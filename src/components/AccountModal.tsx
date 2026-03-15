@@ -110,9 +110,17 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
             <p>✓ Unlimited: timer, shift, manual entry, timeline</p>
             <p>✦ Pro features: reports, invoicing, call logging, unlimited clients & projects</p>
           </div>
-          <Button className="w-full bg-primary text-primary-foreground rounded-[28px] h-12 font-bold">
+          <Button
+            className="w-full bg-primary text-primary-foreground rounded-[28px] h-12 font-bold"
+            onClick={() => setUpgradeNote(true)}
+          >
             Upgrade to Pro — €10/month
           </Button>
+          {upgradeNote && (
+            <p className="text-xs text-muted-foreground">
+              Stripe payments coming soon.<br />To activate Pro access, contact us.
+            </p>
+          )}
         </div>
       );
     }

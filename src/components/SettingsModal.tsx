@@ -260,6 +260,20 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
             </div>
           </div>
 
+          {/* Show summary on Start page */}
+          <div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-semibold">Show activity on Start page</Label>
+                <p className="text-xs text-muted-foreground">Display today's entries count and unassigned work below the timer.</p>
+              </div>
+              <Switch
+                checked={settings.show_logged_today}
+                onCheckedChange={(v) => persist({ ...settings, show_logged_today: v })}
+              />
+            </div>
+          </div>
+
           {/* Integrations placeholder */}
           <div>
             <Label className="text-sm font-semibold">Integrations</Label>

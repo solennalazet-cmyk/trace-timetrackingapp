@@ -274,18 +274,18 @@ const ReportsPage = () => {
             ) : (
               <div className="space-y-1">
                 {todayEntries.map((entry) => (
-                  <button key={entry.id} className="flex items-center w-full text-left px-3 py-2.5 rounded-lg hover:bg-muted/50 gap-3"
+                  <button key={entry.id} className="flex items-center w-full text-left px-3 py-2.5 rounded-lg hover:bg-muted/50 gap-3 min-w-0"
                     onClick={() => { setSelectedEntry(entry); setDetailOpen(true); }}>
                     {entryTypeIcon(entry.entry_type)}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {entry.client_name ? `${entry.client_name}${entry.project_name ? ` — ${entry.project_name}` : ""}` : <span className="text-muted-foreground">Unassigned</span>}
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <p className="text-sm font-medium truncate text-foreground">
+                        {entry.client_name ? `${entry.client_name}${entry.project_name ? ` — ${entry.project_name}` : ""}` : <span className="italic text-muted-foreground">Unassigned</span>}
                       </p>
                       {entry.task_name && <p className="text-xs text-muted-foreground truncate">{entry.task_name}</p>}
                     </div>
-                    <span className="font-mono text-sm font-semibold">{formatHHMM(entry.duration_minutes)}</span>
-                    <span className={`w-2 h-2 rounded-full ${entry.billable ? "bg-primary" : "bg-muted-foreground/30"}`} />
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-mono text-sm font-semibold shrink-0">{formatHHMM(entry.duration_minutes)}</span>
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${entry.billable ? "bg-primary" : "bg-muted-foreground/30"}`} />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
                   </button>
                 ))}
               </div>

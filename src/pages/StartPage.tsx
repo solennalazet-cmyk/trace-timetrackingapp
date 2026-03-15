@@ -236,14 +236,19 @@ const StartPage = () => {
       {mode === "focus" && <FocusMode onComplete={(d) => handleSessionEnd(d, "timer")} />}
       {mode === "shift" && <ShiftMode onClockOut={(d) => handleSessionEnd(d, "shift")} />}
 
+      {/* Welcome banner (first visit only) */}
+      <WelcomeBanner onDismiss={() => {}} />
+
       {/* Summary cards */}
-      <SummaryCards
-        todayCount={todayCount}
-        todayMinutes={todayMinutes}
-        unassignedCount={unassignedCount}
-        onTodayClick={() => navigate("/reports")}
-        onUnassignedClick={() => setUnassignedOpen(true)}
-      />
+      {showSummary && (
+        <SummaryCards
+          todayCount={todayCount}
+          todayMinutes={todayMinutes}
+          unassignedCount={unassignedCount}
+          onTodayClick={() => navigate("/reports")}
+          onUnassignedClick={() => setUnassignedOpen(true)}
+        />
+      )}
 
       <SignInLink />
 

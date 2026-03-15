@@ -26,6 +26,7 @@ const StartPage = () => {
   const [todayCount, setTodayCount] = useState(0);
   const [todayMinutes, setTodayMinutes] = useState(0);
   const [unassignedCount, setUnassignedCount] = useState(0);
+  const [showSummary, setShowSummary] = useState(true);
 
   // Assignment modal state
   const [assignModalOpen, setAssignModalOpen] = useState(false);

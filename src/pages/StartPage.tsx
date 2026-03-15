@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import StopwatchMode from "@/components/StopwatchMode";
 import FocusMode from "@/components/FocusMode";
@@ -10,6 +10,7 @@ import AssignmentModal, { SessionData, AssignmentResult, ExistingEntry } from "@
 import ManualEntryModal from "@/components/ManualEntryModal";
 import CallLogModal from "@/components/CallLogModal";
 import UnassignedPanel from "@/components/UnassignedPanel";
+import WelcomeBanner from "@/components/WelcomeBanner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { saveAnonymousEntry, getAnonymousEntries } from "@/lib/anonymous-store";
@@ -25,6 +26,7 @@ const StartPage = () => {
   const [todayCount, setTodayCount] = useState(0);
   const [todayMinutes, setTodayMinutes] = useState(0);
   const [unassignedCount, setUnassignedCount] = useState(0);
+  const [showSummary, setShowSummary] = useState(true);
 
   // Assignment modal state
   const [assignModalOpen, setAssignModalOpen] = useState(false);
@@ -66,6 +68,29 @@ const StartPage = () => {
   };
 
   useEffect(() => { fetchSummary(); }, [user]);
+
+  // Load show_logged_today setting
+  useEffect(() => {
+    const loadSetting = async () => {
+      if (user) {
+        const { data } = await supabase
+          .from("user_settings")
+          .select("show_logged_today")
+          .eq("user_id", user.id)
+          .single();
+        if (data) setShowSummary(data.show_logged_today ?? true);
+      } else {
+        try {
+          const raw = localStorage.getItem("trace_user_settings");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            setShowSummary(parsed.show_logged_today ?? true);
+          }
+        } catch {}
+      }
+    };
+    loadSetting();
+  }, [user]);
 
   // Called when timer stops — opens the assignment modal
   const handleSessionEnd = (
@@ -211,14 +236,19 @@ const StartPage = () => {
       {mode === "focus" && <FocusMode onComplete={(d) => handleSessionEnd(d, "timer")} />}
       {mode === "shift" && <ShiftMode onClockOut={(d) => handleSessionEnd(d, "shift")} />}
 
+      {/* Welcome banner (first visit only) */}
+      <WelcomeBanner onDismiss={() => {}} />
+
       {/* Summary cards */}
-      <SummaryCards
-        todayCount={todayCount}
-        todayMinutes={todayMinutes}
-        unassignedCount={unassignedCount}
-        onTodayClick={() => navigate("/reports")}
-        onUnassignedClick={() => setUnassignedOpen(true)}
-      />
+      {showSummary && (
+        <SummaryCards
+          todayCount={todayCount}
+          todayMinutes={todayMinutes}
+          unassignedCount={unassignedCount}
+          onTodayClick={() => navigate("/reports")}
+          onUnassignedClick={() => setUnassignedOpen(true)}
+        />
+      )}
 
       <SignInLink />
 

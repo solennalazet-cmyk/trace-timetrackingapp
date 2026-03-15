@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { X, Plus, Volume2, VolumeX } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -21,6 +22,7 @@ interface Settings {
   pause_mode: string;
   timer_sound: string;
   theme: string;
+  show_logged_today: boolean;
 }
 
 const DEFAULTS: Settings = {
@@ -28,6 +30,7 @@ const DEFAULTS: Settings = {
   pause_mode: "deduct",
   timer_sound: "chime",
   theme: "light",
+  show_logged_today: true,
 };
 
 const INTEGRATION_LOGOS = [
@@ -62,7 +65,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     if (user) {
       const { data } = await supabase
         .from("user_settings")
-        .select("timer_presets, pause_mode, timer_sound, theme")
+        .select("timer_presets, pause_mode, timer_sound, theme, show_logged_today")
         .eq("user_id", user.id)
         .single();
       if (data) {
@@ -71,6 +74,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
           pause_mode: data.pause_mode ?? DEFAULTS.pause_mode,
           timer_sound: data.timer_sound ?? DEFAULTS.timer_sound,
           theme: data.theme ?? DEFAULTS.theme,
+          show_logged_today: data.show_logged_today ?? true,
         });
       }
     } else {
@@ -95,6 +99,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
         pause_mode: updated.pause_mode,
         timer_sound: updated.timer_sound,
         theme: updated.theme,
+        show_logged_today: updated.show_logged_today,
       }, { onConflict: "user_id" });
     } else {
       localStorage.setItem(LS_KEY, JSON.stringify(updated));
@@ -252,6 +257,20 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                   {t === "light" ? "Light" : "Dark"}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Show summary on Start page */}
+          <div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-semibold">Show activity on Start page</Label>
+                <p className="text-xs text-muted-foreground">Display today's entries count and unassigned work below the timer.</p>
+              </div>
+              <Switch
+                checked={settings.show_logged_today}
+                onCheckedChange={(v) => persist({ ...settings, show_logged_today: v })}
+              />
             </div>
           </div>
 

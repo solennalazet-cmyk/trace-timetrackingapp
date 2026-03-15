@@ -253,7 +253,7 @@ const ReportsPage = () => {
   if (loading) return <div className="flex items-center justify-center min-h-[60vh] text-muted-foreground text-sm">Loading…</div>;
 
   return (
-    <div className="pb-24 px-4">
+    <div className="pb-24 px-4 overflow-x-hidden">
       {/* Logged Today */}
       <div className="mb-4">
         <button className="flex items-center justify-between w-full mb-2" onClick={() => setShowLoggedToday(!showLoggedToday)}>

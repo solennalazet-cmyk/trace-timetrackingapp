@@ -441,7 +441,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
 
           {/* Notes */}
           <div>
-            <Label>Notes</Label>
+            <Label className="text-foreground">Notes</Label>
             <Textarea
               placeholder="Optional notes"
               value={notes}

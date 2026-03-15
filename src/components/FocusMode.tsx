@@ -2,6 +2,7 @@ import { useFocusTimer } from "@/hooks/useFocusTimer";
 import CircularTimer from "./CircularTimer";
 import { Button } from "@/components/ui/button";
 import { useCallback, useRef } from "react";
+import { Pause, Play, Square } from "lucide-react";
 
 interface FocusModeProps {
   onComplete: (data: { durationMinutes: number; breakMinutes: number; startedAt: string | null }) => void;
@@ -14,15 +15,21 @@ const PRESETS = [
   { label: "1h 30m", minutes: 90 },
 ];
 
+const BTN = "rounded-[28px] h-14 text-[16px] font-bold";
+
 const FocusMode = ({ onComplete }: FocusModeProps) => {
   const {
     status,
     totalSeconds,
     remainingMs,
+    totalPausedMs,
     progress,
     setPreset,
     setCustomSeconds,
     start,
+    pause,
+    resume,
+    stop,
     reset,
     restart,
   } = useFocusTimer();
@@ -52,11 +59,18 @@ const FocusMode = ({ onComplete }: FocusModeProps) => {
     [status, setCustomSeconds]
   );
 
+  const handleStop = () => {
+    const result = stop();
+    onComplete(result);
+  };
+
   const handleAssign = () => {
     const durationMinutes = Math.round(totalSeconds / 60);
     reset();
     onComplete({ durationMinutes, breakMinutes: 0, startedAt: null });
   };
+
+  const pauseMinutes = Math.floor(totalPausedMs / 60000);
 
   return (
     <div className="flex flex-col items-center gap-6">
@@ -64,21 +78,23 @@ const FocusMode = ({ onComplete }: FocusModeProps) => {
         if (e.buttons === 1) handleDrag(e);
       } : undefined}>
         <CircularTimer
-          progress={status === "idle" ? totalSeconds / (120 * 60) : status === "running" ? 1 - progress : 0}
+          progress={status === "idle" ? totalSeconds / (120 * 60) : (status === "running" || status === "paused") ? 1 - progress : 0}
           arcColor="hsl(53, 98%, 77%)"
           pulsing={status === "running"}
+          dimmed={status === "paused"}
         >
           <svg ref={svgRef} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
           <span className="font-mono text-4xl font-bold text-timer-display">
             {status === "idle"
               ? `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}`
-              : status === "running"
+              : status === "running" || status === "paused"
               ? formatCountdown(remainingMs)
               : "Done!"}
           </span>
           <span className="text-xs font-medium text-muted-foreground mt-1 uppercase tracking-wider">
             {status === "idle" && "Set duration"}
             {status === "running" && "Focus"}
+            {status === "paused" && `Paused · ${pauseMinutes}m break`}
             {status === "completed" && "Session complete"}
           </span>
         </CircularTimer>
@@ -101,21 +117,69 @@ const FocusMode = ({ onComplete }: FocusModeProps) => {
           </div>
           <Button
             onClick={start}
-            className="w-full max-w-[280px] bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-14 text-[16px] font-bold"
+            className={`w-full max-w-[280px] bg-primary text-primary-foreground hover:bg-primary/90 ${BTN}`}
           >
             Start Focus
           </Button>
         </>
       )}
 
+      {status === "running" && (
+        <div className="flex gap-3 w-full max-w-[280px]">
+          <Button
+            onClick={pause}
+            variant="outline"
+            className={`flex-1 text-timer-display ${BTN}`}
+            style={{
+              background: "rgba(255, 255, 255, 0.75)",
+              border: "1px solid rgba(255, 255, 255, 0.6)",
+            }}
+          >
+            <Pause className="w-4 h-4 mr-2" />
+            Pause
+          </Button>
+          <Button
+            onClick={handleStop}
+            className={`flex-1 bg-primary text-primary-foreground hover:bg-primary/90 ${BTN}`}
+          >
+            <Square className="w-4 h-4 mr-2" />
+            Stop
+          </Button>
+        </div>
+      )}
+
+      {status === "paused" && (
+        <div className="flex gap-3 w-full max-w-[280px]">
+          <Button
+            onClick={resume}
+            className={`flex-1 bg-primary text-primary-foreground hover:bg-primary/90 ${BTN}`}
+          >
+            <Play className="w-4 h-4 mr-2" />
+            Resume
+          </Button>
+          <Button
+            onClick={handleStop}
+            variant="outline"
+            className={`flex-1 text-timer-display ${BTN}`}
+            style={{
+              background: "rgba(255, 255, 255, 0.75)",
+              border: "1px solid rgba(255, 255, 255, 0.6)",
+            }}
+          >
+            <Square className="w-4 h-4 mr-2" />
+            Stop
+          </Button>
+        </div>
+      )}
+
       {status === "completed" && (
         <div className="flex gap-3 w-full max-w-[280px]">
-          <Button onClick={restart} variant="outline" className="flex-1 h-12">
+          <Button onClick={restart} variant="outline" className={`flex-1 ${BTN}`}>
             Restart
           </Button>
           <Button
             onClick={handleAssign}
-            className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 h-12"
+            className={`flex-1 bg-primary text-primary-foreground hover:bg-primary/90 ${BTN}`}
           >
             Assign Work
           </Button>

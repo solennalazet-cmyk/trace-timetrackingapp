@@ -14,7 +14,399 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      active_sessions: {
+        Row: {
+          created_at: string | null
+          id: string
+          paused_at: string | null
+          session_type: string | null
+          started_at: string
+          total_paused_ms: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          paused_at?: string | null
+          session_type?: string | null
+          started_at: string
+          total_paused_ms?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          paused_at?: string | null
+          session_type?: string | null
+          started_at?: string
+          total_paused_ms?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      clients: {
+        Row: {
+          created_at: string | null
+          currency: string | null
+          default_rate: number | null
+          email: string | null
+          id: string
+          name: string
+          nif: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          currency?: string | null
+          default_rate?: number | null
+          email?: string | null
+          id?: string
+          name: string
+          nif?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          currency?: string | null
+          default_rate?: number | null
+          email?: string | null
+          id?: string
+          name?: string
+          nif?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+          client_id: string | null
+          created_at: string | null
+          currency: string
+          date_range_end: string
+          date_range_start: string
+          delivery_method: string | null
+          id: string
+          paid_at: string | null
+          sent_at: string | null
+          status: string | null
+          stripe_invoice_id: string | null
+          total_amount: number
+          user_id: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string | null
+          currency: string
+          date_range_end: string
+          date_range_start: string
+          delivery_method?: string | null
+          id?: string
+          paid_at?: string | null
+          sent_at?: string | null
+          status?: string | null
+          stripe_invoice_id?: string | null
+          total_amount: number
+          user_id: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string | null
+          currency?: string
+          date_range_end?: string
+          date_range_start?: string
+          delivery_method?: string | null
+          id?: string
+          paid_at?: string | null
+          sent_at?: string | null
+          status?: string | null
+          stripe_invoice_id?: string | null
+          total_amount?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          current_period_end: string | null
+          full_name: string | null
+          id: string
+          plan: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_status: string | null
+          trial_started_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_period_end?: string | null
+          full_name?: string | null
+          id: string
+          plan?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
+          trial_started_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_period_end?: string | null
+          full_name?: string | null
+          id?: string
+          plan?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
+          trial_started_at?: string | null
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          client_id: string | null
+          created_at: string | null
+          currency: string | null
+          id: string
+          name: string
+          rate: number | null
+          user_id: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          name: string
+          rate?: number | null
+          user_id: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          name?: string
+          rate?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      time_entries: {
+        Row: {
+          billable: boolean | null
+          billable_value: number | null
+          billing_status: string | null
+          break_minutes: number | null
+          client_id: string | null
+          created_at: string | null
+          duration_minutes: number
+          entry_date: string | null
+          entry_type: string | null
+          id: string
+          invoice_id: string | null
+          notes: string | null
+          project_id: string | null
+          rate_amount: number | null
+          rate_currency: string | null
+          rate_unit: string | null
+          tags: string[] | null
+          task_id: string | null
+          user_id: string
+        }
+        Insert: {
+          billable?: boolean | null
+          billable_value?: number | null
+          billing_status?: string | null
+          break_minutes?: number | null
+          client_id?: string | null
+          created_at?: string | null
+          duration_minutes: number
+          entry_date?: string | null
+          entry_type?: string | null
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          project_id?: string | null
+          rate_amount?: number | null
+          rate_currency?: string | null
+          rate_unit?: string | null
+          tags?: string[] | null
+          task_id?: string | null
+          user_id: string
+        }
+        Update: {
+          billable?: boolean | null
+          billable_value?: number | null
+          billing_status?: string | null
+          break_minutes?: number | null
+          client_id?: string | null
+          created_at?: string | null
+          duration_minutes?: number
+          entry_date?: string | null
+          entry_type?: string | null
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          project_id?: string | null
+          rate_amount?: number | null
+          rate_currency?: string | null
+          rate_unit?: string | null
+          tags?: string[] | null
+          task_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_feedback: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          type?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          id: string
+          pause_mode: string | null
+          show_logged_today: boolean | null
+          theme: string | null
+          timer_presets: number[] | null
+          timer_sound: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          pause_mode?: string | null
+          show_logged_today?: boolean | null
+          theme?: string | null
+          timer_presets?: number[] | null
+          timer_sound?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          pause_mode?: string | null
+          show_logged_today?: boolean | null
+          theme?: string | null
+          timer_presets?: number[] | null
+          timer_sound?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      webhook_logs: {
+        Row: {
+          error: string | null
+          event_type: string | null
+          id: string
+          payload: Json | null
+          processed_at: string | null
+          stripe_event_id: string | null
+        }
+        Insert: {
+          error?: string | null
+          event_type?: string | null
+          id?: string
+          payload?: Json | null
+          processed_at?: string | null
+          stripe_event_id?: string | null
+        }
+        Update: {
+          error?: string | null
+          event_type?: string | null
+          id?: string
+          payload?: Json | null
+          processed_at?: string | null
+          stripe_event_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

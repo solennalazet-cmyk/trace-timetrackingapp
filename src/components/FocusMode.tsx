@@ -37,7 +37,7 @@ const FocusMode = ({ onComplete }: FocusModeProps) => {
   };
 
   const handleDrag = useCallback(
-    (e: React.PointerEvent<SVGSVGElement>) => {
+    (e: React.PointerEvent<HTMLElement>) => {
       if (status !== "idle" || !svgRef.current) return;
       const rect = svgRef.current.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;

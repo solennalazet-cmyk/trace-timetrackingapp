@@ -407,7 +407,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
 
           {/* Project */}
           <div>
-            <Label>Project</Label>
+            <Label className="text-foreground">Project</Label>
             <CreatableCombobox
               items={filteredProjects}
               value={projectId}

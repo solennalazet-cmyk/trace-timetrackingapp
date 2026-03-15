@@ -340,10 +340,10 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
           )}
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-3 text-foreground">
           {/* Client */}
           <div>
-            <Label>Client</Label>
+            <Label className="text-foreground">Client</Label>
             <CreatableCombobox
               items={clients}
               value={clientId}
@@ -365,7 +365,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
 
           {/* Billable toggle + rate */}
           <div className="flex items-center justify-between">
-            <Label>Billable</Label>
+            <Label className="text-foreground">Billable</Label>
             <Switch checked={billable} onCheckedChange={setBillable} />
           </div>
           {billable && (
@@ -407,7 +407,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
 
           {/* Project */}
           <div>
-            <Label>Project</Label>
+            <Label className="text-foreground">Project</Label>
             <CreatableCombobox
               items={filteredProjects}
               value={projectId}
@@ -424,7 +424,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
 
           {/* Task */}
           <div>
-            <Label>Task</Label>
+            <Label className="text-foreground">Task</Label>
             <CreatableCombobox
               items={tasks}
               value={taskId}
@@ -441,7 +441,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
 
           {/* Notes */}
           <div>
-            <Label>Notes</Label>
+            <Label className="text-foreground">Notes</Label>
             <Textarea
               placeholder="Optional notes"
               value={notes}
@@ -452,7 +452,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
 
           {/* Tags */}
           <div>
-            <Label>Tags</Label>
+            <Label className="text-foreground">Tags</Label>
             <TagsInput
               value={tags}
               onChange={setTags}

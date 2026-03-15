@@ -365,7 +365,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
 
           {/* Billable toggle + rate */}
           <div className="flex items-center justify-between">
-            <Label>Billable</Label>
+            <Label className="text-foreground">Billable</Label>
             <Switch checked={billable} onCheckedChange={setBillable} />
           </div>
           {billable && (

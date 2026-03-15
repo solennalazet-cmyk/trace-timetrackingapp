@@ -21,6 +21,7 @@ interface Settings {
   pause_mode: string;
   timer_sound: string;
   theme: string;
+  show_logged_today: boolean;
 }
 
 const DEFAULTS: Settings = {

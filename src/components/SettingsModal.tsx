@@ -99,6 +99,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
         pause_mode: updated.pause_mode,
         timer_sound: updated.timer_sound,
         theme: updated.theme,
+        show_logged_today: updated.show_logged_today,
       }, { onConflict: "user_id" });
     } else {
       localStorage.setItem(LS_KEY, JSON.stringify(updated));

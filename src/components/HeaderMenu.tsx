@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { HelpCircle, Info, LogIn, LogOut, Settings, MessageSquare, Sparkles, User } from "lucide-react";
+import { HelpCircle, Info, LogIn, LogOut, Settings, MessageSquare, Sparkles, User, CreditCard } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +14,8 @@ import AboutModal from "./AboutModal";
 import AuthModal from "./AuthModal";
 import FeedbackModal from "./FeedbackModal";
 import WhatsNewModal from "./WhatsNewModal";
+import SettingsModal from "./SettingsModal";
+import AccountModal from "./AccountModal";
 
 const HeaderMenu = () => {
   const { user, profile, signOut } = useAuth();
@@ -23,6 +25,8 @@ const HeaderMenu = () => {
   const [authOpen, setAuthOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
 
   const initials = profile?.full_name
     ? profile.full_name
@@ -107,9 +111,13 @@ const HeaderMenu = () => {
                 </div>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer">
+              <DropdownMenuItem onClick={() => setSettingsOpen(true)} className="cursor-pointer">
                 <Settings className="w-4 h-4 mr-2" />
                 Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setAccountOpen(true)} className="cursor-pointer">
+                <CreditCard className="w-4 h-4 mr-2" />
+                Account & Subscription
               </DropdownMenuItem>
               <DropdownMenuSeparator />
             </>
@@ -158,6 +166,8 @@ const HeaderMenu = () => {
       <AuthModal open={authOpen} onOpenChange={setAuthOpen} onShowHowItWorks={() => setHowItWorksOpen(true)} />
       <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
       <WhatsNewModal open={whatsNewOpen} onOpenChange={setWhatsNewOpen} />
+      <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <AccountModal open={accountOpen} onOpenChange={setAccountOpen} />
     </>
   );
 };

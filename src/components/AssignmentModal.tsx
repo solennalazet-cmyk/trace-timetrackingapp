@@ -424,7 +424,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
 
           {/* Task */}
           <div>
-            <Label>Task</Label>
+            <Label className="text-foreground">Task</Label>
             <CreatableCombobox
               items={tasks}
               value={taskId}

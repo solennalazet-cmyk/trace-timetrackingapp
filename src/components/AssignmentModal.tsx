@@ -452,7 +452,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
 
           {/* Tags */}
           <div>
-            <Label>Tags</Label>
+            <Label className="text-foreground">Tags</Label>
             <TagsInput
               value={tags}
               onChange={setTags}

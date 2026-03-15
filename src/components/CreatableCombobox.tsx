@@ -140,7 +140,7 @@ const CreatableCombobox = ({
           {showAddOption && (
             <button
               type="button"
-              className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground cursor-pointer text-primary font-medium"
+              className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground cursor-pointer text-timer-display font-medium"
               onMouseDown={(e) => {
                 e.preventDefault();
                 handleCreate();

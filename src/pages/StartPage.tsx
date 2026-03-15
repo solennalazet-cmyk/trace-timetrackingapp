@@ -116,16 +116,24 @@ const StartPage = () => {
   return (
     <div className="flex flex-col items-center pt-4">
       {/* Mode toggle */}
-      <div className="flex gap-1 p-1 rounded-lg bg-muted/50 mb-6">
+      <div
+        className="flex mb-6"
+        style={{
+          border: "1px solid hsl(var(--border))",
+          borderRadius: 24,
+          padding: 3,
+        }}
+      >
         {modes.map((m) => (
           <button
             key={m.key}
             onClick={() => setMode(m.key)}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-              mode === m.key
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+            className="px-5 py-2 text-sm font-medium transition-colors"
+            style={{
+              borderRadius: 20,
+              background: mode === m.key ? "hsl(var(--primary))" : "transparent",
+              color: mode === m.key ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
+            }}
           >
             {m.label}
           </button>

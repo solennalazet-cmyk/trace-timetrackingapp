@@ -83,7 +83,15 @@ const ShiftMode = ({ onClockOut }: ShiftModeProps) => {
         )}
         {status === "running" && (
           <>
-            <Button onClick={pause} variant="outline" className={`flex-1 border-border bg-transparent text-foreground ${BTN}`}>
+            <Button
+              onClick={pause}
+              variant="outline"
+              className={`flex-1 text-timer-display ${BTN}`}
+              style={{
+                background: "rgba(255, 255, 255, 0.75)",
+                border: "1px solid rgba(255, 255, 255, 0.6)",
+              }}
+            >
               <Pause className="w-4 h-4 mr-2" /> Pause
             </Button>
             <Button onClick={handleClockOut} className={`flex-1 bg-primary text-primary-foreground hover:bg-primary/90 ${BTN}`}>

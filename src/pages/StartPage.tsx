@@ -6,7 +6,10 @@ import ShiftMode from "@/components/ShiftMode";
 import SummaryCards from "@/components/SummaryCards";
 import FAB from "@/components/FAB";
 import SignInLink from "@/components/SignInLink";
-import AssignmentModal, { SessionData, AssignmentResult } from "@/components/AssignmentModal";
+import AssignmentModal, { SessionData, AssignmentResult, ExistingEntry } from "@/components/AssignmentModal";
+import ManualEntryModal from "@/components/ManualEntryModal";
+import CallLogModal from "@/components/CallLogModal";
+import UnassignedPanel from "@/components/UnassignedPanel";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { saveAnonymousEntry, getAnonymousEntries } from "@/lib/anonymous-store";
@@ -26,38 +29,43 @@ const StartPage = () => {
   // Assignment modal state
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [pendingSession, setPendingSession] = useState<SessionData | null>(null);
+  const [editingEntry, setEditingEntry] = useState<ExistingEntry | null>(null);
 
-  // Fetch summary data
-  useEffect(() => {
-    const fetchSummary = async () => {
-      const today = new Date().toISOString().split("T")[0];
-      if (user) {
-        const { data: todayEntries } = await supabase
-          .from("time_entries")
-          .select("duration_minutes")
-          .eq("user_id", user.id)
-          .eq("entry_date", today);
-        setTodayCount(todayEntries?.length ?? 0);
-        setTodayMinutes(todayEntries?.reduce((sum, e) => sum + (e.duration_minutes || 0), 0) ?? 0);
+  // Manual entry & call log modals
+  const [manualOpen, setManualOpen] = useState(false);
+  const [callLogOpen, setCallLogOpen] = useState(false);
 
-        const { count } = await supabase
-          .from("time_entries")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .is("client_id", null)
-          .is("project_id", null);
-        setUnassignedCount(count ?? 0);
-      } else {
-        const entries = getAnonymousEntries();
-        const today = new Date().toISOString().split("T")[0];
-        const todayEntries = entries.filter((e: any) => e.entry_date === today);
-        setTodayCount(todayEntries.length);
-        setTodayMinutes(todayEntries.reduce((sum: number, e: any) => sum + (e.duration_minutes || 0), 0));
-        setUnassignedCount(entries.filter((e: any) => !e.client_id && !e.project_id).length);
-      }
-    };
-    fetchSummary();
-  }, [user]);
+  // Unassigned panel
+  const [unassignedOpen, setUnassignedOpen] = useState(false);
+
+  const fetchSummary = async () => {
+    const today = new Date().toISOString().split("T")[0];
+    if (user) {
+      const { data: todayEntries } = await supabase
+        .from("time_entries")
+        .select("duration_minutes")
+        .eq("user_id", user.id)
+        .eq("entry_date", today);
+      setTodayCount(todayEntries?.length ?? 0);
+      setTodayMinutes(todayEntries?.reduce((sum, e) => sum + (e.duration_minutes || 0), 0) ?? 0);
+
+      const { count } = await supabase
+        .from("time_entries")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .is("client_id", null)
+        .is("project_id", null);
+      setUnassignedCount(count ?? 0);
+    } else {
+      const entries = getAnonymousEntries();
+      const todayEntries = entries.filter((e: any) => e.entry_date === today);
+      setTodayCount(todayEntries.length);
+      setTodayMinutes(todayEntries.reduce((sum: number, e: any) => sum + (e.duration_minutes || 0), 0));
+      setUnassignedCount(entries.filter((e: any) => !e.client_id && !e.project_id).length);
+    }
+  };
+
+  useEffect(() => { fetchSummary(); }, [user]);
 
   // Called when timer stops — opens the assignment modal
   const handleSessionEnd = (
@@ -68,6 +76,7 @@ const StartPage = () => {
       toast.success("Session too short to save.");
       return;
     }
+    setEditingEntry(null);
     setPendingSession({ ...data, entryType });
     setAssignModalOpen(true);
   };
@@ -86,35 +95,82 @@ const StartPage = () => {
       notes: assignment?.notes || null,
       tags: assignment?.tags?.length ? assignment.tags : null,
       rate_amount: assignment?.rateAmount || null,
-      rate_unit: assignment?.rateAmount ? "hour" : null,
+      rate_currency: assignment?.rateCurrency || null,
+      rate_unit: assignment?.rateAmount ? (assignment?.rateUnit || "hour") : null,
+      billable_value: assignment?.billableValue || null,
     };
 
     if (user) {
-      await supabase.from("time_entries").insert({ ...entry, user_id: user.id });
+      const { error } = await supabase.from("time_entries").insert({ ...entry, user_id: user.id });
+      if (error) throw error;
     } else {
       saveAnonymousEntry(entry);
     }
+  };
 
-    setTodayCount((c) => c + 1);
-    setTodayMinutes((m) => m + session.durationMinutes);
-    if (!assignment?.clientId && !assignment?.projectId) {
-      setUnassignedCount((c) => c + 1);
+  const updateEntry = async (entryId: string, assignment: AssignmentResult) => {
+    if (user) {
+      const { error } = await supabase.from("time_entries").update({
+        client_id: assignment.clientId,
+        project_id: assignment.projectId,
+        notes: assignment.notes || null,
+        tags: assignment.tags.length ? assignment.tags : null,
+        billable: assignment.billable,
+        rate_amount: assignment.rateAmount,
+        rate_currency: assignment.rateCurrency,
+        rate_unit: assignment.rateAmount ? assignment.rateUnit : null,
+        billable_value: assignment.billableValue,
+      }).eq("id", entryId);
+      if (error) throw error;
     }
   };
 
   const handleAssignSave = async (session: SessionData, assignment: AssignmentResult) => {
-    await saveEntry(session, assignment);
-    setAssignModalOpen(false);
-    setPendingSession(null);
-    const label = session.entryType === "shift" ? "Shift saved." : "Entry saved.";
-    toast.success(label);
+    try {
+      if (editingEntry) {
+        await updateEntry(editingEntry.id, assignment);
+        toast.success("Entry updated.");
+      } else {
+        await saveEntry(session, assignment);
+        const label = session.entryType === "shift" ? "Shift saved." : "Entry saved.";
+        toast.success(label);
+      }
+      setAssignModalOpen(false);
+      setPendingSession(null);
+      setEditingEntry(null);
+      fetchSummary();
+    } catch (error) {
+      console.error("Save failed:", error);
+      toast.error("Something went wrong. Your session is safe — try again.");
+    }
   };
 
   const handleAssignSkip = async (session: SessionData) => {
-    await saveEntry(session, null);
-    setAssignModalOpen(false);
-    setPendingSession(null);
-    toast.success("Session saved to Unassigned Work.");
+    try {
+      if (!editingEntry) {
+        await saveEntry(session, null);
+      }
+      setAssignModalOpen(false);
+      setPendingSession(null);
+      setEditingEntry(null);
+      toast.success("Session saved to Unassigned Work.");
+      fetchSummary();
+    } catch (error) {
+      console.error("Save failed:", error);
+      toast.error("Something went wrong. Your session is safe — try again.");
+    }
+  };
+
+  // Handle assigning from unassigned panel
+  const handleAssignFromPanel = (entry: any) => {
+    setEditingEntry(entry as ExistingEntry);
+    setPendingSession({
+      durationMinutes: entry.duration_minutes,
+      breakMinutes: entry.break_minutes ?? 0,
+      startedAt: null,
+      entryType: entry.entry_type ?? "timer",
+    });
+    setAssignModalOpen(true);
   };
 
   const modes: { key: Mode; label: string }[] = [
@@ -151,15 +207,9 @@ const StartPage = () => {
       </div>
 
       {/* Timer area */}
-      {mode === "stopwatch" && (
-        <StopwatchMode onStop={(d) => handleSessionEnd(d, "timer")} />
-      )}
-      {mode === "focus" && (
-        <FocusMode onComplete={(d) => handleSessionEnd(d, "timer")} />
-      )}
-      {mode === "shift" && (
-        <ShiftMode onClockOut={(d) => handleSessionEnd(d, "shift")} />
-      )}
+      {mode === "stopwatch" && <StopwatchMode onStop={(d) => handleSessionEnd(d, "timer")} />}
+      {mode === "focus" && <FocusMode onComplete={(d) => handleSessionEnd(d, "timer")} />}
+      {mode === "shift" && <ShiftMode onClockOut={(d) => handleSessionEnd(d, "shift")} />}
 
       {/* Summary cards */}
       <SummaryCards
@@ -167,22 +217,45 @@ const StartPage = () => {
         todayMinutes={todayMinutes}
         unassignedCount={unassignedCount}
         onTodayClick={() => navigate("/reports")}
-        onUnassignedClick={() => {}}
+        onUnassignedClick={() => setUnassignedOpen(true)}
       />
 
       <SignInLink />
 
       <FAB
-        onManualEntry={() => {}}
-        onLogCall={() => {}}
+        onManualEntry={() => setManualOpen(true)}
+        onLogCall={() => setCallLogOpen(true)}
       />
 
       {/* Assignment Modal */}
       <AssignmentModal
         open={assignModalOpen}
         session={pendingSession}
+        existingEntry={editingEntry}
         onSave={handleAssignSave}
         onSkip={handleAssignSkip}
+      />
+
+      {/* Manual Entry Modal */}
+      <ManualEntryModal
+        open={manualOpen}
+        onOpenChange={setManualOpen}
+        onSaved={fetchSummary}
+      />
+
+      {/* Call Log Modal */}
+      <CallLogModal
+        open={callLogOpen}
+        onOpenChange={setCallLogOpen}
+        onSaved={fetchSummary}
+      />
+
+      {/* Unassigned Work Panel */}
+      <UnassignedPanel
+        open={unassignedOpen}
+        onOpenChange={setUnassignedOpen}
+        onAssignEntry={handleAssignFromPanel}
+        onCountChange={setUnassignedCount}
       />
     </div>
   );

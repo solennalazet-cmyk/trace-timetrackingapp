@@ -8,6 +8,8 @@ interface Profile {
   plan: string | null;
   trial_started_at: string | null;
   subscription_status: string | null;
+  created_at: string | null;
+  current_period_end: string | null;
 }
 
 interface AuthContextType {

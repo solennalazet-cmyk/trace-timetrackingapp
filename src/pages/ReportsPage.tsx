@@ -253,7 +253,7 @@ const ReportsPage = () => {
   if (loading) return <div className="flex items-center justify-center min-h-[60vh] text-muted-foreground text-sm">Loading…</div>;
 
   return (
-    <div className="pb-24 px-4">
+    <div className="pb-24 px-4 overflow-x-hidden">
       {/* Logged Today */}
       <div className="mb-4">
         <button className="flex items-center justify-between w-full mb-2" onClick={() => setShowLoggedToday(!showLoggedToday)}>
@@ -274,18 +274,18 @@ const ReportsPage = () => {
             ) : (
               <div className="space-y-1">
                 {todayEntries.map((entry) => (
-                  <button key={entry.id} className="flex items-center w-full text-left px-3 py-2.5 rounded-lg hover:bg-muted/50 gap-3"
+                  <button key={entry.id} className="flex items-center w-full text-left px-3 py-2.5 rounded-lg hover:bg-muted/50 gap-3 min-w-0"
                     onClick={() => { setSelectedEntry(entry); setDetailOpen(true); }}>
                     {entryTypeIcon(entry.entry_type)}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {entry.client_name ? `${entry.client_name}${entry.project_name ? ` — ${entry.project_name}` : ""}` : <span className="text-muted-foreground">Unassigned</span>}
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <p className="text-sm font-medium truncate text-foreground">
+                        {entry.client_name ? `${entry.client_name}${entry.project_name ? ` — ${entry.project_name}` : ""}` : <span className="italic text-muted-foreground">Unassigned</span>}
                       </p>
                       {entry.task_name && <p className="text-xs text-muted-foreground truncate">{entry.task_name}</p>}
                     </div>
-                    <span className="font-mono text-sm font-semibold">{formatHHMM(entry.duration_minutes)}</span>
-                    <span className={`w-2 h-2 rounded-full ${entry.billable ? "bg-primary" : "bg-muted-foreground/30"}`} />
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-mono text-sm font-semibold shrink-0">{formatHHMM(entry.duration_minutes)}</span>
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${entry.billable ? "bg-primary" : "bg-muted-foreground/30"}`} />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
                   </button>
                 ))}
               </div>
@@ -324,7 +324,7 @@ const ReportsPage = () => {
 
         <div className={isFree ? "blur-sm pointer-events-none select-none" : ""}>
           {/* Metric cards */}
-          <div className="flex gap-2 overflow-x-auto mb-4 pb-1">
+          <div className="flex gap-2 overflow-x-auto mb-4 pb-2 -mx-1 px-1">
             {[
               { label: "Total hours", value: formatHHMM(totalMins) },
               { label: "Billable", value: formatHHMM(billableMins) },
@@ -333,9 +333,9 @@ const ReportsPage = () => {
               { label: "Invoiced", value: `€${invoicedTotal.toFixed(0)}` },
               { label: "Paid", value: `€${paidTotal.toFixed(0)}` },
             ].map((m) => (
-              <div key={m.label} className="min-w-[100px] p-3 rounded-xl border border-border bg-card shrink-0">
-                <p className="text-xs text-muted-foreground">{m.label}</p>
-                <p className="font-mono text-lg font-bold text-foreground">{m.value}</p>
+              <div key={m.label} className="min-w-[110px] p-3 rounded-xl border border-border bg-card shrink-0">
+                <p className="text-xs text-muted-foreground whitespace-nowrap">{m.label}</p>
+                <p className="font-mono text-lg font-bold text-foreground whitespace-nowrap">{m.value}</p>
               </div>
             ))}
           </div>

@@ -29,6 +29,7 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [upgradeNote, setUpgradeNote] = useState(false);
 
   if (!user || !profile) return null;
 

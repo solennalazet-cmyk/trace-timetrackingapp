@@ -65,7 +65,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     if (user) {
       const { data } = await supabase
         .from("user_settings")
-        .select("timer_presets, pause_mode, timer_sound, theme")
+        .select("timer_presets, pause_mode, timer_sound, theme, show_logged_today")
         .eq("user_id", user.id)
         .single();
       if (data) {
@@ -74,6 +74,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
           pause_mode: data.pause_mode ?? DEFAULTS.pause_mode,
           timer_sound: data.timer_sound ?? DEFAULTS.timer_sound,
           theme: data.theme ?? DEFAULTS.theme,
+          show_logged_today: data.show_logged_today ?? true,
         });
       }
     } else {

@@ -69,6 +69,29 @@ const StartPage = () => {
 
   useEffect(() => { fetchSummary(); }, [user]);
 
+  // Load show_logged_today setting
+  useEffect(() => {
+    const loadSetting = async () => {
+      if (user) {
+        const { data } = await supabase
+          .from("user_settings")
+          .select("show_logged_today")
+          .eq("user_id", user.id)
+          .single();
+        if (data) setShowSummary(data.show_logged_today ?? true);
+      } else {
+        try {
+          const raw = localStorage.getItem("trace_user_settings");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            setShowSummary(parsed.show_logged_today ?? true);
+          }
+        } catch {}
+      }
+    };
+    loadSetting();
+  }, [user]);
+
   // Called when timer stops — opens the assignment modal
   const handleSessionEnd = (
     data: { durationMinutes: number; breakMinutes: number; startedAt: string | null },

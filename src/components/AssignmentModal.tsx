@@ -10,7 +10,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import CreatableCombobox, { ComboboxItem } from "@/components/CreatableCombobox";
+import TagsInput from "@/components/TagsInput";
 import { formatDuration } from "@/hooks/useTimer";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +27,7 @@ import {
   getAnonymousProjects, saveAnonymousProject,
   getAnonymousTasks, saveAnonymousTask,
 } from "@/lib/anonymous-store";
+import { toast } from "sonner";
 
 export interface SessionData {
   durationMinutes: number;
@@ -35,78 +44,195 @@ export interface AssignmentResult {
   tags: string[];
   billable: boolean;
   rateAmount: number | null;
+  rateCurrency: string;
+  rateUnit: string;
+  billableValue: number | null;
+}
+
+// Existing entry for edit mode
+export interface ExistingEntry {
+  id: string;
+  client_id: string | null;
+  project_id: string | null;
+  task_id: string | null;
+  notes: string | null;
+  tags: string[] | null;
+  billable: boolean | null;
+  rate_amount: number | null;
+  rate_currency: string | null;
+  rate_unit: string | null;
+  duration_minutes: number;
+  break_minutes: number | null;
+  entry_type: string | null;
+  entry_date: string | null;
 }
 
 interface AssignmentModalProps {
   open: boolean;
   session: SessionData | null;
+  existingEntry?: ExistingEntry | null;
   onSave: (session: SessionData, assignment: AssignmentResult) => void;
   onSkip: (session: SessionData) => void;
 }
 
-const AssignmentModal = ({ open, session, onSave, onSkip }: AssignmentModalProps) => {
+interface ClientFull {
+  id: string;
+  name: string;
+  default_rate: number | null;
+  currency: string | null;
+}
+
+interface ProjectFull {
+  id: string;
+  name: string;
+  client_id: string | null;
+  rate: number | null;
+  currency: string | null;
+}
+
+const CURRENCIES = ["EUR", "USD", "GBP", "CHF", "BRL", "CAD", "AUD"];
+const RATE_UNITS = [
+  { value: "hour", label: "Per hour" },
+  { value: "word", label: "Per word" },
+  { value: "project", label: "Per project" },
+];
+
+const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: AssignmentModalProps) => {
   const { user } = useAuth();
   const [clientId, setClientId] = useState("");
   const [clientName, setClientName] = useState("");
   const [projectId, setProjectId] = useState("");
   const [projectName, setProjectName] = useState("");
+  const [taskId, setTaskId] = useState("");
   const [taskName, setTaskName] = useState("");
   const [notes, setNotes] = useState("");
-  const [tagsInput, setTagsInput] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   const [billable, setBillable] = useState(true);
   const [rateAmount, setRateAmount] = useState("");
+  const [rateCurrency, setRateCurrency] = useState("EUR");
+  const [rateUnit, setRateUnit] = useState("hour");
 
-  const [clients, setClients] = useState<ComboboxItem[]>([]);
-  const [allProjects, setAllProjects] = useState<{ id: string; name: string; client_id: string | null }[]>([]);
+  const [clientsFull, setClientsFull] = useState<ClientFull[]>([]);
+  const [allProjectsFull, setAllProjectsFull] = useState<ProjectFull[]>([]);
   const [tasks, setTasks] = useState<ComboboxItem[]>([]);
+  const [allTags, setAllTags] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  const clients: ComboboxItem[] = clientsFull.map((c) => ({ id: c.id, name: c.name }));
+  const filteredProjects: ComboboxItem[] = clientId
+    ? allProjectsFull.filter((p) => p.client_id === clientId).map((p) => ({ id: p.id, name: p.name }))
+    : allProjectsFull.map((p) => ({ id: p.id, name: p.name }));
 
   const loadData = useCallback(async () => {
     if (user) {
       const [{ data: c }, { data: p }, { data: t }] = await Promise.all([
-        supabase.from("clients").select("id, name").eq("user_id", user.id),
-        supabase.from("projects").select("id, name, client_id").eq("user_id", user.id),
+        supabase.from("clients").select("id, name, default_rate, currency").eq("user_id", user.id),
+        supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", user.id),
         supabase.from("tasks").select("id, name").eq("user_id", user.id),
       ]);
-      setClients((c ?? []).map((x) => ({ id: x.id, name: x.name })));
-      setAllProjects(p ?? []);
+      setClientsFull((c ?? []) as ClientFull[]);
+      setAllProjectsFull((p ?? []) as ProjectFull[]);
       setTasks((t ?? []).map((x) => ({ id: x.id, name: x.name })));
+
+      // Load all previously-used tags for autocomplete
+      const { data: tagEntries } = await supabase
+        .from("time_entries")
+        .select("tags")
+        .eq("user_id", user.id)
+        .not("tags", "is", null);
+      const tagSet = new Set<string>();
+      tagEntries?.forEach((e) => e.tags?.forEach((t: string) => tagSet.add(t)));
+      setAllTags(Array.from(tagSet).sort());
     } else {
       const ac = getAnonymousClients();
-      setClients(ac.map((c: any) => ({ id: c.id, name: c.name })));
+      setClientsFull(ac.map((c: any) => ({ id: c.id, name: c.name, default_rate: c.default_rate ?? null, currency: c.currency ?? null })));
       const ap = getAnonymousProjects();
-      setAllProjects(ap.map((p: any) => ({ id: p.id, name: p.name, client_id: p.client_id ?? null })));
+      setAllProjectsFull(ap.map((p: any) => ({ id: p.id, name: p.name, client_id: p.client_id ?? null, rate: p.rate ?? null, currency: p.currency ?? null })));
       const at = getAnonymousTasks();
       setTasks(at.map((t: any) => ({ id: t.id, name: t.name })));
+      setAllTags([]);
     }
   }, [user]);
 
   useEffect(() => {
     if (!open) return;
-    setClientId(""); setClientName("");
-    setProjectId(""); setProjectName("");
-    setTaskName(""); setNotes(""); setTagsInput("");
-    setBillable(true); setRateAmount("");
+
+    if (existingEntry) {
+      // Edit mode — pre-fill
+      setClientId(existingEntry.client_id ?? "");
+      setProjectId(existingEntry.project_id ?? "");
+      setTaskId(existingEntry.task_id ?? "");
+      setNotes(existingEntry.notes ?? "");
+      setTags(existingEntry.tags ?? []);
+      setBillable(existingEntry.billable ?? true);
+      setRateAmount(existingEntry.rate_amount != null ? String(existingEntry.rate_amount) : "");
+      setRateCurrency(existingEntry.rate_currency ?? "EUR");
+      setRateUnit(existingEntry.rate_unit ?? "hour");
+    } else {
+      setClientId(""); setClientName("");
+      setProjectId(""); setProjectName("");
+      setTaskId(""); setTaskName("");
+      setNotes(""); setTags([]);
+      setBillable(true); setRateAmount("");
+      setRateCurrency("EUR"); setRateUnit("hour");
+    }
+
     loadData();
-  }, [open, loadData]);
+  }, [open, loadData, existingEntry]);
+
+  // After data loads, resolve names for edit mode
+  useEffect(() => {
+    if (existingEntry && clientId) {
+      const c = clientsFull.find((x) => x.id === clientId);
+      if (c) setClientName(c.name);
+    }
+    if (existingEntry && projectId) {
+      const p = allProjectsFull.find((x) => x.id === projectId);
+      if (p) setProjectName(p.name);
+    }
+    if (existingEntry && taskId) {
+      const t = tasks.find((x) => x.id === taskId);
+      if (t) setTaskName(t.name);
+    }
+  }, [clientsFull, allProjectsFull, tasks, existingEntry, clientId, projectId, taskId]);
+
+  // Rate resolution when client/project changes
+  useEffect(() => {
+    if (existingEntry) return; // Don't override on edit
+    const selectedClient = clientsFull.find((c) => c.id === clientId);
+    const selectedProject = allProjectsFull.find((p) => p.id === projectId);
+
+    if (selectedProject?.rate) {
+      setRateAmount(String(selectedProject.rate));
+      setRateCurrency(selectedProject.currency ?? selectedClient?.currency ?? "EUR");
+    } else if (selectedClient?.default_rate) {
+      setRateAmount(String(selectedClient.default_rate));
+      setRateCurrency(selectedClient.currency ?? "EUR");
+    }
+  }, [clientId, projectId, clientsFull, allProjectsFull, existingEntry]);
 
   if (!session) return null;
 
-  // Filtered projects for selected client
-  const filteredProjects: ComboboxItem[] = clientId
-    ? allProjects.filter((p) => p.client_id === clientId).map((p) => ({ id: p.id, name: p.name }))
-    : allProjects.map((p) => ({ id: p.id, name: p.name }));
+  const calcBillableValue = (): number | null => {
+    const amount = parseFloat(rateAmount);
+    if (!billable || !amount) return null;
+    if (rateUnit === "hour") return (session.durationMinutes / 60) * amount;
+    if (rateUnit === "project") return amount;
+    if (rateUnit === "word") return amount; // stored, not auto-calculated
+    return null;
+  };
 
   // --- Create handlers ---
   const handleCreateClient = async (name: string): Promise<ComboboxItem | null> => {
     if (user) {
-      const { data, error } = await supabase.from("clients").insert({ name, user_id: user.id }).select("id, name").single();
+      const { data, error } = await supabase.from("clients").insert({ name, user_id: user.id }).select("id, name, default_rate, currency").single();
       if (error || !data) return null;
-      setClients((prev) => [...prev, { id: data.id, name: data.name }]);
+      setClientsFull((prev) => [...prev, data as ClientFull]);
       return { id: data.id, name: data.name };
     } else {
       const id = `local-${Date.now()}`;
-      saveAnonymousClient({ id, name });
-      setClients((prev) => [...prev, { id, name }]);
+      saveAnonymousClient({ id, name, default_rate: null, currency: "EUR" });
+      setClientsFull((prev) => [...prev, { id, name, default_rate: null, currency: null }]);
       return { id, name };
     }
   };
@@ -115,15 +241,15 @@ const AssignmentModal = ({ open, session, onSave, onSkip }: AssignmentModalProps
     if (user) {
       const insert: any = { name, user_id: user.id };
       if (clientId) insert.client_id = clientId;
-      const { data, error } = await supabase.from("projects").insert(insert).select("id, name, client_id").single();
+      const { data, error } = await supabase.from("projects").insert(insert).select("id, name, client_id, rate, currency").single();
       if (error || !data) return null;
-      setAllProjects((prev) => [...prev, { id: data.id, name: data.name, client_id: data.client_id }]);
+      setAllProjectsFull((prev) => [...prev, data as ProjectFull]);
       return { id: data.id, name: data.name };
     } else {
       const id = `local-${Date.now()}`;
-      const proj = { id, name, client_id: clientId || null };
+      const proj = { id, name, client_id: clientId || null, rate: null, currency: null };
       saveAnonymousProject(proj);
-      setAllProjects((prev) => [...prev, proj]);
+      setAllProjectsFull((prev) => [...prev, proj]);
       return { id, name };
     }
   };
@@ -142,17 +268,40 @@ const AssignmentModal = ({ open, session, onSave, onSkip }: AssignmentModalProps
     }
   };
 
-  const handleSave = () => {
-    const tags = tagsInput.split(",").map((t) => t.trim()).filter(Boolean);
-    onSave(session, {
-      clientId: clientId || null,
-      projectId: projectId || null,
-      taskName,
-      notes,
-      tags,
-      billable,
-      rateAmount: rateAmount ? parseFloat(rateAmount) : null,
-    });
+  const handleSave = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const billableValue = calcBillableValue();
+
+      // Update client default_rate if changed
+      if (billable && rateAmount && clientId && user) {
+        const amount = parseFloat(rateAmount);
+        const selectedClient = clientsFull.find((c) => c.id === clientId);
+        if (selectedClient && selectedClient.default_rate !== amount) {
+          await supabase.from("clients").update({ default_rate: amount, currency: rateCurrency }).eq("id", clientId);
+        }
+      }
+
+      onSave(session, {
+        clientId: clientId || null,
+        projectId: projectId || null,
+        taskName,
+        notes,
+        tags,
+        billable,
+        rateAmount: rateAmount ? parseFloat(rateAmount) : null,
+        rateCurrency,
+        rateUnit,
+        billableValue,
+      });
+    } catch (error) {
+      console.error("Save failed:", error);
+      toast.error("Something went wrong. Your session is safe — try again.");
+      setSaving(false);
+      return; // Don't close modal
+    }
+    setSaving(false);
   };
 
   const handleSkipOrDismiss = () => onSkip(session);
@@ -162,7 +311,11 @@ const AssignmentModal = ({ open, session, onSave, onSkip }: AssignmentModalProps
       <DialogContent className="max-w-[400px] rounded-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {session.entryType === "shift" ? "Shift Complete" : "Session Complete"}
+            {existingEntry
+              ? "Edit Entry"
+              : session.entryType === "shift"
+                ? "Shift Complete"
+                : "Session Complete"}
           </DialogTitle>
         </DialogHeader>
 
@@ -199,18 +352,12 @@ const AssignmentModal = ({ open, session, onSave, onSkip }: AssignmentModalProps
               onSelect={(id, name) => {
                 setClientId(id);
                 setClientName(name);
-                // Reset project when client changes
                 setProjectId("");
                 setProjectName("");
               }}
               onCreate={async (name) => {
                 const created = await handleCreateClient(name);
-                if (created) {
-                  setClientId(created.id);
-                  setClientName(created.name);
-                  setProjectId("");
-                  setProjectName("");
-                }
+                if (created) { setClientId(created.id); setClientName(created.name); setProjectId(""); setProjectName(""); }
                 return created;
               }}
             />
@@ -222,14 +369,39 @@ const AssignmentModal = ({ open, session, onSave, onSkip }: AssignmentModalProps
             <Switch checked={billable} onCheckedChange={setBillable} />
           </div>
           {billable && (
-            <div>
-              <Label>Rate (per hour)</Label>
-              <Input
-                type="number"
-                placeholder="0.00"
-                value={rateAmount}
-                onChange={(e) => setRateAmount(e.target.value)}
-              />
+            <div className="flex gap-2">
+              <div className="w-20">
+                <Select value={rateCurrency} onValueChange={setRateCurrency}>
+                  <SelectTrigger className="h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURRENCIES.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1">
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  value={rateAmount}
+                  onChange={(e) => setRateAmount(e.target.value)}
+                />
+              </div>
+              <div className="w-28">
+                <Select value={rateUnit} onValueChange={setRateUnit}>
+                  <SelectTrigger className="h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RATE_UNITS.map((u) => (
+                      <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
 
@@ -241,16 +413,10 @@ const AssignmentModal = ({ open, session, onSave, onSkip }: AssignmentModalProps
               value={projectId}
               displayValue={projectName}
               placeholder="Select project (optional)"
-              onSelect={(id, name) => {
-                setProjectId(id);
-                setProjectName(name);
-              }}
+              onSelect={(id, name) => { setProjectId(id); setProjectName(name); }}
               onCreate={async (name) => {
                 const created = await handleCreateProject(name);
-                if (created) {
-                  setProjectId(created.id);
-                  setProjectName(created.name);
-                }
+                if (created) { setProjectId(created.id); setProjectName(created.name); }
                 return created;
               }}
             />
@@ -261,13 +427,13 @@ const AssignmentModal = ({ open, session, onSave, onSkip }: AssignmentModalProps
             <Label>Task</Label>
             <CreatableCombobox
               items={tasks}
-              value={tasks.find((t) => t.name === taskName)?.id ?? ""}
+              value={taskId}
               displayValue={taskName}
               placeholder="What were you working on?"
-              onSelect={(_id, name) => setTaskName(name)}
+              onSelect={(id, name) => { setTaskId(id); setTaskName(name); }}
               onCreate={async (name) => {
                 const created = await handleCreateTask(name);
-                if (created) setTaskName(created.name);
+                if (created) { setTaskId(created.id); setTaskName(created.name); }
                 return created;
               }}
             />
@@ -277,7 +443,7 @@ const AssignmentModal = ({ open, session, onSave, onSkip }: AssignmentModalProps
           <div>
             <Label>Notes</Label>
             <Textarea
-              placeholder="Add notes…"
+              placeholder="Optional notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
@@ -287,27 +453,30 @@ const AssignmentModal = ({ open, session, onSave, onSkip }: AssignmentModalProps
           {/* Tags */}
           <div>
             <Label>Tags</Label>
-            <Input
-              placeholder="Comma-separated tags"
-              value={tagsInput}
-              onChange={(e) => setTagsInput(e.target.value)}
+            <TagsInput
+              value={tags}
+              onChange={setTags}
+              suggestions={allTags}
             />
           </div>
         </div>
 
         <div className="flex gap-3 mt-4">
-          <Button
-            variant="outline"
-            className="flex-1 rounded-[28px] h-12 font-bold"
-            onClick={handleSkipOrDismiss}
-          >
-            Skip
-          </Button>
+          {!existingEntry && (
+            <Button
+              variant="outline"
+              className="flex-1 rounded-[28px] h-12 font-bold"
+              onClick={handleSkipOrDismiss}
+            >
+              Skip
+            </Button>
+          )}
           <Button
             className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-12 font-bold"
             onClick={handleSave}
+            disabled={saving}
           >
-            Save Entry
+            {existingEntry ? "Update Entry" : "Save Entry"}
           </Button>
         </div>
       </DialogContent>

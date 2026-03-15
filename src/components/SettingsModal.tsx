@@ -29,6 +29,7 @@ const DEFAULTS: Settings = {
   pause_mode: "deduct",
   timer_sound: "chime",
   theme: "light",
+  show_logged_today: true,
 };
 
 const INTEGRATION_LOGOS = [

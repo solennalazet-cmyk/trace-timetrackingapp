@@ -15,7 +15,7 @@ interface CircularTimerProps {
 }
 
 const SIZE = 240;
-const STROKE = 4;
+const STROKE = 6;
 const RADIUS = (SIZE - STROKE * 2) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
@@ -53,7 +53,7 @@ const CircularTimer = ({
           cy={SIZE / 2}
           r={RADIUS}
           fill={filled ? fillColor || "hsl(330, 81%, 60%)" : "transparent"}
-          stroke="hsl(var(--muted))"
+          stroke="hsl(240, 5%, 85%)"
           strokeWidth={STROKE}
         />
         {/* Progress arc */}

@@ -101,7 +101,7 @@ const FocusMode = ({ onComplete }: FocusModeProps) => {
           </div>
           <Button
             onClick={start}
-            className="w-full max-w-[280px] bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base font-semibold"
+            className="w-full max-w-[280px] bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-14 text-[16px] font-bold"
           >
             Start Focus
           </Button>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import StopwatchMode from "@/components/StopwatchMode";
 import FocusMode from "@/components/FocusMode";

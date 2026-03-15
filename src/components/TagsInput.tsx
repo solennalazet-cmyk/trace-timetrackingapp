@@ -95,6 +95,8 @@ const TagsInput = forwardRef<HTMLDivElement, TagsInputProps>(({ value, onChange,
       )}
     </div>
   );
-};
+});
+
+TagsInput.displayName = "TagsInput";
 
 export default TagsInput;

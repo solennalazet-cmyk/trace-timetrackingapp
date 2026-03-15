@@ -340,10 +340,10 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
           )}
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-3 text-foreground">
           {/* Client */}
           <div>
-            <Label>Client</Label>
+            <Label className="text-foreground">Client</Label>
             <CreatableCombobox
               items={clients}
               value={clientId}

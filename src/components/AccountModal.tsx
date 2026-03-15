@@ -29,6 +29,7 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [upgradeNote, setUpgradeNote] = useState(false);
 
   if (!user || !profile) return null;
 
@@ -85,9 +86,17 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
           <p className="text-sm font-medium">Plan: Free Trial</p>
           <Progress value={(trialDaysUsed / 14) * 100} className="h-2" />
           <p className="text-xs text-muted-foreground">{trialDaysLeft} days remaining in your trial.</p>
-          <Button className="w-full bg-primary text-primary-foreground rounded-[28px] h-12 font-bold">
+          <Button
+            className="w-full bg-primary text-primary-foreground rounded-[28px] h-12 font-bold"
+            onClick={() => setUpgradeNote(true)}
+          >
             Upgrade to Pro — €10/month
           </Button>
+          {upgradeNote && (
+            <p className="text-xs text-muted-foreground">
+              Stripe payments coming soon.<br />To activate Pro access, contact us.
+            </p>
+          )}
         </div>
       );
     }
@@ -101,9 +110,17 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
             <p>✓ Unlimited: timer, shift, manual entry, timeline</p>
             <p>✦ Pro features: reports, invoicing, call logging, unlimited clients & projects</p>
           </div>
-          <Button className="w-full bg-primary text-primary-foreground rounded-[28px] h-12 font-bold">
+          <Button
+            className="w-full bg-primary text-primary-foreground rounded-[28px] h-12 font-bold"
+            onClick={() => setUpgradeNote(true)}
+          >
             Upgrade to Pro — €10/month
           </Button>
+          {upgradeNote && (
+            <p className="text-xs text-muted-foreground">
+              Stripe payments coming soon.<br />To activate Pro access, contact us.
+            </p>
+          )}
         </div>
       );
     }

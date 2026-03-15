@@ -14,7 +14,6 @@ const AppLayout = () => {
       <div className="relative max-w-[420px] mx-auto min-h-screen">
         <Header />
         <div className="pt-14">
-          <AnonymousBanner onSignIn={() => setAuthOpen(true)} />
           <TrialBanner />
         </div>
         <main className="pb-20 px-4">

@@ -160,6 +160,9 @@ const StartPage = () => {
         onUnassignedClick={() => {/* TODO: open unassigned panel */}}
       />
 
+      {/* Sign-in link for anonymous users */}
+      <SignInLink />
+
       {/* FAB */}
       <FAB
         onManualEntry={() => {/* TODO: open manual entry modal */}}

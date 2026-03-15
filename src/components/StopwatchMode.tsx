@@ -3,6 +3,8 @@ import CircularTimer from "./CircularTimer";
 import { Button } from "@/components/ui/button";
 import { Pause, Play, Square } from "lucide-react";
 
+const BTN = "rounded-[28px] h-14 text-[16px] font-bold";
+
 interface StopwatchModeProps {
   onStop: (data: { durationMinutes: number; breakMinutes: number; startedAt: string | null }) => void;
 }
@@ -38,7 +40,7 @@ const StopwatchMode = ({ onStop }: StopwatchModeProps) => {
         {status === "idle" && (
           <Button
             onClick={start}
-            className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base font-semibold"
+            className={`flex-1 bg-primary text-primary-foreground hover:bg-primary/90 ${BTN}`}
           >
             Start
           </Button>
@@ -48,14 +50,14 @@ const StopwatchMode = ({ onStop }: StopwatchModeProps) => {
             <Button
               onClick={pause}
               variant="outline"
-              className="flex-1 h-12"
+              className={`flex-1 border-border bg-transparent text-foreground ${BTN}`}
             >
               <Pause className="w-4 h-4 mr-2" />
               Pause
             </Button>
             <Button
               onClick={handleStop}
-              className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 h-12"
+              className={`flex-1 bg-primary text-primary-foreground hover:bg-primary/90 ${BTN}`}
             >
               <Square className="w-4 h-4 mr-2" />
               Stop
@@ -66,7 +68,7 @@ const StopwatchMode = ({ onStop }: StopwatchModeProps) => {
           <>
             <Button
               onClick={resume}
-              className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 h-12"
+              className={`flex-1 bg-primary text-primary-foreground hover:bg-primary/90 ${BTN}`}
             >
               <Play className="w-4 h-4 mr-2" />
               Resume
@@ -74,7 +76,7 @@ const StopwatchMode = ({ onStop }: StopwatchModeProps) => {
             <Button
               onClick={handleStop}
               variant="outline"
-              className="flex-1 h-12"
+              className={`flex-1 border-border bg-transparent text-foreground ${BTN}`}
             >
               <Square className="w-4 h-4 mr-2" />
               Stop

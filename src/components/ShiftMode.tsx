@@ -5,6 +5,8 @@ import { Pause, Play, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInHours } from "date-fns";
 
+const BTN = "rounded-[28px] h-14 text-[16px] font-bold";
+
 interface ShiftModeProps {
   onClockOut: (data: { durationMinutes: number; breakMinutes: number; startedAt: string | null }) => void;
 }
@@ -64,7 +66,7 @@ const ShiftMode = ({ onClockOut }: ShiftModeProps) => {
           <p className="text-xs text-foreground font-medium">
             Your shift has been running for over 24 hours. Did you forget to clock out?
           </p>
-          <Button size="sm" variant="outline" className="mt-2" onClick={handleClockOut}>
+          <Button size="sm" variant="outline" className="mt-2 rounded-[28px]" onClick={handleClockOut}>
             Clock Out
           </Button>
         </div>
@@ -74,27 +76,27 @@ const ShiftMode = ({ onClockOut }: ShiftModeProps) => {
         {status === "idle" && (
           <Button
             onClick={handleClockIn}
-            className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base font-semibold"
+            className={`flex-1 bg-primary text-primary-foreground hover:bg-primary/90 ${BTN}`}
           >
             Clock In
           </Button>
         )}
         {status === "running" && (
           <>
-            <Button onClick={pause} variant="outline" className="flex-1 h-12">
+            <Button onClick={pause} variant="outline" className={`flex-1 border-border bg-transparent text-foreground ${BTN}`}>
               <Pause className="w-4 h-4 mr-2" /> Pause
             </Button>
-            <Button onClick={handleClockOut} className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 h-12">
+            <Button onClick={handleClockOut} className={`flex-1 bg-primary text-primary-foreground hover:bg-primary/90 ${BTN}`}>
               <LogOut className="w-4 h-4 mr-2" /> Clock Out
             </Button>
           </>
         )}
         {status === "paused" && (
           <>
-            <Button onClick={resume} className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 h-12">
+            <Button onClick={resume} className={`flex-1 bg-primary text-primary-foreground hover:bg-primary/90 ${BTN}`}>
               <Play className="w-4 h-4 mr-2" /> Resume
             </Button>
-            <Button onClick={handleClockOut} variant="outline" className="flex-1 h-12">
+            <Button onClick={handleClockOut} variant="outline" className={`flex-1 border-border bg-transparent text-foreground ${BTN}`}>
               <LogOut className="w-4 h-4 mr-2" /> Clock Out
             </Button>
           </>

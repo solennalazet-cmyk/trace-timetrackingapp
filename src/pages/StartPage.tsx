@@ -98,8 +98,7 @@ const StartPage = () => {
     entryType: string = "timer"
   ) => {
     if (data.durationMinutes <= 0) {
-      toast.success("Session too short to save.");
-      return;
+      data.durationMinutes = 1;
     }
     setEditingEntry(null);
     setPendingSession({ ...data, entryType });

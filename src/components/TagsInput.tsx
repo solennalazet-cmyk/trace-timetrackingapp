@@ -1,4 +1,4 @@
-import { useState, useRef, KeyboardEvent } from "react";
+import { useState, useRef, KeyboardEvent, forwardRef } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -8,7 +8,7 @@ interface TagsInputProps {
   suggestions?: string[];
 }
 
-const TagsInput = ({ value, onChange, suggestions = [] }: TagsInputProps) => {
+const TagsInput = forwardRef<HTMLDivElement, TagsInputProps>(({ value, onChange, suggestions = [] }, ref) => {
   const [input, setInput] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -95,6 +95,8 @@ const TagsInput = ({ value, onChange, suggestions = [] }: TagsInputProps) => {
       )}
     </div>
   );
-};
+});
+
+TagsInput.displayName = "TagsInput";
 
 export default TagsInput;

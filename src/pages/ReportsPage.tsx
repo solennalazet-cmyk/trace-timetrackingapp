@@ -324,7 +324,7 @@ const ReportsPage = () => {
 
         <div className={isFree ? "blur-sm pointer-events-none select-none" : ""}>
           {/* Metric cards */}
-          <div className="flex gap-2 overflow-x-auto mb-4 pb-1">
+          <div className="flex gap-2 overflow-x-auto mb-4 pb-2 -mx-1 px-1">
             {[
               { label: "Total hours", value: formatHHMM(totalMins) },
               { label: "Billable", value: formatHHMM(billableMins) },
@@ -333,9 +333,9 @@ const ReportsPage = () => {
               { label: "Invoiced", value: `€${invoicedTotal.toFixed(0)}` },
               { label: "Paid", value: `€${paidTotal.toFixed(0)}` },
             ].map((m) => (
-              <div key={m.label} className="min-w-[100px] p-3 rounded-xl border border-border bg-card shrink-0">
-                <p className="text-xs text-muted-foreground">{m.label}</p>
-                <p className="font-mono text-lg font-bold text-foreground">{m.value}</p>
+              <div key={m.label} className="min-w-[110px] p-3 rounded-xl border border-border bg-card shrink-0">
+                <p className="text-xs text-muted-foreground whitespace-nowrap">{m.label}</p>
+                <p className="font-mono text-lg font-bold text-foreground whitespace-nowrap">{m.value}</p>
               </div>
             ))}
           </div>

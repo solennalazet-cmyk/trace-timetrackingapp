@@ -462,7 +462,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
           </div>
         </div>
 
-        <div className="flex gap-3 mt-4">
+        <DialogFooter>
           {!existingEntry && (
             <Button
               variant="outline"
@@ -479,7 +479,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
           >
             {existingEntry ? "Update Entry" : "Save Entry"}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

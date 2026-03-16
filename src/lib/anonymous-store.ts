@@ -105,7 +105,9 @@ export function setPendingAssignment(entry: any | null) {
   else removeItem(KEYS.pendingAssignment);
 }
 
-// Clear all anonymous data (after migration)
+// Clear all anonymous data (after migration) — never clears active timer sessions
 export function clearAllAnonymousData() {
-  Object.values(KEYS).forEach(removeItem);
+  Object.values(KEYS).forEach((key) => {
+    if (!PROTECTED_KEYS.has(key)) removeItem(key);
+  });
 }

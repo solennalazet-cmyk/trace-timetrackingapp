@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -209,7 +210,7 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[400px] rounded-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[400px] rounded-t-2xl sm:rounded-2xl p-6">
         <DialogHeader>
           <DialogTitle>Manual Entry</DialogTitle>
         </DialogHeader>
@@ -314,10 +315,10 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
           <div><Label>Tags</Label><TagsInput value={tags} onChange={setTags} suggestions={allTags} /></div>
         </div>
 
-        <div className="flex gap-3 mt-4">
+        <DialogFooter>
           <Button variant="outline" className="flex-1 rounded-[28px] h-12 font-bold" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-12 font-bold" onClick={handleSave} disabled={!canSave || saving}>Save Entry</Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

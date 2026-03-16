@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -308,7 +309,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleSkipOrDismiss(); }}>
-      <DialogContent className="max-w-[400px] rounded-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[400px] rounded-t-2xl sm:rounded-2xl p-6">
         <DialogHeader>
           <DialogTitle>
             {existingEntry
@@ -461,7 +462,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
           </div>
         </div>
 
-        <div className="flex gap-3 mt-4">
+        <DialogFooter>
           {!existingEntry && (
             <Button
               variant="outline"
@@ -478,7 +479,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
           >
             {existingEntry ? "Update Entry" : "Save Entry"}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

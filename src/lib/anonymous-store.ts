@@ -13,6 +13,9 @@ const KEYS = {
   pendingAssignment: "trace_pending_assignment",
 } as const;
 
+// Keys that must NEVER be cleared except on explicit user action (stop/discard)
+const PROTECTED_KEYS: Set<string> = new Set([KEYS.activeStopwatch, KEYS.activeShift]);
+
 function getItem<T>(key: string): T | null {
   try {
     const raw = localStorage.getItem(key);
@@ -102,7 +105,9 @@ export function setPendingAssignment(entry: any | null) {
   else removeItem(KEYS.pendingAssignment);
 }
 
-// Clear all anonymous data (after migration)
+// Clear all anonymous data (after migration) — never clears active timer sessions
 export function clearAllAnonymousData() {
-  Object.values(KEYS).forEach(removeItem);
+  Object.values(KEYS).forEach((key) => {
+    if (!PROTECTED_KEYS.has(key)) removeItem(key);
+  });
 }

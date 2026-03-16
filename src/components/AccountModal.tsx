@@ -85,6 +85,7 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
       await supabase.from("invoices").delete().eq("user_id", user.id);
       await supabase.from("profiles").delete().eq("id", user.id);
       await signOut();
+      // Clear localStorage but this is account deletion so clearing everything is fine
       localStorage.clear();
       toast.success("Account deleted.");
       navigate("/");

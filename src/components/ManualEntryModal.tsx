@@ -210,7 +210,7 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[400px] rounded-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[400px] rounded-t-2xl sm:rounded-2xl p-6">
         <DialogHeader>
           <DialogTitle>Manual Entry</DialogTitle>
         </DialogHeader>

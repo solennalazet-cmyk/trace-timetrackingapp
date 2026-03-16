@@ -13,6 +13,9 @@ const KEYS = {
   pendingAssignment: "trace_pending_assignment",
 } as const;
 
+// Keys that must NEVER be cleared except on explicit user action (stop/discard)
+const PROTECTED_KEYS = new Set([KEYS.activeStopwatch, KEYS.activeShift]);
+
 function getItem<T>(key: string): T | null {
   try {
     const raw = localStorage.getItem(key);

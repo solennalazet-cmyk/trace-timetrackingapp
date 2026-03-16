@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { migrateAnonymousData } from "@/lib/migrate-anonymous";
 import { toast } from "sonner";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
+
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 
 interface AuthModalProps {
   open: boolean;
@@ -24,6 +27,11 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showForgot, setShowForgot] = useState(false);
+
+  // Turnstile
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileError, setTurnstileError] = useState(false);
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
   // Sign up fields
   const [fullName, setFullName] = useState("");
@@ -41,6 +49,9 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
 
+  const hasTurnstile = !!TURNSTILE_SITE_KEY;
+  const isDarkMode = document.documentElement.classList.contains("dark");
+
   const resetFields = () => {
     setError("");
     setFullName("");
@@ -52,6 +63,13 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
     setForgotEmail("");
     setForgotSent(false);
     setShowForgot(false);
+    setTurnstileToken(null);
+    setTurnstileError(false);
+  };
+
+  const resetTurnstile = () => {
+    setTurnstileToken(null);
+    turnstileRef.current?.reset();
   };
 
   const handleGoogleSSO = async () => {
@@ -86,11 +104,16 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
       options: {
         data: { full_name: fullName },
         emailRedirectTo: window.location.origin,
+        ...(hasTurnstile && turnstileToken ? { captchaToken: turnstileToken } : {}),
       },
     });
 
+    resetTurnstile();
+
     if (authError) {
-      if (authError.message.includes("already registered")) {
+      if (authError.message.includes("captcha")) {
+        setError("Security check failed. Please try again.");
+      } else if (authError.message.includes("already registered")) {
         setError("An account with this email exists. Log in instead?");
       } else {
         setError(authError.message);
@@ -117,10 +140,19 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
     const { data, error: authError } = await supabase.auth.signInWithPassword({
       email: loginEmail,
       password: loginPassword,
+      options: {
+        ...(hasTurnstile && turnstileToken ? { captchaToken: turnstileToken } : {}),
+      },
     });
 
+    resetTurnstile();
+
     if (authError) {
-      setError("Incorrect email or password.");
+      if (authError.message.includes("captcha")) {
+        setError("Security check failed. Please try again.");
+      } else {
+        setError("Incorrect email or password.");
+      }
       setLoading(false);
       return;
     }
@@ -141,15 +173,45 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
 
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       forgotEmail,
-      { redirectTo: `${window.location.origin}/reset-password` }
+      {
+        redirectTo: `${window.location.origin}/reset-password`,
+        ...(hasTurnstile && turnstileToken ? { captchaToken: turnstileToken } : {}),
+      }
     );
 
+    resetTurnstile();
+
     if (resetError) {
-      setError("Something went wrong. Check your connection.");
+      if (resetError.message.includes("captcha")) {
+        setError("Security check failed. Please try again.");
+      } else {
+        setError("Something went wrong. Check your connection.");
+      }
     } else {
       setForgotSent(true);
     }
     setLoading(false);
+  };
+
+  const isSubmitDisabled = loading || (hasTurnstile && !turnstileToken);
+
+  const renderTurnstile = () => {
+    if (!hasTurnstile) return null;
+    return (
+      <div className="flex flex-col items-center gap-1">
+        <Turnstile
+          ref={turnstileRef}
+          siteKey={TURNSTILE_SITE_KEY}
+          onSuccess={(token) => { setTurnstileToken(token); setTurnstileError(false); }}
+          onExpire={() => setTurnstileToken(null)}
+          onError={() => { setTurnstileToken(null); setTurnstileError(true); }}
+          options={{ theme: isDarkMode ? "dark" : "light", size: "normal" }}
+        />
+        {turnstileError && (
+          <p className="text-xs text-destructive">Security check unavailable. Please refresh.</p>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -161,7 +223,7 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
       }}
     >
       <DialogContent className="max-w-[380px] rounded-2xl p-0 overflow-hidden">
-        <Tabs value={tab} onValueChange={(v) => { setTab(v); setError(""); setShowForgot(false); }} className="w-full">
+        <Tabs value={tab} onValueChange={(v) => { setTab(v); setError(""); setShowForgot(false); resetTurnstile(); }} className="w-full">
           <div className="px-6 pt-6">
             <TabsList className="w-full grid grid-cols-2">
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -222,7 +284,8 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                   <Label htmlFor="confirmPassword">Confirm Password</Label>
                   <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
                 </div>
-                <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={loading}>
+                {renderTurnstile()}
+                <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitDisabled}>
                   {loading ? "Creating account…" : "Create account"}
                 </Button>
               </form>
@@ -244,7 +307,8 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                       <Label htmlFor="forgotEmail">Email</Label>
                       <Input id="forgotEmail" type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required />
                     </div>
-                    <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={loading}>
+                    {renderTurnstile()}
+                    <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitDisabled}>
                       {loading ? "Sending…" : "Send reset link"}
                     </Button>
                     <button type="button" className="text-sm text-muted-foreground underline w-full text-center" onClick={() => setShowForgot(false)}>
@@ -270,7 +334,8 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                   <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setShowForgot(true)}>
                     Forgot password?
                   </button>
-                  <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={loading}>
+                  {renderTurnstile()}
+                  <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitDisabled}>
                     {loading ? "Signing in…" : "Sign in"}
                   </Button>
                 </form>

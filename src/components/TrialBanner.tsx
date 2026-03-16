@@ -1,8 +1,12 @@
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { differenceInDays } from "date-fns";
+import { redirectToCheckout } from "@/lib/stripe";
+import { toast } from "sonner";
 
 const TrialBanner = () => {
   const { profile } = useAuth();
+  const [loading, setLoading] = useState(false);
 
   if (!profile || profile.plan !== "trial" || !profile.trial_started_at) return null;
 
@@ -15,6 +19,16 @@ const TrialBanner = () => {
 
   const isUrgent = daysRemaining <= 3;
 
+  const handleUpgrade = async () => {
+    setLoading(true);
+    try {
+      await redirectToCheckout();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to start checkout.");
+      setLoading(false);
+    }
+  };
+
   return (
     <div
       className={`px-4 py-2 text-center text-xs font-medium ${
@@ -26,12 +40,17 @@ const TrialBanner = () => {
       {isUrgent ? (
         <span>
           Only {daysRemaining} day{daysRemaining !== 1 ? "s" : ""} left.{" "}
-          <button className="underline font-semibold">Upgrade now</button> to keep full access.
+          <button className="underline font-semibold" onClick={handleUpgrade} disabled={loading}>
+            {loading ? "Redirecting…" : "Upgrade now"}
+          </button>{" "}
+          to keep full access.
         </span>
       ) : (
         <span>
           {daysRemaining} day{daysRemaining !== 1 ? "s" : ""} left in your free trial ·{" "}
-          <button className="underline">See what's included in Pro →</button>
+          <button className="underline" onClick={handleUpgrade} disabled={loading}>
+            {loading ? "Redirecting…" : "See what's included in Pro →"}
+          </button>
         </span>
       )}
     </div>

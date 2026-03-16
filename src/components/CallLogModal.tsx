@@ -300,10 +300,10 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
           <div><Label>Notes</Label><Textarea placeholder="Optional notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></div>
         </div>
 
-        <div className="flex gap-3 mt-4">
+        <DialogFooter>
           <Button variant="outline" className="flex-1 rounded-[28px] h-12 font-bold" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-12 font-bold" onClick={handleSave} disabled={durationMinutes <= 0 || saving}>Save Call</Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

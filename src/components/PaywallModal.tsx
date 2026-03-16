@@ -5,6 +5,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Crown } from "lucide-react";
+import { redirectToCheckout } from "@/lib/stripe";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 interface PaywallModalProps {
   open: boolean;
@@ -19,10 +22,25 @@ const PaywallModal = ({
   headline = "This is a Pro feature",
   body = "Upgrade to Trace Pro to unlock unlimited clients, projects, reports, invoicing, and more.",
 }: PaywallModalProps) => {
-  const [showNote, setShowNote] = useState(false);
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+
+  const handleUpgrade = async () => {
+    if (!user) {
+      toast.error("Please sign in first.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await redirectToCheckout();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to start checkout.");
+      setLoading(false);
+    }
+  };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) setShowNote(false); onOpenChange(o); }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[380px] rounded-2xl text-center">
         <div className="flex justify-center mb-4">
           <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
@@ -33,15 +51,11 @@ const PaywallModal = ({
         <p className="text-sm text-muted-foreground mt-2">{body}</p>
         <Button
           className="w-full mt-4 bg-primary text-primary-foreground hover:bg-primary/90"
-          onClick={() => setShowNote(true)}
+          onClick={handleUpgrade}
+          disabled={loading}
         >
-          Upgrade to Pro — €10/month
+          {loading ? "Redirecting…" : "Upgrade to Pro — €10/month"}
         </Button>
-        {showNote && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Stripe payments coming soon.<br />To activate Pro access, contact us.
-          </p>
-        )}
         <button
           className="text-sm text-muted-foreground underline mt-2"
           onClick={() => onOpenChange(false)}

@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { redirectToCheckout, redirectToPortal } from "@/lib/stripe";
 
 interface AccountModalProps {
   open: boolean;
@@ -29,7 +30,8 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
-  const [upgradeNote, setUpgradeNote] = useState(false);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   if (!user || !profile) return null;
 
@@ -37,7 +39,6 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
     day: "numeric", month: "long", year: "numeric",
   });
 
-  // Trial
   const trialDaysUsed = profile.trial_started_at
     ? Math.floor((Date.now() - new Date(profile.trial_started_at).getTime()) / 86400000)
     : 0;
@@ -51,11 +52,30 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
     refreshProfile();
   };
 
+  const handleUpgrade = async () => {
+    setUpgradeLoading(true);
+    try {
+      await redirectToCheckout();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to start checkout.");
+      setUpgradeLoading(false);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    setPortalLoading(true);
+    try {
+      await redirectToPortal();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to open subscription portal.");
+      setPortalLoading(false);
+    }
+  };
+
   const handleDeleteAccount = async () => {
     if (deleteConfirm !== "DELETE") return;
     setDeleting(true);
     try {
-      // Delete user data
       await supabase.from("time_entries").delete().eq("user_id", user.id);
       await supabase.from("projects").delete().eq("user_id", user.id);
       await supabase.from("clients").delete().eq("user_id", user.id);
@@ -64,7 +84,6 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
       await supabase.from("user_feedback").delete().eq("user_id", user.id);
       await supabase.from("invoices").delete().eq("user_id", user.id);
       await supabase.from("profiles").delete().eq("id", user.id);
-
       await signOut();
       localStorage.clear();
       toast.success("Account deleted.");
@@ -88,15 +107,11 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
           <p className="text-xs text-muted-foreground">{trialDaysLeft} days remaining in your trial.</p>
           <Button
             className="w-full bg-primary text-primary-foreground rounded-[28px] h-12 font-bold"
-            onClick={() => setUpgradeNote(true)}
+            onClick={handleUpgrade}
+            disabled={upgradeLoading}
           >
-            Upgrade to Pro — €10/month
+            {upgradeLoading ? "Redirecting…" : "Upgrade to Pro — €10/month"}
           </Button>
-          {upgradeNote && (
-            <p className="text-xs text-muted-foreground">
-              Stripe payments coming soon.<br />To activate Pro access, contact us.
-            </p>
-          )}
         </div>
       );
     }
@@ -112,15 +127,11 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
           </div>
           <Button
             className="w-full bg-primary text-primary-foreground rounded-[28px] h-12 font-bold"
-            onClick={() => setUpgradeNote(true)}
+            onClick={handleUpgrade}
+            disabled={upgradeLoading}
           >
-            Upgrade to Pro — €10/month
+            {upgradeLoading ? "Redirecting…" : "Upgrade to Pro — €10/month"}
           </Button>
-          {upgradeNote && (
-            <p className="text-xs text-muted-foreground">
-              Stripe payments coming soon.<br />To activate Pro access, contact us.
-            </p>
-          )}
         </div>
       );
     }
@@ -134,8 +145,13 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
               <p className="text-sm font-medium">Payment failed</p>
             </div>
             <p className="text-xs text-muted-foreground">Your last payment could not be processed.</p>
-            <Button variant="outline" className="w-full rounded-[28px] h-10 gap-1">
-              <ExternalLink className="w-3 h-3" /> Update payment method
+            <Button
+              variant="outline"
+              className="w-full rounded-[28px] h-10 gap-1"
+              onClick={handleManageSubscription}
+              disabled={portalLoading}
+            >
+              <ExternalLink className="w-3 h-3" /> {portalLoading ? "Opening…" : "Update payment method"}
             </Button>
           </div>
         );
@@ -152,8 +168,12 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
               <Crown className="w-4 h-4 text-primary" />
             </div>
             <p className="text-xs text-muted-foreground">Access continues until {periodEnd}.</p>
-            <Button className="w-full bg-primary text-primary-foreground rounded-[28px] h-12 font-bold">
-              Resubscribe
+            <Button
+              className="w-full bg-primary text-primary-foreground rounded-[28px] h-12 font-bold"
+              onClick={handleUpgrade}
+              disabled={upgradeLoading}
+            >
+              {upgradeLoading ? "Redirecting…" : "Resubscribe"}
             </Button>
           </div>
         );
@@ -179,8 +199,13 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
           </div>
           <p className="text-xs text-muted-foreground">Status: Active</p>
           <p className="text-xs text-muted-foreground">Next billing: {nextBilling} — €10.00</p>
-          <Button variant="outline" className="w-full rounded-[28px] h-10 gap-1">
-            <ExternalLink className="w-3 h-3" /> Manage Subscription
+          <Button
+            variant="outline"
+            className="w-full rounded-[28px] h-10 gap-1"
+            onClick={handleManageSubscription}
+            disabled={portalLoading}
+          >
+            <ExternalLink className="w-3 h-3" /> {portalLoading ? "Opening…" : "Manage Subscription"}
           </Button>
           <p className="text-[10px] text-muted-foreground text-center">Cancel anytime. Access continues to {nextBilling}.</p>
         </div>

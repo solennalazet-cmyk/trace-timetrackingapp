@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Check, ChevronDown, Plus } from "lucide-react";
+import { Check, ChevronDown, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface ComboboxItem {
@@ -27,6 +27,7 @@ const CreatableCombobox = ({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
+  const [pendingName, setPendingName] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -45,7 +46,6 @@ const CreatableCombobox = ({
     const handler = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false);
-        // Restore display value if user clicked away
         if (!search.trim() && value) {
           setSearch("");
         }
@@ -56,6 +56,13 @@ const CreatableCombobox = ({
       return () => document.removeEventListener("mousedown", handler);
     }
   }, [open, value, search]);
+
+  // Clear pendingName once parent displayValue catches up
+  useEffect(() => {
+    if (pendingName && displayValue === pendingName) {
+      setPendingName("");
+    }
+  }, [displayValue, pendingName]);
 
   const handleFocus = () => {
     setOpen(true);
@@ -73,19 +80,23 @@ const CreatableCombobox = ({
     const name = search.trim();
     if (!name) return;
     setCreating(true);
-    // Set display value immediately so the field never goes blank
-    const optimisticName = name;
+    // Show the typed name immediately while async creation runs
+    setPendingName(name);
     setSearch("");
     setOpen(false);
-    
-    const created = await onCreate(optimisticName);
+
+    const created = await onCreate(name);
     if (created) {
       onSelect(created.id, created.name);
+    } else {
+      // Creation failed — clear pending
+      setPendingName("");
     }
     setCreating(false);
   };
 
-  const inputDisplay = open ? search : displayValue;
+  // Show: search text when open, otherwise pendingName (during creation) or confirmed displayValue
+  const inputDisplay = open ? search : (pendingName || displayValue);
 
   return (
     <div ref={containerRef} className="relative">
@@ -108,8 +119,13 @@ const CreatableCombobox = ({
             if (!open) setOpen(true);
           }}
           onFocus={handleFocus}
+          disabled={creating}
         />
-        <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-1" />
+        {creating ? (
+          <Loader2 className="h-4 w-4 opacity-50 shrink-0 ml-1 animate-spin" />
+        ) : (
+          <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-1" />
+        )}
       </div>
 
       {open && (

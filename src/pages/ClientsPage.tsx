@@ -75,9 +75,11 @@ const ClientsPage = () => {
   const [search, setSearch] = useState("");
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStats[]>([]);
   const [projectStats, setProjectStats] = useState<ProjectStats[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [tasksExpanded, setTasksExpanded] = useState(true);
   const [loading, setLoading] = useState(true);
 
   // Modals

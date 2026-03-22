@@ -118,6 +118,7 @@ const StartPage = () => {
       billing_status: "unbilled",
       client_id: assignment?.clientId || null,
       project_id: assignment?.projectId || null,
+      task_id: assignment?.taskId || null,
       notes: assignment?.notes || null,
       tags: assignment?.tags?.length ? assignment.tags : null,
       rate_amount: assignment?.rateAmount || null,

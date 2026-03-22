@@ -836,14 +836,22 @@ const ReportsPage = () => {
           {/* ═══════════════════════════════════════════
               SECTION 5 — Trash link (only when non-empty)
               ═══════════════════════════════════════════ */}
-          {trashCount > 0 && (
+          {showTrash ? (
+            <TrashView
+              onBack={() => setShowTrash(false)}
+              onCountChange={(c) => setTrashCount(c)}
+            />
+          ) : trashCount > 0 ? (
             <div className="flex justify-center py-4">
-              <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <button
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setShowTrash(true)}
+              >
                 <Trash2 className="w-4 h-4" />
                 Trash · {trashCount} {trashCount === 1 ? "entry" : "entries"}
               </button>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 

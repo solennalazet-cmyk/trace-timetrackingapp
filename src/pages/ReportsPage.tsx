@@ -99,7 +99,9 @@ const ReportsPage = () => {
   const [editSession, setEditSession] = useState<SessionData | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
   const [billingOpen, setBillingOpen] = useState(false);
+  const [billingClientId, setBillingClientId] = useState<string | null>(null);
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [unassignedOpen, setUnassignedOpen] = useState(false);
 
   // Recent activity filters
   const [search, setSearch] = useState("");

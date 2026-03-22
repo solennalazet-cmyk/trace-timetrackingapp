@@ -40,6 +40,7 @@ export interface SessionData {
 export interface AssignmentResult {
   clientId: string | null;
   projectId: string | null;
+  taskId: string | null;
   taskName: string;
   notes: string;
   tags: string[];

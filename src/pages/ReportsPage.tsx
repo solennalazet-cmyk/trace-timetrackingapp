@@ -198,12 +198,20 @@ const ReportsPage = () => {
   // (Client billing summary is now a separate component with its own date range)
 
   // === SECTION 3: Filtered recent activity ===
+  const activityRangeStart = getDateRangeStart(activityRange);
+
+  const activityEntries = useMemo(() => {
+    return rangeEntries.filter((e) => (e.entry_date ?? "") >= activityRangeStart);
+  }, [rangeEntries, activityRangeStart]);
+
   const filteredEntries = useMemo(() => {
-    let result = rangeEntries;
+    let result = activityEntries;
     if (typeFilter !== "all") result = result.filter((e) => e.entry_type === typeFilter);
     if (billableFilter === "billable") result = result.filter((e) => e.billable);
     if (billableFilter === "non-billable") result = result.filter((e) => !e.billable);
     if (clientFilter) result = result.filter((e) => e.client_id === clientFilter);
+    if (projectFilter) result = result.filter((e) => e.project_id === projectFilter);
+    if (taskFilter) result = result.filter((e) => e.task_id === taskFilter);
     if (search) {
       const q = search.toLowerCase();
       result = result.filter((e) =>
@@ -215,7 +223,14 @@ const ReportsPage = () => {
       );
     }
     return result;
-  }, [rangeEntries, typeFilter, billableFilter, clientFilter, search]);
+  }, [activityEntries, typeFilter, billableFilter, clientFilter, projectFilter, taskFilter, search]);
+
+  const activitySummary = useMemo(() => {
+    const totalMins = filteredEntries.reduce((s, e) => s + e.duration_minutes, 0);
+    const billableCount = filteredEntries.filter((e) => e.billable).length;
+    const totalValue = filteredEntries.reduce((s, e) => s + (e.billable_value || 0), 0);
+    return { count: filteredEntries.length, totalMins, billableCount, totalValue };
+  }, [filteredEntries]);
 
   const groupedEntries = useMemo(() => {
     const groups: { date: string; label: string; entries: TimeEntry[] }[] = [];
@@ -234,8 +249,21 @@ const ReportsPage = () => {
     return groups;
   }, [filteredEntries]);
 
-  const hasFilters = typeFilter !== "all" || billableFilter !== "all" || clientFilter !== "" || search !== "";
-  const clearFilters = () => { setSearch(""); setTypeFilter("all"); setBillableFilter("all"); setClientFilter(""); };
+  const hasFilters = typeFilter !== "all" || billableFilter !== "all" || clientFilter !== "" || projectFilter !== "" || taskFilter !== "" || search !== "";
+  const clearFilters = () => { setSearch(""); setTypeFilter("all"); setBillableFilter("all"); setClientFilter(""); setProjectFilter(""); setTaskFilter(""); };
+
+  // Unique projects/tasks for context filters
+  const projectOptions = useMemo(() => {
+    const map: Record<string, string> = {};
+    activityEntries.forEach((e) => { if (e.project_id && e.project_name) map[e.project_id] = e.project_name; });
+    return Object.entries(map).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [activityEntries]);
+
+  const taskOptions = useMemo(() => {
+    const map: Record<string, string> = {};
+    activityEntries.forEach((e) => { if (e.task_id && e.task_name) map[e.task_id] = e.task_name; });
+    return Object.entries(map).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [activityEntries]);
 
   // === SECTION 4: Chart data ===
   const pieData = [

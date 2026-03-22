@@ -34,6 +34,7 @@ export interface TimeEntry {
   rate_currency: string | null;
   rate_unit: string | null;
   billable_value: number | null;
+  billing_status: string | null;
   client_id: string | null;
   project_id: string | null;
   task_id: string | null;

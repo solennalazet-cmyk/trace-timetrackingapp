@@ -76,10 +76,16 @@ const ClientsPage = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [taskEntryCounts, setTaskEntryCounts] = useState<Record<string, number>>({});
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStats[]>([]);
   const [projectStats, setProjectStats] = useState<ProjectStats[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [tasksExpanded, setTasksExpanded] = useState(true);
+  const [addingTask, setAddingTask] = useState(false);
+  const [newTaskName, setNewTaskName] = useState("");
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingTaskName, setEditingTaskName] = useState("");
+  const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Modals

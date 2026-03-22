@@ -5,7 +5,7 @@ import {
 } from "recharts";
 import {
   ChevronDown, ChevronUp, Timer, PenLine, Clock, Phone, ChevronRight, Crown,
-  CreditCard, Download, Trash2, Search,
+  CreditCard, Download, Trash2, Search, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -108,7 +108,9 @@ const ReportsPage = () => {
   const [typeFilter, setTypeFilter] = useState<EntryTypeFilter>("all");
   const [billableFilter, setBillableFilter] = useState<BillableFilter>("all");
   const [clientFilter, setClientFilter] = useState("");
-  const [showRecentActivity, setShowRecentActivity] = useState(true);
+  const [projectFilter, setProjectFilter] = useState("");
+  const [taskFilter, setTaskFilter] = useState("");
+  const [activityRange, setActivityRange] = useState<DateRange>("7days");
   const [showCharts, setShowCharts] = useState(true);
 
   const today = new Date().toISOString().split("T")[0];
@@ -196,12 +198,20 @@ const ReportsPage = () => {
   // (Client billing summary is now a separate component with its own date range)
 
   // === SECTION 3: Filtered recent activity ===
+  const activityRangeStart = getDateRangeStart(activityRange);
+
+  const activityEntries = useMemo(() => {
+    return rangeEntries.filter((e) => (e.entry_date ?? "") >= activityRangeStart);
+  }, [rangeEntries, activityRangeStart]);
+
   const filteredEntries = useMemo(() => {
-    let result = rangeEntries;
+    let result = activityEntries;
     if (typeFilter !== "all") result = result.filter((e) => e.entry_type === typeFilter);
     if (billableFilter === "billable") result = result.filter((e) => e.billable);
     if (billableFilter === "non-billable") result = result.filter((e) => !e.billable);
     if (clientFilter) result = result.filter((e) => e.client_id === clientFilter);
+    if (projectFilter) result = result.filter((e) => e.project_id === projectFilter);
+    if (taskFilter) result = result.filter((e) => e.task_id === taskFilter);
     if (search) {
       const q = search.toLowerCase();
       result = result.filter((e) =>
@@ -213,7 +223,14 @@ const ReportsPage = () => {
       );
     }
     return result;
-  }, [rangeEntries, typeFilter, billableFilter, clientFilter, search]);
+  }, [activityEntries, typeFilter, billableFilter, clientFilter, projectFilter, taskFilter, search]);
+
+  const activitySummary = useMemo(() => {
+    const totalMins = filteredEntries.reduce((s, e) => s + e.duration_minutes, 0);
+    const billableCount = filteredEntries.filter((e) => e.billable).length;
+    const totalValue = filteredEntries.reduce((s, e) => s + (e.billable_value || 0), 0);
+    return { count: filteredEntries.length, totalMins, billableCount, totalValue };
+  }, [filteredEntries]);
 
   const groupedEntries = useMemo(() => {
     const groups: { date: string; label: string; entries: TimeEntry[] }[] = [];
@@ -232,8 +249,21 @@ const ReportsPage = () => {
     return groups;
   }, [filteredEntries]);
 
-  const hasFilters = typeFilter !== "all" || billableFilter !== "all" || clientFilter !== "" || search !== "";
-  const clearFilters = () => { setSearch(""); setTypeFilter("all"); setBillableFilter("all"); setClientFilter(""); };
+  const hasFilters = typeFilter !== "all" || billableFilter !== "all" || clientFilter !== "" || projectFilter !== "" || taskFilter !== "" || search !== "";
+  const clearFilters = () => { setSearch(""); setTypeFilter("all"); setBillableFilter("all"); setClientFilter(""); setProjectFilter(""); setTaskFilter(""); };
+
+  // Unique projects/tasks for context filters
+  const projectOptions = useMemo(() => {
+    const map: Record<string, string> = {};
+    activityEntries.forEach((e) => { if (e.project_id && e.project_name) map[e.project_id] = e.project_name; });
+    return Object.entries(map).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [activityEntries]);
+
+  const taskOptions = useMemo(() => {
+    const map: Record<string, string> = {};
+    activityEntries.forEach((e) => { if (e.task_id && e.task_name) map[e.task_id] = e.task_name; });
+    return Object.entries(map).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [activityEntries]);
 
   // === SECTION 4: Chart data ===
   const pieData = [
@@ -463,94 +493,138 @@ const ReportsPage = () => {
               SECTION 3 — Recent Activity (filterable)
               ═══════════════════════════════════════════ */}
           <div className="mb-6">
-            <button className="flex items-center justify-between w-full mb-2" onClick={() => setShowRecentActivity(!showRecentActivity)}>
+            <div className="mb-2">
               <h3 className="text-sm font-semibold text-foreground">Recent Activity</h3>
-              {showRecentActivity ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-            </button>
+              <p className="text-xs text-muted-foreground">Your entries, filtered by time and context.</p>
+            </div>
 
-            {showRecentActivity && (
-              <>
-                {/* Search */}
-                <div className="relative mb-2">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input className="pl-9 h-9" placeholder="Search entries..." value={search} onChange={(e) => setSearch(e.target.value)} />
-                </div>
+            {/* Date range pills */}
+            <div className="flex gap-1.5 mb-3 overflow-x-auto">
+              {RANGES.map((r) => (
+                <button key={r.key} onClick={() => setActivityRange(r.key)}
+                  className="px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-colors"
+                  style={{
+                    background: activityRange === r.key ? "hsl(var(--primary))" : "transparent",
+                    color: activityRange === r.key ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
+                    border: activityRange === r.key ? "none" : "1px solid hsl(var(--border))",
+                  }}
+                >{r.label}</button>
+              ))}
+            </div>
 
-                {/* Filter chips */}
-                <div className="flex gap-1.5 flex-wrap mb-3">
-                  {(["all", "timer", "manual", "shift", "call"] as EntryTypeFilter[]).map((t) => (
-                    <button key={t} onClick={() => setTypeFilter(t)}
-                      className="px-2.5 py-1 text-[11px] font-medium rounded-full transition-colors"
-                      style={{
-                        background: typeFilter === t ? "hsl(var(--primary))" : "transparent",
-                        color: typeFilter === t ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
-                        border: typeFilter === t ? "none" : "1px solid hsl(var(--border))",
-                      }}
-                    >{t === "all" ? "All" : t.charAt(0).toUpperCase() + t.slice(1)}</button>
+            {/* Context filters */}
+            <div className="flex gap-1.5 flex-wrap mb-3">
+              {/* Client filter */}
+              {clientFilter ? (
+                <button onClick={() => setClientFilter("")}
+                  className="px-2.5 py-1 text-[11px] font-medium rounded-full flex items-center gap-1 bg-primary text-primary-foreground"
+                >
+                  {clients[clientFilter] ?? "Client"} <X className="w-3 h-3" />
+                </button>
+              ) : Object.keys(clients).length > 0 ? (
+                <select value="" onChange={(e) => setClientFilter(e.target.value)}
+                  className="px-2.5 py-1 text-[11px] font-medium rounded-full border border-border bg-transparent text-muted-foreground appearance-none cursor-pointer"
+                >
+                  <option value="">Client ▾</option>
+                  {Object.entries(clients).map(([id, name]) => (
+                    <option key={id} value={id}>{name}</option>
                   ))}
-                  {(["all", "billable", "non-billable"] as BillableFilter[]).map((b) => (
-                    <button key={b} onClick={() => setBillableFilter(b)}
-                      className="px-2.5 py-1 text-[11px] font-medium rounded-full transition-colors"
-                      style={{
-                        background: billableFilter === b ? "hsl(var(--primary))" : "transparent",
-                        color: billableFilter === b ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
-                        border: billableFilter === b ? "none" : "1px solid hsl(var(--border))",
-                      }}
-                    >{b === "all" ? "All" : b === "billable" ? "Billable" : "Non-billable"}</button>
+                </select>
+              ) : null}
+
+              {/* Project filter */}
+              {projectFilter ? (
+                <button onClick={() => setProjectFilter("")}
+                  className="px-2.5 py-1 text-[11px] font-medium rounded-full flex items-center gap-1 bg-primary text-primary-foreground"
+                >
+                  {projects[projectFilter] ?? "Project"} <X className="w-3 h-3" />
+                </button>
+              ) : projectOptions.length > 0 ? (
+                <select value="" onChange={(e) => setProjectFilter(e.target.value)}
+                  className="px-2.5 py-1 text-[11px] font-medium rounded-full border border-border bg-transparent text-muted-foreground appearance-none cursor-pointer"
+                >
+                  <option value="">Project ▾</option>
+                  {projectOptions.map(([id, name]) => (
+                    <option key={id} value={id}>{name}</option>
                   ))}
-                  {Object.keys(clients).length > 0 && (
-                    <select
-                      value={clientFilter}
-                      onChange={(e) => setClientFilter(e.target.value)}
-                      className="px-2.5 py-1 text-[11px] font-medium rounded-full border border-border bg-transparent text-muted-foreground"
-                    >
-                      <option value="">All clients</option>
-                      {Object.entries(clients).map(([id, name]) => (
-                        <option key={id} value={id}>{name}</option>
-                      ))}
-                    </select>
-                  )}
-                  {hasFilters && (
-                    <button onClick={clearFilters} className="text-[11px] text-primary hover:underline">Clear</button>
-                  )}
-                </div>
+                </select>
+              ) : null}
 
-                {/* Entries grouped by date */}
-                {filteredEntries.length === 0 && (
-                  <div className="text-center py-6">
-                    <p className="text-sm text-muted-foreground">No entries match your filters.</p>
-                    {hasFilters && <button onClick={clearFilters} className="text-xs text-primary hover:underline mt-1">Clear filters</button>}
-                  </div>
-                )}
+              {/* Task filter */}
+              {taskFilter ? (
+                <button onClick={() => setTaskFilter("")}
+                  className="px-2.5 py-1 text-[11px] font-medium rounded-full flex items-center gap-1 bg-primary text-primary-foreground"
+                >
+                  {tasks[taskFilter] ?? "Task"} <X className="w-3 h-3" />
+                </button>
+              ) : taskOptions.length > 0 ? (
+                <select value="" onChange={(e) => setTaskFilter(e.target.value)}
+                  className="px-2.5 py-1 text-[11px] font-medium rounded-full border border-border bg-transparent text-muted-foreground appearance-none cursor-pointer"
+                >
+                  <option value="">Task ▾</option>
+                  {taskOptions.map(([id, name]) => (
+                    <option key={id} value={id}>{name}</option>
+                  ))}
+                </select>
+              ) : null}
 
-                {groupedEntries.map((group) => (
-                  <div key={group.date} className="mb-3">
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{group.label}</p>
-                    <div className="space-y-0.5">
-                      {group.entries.map((entry) => (
+              {hasFilters && (
+                <button onClick={clearFilters} className="text-[11px] text-primary hover:underline">Clear all</button>
+              )}
+            </div>
+
+            {/* Summary line */}
+            <p className="text-xs text-muted-foreground mb-3">
+              {activitySummary.count} {activitySummary.count === 1 ? "entry" : "entries"} · {formatHHMM(activitySummary.totalMins)} · {activitySummary.billableCount} billable · €{activitySummary.totalValue.toFixed(0)}
+            </p>
+
+            {/* Entry cards */}
+            {filteredEntries.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-sm text-muted-foreground">No entries match your filters.</p>
+                {hasFilters && <button onClick={clearFilters} className="text-xs text-primary hover:underline mt-1">Clear filters</button>}
+              </div>
+            ) : (
+              groupedEntries.map((group) => (
+                <div key={group.date} className="mb-3">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{group.label}</p>
+                  <div className="space-y-1.5">
+                    {group.entries.map((entry) => {
+                      const sym = CURRENCY_SYMBOLS[entry.rate_currency ?? "EUR"] ?? "€";
+                      return (
                         <button key={entry.id}
-                          className="flex items-center w-full text-left px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors gap-3"
+                          className="w-full text-left p-3 rounded-xl border border-border bg-card hover:bg-muted/50 transition-colors"
                           onClick={() => { setSelectedEntry(entry); setDetailOpen(true); }}
                         >
-                          {entryTypeIcon(entry.entry_type)}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground truncate">
-                              {entry.client_name ? `${entry.client_name}${entry.project_name ? ` — ${entry.project_name}` : ""}` : <span className="text-muted-foreground">Unassigned</span>}
-                            </p>
-                            {entry.task_name && <p className="text-xs text-muted-foreground truncate">{entry.task_name}</p>}
-                            {entry.notes && <p className="text-xs text-muted-foreground truncate">{entry.notes}</p>}
+                          <div className="flex items-center justify-between mb-0.5">
+                            <div className="flex items-center gap-2 min-w-0">
+                              {entryTypeIcon(entry.entry_type)}
+                              <span className="text-xs text-muted-foreground">
+                                {entry.entry_date ? new Date(entry.entry_date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) : ""}
+                              </span>
+                              <span className="text-xs text-muted-foreground">·</span>
+                              <span className="text-sm font-medium text-foreground truncate">
+                                {entry.client_name || <span className="text-muted-foreground italic">Unassigned</span>}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0 ml-2">
+                              <span className="font-mono text-sm font-semibold text-foreground">{formatHHMM(entry.duration_minutes)}</span>
+                              <span className={`w-2 h-2 rounded-full ${entry.billable ? "bg-primary" : "bg-muted-foreground/30"}`} />
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="font-mono text-sm font-semibold">{formatHHMM(entry.duration_minutes)}</span>
-                            <span className={`w-2 h-2 rounded-full ${entry.billable ? "bg-primary" : "bg-muted-foreground/30"}`} />
-                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground pl-6">
+                            {entry.project_name && <span>{entry.project_name}</span>}
+                            {entry.project_name && entry.billable && entry.rate_amount && <span>·</span>}
+                            {entry.billable && entry.rate_amount && (
+                              <span>{sym}{entry.rate_amount}/{entry.rate_unit ?? "hr"}</span>
+                            )}
                           </div>
                         </button>
-                      ))}
-                    </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </>
+                </div>
+              ))
             )}
           </div>
 

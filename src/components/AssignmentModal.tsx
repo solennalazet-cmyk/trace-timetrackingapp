@@ -140,7 +140,8 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
         .from("time_entries")
         .select("tags")
         .eq("user_id", user.id)
-        .not("tags", "is", null);
+        .not("tags", "is", null)
+        .is("deleted_at", null);
       const tagSet = new Set<string>();
       tagEntries?.forEach((e) => e.tags?.forEach((t: string) => tagSet.add(t)));
       setAllTags(Array.from(tagSet).sort());

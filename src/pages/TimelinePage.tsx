@@ -113,6 +113,7 @@ const TimelinePage = () => {
           .select("id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, billable_value, client_id, project_id, task_id")
           .eq("user_id", user.id)
           .gte("entry_date", rangeStart)
+          .is("deleted_at", null)
           .order("entry_date", { ascending: false }),
         supabase.from("clients").select("id, name").eq("user_id", user.id),
         supabase.from("projects").select("id, name").eq("user_id", user.id),

@@ -104,9 +104,9 @@ const ReportsPage = () => {
     if (user) {
       const [{ data: te }, { data: re }, { data: c }, { data: p }, { data: t }, { data: inv }] = await Promise.all([
         supabase.from("time_entries").select("id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, billable_value, client_id, project_id, task_id, billing_status")
-          .eq("user_id", user.id).eq("entry_date", today),
+          .eq("user_id", user.id).eq("entry_date", today).is("deleted_at", null),
         supabase.from("time_entries").select("id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, billable_value, client_id, project_id, task_id, billing_status")
-          .eq("user_id", user.id).gte("entry_date", rangeStart).order("entry_date", { ascending: false }),
+          .eq("user_id", user.id).gte("entry_date", rangeStart).is("deleted_at", null).order("entry_date", { ascending: false }),
         supabase.from("clients").select("id, name").eq("user_id", user.id),
         supabase.from("projects").select("id, name").eq("user_id", user.id),
         supabase.from("tasks").select("id, name").eq("user_id", user.id),

@@ -83,6 +83,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
         .eq("user_id", user.id)
         .is("client_id", null)
         .is("project_id", null)
+        .is("deleted_at", null)
         .order("entry_date", { ascending: false });
       setEntries((data ?? []) as UnassignedEntry[]);
       onCountChange((data ?? []).length);
@@ -105,7 +106,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
 
   const handleDelete = async (id: string) => {
     if (user) {
-      await supabase.from("time_entries").delete().eq("id", id);
+      await supabase.from("time_entries").update({ deleted_at: new Date().toISOString() }).eq("id", id);
     }
     setEntries((prev) => prev.filter((e) => e.id !== id));
     onCountChange(entries.length - 1);

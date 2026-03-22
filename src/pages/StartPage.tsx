@@ -47,7 +47,8 @@ const StartPage = () => {
         .from("time_entries")
         .select("duration_minutes")
         .eq("user_id", user.id)
-        .eq("entry_date", today);
+        .eq("entry_date", today)
+        .is("deleted_at", null);
       setTodayCount(todayEntries?.length ?? 0);
       setTodayMinutes(todayEntries?.reduce((sum, e) => sum + (e.duration_minutes || 0), 0) ?? 0);
 
@@ -56,7 +57,8 @@ const StartPage = () => {
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
         .is("client_id", null)
-        .is("project_id", null);
+        .is("project_id", null)
+        .is("deleted_at", null);
       setUnassignedCount(count ?? 0);
     } else {
       const entries = getAnonymousEntries();

@@ -93,7 +93,7 @@ const EntryDetailSheet = ({ entry, open, onOpenChange, onEdit, onDeleted }: Entr
 
   const handleDelete = async () => {
     if (user) {
-      await supabase.from("time_entries").delete().eq("id", entry.id);
+      await supabase.from("time_entries").update({ deleted_at: new Date().toISOString() }).eq("id", entry.id);
     }
     onDeleted(entry.id);
     onOpenChange(false);

@@ -98,7 +98,7 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
       setClientsFull((c ?? []) as ClientFull[]);
       setAllProjectsFull((p ?? []) as ProjectFull[]);
       setTasks((t ?? []).map((x) => ({ id: x.id, name: x.name })));
-      const { data: tagEntries } = await supabase.from("time_entries").select("tags").eq("user_id", user.id).not("tags", "is", null);
+      const { data: tagEntries } = await supabase.from("time_entries").select("tags").eq("user_id", user.id).not("tags", "is", null).is("deleted_at", null);
       const tagSet = new Set<string>();
       tagEntries?.forEach((e) => e.tags?.forEach((t: string) => tagSet.add(t)));
       setAllTags(Array.from(tagSet).sort());

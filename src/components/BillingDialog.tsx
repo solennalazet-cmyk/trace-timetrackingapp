@@ -50,7 +50,7 @@ const BillingDialog = ({ open, onOpenChange, onComplete }: BillingDialogProps) =
       const { data: clients } = await supabase.from("clients").select("id, name, currency").eq("user_id", user.id);
       const { data: entries } = await supabase.from("time_entries")
         .select("client_id, duration_minutes, billable_value")
-        .eq("user_id", user.id).eq("billing_status", "unbilled").not("client_id", "is", null);
+        .eq("user_id", user.id).eq("billing_status", "unbilled").not("client_id", "is", null).is("deleted_at", null);
 
       const map: Record<string, { hours: number; amount: number; count: number }> = {};
       entries?.forEach((e) => {
@@ -95,6 +95,7 @@ const BillingDialog = ({ open, onOpenChange, onComplete }: BillingDialogProps) =
           .select("id, entry_date, duration_minutes, billable_value, notes, rate_amount, rate_unit")
           .eq("user_id", user.id).eq("client_id", client.id)
           .eq("billing_status", "unbilled")
+          .is("deleted_at", null)
           .gte("entry_date", fromStr).lte("entry_date", toStr);
 
         if (!entries || entries.length === 0) continue;

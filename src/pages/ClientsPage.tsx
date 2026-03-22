@@ -106,7 +106,8 @@ const ClientsPage = () => {
         .select("client_id, project_id, duration_minutes, billable_value")
         .eq("user_id", user.id)
         .gte("entry_date", monthStart)
-        .not("client_id", "is", null);
+        .not("client_id", "is", null)
+        .is("deleted_at", null);
 
       const statsMap: Record<string, { hours: number; value: number }> = {};
       const projStatsMap: Record<string, { hours: number; value: number }> = {};

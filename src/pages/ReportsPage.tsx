@@ -433,58 +433,31 @@ const ReportsPage = () => {
           {/* ═══════════════════════════════════════════
               SECTION 2 — Client Billing Summary
               ═══════════════════════════════════════════ */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-foreground">Client Billing</h3>
-              {isPro && (
-                <Button size="sm" className="bg-primary text-primary-foreground rounded-full h-8 px-4 text-xs font-bold gap-1" onClick={() => setBillingOpen(true)}>
-                  <CreditCard className="w-3.5 h-3.5" /> Bill Clients
-                </Button>
-              )}
+          <ClientBillingSummary
+            allEntries={rangeEntries}
+            clients={clients}
+            projects={projects}
+            isPro={isPro}
+            onBillClient={(clientId) => {
+              setBillingClientId(clientId);
+              setBillingOpen(true);
+            }}
+            onOpenUnassigned={() => setUnassignedOpen(true)}
+          />
+
+          {/* Invoice totals row */}
+          {(invoicedTotal > 0 || paidTotal > 0) && (
+            <div className="flex gap-2 mb-6">
+              <div className="flex-1 p-2.5 rounded-xl border border-border bg-card">
+                <p className="text-[10px] text-muted-foreground">Invoiced</p>
+                <p className="font-mono text-base font-bold text-foreground">€{invoicedTotal.toFixed(0)}</p>
+              </div>
+              <div className="flex-1 p-2.5 rounded-xl border border-border bg-card">
+                <p className="text-[10px] text-muted-foreground">Paid</p>
+                <p className="font-mono text-base font-bold text-foreground">€{paidTotal.toFixed(0)}</p>
+              </div>
             </div>
-
-            {clientBillingSummary.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">No entries in this period.</p>
-            ) : (
-              <div className="space-y-2">
-                {clientBillingSummary.map((c, i) => {
-                  const sym = CURRENCY_SYMBOLS[c.currency] ?? "€";
-                  return (
-                    <div key={c.id} className="p-3 rounded-xl border border-border bg-card">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.id === "unassigned" ? "hsl(240 5% 75%)" : CLIENT_COLORS[i % CLIENT_COLORS.length] }} />
-                          <span className="text-sm font-medium text-foreground">{c.name}</span>
-                        </div>
-                        <span className="font-mono text-sm font-semibold text-foreground">{formatHHMM(Math.round(c.hours * 60))}</span>
-                      </div>
-                      <div className="flex gap-3 text-xs text-muted-foreground">
-                        <span>Billable: {c.billableHours.toFixed(1)}h</span>
-                        <span>Value: {sym}{c.value.toFixed(2)}</span>
-                        {c.unbilledValue > 0 && (
-                          <span className="text-primary font-medium">Unbilled: {sym}{c.unbilledValue.toFixed(2)}</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Invoice totals row */}
-            {(invoicedTotal > 0 || paidTotal > 0) && (
-              <div className="flex gap-2 mt-3">
-                <div className="flex-1 p-2.5 rounded-xl border border-border bg-card">
-                  <p className="text-[10px] text-muted-foreground">Invoiced</p>
-                  <p className="font-mono text-base font-bold text-foreground">€{invoicedTotal.toFixed(0)}</p>
-                </div>
-                <div className="flex-1 p-2.5 rounded-xl border border-border bg-card">
-                  <p className="text-[10px] text-muted-foreground">Paid</p>
-                  <p className="font-mono text-base font-bold text-foreground">€{paidTotal.toFixed(0)}</p>
-                </div>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* ═══════════════════════════════════════════
               SECTION 3 — Recent Activity (filterable)

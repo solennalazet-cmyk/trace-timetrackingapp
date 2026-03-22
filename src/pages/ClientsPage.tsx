@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Search, Plus, Users, ChevronDown, ChevronUp, Mail, Hash, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, Briefcase, ChevronDown, ChevronUp, Mail, Hash, Pencil, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -38,6 +38,11 @@ interface Project {
   currency: string | null;
 }
 
+interface Task {
+  id: string;
+  name: string;
+}
+
 interface MonthlyStats {
   clientId: string;
   hours: number;
@@ -70,9 +75,11 @@ const ClientsPage = () => {
   const [search, setSearch] = useState("");
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStats[]>([]);
   const [projectStats, setProjectStats] = useState<ProjectStats[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [tasksExpanded, setTasksExpanded] = useState(true);
   const [loading, setLoading] = useState(true);
 
   // Modals
@@ -91,12 +98,14 @@ const ClientsPage = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     if (user) {
-      const [{ data: c }, { data: p }] = await Promise.all([
+      const [{ data: c }, { data: p }, { data: tk }] = await Promise.all([
         supabase.from("clients").select("id, name, email, nif, currency, default_rate").eq("user_id", user.id).order("name"),
         supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", user.id),
+        supabase.from("tasks").select("id, name").eq("user_id", user.id).order("name"),
       ]);
       setClients((c ?? []) as Client[]);
       setProjects((p ?? []) as Project[]);
+      setTasks((tk ?? []) as Task[]);
 
       // Monthly stats
       const now = new Date();
@@ -132,15 +141,29 @@ const ClientsPage = () => {
       setProjects(ap.map((p: any) => ({ id: p.id, name: p.name, client_id: p.client_id ?? null, rate: p.rate ?? null, currency: p.currency ?? null })));
       setMonthlyStats([]);
       setProjectStats([]);
+      setTasks([]);
     }
     setLoading(false);
   }, [user]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const q = search.toLowerCase();
+  const matchingProjectIds = new Set(
+    projects.filter((p) => p.name.toLowerCase().includes(q)).map((p) => p.id)
+  );
+  const matchingProjectClientIds = new Set(
+    projects.filter((p) => p.name.toLowerCase().includes(q) && p.client_id).map((p) => p.client_id!)
+  );
+  const filteredTasks = tasks.filter((t) => t.name.toLowerCase().includes(q));
+
   const filtered = clients.filter((c) => {
-    const q = search.toLowerCase();
-    return c.name.toLowerCase().includes(q) || (c.nif ?? "").toLowerCase().includes(q) || (c.email ?? "").toLowerCase().includes(q);
+    if (!q) return true;
+    // Direct client match
+    if (c.name.toLowerCase().includes(q) || (c.nif ?? "").toLowerCase().includes(q) || (c.email ?? "").toLowerCase().includes(q)) return true;
+    // Client has a matching project
+    if (matchingProjectClientIds.has(c.id)) return true;
+    return false;
   });
 
   const getClientStats = (id: string) => monthlyStats.find((s) => s.clientId === id);
@@ -258,7 +281,7 @@ const ClientsPage = () => {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           className="pl-9"
-          placeholder="Search clients..."
+          placeholder="Search clients, projects, tasks..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -276,7 +299,7 @@ const ClientsPage = () => {
       {/* Empty state */}
       {clients.length === 0 && !search && (
         <div className="flex flex-col items-center justify-center py-16 gap-3">
-          <Users className="w-12 h-12 text-muted-foreground opacity-30" />
+          <Briefcase className="w-12 h-12 text-muted-foreground opacity-30" />
           <p className="text-muted-foreground text-sm text-center">
             No clients yet.<br />Add your first client to start tracking billable work.
           </p>
@@ -288,8 +311,8 @@ const ClientsPage = () => {
       )}
 
       {/* No search results */}
-      {clients.length > 0 && filtered.length === 0 && search && (
-        <p className="text-center text-sm text-muted-foreground py-8">No clients match your search.</p>
+      {search && filtered.length === 0 && filteredTasks.length === 0 && (
+        <p className="text-center text-sm text-muted-foreground py-8">No results match your search.</p>
       )}
 
       {/* Client cards */}
@@ -418,6 +441,33 @@ const ClientsPage = () => {
           );
         })}
       </div>
+
+      {/* Tasks section */}
+      {((!search && tasks.length > 0) || (search && filteredTasks.length > 0)) && (
+        <div className="mt-6">
+          <button
+            className="flex items-center justify-between w-full mb-2"
+            onClick={() => setTasksExpanded(!tasksExpanded)}
+          >
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Tasks ({search ? filteredTasks.length : tasks.length})
+            </h3>
+            {tasksExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+          </button>
+          {tasksExpanded && (
+            <div className="space-y-1">
+              {(search ? filteredTasks : tasks).map((task) => (
+                <div
+                  key={task.id}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-border bg-card"
+                >
+                  <span className="text-sm text-foreground">{task.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Client Form Modal */}
       <ClientFormModal

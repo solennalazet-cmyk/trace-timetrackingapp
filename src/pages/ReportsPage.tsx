@@ -5,9 +5,10 @@ import {
 } from "recharts";
 import {
   ChevronDown, ChevronUp, Timer, PenLine, Clock, Phone, ChevronRight, Crown,
-  CreditCard, Download, Flame,
+  CreditCard, Download, Trash2, Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getAnonymousEntries } from "@/lib/anonymous-store";
@@ -72,13 +73,15 @@ const entryTypeIcon = (type: string | null) => {
   }
 };
 
+type EntryTypeFilter = "all" | "timer" | "manual" | "shift" | "call";
+type BillableFilter = "all" | "billable" | "non-billable";
+
 const ReportsPage = () => {
   const { user, profile } = useAuth();
   const isFree = profile?.plan === "free";
   const isPro = profile?.plan === "pro" || profile?.plan === "trial";
 
-  const [range, setRange] = useState<DateRange>("30days");
-  const [showLoggedToday, setShowLoggedToday] = useState(true);
+  const [range, setRange] = useState<DateRange>("7days");
   const [todayEntries, setTodayEntries] = useState<TimeEntry[]>([]);
   const [rangeEntries, setRangeEntries] = useState<TimeEntry[]>([]);
   const [clients, setClients] = useState<Record<string, string>>({});
@@ -95,6 +98,14 @@ const ReportsPage = () => {
   const [assignOpen, setAssignOpen] = useState(false);
   const [billingOpen, setBillingOpen] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
+
+  // Recent activity filters
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<EntryTypeFilter>("all");
+  const [billableFilter, setBillableFilter] = useState<BillableFilter>("all");
+  const [clientFilter, setClientFilter] = useState("");
+  const [showRecentActivity, setShowRecentActivity] = useState(true);
+  const [showCharts, setShowCharts] = useState(true);
 
   const today = new Date().toISOString().split("T")[0];
   const rangeStart = getDateRangeStart(range);
@@ -151,24 +162,102 @@ const ReportsPage = () => {
 
   // Today summary
   const todayMins = todayEntries.reduce((s, e) => s + e.duration_minutes, 0);
-  const todayBillable = todayEntries.filter((e) => e.billable).length;
 
-  // Chart data
+  // === SECTION 1: Stacked bar chart data ===
+  const clientIds = useMemo(() => [...new Set(rangeEntries.map((e) => e.client_id).filter(Boolean))] as string[], [rangeEntries]);
+  const hasUnassigned = rangeEntries.some((e) => !e.client_id);
+
+  const stackedChartData = useMemo(() => {
+    const days = getDaysInRange(rangeStart);
+    const colorMap: Record<string, string> = {};
+    clientIds.forEach((id, i) => { colorMap[id] = CLIENT_COLORS[i % CLIENT_COLORS.length]; });
+    colorMap["unassigned"] = "hsl(240 5% 75%)";
+
+    return days.map((day) => {
+      const dayEntries = rangeEntries.filter((e) => e.entry_date === day);
+      const row: any = {
+        date: day,
+        label: new Date(day + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+        _total: dayEntries.reduce((s, e) => s + e.duration_minutes / 60, 0),
+      };
+      clientIds.forEach((cid) => {
+        row[cid] = dayEntries.filter((e) => e.client_id === cid).reduce((s, e) => s + e.duration_minutes / 60, 0);
+      });
+      const unassigned = dayEntries.filter((e) => !e.client_id).reduce((s, e) => s + e.duration_minutes / 60, 0);
+      if (unassigned > 0) row["unassigned"] = unassigned;
+      return row;
+    });
+  }, [rangeEntries, rangeStart, clientIds]);
+
+  // === SECTION 2: Client billing summary ===
+  const clientBillingSummary = useMemo(() => {
+    const map: Record<string, { hours: number; billableHours: number; value: number; unbilledValue: number; currency: string }> = {};
+    rangeEntries.forEach((e) => {
+      const key = e.client_id ?? "unassigned";
+      if (!map[key]) map[key] = { hours: 0, billableHours: 0, value: 0, unbilledValue: 0, currency: e.rate_currency ?? "EUR" };
+      map[key].hours += e.duration_minutes / 60;
+      if (e.billable) {
+        map[key].billableHours += e.duration_minutes / 60;
+        map[key].value += e.billable_value || 0;
+        if (e.billing_status === "unbilled") {
+          map[key].unbilledValue += e.billable_value || 0;
+        }
+      }
+    });
+    return Object.entries(map)
+      .map(([id, d]) => ({
+        id,
+        name: id === "unassigned" ? "Unassigned" : (clients[id] ?? "Unknown"),
+        ...d,
+      }))
+      .sort((a, b) => b.hours - a.hours);
+  }, [rangeEntries, clients]);
+
+  // === SECTION 3: Filtered recent activity ===
+  const filteredEntries = useMemo(() => {
+    let result = rangeEntries;
+    if (typeFilter !== "all") result = result.filter((e) => e.entry_type === typeFilter);
+    if (billableFilter === "billable") result = result.filter((e) => e.billable);
+    if (billableFilter === "non-billable") result = result.filter((e) => !e.billable);
+    if (clientFilter) result = result.filter((e) => e.client_id === clientFilter);
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter((e) =>
+        (e.client_name ?? "").toLowerCase().includes(q) ||
+        (e.project_name ?? "").toLowerCase().includes(q) ||
+        (e.task_name ?? "").toLowerCase().includes(q) ||
+        (e.notes ?? "").toLowerCase().includes(q) ||
+        (e.tags ?? []).some((t) => t.toLowerCase().includes(q))
+      );
+    }
+    return result;
+  }, [rangeEntries, typeFilter, billableFilter, clientFilter, search]);
+
+  const groupedEntries = useMemo(() => {
+    const groups: { date: string; label: string; entries: TimeEntry[] }[] = [];
+    const dateMap = new Map<string, TimeEntry[]>();
+    filteredEntries.forEach((e) => {
+      const d = e.entry_date ?? "unknown";
+      if (!dateMap.has(d)) dateMap.set(d, []);
+      dateMap.get(d)!.push(e);
+    });
+    const sortedDates = [...dateMap.keys()].sort((a, b) => b.localeCompare(a));
+    sortedDates.forEach((d) => {
+      const dateObj = new Date(d + "T00:00:00");
+      const label = dateObj.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+      groups.push({ date: d, label, entries: dateMap.get(d)! });
+    });
+    return groups;
+  }, [filteredEntries]);
+
+  const hasFilters = typeFilter !== "all" || billableFilter !== "all" || clientFilter !== "" || search !== "";
+  const clearFilters = () => { setSearch(""); setTypeFilter("all"); setBillableFilter("all"); setClientFilter(""); };
+
+  // === SECTION 4: Chart data ===
   const pieData = [
     { name: "Billable", value: billableMins, fill: "hsl(45 93% 58%)" },
     { name: "Non-billable", value: nonBillableMins, fill: "hsl(240 5% 75%)" },
   ].filter((d) => d.value > 0);
-
-  const clientHoursData = useMemo(() => {
-    const map: Record<string, number> = {};
-    rangeEntries.forEach((e) => {
-      const key = e.client_id ?? "unassigned";
-      map[key] = (map[key] || 0) + e.duration_minutes / 60;
-    });
-    return Object.entries(map)
-      .map(([id, hours]) => ({ name: id === "unassigned" ? "Unassigned" : (clients[id] ?? "Unknown"), hours: +hours.toFixed(1) }))
-      .sort((a, b) => b.hours - a.hours);
-  }, [rangeEntries, clients]);
 
   const projectHoursData = useMemo(() => {
     const map: Record<string, { hours: number; clientName: string }> = {};
@@ -255,46 +344,6 @@ const ReportsPage = () => {
 
   return (
     <div className="pb-24 px-4 overflow-x-hidden">
-      {/* Logged Today */}
-      <div className="mb-4">
-        <button className="flex items-center justify-between w-full mb-2" onClick={() => setShowLoggedToday(!showLoggedToday)}>
-          <div>
-            <h2 className="text-base font-semibold text-foreground">Logged Today</h2>
-            <p className="text-xs text-muted-foreground">Entries saved today, whenever the work happened.</p>
-          </div>
-          {showLoggedToday ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-        </button>
-
-        {showLoggedToday && (
-          <>
-            <p className="text-xs text-muted-foreground mb-2">
-              {todayEntries.length} {todayEntries.length === 1 ? "entry" : "entries"} · {formatHHMM(todayMins)} · {todayBillable} billable
-            </p>
-            {todayEntries.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Nothing logged yet today.</p>
-            ) : (
-              <div className="space-y-1">
-                {todayEntries.map((entry) => (
-                  <button key={entry.id} className="flex items-center w-full text-left px-3 py-2.5 rounded-lg hover:bg-muted/50 gap-3 min-w-0"
-                    onClick={() => { setSelectedEntry(entry); setDetailOpen(true); }}>
-                    {entryTypeIcon(entry.entry_type)}
-                    <div className="flex-1 min-w-0 overflow-hidden">
-                      <p className="text-sm font-medium truncate text-foreground">
-                        {entry.client_name ? `${entry.client_name}${entry.project_name ? ` — ${entry.project_name}` : ""}` : <span className="italic text-muted-foreground">Unassigned</span>}
-                      </p>
-                      {entry.task_name && <p className="text-xs text-muted-foreground truncate">{entry.task_name}</p>}
-                    </div>
-                    <span className="font-mono text-sm font-semibold shrink-0">{formatHHMM(entry.duration_minutes)}</span>
-                    <span className={`w-2 h-2 rounded-full shrink-0 ${entry.billable ? "bg-primary" : "bg-muted-foreground/30"}`} />
-                    <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
       {/* Date range filter */}
       <div className="flex gap-1 mb-4 overflow-x-auto">
         {RANGES.map((r) => (
@@ -324,123 +373,322 @@ const ReportsPage = () => {
         )}
 
         <div className={isFree ? "blur-sm pointer-events-none select-none" : ""}>
-          {/* Metric cards */}
-          <div className="flex gap-2 overflow-x-auto mb-4 pb-2 -mx-1 px-1">
-            {[
-              { label: "Total hours", value: formatHHMM(totalMins) },
-              { label: "Billable", value: formatHHMM(billableMins) },
-              { label: "Non-billable", value: formatHHMM(nonBillableMins) },
-              { label: "Est. value", value: `€${billableValue.toFixed(0)}` },
-              { label: "Invoiced", value: `€${invoicedTotal.toFixed(0)}` },
-              { label: "Paid", value: `€${paidTotal.toFixed(0)}` },
-            ].map((m) => (
-              <div key={m.label} className="min-w-[110px] p-3 rounded-xl border border-border bg-card shrink-0">
-                <p className="text-xs text-muted-foreground whitespace-nowrap">{m.label}</p>
-                <p className="font-mono text-lg font-bold text-foreground whitespace-nowrap">{m.value}</p>
-              </div>
-            ))}
-          </div>
 
-          {/* Bill Clients CTA */}
-          {isPro && (
-            <Button className="w-full bg-primary text-primary-foreground rounded-[28px] h-12 font-bold mb-4 gap-2" onClick={() => setBillingOpen(true)}>
-              <CreditCard className="w-4 h-4" /> Bill Clients
-            </Button>
-          )}
+          {/* ═══════════════════════════════════════════
+              SECTION 1 — Timeline Chart (Stacked Bar)
+              ═══════════════════════════════════════════ */}
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-foreground mb-3">Timeline</h3>
 
-          {/* Billable vs Non-billable */}
-          {pieData.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-foreground mb-2">Billable vs Non-billable</h3>
-              <div className="flex items-center gap-4">
-                <ResponsiveContainer width={120} height={120}>
-                  <PieChart>
-                    <Pie data={pieData} innerRadius={35} outerRadius={55} dataKey="value" stroke="none">
-                      {pieData.map((d, i) => <Cell key={i} fill={d.fill} />)}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="space-y-1">
-                  {pieData.map((d) => (
-                    <div key={d.name} className="flex items-center gap-2 text-xs">
-                      <div className="w-2.5 h-2.5 rounded-full" style={{ background: d.fill }} />
-                      {d.name}: {formatHHMM(d.value)} ({totalMins > 0 ? Math.round((d.value / totalMins) * 100) : 0}%)
+            {/* Metric cards row */}
+            <div className="flex gap-2 overflow-x-auto mb-3 pb-1 -mx-1 px-1">
+              {[
+                { label: "Total", value: formatHHMM(totalMins) },
+                { label: "Billable", value: formatHHMM(billableMins) },
+                { label: "Non-billable", value: formatHHMM(nonBillableMins) },
+                { label: "Est. value", value: `€${billableValue.toFixed(0)}` },
+              ].map((m) => (
+                <div key={m.label} className="min-w-[90px] p-2.5 rounded-xl border border-border bg-card shrink-0">
+                  <p className="text-[10px] text-muted-foreground whitespace-nowrap">{m.label}</p>
+                  <p className="font-mono text-base font-bold text-foreground whitespace-nowrap">{m.value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Stacked bar chart */}
+            {stackedChartData.length > 0 && (
+              <>
+                <div className="w-full overflow-x-auto" style={{ minHeight: 200 }}>
+                  <div style={{ minWidth: Math.max(stackedChartData.length * 32, 300) }}>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <BarChart data={stackedChartData} barCategoryGap="20%">
+                        <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                        <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={30} tickFormatter={(v) => `${v}h`} />
+                        <Tooltip
+                          contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
+                          formatter={(value: number, name: string) => {
+                            const label = name === "unassigned" ? "Unassigned" : (clients[name] ?? name);
+                            return [`${value.toFixed(1)}h`, label];
+                          }}
+                          labelFormatter={(label) => label}
+                        />
+                        {clientIds.map((cid, i) => (
+                          <Bar key={cid} dataKey={cid} stackId="a" fill={CLIENT_COLORS[i % CLIENT_COLORS.length]}
+                            radius={i === clientIds.length - 1 && !hasUnassigned ? [3, 3, 0, 0] : undefined}
+                            name={cid} />
+                        ))}
+                        {hasUnassigned && (
+                          <Bar dataKey="unassigned" stackId="a" fill="hsl(240 5% 75%)" radius={[3, 3, 0, 0]} name="unassigned" />
+                        )}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Legend */}
+                <div className="flex flex-wrap gap-3 mt-2">
+                  {clientIds.map((cid, i) => (
+                    <div key={cid} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ background: CLIENT_COLORS[i % CLIENT_COLORS.length] }} />
+                      {clients[cid] ?? "Unknown"}
                     </div>
                   ))}
+                  {hasUnassigned && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ background: "hsl(240 5% 75%)" }} />
+                      Unassigned
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {stackedChartData.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-6">No data for this period.</p>
+            )}
+          </div>
+
+          {/* ═══════════════════════════════════════════
+              SECTION 2 — Client Billing Summary
+              ═══════════════════════════════════════════ */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-foreground">Client Billing</h3>
+              {isPro && (
+                <Button size="sm" className="bg-primary text-primary-foreground rounded-full h-8 px-4 text-xs font-bold gap-1" onClick={() => setBillingOpen(true)}>
+                  <CreditCard className="w-3.5 h-3.5" /> Bill Clients
+                </Button>
+              )}
+            </div>
+
+            {clientBillingSummary.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No entries in this period.</p>
+            ) : (
+              <div className="space-y-2">
+                {clientBillingSummary.map((c, i) => {
+                  const sym = CURRENCY_SYMBOLS[c.currency] ?? "€";
+                  return (
+                    <div key={c.id} className="p-3 rounded-xl border border-border bg-card">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.id === "unassigned" ? "hsl(240 5% 75%)" : CLIENT_COLORS[i % CLIENT_COLORS.length] }} />
+                          <span className="text-sm font-medium text-foreground">{c.name}</span>
+                        </div>
+                        <span className="font-mono text-sm font-semibold text-foreground">{formatHHMM(Math.round(c.hours * 60))}</span>
+                      </div>
+                      <div className="flex gap-3 text-xs text-muted-foreground">
+                        <span>Billable: {c.billableHours.toFixed(1)}h</span>
+                        <span>Value: {sym}{c.value.toFixed(2)}</span>
+                        {c.unbilledValue > 0 && (
+                          <span className="text-primary font-medium">Unbilled: {sym}{c.unbilledValue.toFixed(2)}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Invoice totals row */}
+            {(invoicedTotal > 0 || paidTotal > 0) && (
+              <div className="flex gap-2 mt-3">
+                <div className="flex-1 p-2.5 rounded-xl border border-border bg-card">
+                  <p className="text-[10px] text-muted-foreground">Invoiced</p>
+                  <p className="font-mono text-base font-bold text-foreground">€{invoicedTotal.toFixed(0)}</p>
+                </div>
+                <div className="flex-1 p-2.5 rounded-xl border border-border bg-card">
+                  <p className="text-[10px] text-muted-foreground">Paid</p>
+                  <p className="font-mono text-base font-bold text-foreground">€{paidTotal.toFixed(0)}</p>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          {/* Hours by Client */}
-          {clientHoursData.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-foreground mb-2">Hours by Client</h3>
-              <ResponsiveContainer width="100%" height={clientHoursData.length * 36 + 20}>
-                <BarChart data={clientHoursData} layout="vertical" margin={{ left: 0, right: 10 }}>
-                  <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}h`} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
-                  <Tooltip formatter={(v: number) => [`${v.toFixed(1)}h`]} />
-                  <Bar dataKey="hours" radius={[0, 4, 4, 0]}>
-                    {clientHoursData.map((_, i) => <Cell key={i} fill={CLIENT_COLORS[i % CLIENT_COLORS.length]} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
+          {/* ═══════════════════════════════════════════
+              SECTION 3 — Recent Activity (filterable)
+              ═══════════════════════════════════════════ */}
+          <div className="mb-6">
+            <button className="flex items-center justify-between w-full mb-2" onClick={() => setShowRecentActivity(!showRecentActivity)}>
+              <h3 className="text-sm font-semibold text-foreground">Recent Activity</h3>
+              {showRecentActivity ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+            </button>
 
-          {/* Hours by Project */}
-          {projectHoursData.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-foreground mb-2">Hours by Project</h3>
-              <ResponsiveContainer width="100%" height={projectHoursData.length * 36 + 20}>
-                <BarChart data={projectHoursData} layout="vertical" margin={{ left: 0, right: 10 }}>
-                  <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}h`} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
-                  <Tooltip formatter={(v: number) => [`${v.toFixed(1)}h`]} />
-                  <Bar dataKey="hours" radius={[0, 4, 4, 0]}>
-                    {projectHoursData.map((_, i) => <Cell key={i} fill={CLIENT_COLORS[i % CLIENT_COLORS.length]} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
+            {showRecentActivity && (
+              <>
+                {/* Search */}
+                <div className="relative mb-2">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input className="pl-9 h-9" placeholder="Search entries..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                </div>
 
-          {/* Daily Activity */}
-          {dailyData.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-foreground mb-2">Daily Activity</h3>
-              <ResponsiveContainer width="100%" height={180}>
-                <LineChart data={dailyData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="date" tick={{ fontSize: 9 }} />
-                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}h`} width={30} />
-                  <Tooltip formatter={(v: number) => [`${v.toFixed(1)}h`]} />
-                  <Line type="monotone" dataKey="hours" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          )}
+                {/* Filter chips */}
+                <div className="flex gap-1.5 flex-wrap mb-3">
+                  {(["all", "timer", "manual", "shift", "call"] as EntryTypeFilter[]).map((t) => (
+                    <button key={t} onClick={() => setTypeFilter(t)}
+                      className="px-2.5 py-1 text-[11px] font-medium rounded-full transition-colors"
+                      style={{
+                        background: typeFilter === t ? "hsl(var(--primary))" : "transparent",
+                        color: typeFilter === t ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
+                        border: typeFilter === t ? "none" : "1px solid hsl(var(--border))",
+                      }}
+                    >{t === "all" ? "All" : t.charAt(0).toUpperCase() + t.slice(1)}</button>
+                  ))}
+                  {(["all", "billable", "non-billable"] as BillableFilter[]).map((b) => (
+                    <button key={b} onClick={() => setBillableFilter(b)}
+                      className="px-2.5 py-1 text-[11px] font-medium rounded-full transition-colors"
+                      style={{
+                        background: billableFilter === b ? "hsl(var(--primary))" : "transparent",
+                        color: billableFilter === b ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
+                        border: billableFilter === b ? "none" : "1px solid hsl(var(--border))",
+                      }}
+                    >{b === "all" ? "All" : b === "billable" ? "Billable" : "Non-billable"}</button>
+                  ))}
+                  {Object.keys(clients).length > 0 && (
+                    <select
+                      value={clientFilter}
+                      onChange={(e) => setClientFilter(e.target.value)}
+                      className="px-2.5 py-1 text-[11px] font-medium rounded-full border border-border bg-transparent text-muted-foreground"
+                    >
+                      <option value="">All clients</option>
+                      {Object.entries(clients).map(([id, name]) => (
+                        <option key={id} value={id}>{name}</option>
+                      ))}
+                    </select>
+                  )}
+                  {hasFilters && (
+                    <button onClick={clearFilters} className="text-[11px] text-primary hover:underline">Clear</button>
+                  )}
+                </div>
 
-          {/* Break Patterns */}
-          {breakEntries.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-foreground mb-2">Time You Stepped Away</h3>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { label: "Avg break / day", value: `${Math.round(avgBreakPerDay)}m` },
-                  { label: "Break % of total", value: `${breakPct.toFixed(1)}%` },
-                  { label: "Total break time", value: formatHHMM(totalBreakMins) },
-                  { label: "Longest break", value: `${longestBreak}m` },
-                ].map((s) => (
-                  <div key={s.label} className="p-3 rounded-xl border border-border bg-card">
-                    <p className="text-xs text-muted-foreground">{s.label}</p>
-                    <p className="font-mono text-lg font-bold">{s.value}</p>
+                {/* Entries grouped by date */}
+                {filteredEntries.length === 0 && (
+                  <div className="text-center py-6">
+                    <p className="text-sm text-muted-foreground">No entries match your filters.</p>
+                    {hasFilters && <button onClick={clearFilters} className="text-xs text-primary hover:underline mt-1">Clear filters</button>}
+                  </div>
+                )}
+
+                {groupedEntries.map((group) => (
+                  <div key={group.date} className="mb-3">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{group.label}</p>
+                    <div className="space-y-0.5">
+                      {group.entries.map((entry) => (
+                        <button key={entry.id}
+                          className="flex items-center w-full text-left px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors gap-3"
+                          onClick={() => { setSelectedEntry(entry); setDetailOpen(true); }}
+                        >
+                          {entryTypeIcon(entry.entry_type)}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">
+                              {entry.client_name ? `${entry.client_name}${entry.project_name ? ` — ${entry.project_name}` : ""}` : <span className="text-muted-foreground">Unassigned</span>}
+                            </p>
+                            {entry.task_name && <p className="text-xs text-muted-foreground truncate">{entry.task_name}</p>}
+                            {entry.notes && <p className="text-xs text-muted-foreground truncate">{entry.notes}</p>}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="font-mono text-sm font-semibold">{formatHHMM(entry.duration_minutes)}</span>
+                            <span className={`w-2 h-2 rounded-full ${entry.billable ? "bg-primary" : "bg-muted-foreground/30"}`} />
+                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 ))}
-              </div>
-            </div>
-          )}
+              </>
+            )}
+          </div>
+
+          {/* ═══════════════════════════════════════════
+              SECTION 4 — Charts
+              ═══════════════════════════════════════════ */}
+          <div className="mb-6">
+            <button className="flex items-center justify-between w-full mb-3" onClick={() => setShowCharts(!showCharts)}>
+              <h3 className="text-sm font-semibold text-foreground">Charts & Insights</h3>
+              {showCharts ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+            </button>
+
+            {showCharts && (
+              <>
+                {/* Billable vs Non-billable */}
+                {pieData.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Billable vs Non-billable</h4>
+                    <div className="flex items-center gap-4">
+                      <ResponsiveContainer width={120} height={120}>
+                        <PieChart>
+                          <Pie data={pieData} innerRadius={35} outerRadius={55} dataKey="value" stroke="none">
+                            {pieData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="space-y-1">
+                        {pieData.map((d) => (
+                          <div key={d.name} className="flex items-center gap-2 text-xs text-foreground">
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ background: d.fill }} />
+                            {d.name}: {formatHHMM(d.value)} ({totalMins > 0 ? Math.round((d.value / totalMins) * 100) : 0}%)
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Hours by Project */}
+                {projectHoursData.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Hours by Project</h4>
+                    <ResponsiveContainer width="100%" height={projectHoursData.length * 36 + 20}>
+                      <BarChart data={projectHoursData} layout="vertical" margin={{ left: 0, right: 10 }}>
+                        <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}h`} />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
+                        <Tooltip formatter={(v: number) => [`${v.toFixed(1)}h`]} />
+                        <Bar dataKey="hours" radius={[0, 4, 4, 0]}>
+                          {projectHoursData.map((_, i) => <Cell key={i} fill={CLIENT_COLORS[i % CLIENT_COLORS.length]} />)}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+
+                {/* Daily Activity line */}
+                {dailyData.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Daily Activity</h4>
+                    <ResponsiveContainer width="100%" height={160}>
+                      <LineChart data={dailyData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="date" tick={{ fontSize: 9 }} />
+                        <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}h`} width={30} />
+                        <Tooltip formatter={(v: number) => [`${v.toFixed(1)}h`]} />
+                        <Line type="monotone" dataKey="hours" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+
+                {/* Break Patterns */}
+                {breakEntries.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Time You Stepped Away</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { label: "Avg break / day", value: `${Math.round(avgBreakPerDay)}m` },
+                        { label: "Break % of total", value: `${breakPct.toFixed(1)}%` },
+                        { label: "Total break time", value: formatHHMM(totalBreakMins) },
+                        { label: "Longest break", value: `${longestBreak}m` },
+                      ].map((s) => (
+                        <div key={s.label} className="p-3 rounded-xl border border-border bg-card">
+                          <p className="text-xs text-muted-foreground">{s.label}</p>
+                          <p className="font-mono text-lg font-bold text-foreground">{s.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
 
           {/* Export buttons */}
           <div className="flex gap-2 mb-6">
@@ -460,7 +708,7 @@ const ReportsPage = () => {
                 {invoices.map((inv) => (
                   <div key={inv.id} className={`flex items-center justify-between px-3 py-2.5 rounded-lg border border-border ${inv.status === "void" ? "opacity-50 line-through" : ""}`}>
                     <div>
-                      <p className="text-sm font-medium">{clients[inv.client_id] ?? "Unknown"}</p>
+                      <p className="text-sm font-medium text-foreground">{clients[inv.client_id] ?? "Unknown"}</p>
                       <p className="text-xs text-muted-foreground">{new Date(inv.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -478,6 +726,16 @@ const ReportsPage = () => {
               </div>
             </div>
           )}
+
+          {/* ═══════════════════════════════════════════
+              SECTION 5 — Trash link
+              ═══════════════════════════════════════════ */}
+          <div className="flex justify-center py-4">
+            <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <Trash2 className="w-4 h-4" />
+              View Trash
+            </button>
+          </div>
         </div>
       </div>
 

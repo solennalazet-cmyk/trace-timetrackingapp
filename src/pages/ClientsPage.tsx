@@ -282,6 +282,51 @@ const ClientsPage = () => {
     loadData();
   };
 
+  // --- Task handlers ---
+  const handleAddTask = async () => {
+    const name = newTaskName.trim();
+    if (!name) return;
+    // Duplicate check
+    if (tasks.some((t) => t.name.toLowerCase() === name.toLowerCase())) {
+      toast.error("A task with that name already exists.");
+      return;
+    }
+    if (user) {
+      const { error } = await supabase.from("tasks").insert({ name, user_id: user.id });
+      if (error) { toast.error("Failed to add task."); return; }
+    }
+    setAddingTask(false);
+    setNewTaskName("");
+    toast.success("Task added.");
+    loadData();
+  };
+
+  const handleRenameTask = async (taskId: string) => {
+    const name = editingTaskName.trim();
+    if (!name) return;
+    if (tasks.some((t) => t.id !== taskId && t.name.toLowerCase() === name.toLowerCase())) {
+      toast.error("A task with that name already exists.");
+      return;
+    }
+    if (user) {
+      await supabase.from("tasks").update({ name }).eq("id", taskId);
+    }
+    setEditingTaskId(null);
+    toast.success("Task renamed.");
+    loadData();
+  };
+
+  const handleDeleteTask = async () => {
+    if (!deleteTaskId) return;
+    if (user) {
+      await supabase.from("time_entries").update({ task_id: null }).eq("task_id", deleteTaskId);
+      await supabase.from("tasks").delete().eq("id", deleteTaskId);
+    }
+    setDeleteTaskId(null);
+    toast.success("Task deleted.");
+    loadData();
+  };
+
   const sym = (currency: string | null) => CURRENCY_SYMBOLS[currency ?? "EUR"] ?? "€";
 
   if (loading) {

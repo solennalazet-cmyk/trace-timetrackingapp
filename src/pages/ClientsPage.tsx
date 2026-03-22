@@ -113,16 +113,17 @@ const ClientsPage = () => {
       setProjects((p ?? []) as Project[]);
       setTasks((tk ?? []) as Task[]);
 
-      // Monthly stats
+      // Monthly stats + task entry counts
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-      const { data: entries } = await supabase
-        .from("time_entries")
-        .select("client_id, project_id, duration_minutes, billable_value")
-        .eq("user_id", user.id)
-        .gte("entry_date", monthStart)
-        .not("client_id", "is", null)
-        .is("deleted_at", null);
+      const [{ data: entries }, { data: taskEntries }] = await Promise.all([
+        supabase.from("time_entries")
+          .select("client_id, project_id, duration_minutes, billable_value")
+          .eq("user_id", user.id).gte("entry_date", monthStart).not("client_id", "is", null).is("deleted_at", null),
+        supabase.from("time_entries")
+          .select("task_id")
+          .eq("user_id", user.id).not("task_id", "is", null).is("deleted_at", null),
+      ]);
 
       const statsMap: Record<string, { hours: number; value: number }> = {};
       const projStatsMap: Record<string, { hours: number; value: number }> = {};

@@ -10,6 +10,7 @@ import AssignmentModal, { SessionData, AssignmentResult, ExistingEntry } from "@
 import ManualEntryModal from "@/components/ManualEntryModal";
 import CallLogModal from "@/components/CallLogModal";
 import UnassignedPanel from "@/components/UnassignedPanel";
+import TodayEntriesSheet from "@/components/TodayEntriesSheet";
 import WelcomeBanner from "@/components/WelcomeBanner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";

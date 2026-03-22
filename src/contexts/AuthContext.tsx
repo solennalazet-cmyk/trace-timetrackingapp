@@ -71,6 +71,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session);
       if (session?.user) {
         fetchProfile(session.user.id);
+        // Auto-delete entries trashed more than 7 days ago
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        supabase
+          .from("time_entries")
+          .delete()
+          .eq("user_id", session.user.id)
+          .lt("deleted_at", sevenDaysAgo.toISOString())
+          .not("deleted_at", "is", null)
+          .then(() => {});
       }
       setLoading(false);
     });

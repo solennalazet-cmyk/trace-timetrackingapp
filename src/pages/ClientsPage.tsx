@@ -98,12 +98,14 @@ const ClientsPage = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     if (user) {
-      const [{ data: c }, { data: p }] = await Promise.all([
+      const [{ data: c }, { data: p }, { data: tk }] = await Promise.all([
         supabase.from("clients").select("id, name, email, nif, currency, default_rate").eq("user_id", user.id).order("name"),
         supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", user.id),
+        supabase.from("tasks").select("id, name").eq("user_id", user.id).order("name"),
       ]);
       setClients((c ?? []) as Client[]);
       setProjects((p ?? []) as Project[]);
+      setTasks((tk ?? []) as Task[]);
 
       // Monthly stats
       const now = new Date();

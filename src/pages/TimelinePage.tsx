@@ -110,7 +110,7 @@ const TimelinePage = () => {
     if (user) {
       const [{ data: e }, { data: c }, { data: p }, { data: t }] = await Promise.all([
         supabase.from("time_entries")
-          .select("id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, billable_value, client_id, project_id, task_id")
+          .select("id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, billable_value, client_id, project_id, task_id, client:clients(id, name), project:projects(id, name), task:tasks(id, name)")
           .eq("user_id", user.id)
           .gte("entry_date", rangeStart)
           .is("deleted_at", null)
@@ -131,11 +131,11 @@ const TimelinePage = () => {
       setProjects(projectMap);
       setTasksMap(taskMap);
 
-      setEntries((e ?? []).map((entry) => ({
+      setEntries((e ?? []).map((entry: any) => ({
         ...entry,
-        client_name: entry.client_id ? clientMap[entry.client_id] : undefined,
-        project_name: entry.project_id ? projectMap[entry.project_id] : undefined,
-        task_name: entry.task_id ? taskMap[entry.task_id] : undefined,
+        client_name: (entry.client as any)?.name ?? undefined,
+        project_name: (entry.project as any)?.name ?? undefined,
+        task_name: (entry.task as any)?.name ?? undefined,
       })) as TimeEntry[]);
     } else {
       const all = getAnonymousEntries();

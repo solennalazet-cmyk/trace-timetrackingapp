@@ -268,6 +268,13 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
 
   const handleCreateTask = async (name: string): Promise<ComboboxItem | null> => {
     if (user) {
+      // Check for existing match first
+      const { data: existing } = await supabase.from("tasks").select("id, name")
+        .eq("user_id", user.id).ilike("name", name).maybeSingle();
+      if (existing) {
+        setTasks((prev) => prev.some((t) => t.id === existing.id) ? prev : [...prev, existing]);
+        return { id: existing.id, name: existing.name };
+      }
       const { data, error } = await supabase.from("tasks").insert({ name, user_id: user.id }).select("id, name").single();
       if (error || !data) return null;
       setTasks((prev) => [...prev, { id: data.id, name: data.name }]);

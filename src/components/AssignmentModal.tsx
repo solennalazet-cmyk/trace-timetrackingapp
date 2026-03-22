@@ -29,6 +29,7 @@ import {
   getAnonymousTasks, saveAnonymousTask,
 } from "@/lib/anonymous-store";
 import { toast } from "sonner";
+import { resolveRate } from "@/lib/resolve-rate";
 
 export interface SessionData {
   durationMinutes: number;

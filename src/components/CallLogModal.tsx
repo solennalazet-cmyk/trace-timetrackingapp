@@ -29,6 +29,7 @@ import {
   saveAnonymousEntry,
 } from "@/lib/anonymous-store";
 import { toast } from "sonner";
+import { resolveRate } from "@/lib/resolve-rate";
 
 interface CallLogModalProps {
   open: boolean;

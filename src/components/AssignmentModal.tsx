@@ -242,6 +242,15 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
 
   const handleCreateProject = async (name: string): Promise<ComboboxItem | null> => {
     if (user) {
+      // Check for existing match first
+      const { data: existing } = await supabase.from("projects").select("id, name, client_id, rate, currency")
+        .eq("user_id", user.id).ilike("name", name)
+        ...(clientId ? [{ filter: "client_id", value: clientId }] : [])
+        .maybeSingle();
+      if (existing) {
+        setAllProjectsFull((prev) => prev.some((p) => p.id === existing.id) ? prev : [...prev, existing as ProjectFull]);
+        return { id: existing.id, name: existing.name };
+      }
       const insert: any = { name, user_id: user.id };
       if (clientId) insert.client_id = clientId;
       const { data, error } = await supabase.from("projects").insert(insert).select("id, name, client_id, rate, currency").single();

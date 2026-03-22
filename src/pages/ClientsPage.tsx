@@ -661,6 +661,20 @@ const ClientsPage = () => {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Delete Task Confirm */}
+      <AlertDialog open={!!deleteTaskId} onOpenChange={(o) => { if (!o) setDeleteTaskId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete "{tasks.find((t) => t.id === deleteTaskId)?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>This task will be removed permanently.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteTask} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Paywall */}
       <PaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} body={paywallMessage} />
     </div>

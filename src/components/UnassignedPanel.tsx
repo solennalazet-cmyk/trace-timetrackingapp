@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Sheet,
   SheetContent,
@@ -11,16 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getAnonymousEntries } from "@/lib/anonymous-store";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useNavigate } from "react-router-dom";
 
 interface UnassignedEntry {
   id: string;
@@ -67,11 +58,73 @@ const formatEntryDate = (dateStr: string | null) => {
   return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 };
 
+/* ── Swipeable row with "Delete" reveal ── */
+const SwipeDeleteRow = ({
+  children,
+  onSwipeLeft,
+}: {
+  children: React.ReactNode;
+  onSwipeLeft: () => void;
+}) => {
+  const startX = useRef(0);
+  const currentX = useRef(0);
+  const rowRef = useRef<HTMLDivElement>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startX.current = e.touches[0].clientX;
+    currentX.current = 0;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const diff = e.touches[0].clientX - startX.current;
+    if (diff < 0 && rowRef.current) {
+      currentX.current = diff;
+      rowRef.current.style.transform = `translateX(${Math.max(diff, -100)}px)`;
+      rowRef.current.style.opacity = `${Math.max(1 + diff / 200, 0.3)}`;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (currentX.current < -80) {
+      if (rowRef.current) {
+        rowRef.current.style.transition = "transform 0.2s, opacity 0.2s";
+        rowRef.current.style.transform = "translateX(-100%)";
+        rowRef.current.style.opacity = "0";
+      }
+      setTimeout(onSwipeLeft, 200);
+    } else if (rowRef.current) {
+      rowRef.current.style.transition = "transform 0.2s, opacity 0.2s";
+      rowRef.current.style.transform = "translateX(0)";
+      rowRef.current.style.opacity = "1";
+    }
+    setTimeout(() => {
+      if (rowRef.current) rowRef.current.style.transition = "";
+    }, 200);
+  };
+
+  return (
+    <div className="relative overflow-hidden rounded-lg">
+      <div className="absolute inset-0 flex items-center justify-end pr-4 bg-destructive/10 rounded-lg">
+        <span className="text-xs text-destructive font-medium">Delete</span>
+      </div>
+      <div
+        ref={rowRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        className="relative bg-background"
+      >
+        {children}
+      </div>
+    </div>
+  );
+};
+
 const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: UnassignedPanelProps) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [entries, setEntries] = useState<UnassignedEntry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<UnassignedEntry | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const loadEntries = async () => {
@@ -104,24 +157,35 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
     }
   }, [open, user]);
 
-  const handleDelete = async (id: string) => {
+  const softDelete = async (id: string) => {
+    // Remove from list immediately
+    setEntries((prev) => prev.filter((e) => e.id !== id));
+    onCountChange(Math.max(entries.length - 1, 0));
+
+    // Perform soft delete
     if (user) {
       await supabase.from("time_entries").update({ deleted_at: new Date().toISOString() }).eq("id", id);
     }
-    setEntries((prev) => prev.filter((e) => e.id !== id));
-    onCountChange(entries.length - 1);
-    setSelectedEntry(null);
-    setDeleteConfirm(null);
-    toast.success("Entry deleted.");
 
-    if (entries.length <= 1) {
-      onOpenChange(false);
-    }
+    // Undo toast
+    toast("Entry deleted.", {
+      action: {
+        label: "Undo",
+        onClick: async () => {
+          if (user) {
+            await supabase.from("time_entries").update({ deleted_at: null }).eq("id", id);
+          }
+          loadEntries();
+        },
+      },
+      duration: 5000,
+    });
+
+    if (entries.length <= 1) onOpenChange(false);
   };
 
   const handleAssign = (entry: UnassignedEntry) => {
     onAssignEntry(entry);
-    // Remove from list optimistically
     setEntries((prev) => prev.filter((e) => e.id !== entry.id));
     onCountChange(entries.length - 1);
     setSelectedEntry(null);
@@ -129,68 +193,76 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
   };
 
   return (
-    <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto">
-          <SheetHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto">
+        <SheetHeader>
+          <div className="flex items-center justify-between">
             <SheetTitle>Unassigned Work ({entries.length})</SheetTitle>
-          </SheetHeader>
+            <button
+              onClick={() => { onOpenChange(false); navigate("/reports"); }}
+              className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+              title="View Trash"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        </SheetHeader>
 
-          {selectedEntry ? (
-            /* Detail view */
-            <div className="mt-4 space-y-4">
-              <div className="space-y-2 p-3 rounded-lg bg-muted/50">
-                <div className="flex items-center gap-2">
-                  {entryTypeIcon(selectedEntry.entry_type)}
-                  <span className="text-sm font-medium capitalize">{selectedEntry.entry_type ?? "Timer"}</span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {formatEntryDate(selectedEntry.entry_date)}
-                </p>
-                <p className="font-mono text-2xl font-bold">
-                  {formatHHMM(selectedEntry.duration_minutes)}
-                </p>
-                {(selectedEntry.break_minutes ?? 0) > 0 && (
-                  <p className="text-sm text-muted-foreground">{selectedEntry.break_minutes}m break</p>
-                )}
-                {selectedEntry.notes && (
-                  <p className="text-sm text-muted-foreground mt-2">{selectedEntry.notes}</p>
-                )}
+        {selectedEntry ? (
+          /* Detail view */
+          <div className="mt-4 space-y-4">
+            <div className="space-y-2 p-3 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-2">
+                {entryTypeIcon(selectedEntry.entry_type)}
+                <span className="text-sm font-medium capitalize">{selectedEntry.entry_type ?? "Timer"}</span>
               </div>
-
-              <Button
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-12 font-bold"
-                onClick={() => handleAssign(selectedEntry)}
-              >
-                Assign this entry
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-
-              <button
-                className="w-full text-center text-sm text-destructive hover:underline"
-                onClick={() => setDeleteConfirm(selectedEntry.id)}
-              >
-                Delete
-              </button>
-
-              <Button
-                variant="ghost"
-                className="w-full text-muted-foreground"
-                onClick={() => setSelectedEntry(null)}
-              >
-                ← Back to list
-              </Button>
-            </div>
-          ) : (
-            /* List view */
-            <div className="mt-4 space-y-1">
-              {loading && <p className="text-sm text-muted-foreground text-center py-4">Loading…</p>}
-              {!loading && entries.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">No unassigned entries.</p>
+              <p className="text-sm text-muted-foreground">
+                {formatEntryDate(selectedEntry.entry_date)}
+              </p>
+              <p className="font-mono text-2xl font-bold">
+                {formatHHMM(selectedEntry.duration_minutes)}
+              </p>
+              {(selectedEntry.break_minutes ?? 0) > 0 && (
+                <p className="text-sm text-muted-foreground">{selectedEntry.break_minutes}m break</p>
               )}
-              {entries.map((entry) => (
+              {selectedEntry.notes && (
+                <p className="text-sm text-muted-foreground mt-2">{selectedEntry.notes}</p>
+              )}
+            </div>
+
+            <Button
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-12 font-bold"
+              onClick={() => handleAssign(selectedEntry)}
+            >
+              Assign this entry
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+
+            <button
+              className="w-full text-center text-sm text-destructive hover:underline"
+              onClick={() => { setSelectedEntry(null); softDelete(selectedEntry.id); }}
+            >
+              Delete
+            </button>
+
+            <Button
+              variant="ghost"
+              className="w-full text-muted-foreground"
+              onClick={() => setSelectedEntry(null)}
+            >
+              ← Back to list
+            </Button>
+          </div>
+        ) : (
+          /* List view */
+          <div className="mt-4 space-y-1">
+            {loading && <p className="text-sm text-muted-foreground text-center py-4">Loading…</p>}
+            {!loading && entries.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">No unassigned entries.</p>
+            )}
+            {entries.map((entry) => (
+              <SwipeDeleteRow key={entry.id} onSwipeLeft={() => softDelete(entry.id)}>
                 <button
-                  key={entry.id}
                   className="flex items-center justify-between w-full text-left px-3 py-3 rounded-lg hover:bg-muted/50 transition-colors"
                   onClick={() => setSelectedEntry(entry)}
                 >
@@ -205,27 +277,12 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
                     <p className="text-xs text-muted-foreground truncate max-w-[120px]">{entry.notes}</p>
                   )}
                 </button>
-              ))}
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
-
-      <AlertDialog open={!!deleteConfirm} onOpenChange={(o) => { if (!o) setDeleteConfirm(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this entry?</AlertDialogTitle>
-            <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+              </SwipeDeleteRow>
+            ))}
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 };
 

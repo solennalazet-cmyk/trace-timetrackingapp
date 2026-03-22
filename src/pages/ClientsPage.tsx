@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Search, Plus, Briefcase, ChevronDown, ChevronUp, Mail, Hash, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, Briefcase, ChevronDown, ChevronUp, Mail, Hash, Pencil, Trash2, Check, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -76,10 +76,16 @@ const ClientsPage = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [taskEntryCounts, setTaskEntryCounts] = useState<Record<string, number>>({});
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStats[]>([]);
   const [projectStats, setProjectStats] = useState<ProjectStats[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [tasksExpanded, setTasksExpanded] = useState(true);
+  const [addingTask, setAddingTask] = useState(false);
+  const [newTaskName, setNewTaskName] = useState("");
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingTaskName, setEditingTaskName] = useState("");
+  const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Modals
@@ -107,16 +113,17 @@ const ClientsPage = () => {
       setProjects((p ?? []) as Project[]);
       setTasks((tk ?? []) as Task[]);
 
-      // Monthly stats
+      // Monthly stats + task entry counts
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-      const { data: entries } = await supabase
-        .from("time_entries")
-        .select("client_id, project_id, duration_minutes, billable_value")
-        .eq("user_id", user.id)
-        .gte("entry_date", monthStart)
-        .not("client_id", "is", null)
-        .is("deleted_at", null);
+      const [{ data: entries }, { data: taskEntries }] = await Promise.all([
+        supabase.from("time_entries")
+          .select("client_id, project_id, duration_minutes, billable_value")
+          .eq("user_id", user.id).gte("entry_date", monthStart).not("client_id", "is", null).is("deleted_at", null),
+        supabase.from("time_entries")
+          .select("task_id")
+          .eq("user_id", user.id).not("task_id", "is", null).is("deleted_at", null),
+      ]);
 
       const statsMap: Record<string, { hours: number; value: number }> = {};
       const projStatsMap: Record<string, { hours: number; value: number }> = {};
@@ -134,6 +141,13 @@ const ClientsPage = () => {
       });
       setMonthlyStats(Object.entries(statsMap).map(([clientId, s]) => ({ clientId, ...s })));
       setProjectStats(Object.entries(projStatsMap).map(([projectId, s]) => ({ projectId, ...s })));
+
+      // Task entry counts
+      const teCounts: Record<string, number> = {};
+      taskEntries?.forEach((e) => {
+        if (e.task_id) teCounts[e.task_id] = (teCounts[e.task_id] || 0) + 1;
+      });
+      setTaskEntryCounts(teCounts);
     } else {
       const ac = getAnonymousClients();
       setClients(ac.map((c: any) => ({ id: c.id, name: c.name, email: c.email ?? null, nif: c.nif ?? null, currency: c.currency ?? "EUR", default_rate: c.default_rate ?? null })));
@@ -265,6 +279,51 @@ const ClientsPage = () => {
     setDeleteProjectId(null);
     setProjectFormOpen(false);
     toast.success("Project deleted.");
+    loadData();
+  };
+
+  // --- Task handlers ---
+  const handleAddTask = async () => {
+    const name = newTaskName.trim();
+    if (!name) return;
+    // Duplicate check
+    if (tasks.some((t) => t.name.toLowerCase() === name.toLowerCase())) {
+      toast.error("A task with that name already exists.");
+      return;
+    }
+    if (user) {
+      const { error } = await supabase.from("tasks").insert({ name, user_id: user.id });
+      if (error) { toast.error("Failed to add task."); return; }
+    }
+    setAddingTask(false);
+    setNewTaskName("");
+    toast.success("Task added.");
+    loadData();
+  };
+
+  const handleRenameTask = async (taskId: string) => {
+    const name = editingTaskName.trim();
+    if (!name) return;
+    if (tasks.some((t) => t.id !== taskId && t.name.toLowerCase() === name.toLowerCase())) {
+      toast.error("A task with that name already exists.");
+      return;
+    }
+    if (user) {
+      await supabase.from("tasks").update({ name }).eq("id", taskId);
+    }
+    setEditingTaskId(null);
+    toast.success("Task renamed.");
+    loadData();
+  };
+
+  const handleDeleteTask = async () => {
+    if (!deleteTaskId) return;
+    if (user) {
+      await supabase.from("time_entries").update({ task_id: null }).eq("task_id", deleteTaskId);
+      await supabase.from("tasks").delete().eq("id", deleteTaskId);
+    }
+    setDeleteTaskId(null);
+    toast.success("Task deleted.");
     loadData();
   };
 
@@ -443,27 +502,101 @@ const ClientsPage = () => {
       </div>
 
       {/* Tasks section */}
-      {((!search && tasks.length > 0) || (search && filteredTasks.length > 0)) && (
+      {((!search && tasks.length > 0) || (search && filteredTasks.length > 0) || !search) && (
         <div className="mt-6">
-          <button
-            className="flex items-center justify-between w-full mb-2"
-            onClick={() => setTasksExpanded(!tasksExpanded)}
-          >
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Tasks ({search ? filteredTasks.length : tasks.length})
-            </h3>
-            {tasksExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-          </button>
+          <div className="flex items-center justify-between mb-2">
+            <button
+              className="flex items-center gap-1"
+              onClick={() => setTasksExpanded(!tasksExpanded)}
+            >
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Tasks ({search ? filteredTasks.length : tasks.length})
+              </h3>
+              {tasksExpanded ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+            </button>
+            {!search && (
+              <button
+                className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
+                onClick={() => { setAddingTask(true); setTasksExpanded(true); setNewTaskName(""); }}
+              >
+                <Plus className="w-3.5 h-3.5" /> Add task
+              </button>
+            )}
+          </div>
           {tasksExpanded && (
             <div className="space-y-1">
-              {(search ? filteredTasks : tasks).map((task) => (
-                <div
-                  key={task.id}
-                  className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-border bg-card"
-                >
-                  <span className="text-sm text-foreground">{task.name}</span>
+              {/* Inline add */}
+              {addingTask && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-primary bg-card">
+                  <Pencil className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                  <Input
+                    autoFocus
+                    className="h-7 text-sm border-none shadow-none p-0 focus-visible:ring-0"
+                    placeholder="Task name..."
+                    value={newTaskName}
+                    onChange={(e) => setNewTaskName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleAddTask(); if (e.key === "Escape") setAddingTask(false); }}
+                  />
+                  <button onClick={handleAddTask} className="text-primary hover:text-primary/80 shrink-0">
+                    <Check className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => setAddingTask(false)} className="text-muted-foreground hover:text-foreground shrink-0">
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
-              ))}
+              )}
+
+              {(search ? filteredTasks : tasks).map((task) => {
+                const count = taskEntryCounts[task.id] || 0;
+                const isEditing = editingTaskId === task.id;
+
+                return (
+                  <div
+                    key={task.id}
+                    className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-border bg-card gap-2"
+                  >
+                    {isEditing ? (
+                      <>
+                        <Pencil className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                        <Input
+                          autoFocus
+                          className="h-7 text-sm border-none shadow-none p-0 focus-visible:ring-0 flex-1"
+                          value={editingTaskName}
+                          onChange={(e) => setEditingTaskName(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") handleRenameTask(task.id); if (e.key === "Escape") setEditingTaskId(null); }}
+                        />
+                        <button onClick={() => handleRenameTask(task.id)} className="text-primary hover:text-primary/80 shrink-0">
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => setEditingTaskId(null)} className="text-muted-foreground hover:text-foreground shrink-0">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                          onClick={() => { setEditingTaskId(task.id); setEditingTaskName(task.name); }}
+                        >
+                          <Pencil className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          <span className="text-sm text-foreground truncate">{task.name}</span>
+                        </button>
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          {count} {count === 1 ? "entry" : "entries"}
+                        </span>
+                        {count === 0 && (
+                          <button
+                            onClick={() => setDeleteTaskId(task.id)}
+                            className="text-destructive hover:text-destructive/80 shrink-0 ml-1"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -524,6 +657,20 @@ const ClientsPage = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteProject} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Task Confirm */}
+      <AlertDialog open={!!deleteTaskId} onOpenChange={(o) => { if (!o) setDeleteTaskId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete "{tasks.find((t) => t.id === deleteTaskId)?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>This task will be removed permanently.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteTask} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

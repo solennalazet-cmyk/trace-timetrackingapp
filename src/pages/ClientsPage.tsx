@@ -141,6 +141,13 @@ const ClientsPage = () => {
       });
       setMonthlyStats(Object.entries(statsMap).map(([clientId, s]) => ({ clientId, ...s })));
       setProjectStats(Object.entries(projStatsMap).map(([projectId, s]) => ({ projectId, ...s })));
+
+      // Task entry counts
+      const teCounts: Record<string, number> = {};
+      taskEntries?.forEach((e) => {
+        if (e.task_id) teCounts[e.task_id] = (teCounts[e.task_id] || 0) + 1;
+      });
+      setTaskEntryCounts(teCounts);
     } else {
       const ac = getAnonymousClients();
       setClients(ac.map((c: any) => ({ id: c.id, name: c.name, email: c.email ?? null, nif: c.nif ?? null, currency: c.currency ?? "EUR", default_rate: c.default_rate ?? null })));

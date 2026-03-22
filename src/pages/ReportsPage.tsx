@@ -193,29 +193,7 @@ const ReportsPage = () => {
     });
   }, [rangeEntries, rangeStart, clientIds]);
 
-  // === SECTION 2: Client billing summary ===
-  const clientBillingSummary = useMemo(() => {
-    const map: Record<string, { hours: number; billableHours: number; value: number; unbilledValue: number; currency: string }> = {};
-    rangeEntries.forEach((e) => {
-      const key = e.client_id ?? "unassigned";
-      if (!map[key]) map[key] = { hours: 0, billableHours: 0, value: 0, unbilledValue: 0, currency: e.rate_currency ?? "EUR" };
-      map[key].hours += e.duration_minutes / 60;
-      if (e.billable) {
-        map[key].billableHours += e.duration_minutes / 60;
-        map[key].value += e.billable_value || 0;
-        if (e.billing_status === "unbilled") {
-          map[key].unbilledValue += e.billable_value || 0;
-        }
-      }
-    });
-    return Object.entries(map)
-      .map(([id, d]) => ({
-        id,
-        name: id === "unassigned" ? "Unassigned" : (clients[id] ?? "Unknown"),
-        ...d,
-      }))
-      .sort((a, b) => b.hours - a.hours);
-  }, [rangeEntries, clients]);
+  // (Client billing summary is now a separate component with its own date range)
 
   // === SECTION 3: Filtered recent activity ===
   const filteredEntries = useMemo(() => {

@@ -311,8 +311,8 @@ const ClientsPage = () => {
       )}
 
       {/* No search results */}
-      {clients.length > 0 && filtered.length === 0 && search && (
-        <p className="text-center text-sm text-muted-foreground py-8">No clients match your search.</p>
+      {search && filtered.length === 0 && filteredTasks.length === 0 && (
+        <p className="text-center text-sm text-muted-foreground py-8">No results match your search.</p>
       )}
 
       {/* Client cards */}

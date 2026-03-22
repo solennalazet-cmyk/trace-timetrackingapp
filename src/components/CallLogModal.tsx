@@ -171,6 +171,14 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
 
   const handleCreateProject = async (name: string): Promise<ComboboxItem | null> => {
     if (user) {
+      let query = supabase.from("projects").select("id, name, client_id, rate, currency")
+        .eq("user_id", user.id).ilike("name", name);
+      if (clientId) query = query.eq("client_id", clientId);
+      const { data: existing } = await query.maybeSingle();
+      if (existing) {
+        setAllProjectsFull((prev) => prev.some((p) => p.id === existing.id) ? prev : [...prev, existing as ProjectFull]);
+        return { id: existing.id, name: existing.name };
+      }
       const insert: any = { name, user_id: user.id }; if (clientId) insert.client_id = clientId;
       const { data } = await supabase.from("projects").insert(insert).select("id, name, client_id, rate, currency").single();
       if (!data) return null; setAllProjectsFull((prev) => [...prev, data as ProjectFull]); return { id: data.id, name: data.name };
@@ -181,6 +189,12 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
 
   const handleCreateTask = async (name: string): Promise<ComboboxItem | null> => {
     if (user) {
+      const { data: existing } = await supabase.from("tasks").select("id, name")
+        .eq("user_id", user.id).ilike("name", name).maybeSingle();
+      if (existing) {
+        setTasks((prev) => prev.some((t) => t.id === existing.id) ? prev : [...prev, existing]);
+        return { id: existing.id, name: existing.name };
+      }
       const { data } = await supabase.from("tasks").insert({ name, user_id: user.id }).select("id, name").single();
       if (!data) return null; setTasks((prev) => [...prev, { id: data.id, name: data.name }]); return { id: data.id, name: data.name };
     }

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { HelpCircle, Info, LogIn, LogOut, Settings, MessageSquare, Sparkles, User, CreditCard } from "lucide-react";
+import { CircleUser, Info, LogIn, LogOut, Settings, MessageSquare, Sparkles, User, CreditCard } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -86,7 +86,7 @@ const HeaderMenu = () => {
               className="w-9 h-9 rounded-full flex items-center justify-center transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="Menu"
             >
-              <HelpCircle className="w-5 h-5 text-foreground" />
+              <CircleUser className="w-5 h-5 text-foreground" />
             </button>
           )}
         </DropdownMenuTrigger>

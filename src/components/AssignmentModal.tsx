@@ -242,6 +242,15 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
 
   const handleCreateProject = async (name: string): Promise<ComboboxItem | null> => {
     if (user) {
+      // Check for existing match first
+      let query = supabase.from("projects").select("id, name, client_id, rate, currency")
+        .eq("user_id", user.id).ilike("name", name);
+      if (clientId) query = query.eq("client_id", clientId);
+      const { data: existing } = await query.maybeSingle();
+      if (existing) {
+        setAllProjectsFull((prev) => prev.some((p) => p.id === existing.id) ? prev : [...prev, existing as ProjectFull]);
+        return { id: existing.id, name: existing.name };
+      }
       const insert: any = { name, user_id: user.id };
       if (clientId) insert.client_id = clientId;
       const { data, error } = await supabase.from("projects").insert(insert).select("id, name, client_id, rate, currency").single();
@@ -259,6 +268,13 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
 
   const handleCreateTask = async (name: string): Promise<ComboboxItem | null> => {
     if (user) {
+      // Check for existing match first
+      const { data: existing } = await supabase.from("tasks").select("id, name")
+        .eq("user_id", user.id).ilike("name", name).maybeSingle();
+      if (existing) {
+        setTasks((prev) => prev.some((t) => t.id === existing.id) ? prev : [...prev, existing]);
+        return { id: existing.id, name: existing.name };
+      }
       const { data, error } = await supabase.from("tasks").insert({ name, user_id: user.id }).select("id, name").single();
       if (error || !data) return null;
       setTasks((prev) => [...prev, { id: data.id, name: data.name }]);

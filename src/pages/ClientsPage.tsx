@@ -299,7 +299,7 @@ const ClientsPage = () => {
       {/* Empty state */}
       {clients.length === 0 && !search && (
         <div className="flex flex-col items-center justify-center py-16 gap-3">
-          <Users className="w-12 h-12 text-muted-foreground opacity-30" />
+          <Briefcase className="w-12 h-12 text-muted-foreground opacity-30" />
           <p className="text-muted-foreground text-sm text-center">
             No clients yet.<br />Add your first client to start tracking billable work.
           </p>

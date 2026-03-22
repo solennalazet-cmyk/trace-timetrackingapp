@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { HelpCircle, Info, LogIn, LogOut, Settings, MessageSquare, Sparkles, User, CreditCard } from "lucide-react";
+import { CircleUser, Info, LogIn, LogOut, Settings, MessageSquare, Sparkles, User, CreditCard } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,

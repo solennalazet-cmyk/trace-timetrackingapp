@@ -1,11 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
-import { Timer, BarChart3, Clock, Users } from "lucide-react";
+import { Timer, BarChart3, Clock, Briefcase } from "lucide-react";
 
 const tabs = [
   { path: "/", label: "Start", icon: Timer },
   { path: "/reports", label: "Reports", icon: BarChart3 },
   { path: "/timeline", label: "Timeline", icon: Clock },
-  { path: "/clients", label: "Clients", icon: Users },
+  { path: "/clients", label: "Projects", icon: Briefcase },
 ];
 
 const BottomNav = () => {

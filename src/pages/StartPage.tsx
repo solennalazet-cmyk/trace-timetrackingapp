@@ -292,6 +292,23 @@ const StartPage = () => {
         onAssignEntry={handleAssignFromPanel}
         onCountChange={setUnassignedCount}
       />
+
+      {/* Today's Entries Sheet */}
+      <TodayEntriesSheet
+        open={todaySheetOpen}
+        onOpenChange={setTodaySheetOpen}
+        onEntryTap={(entry) => {
+          setTodaySheetOpen(false);
+          setEditingEntry(entry as any);
+          setPendingSession({
+            durationMinutes: entry.duration_minutes,
+            breakMinutes: entry.break_minutes ?? 0,
+            startedAt: null,
+            entryType: entry.entry_type ?? "timer",
+          });
+          setAssignModalOpen(true);
+        }}
+      />
     </div>
   );
 };

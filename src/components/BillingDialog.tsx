@@ -95,6 +95,7 @@ const BillingDialog = ({ open, onOpenChange, onComplete }: BillingDialogProps) =
           .select("id, entry_date, duration_minutes, billable_value, notes, rate_amount, rate_unit")
           .eq("user_id", user.id).eq("client_id", client.id)
           .eq("billing_status", "unbilled")
+          .is("deleted_at", null)
           .gte("entry_date", fromStr).lte("entry_date", toStr);
 
         if (!entries || entries.length === 0) continue;

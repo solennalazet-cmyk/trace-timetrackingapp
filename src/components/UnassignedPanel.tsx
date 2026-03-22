@@ -83,6 +83,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
         .eq("user_id", user.id)
         .is("client_id", null)
         .is("project_id", null)
+        .is("deleted_at", null)
         .order("entry_date", { ascending: false });
       setEntries((data ?? []) as UnassignedEntry[]);
       onCountChange((data ?? []).length);

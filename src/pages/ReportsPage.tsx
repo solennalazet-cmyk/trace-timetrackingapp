@@ -113,6 +113,7 @@ const ReportsPage = () => {
   const [taskFilter, setTaskFilter] = useState("");
   const [activityRange, setActivityRange] = useState<DateRange>("7days");
   const [showCharts, setShowCharts] = useState(true);
+  const [showTrash, setShowTrash] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
   const rangeStart = getDateRangeStart(range);

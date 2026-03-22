@@ -242,6 +242,7 @@ const TimelinePage = () => {
     try {
       await supabase.from("time_entries").update({
         client_id: assignment.clientId, project_id: assignment.projectId,
+        task_id: assignment.taskId,
         notes: assignment.notes || null, tags: assignment.tags.length ? assignment.tags : null,
         billable: assignment.billable, rate_amount: assignment.rateAmount,
         rate_currency: assignment.rateCurrency, rate_unit: assignment.rateAmount ? assignment.rateUnit : null,

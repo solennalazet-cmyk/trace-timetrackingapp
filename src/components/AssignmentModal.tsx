@@ -40,6 +40,7 @@ export interface SessionData {
 export interface AssignmentResult {
   clientId: string | null;
   projectId: string | null;
+  taskId: string | null;
   taskName: string;
   notes: string;
   tags: string[];
@@ -288,6 +289,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
       onSave(session, {
         clientId: clientId || null,
         projectId: projectId || null,
+        taskId: taskId || null,
         taskName,
         notes,
         tags,

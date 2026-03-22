@@ -118,6 +118,7 @@ const StartPage = () => {
       billing_status: "unbilled",
       client_id: assignment?.clientId || null,
       project_id: assignment?.projectId || null,
+      task_id: assignment?.taskId || null,
       notes: assignment?.notes || null,
       tags: assignment?.tags?.length ? assignment.tags : null,
       rate_amount: assignment?.rateAmount || null,
@@ -139,6 +140,7 @@ const StartPage = () => {
       const { error } = await supabase.from("time_entries").update({
         client_id: assignment.clientId,
         project_id: assignment.projectId,
+        task_id: assignment.taskId,
         notes: assignment.notes || null,
         tags: assignment.tags.length ? assignment.tags : null,
         billable: assignment.billable,

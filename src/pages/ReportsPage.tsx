@@ -5,7 +5,7 @@ import {
 } from "recharts";
 import {
   ChevronDown, ChevronUp, Timer, PenLine, Clock, Phone, ChevronRight, Crown,
-  CreditCard, Download, Trash2, Search,
+  CreditCard, Download, Trash2, Search, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -442,6 +442,33 @@ const ClientsPage = () => {
         })}
       </div>
 
+      {/* Tasks section */}
+      {((!search && tasks.length > 0) || (search && filteredTasks.length > 0)) && (
+        <div className="mt-6">
+          <button
+            className="flex items-center justify-between w-full mb-2"
+            onClick={() => setTasksExpanded(!tasksExpanded)}
+          >
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Tasks ({search ? filteredTasks.length : tasks.length})
+            </h3>
+            {tasksExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+          </button>
+          {tasksExpanded && (
+            <div className="space-y-1">
+              {(search ? filteredTasks : tasks).map((task) => (
+                <div
+                  key={task.id}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-border bg-card"
+                >
+                  <span className="text-sm text-foreground">{task.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Client Form Modal */}
       <ClientFormModal
         open={clientFormOpen}

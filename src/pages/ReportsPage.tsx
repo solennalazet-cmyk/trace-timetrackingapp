@@ -18,6 +18,7 @@ import BillingDialog from "@/components/BillingDialog";
 import PaywallModal from "@/components/PaywallModal";
 import ClientBillingSummary from "@/components/ClientBillingSummary";
 import UnassignedPanel from "@/components/UnassignedPanel";
+import TrashView from "@/components/TrashView";
 import { toast } from "sonner";
 
 type DateRange = "today" | "7days" | "30days" | "month";
@@ -112,6 +113,7 @@ const ReportsPage = () => {
   const [taskFilter, setTaskFilter] = useState("");
   const [activityRange, setActivityRange] = useState<DateRange>("7days");
   const [showCharts, setShowCharts] = useState(true);
+  const [showTrash, setShowTrash] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
   const rangeStart = getDateRangeStart(range);
@@ -834,14 +836,22 @@ const ReportsPage = () => {
           {/* ═══════════════════════════════════════════
               SECTION 5 — Trash link (only when non-empty)
               ═══════════════════════════════════════════ */}
-          {trashCount > 0 && (
+          {showTrash ? (
+            <TrashView
+              onBack={() => setShowTrash(false)}
+              onCountChange={(c) => setTrashCount(c)}
+            />
+          ) : trashCount > 0 ? (
             <div className="flex justify-center py-4">
-              <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <button
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setShowTrash(true)}
+              >
                 <Trash2 className="w-4 h-4" />
                 Trash · {trashCount} {trashCount === 1 ? "entry" : "entries"}
               </button>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 

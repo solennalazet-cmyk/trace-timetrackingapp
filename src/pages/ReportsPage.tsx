@@ -16,6 +16,8 @@ import EntryDetailSheet, { type TimeEntry } from "@/components/EntryDetailSheet"
 import AssignmentModal, { type SessionData, type AssignmentResult, type ExistingEntry } from "@/components/AssignmentModal";
 import BillingDialog from "@/components/BillingDialog";
 import PaywallModal from "@/components/PaywallModal";
+import ClientBillingSummary from "@/components/ClientBillingSummary";
+import UnassignedPanel from "@/components/UnassignedPanel";
 import { toast } from "sonner";
 
 type DateRange = "today" | "7days" | "30days" | "month";

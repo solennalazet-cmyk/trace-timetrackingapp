@@ -108,7 +108,9 @@ const ReportsPage = () => {
   const [typeFilter, setTypeFilter] = useState<EntryTypeFilter>("all");
   const [billableFilter, setBillableFilter] = useState<BillableFilter>("all");
   const [clientFilter, setClientFilter] = useState("");
-  const [showRecentActivity, setShowRecentActivity] = useState(true);
+  const [projectFilter, setProjectFilter] = useState("");
+  const [taskFilter, setTaskFilter] = useState("");
+  const [activityRange, setActivityRange] = useState<DateRange>("7days");
   const [showCharts, setShowCharts] = useState(true);
 
   const today = new Date().toISOString().split("T")[0];

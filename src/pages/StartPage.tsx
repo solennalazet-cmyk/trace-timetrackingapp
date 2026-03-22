@@ -10,6 +10,7 @@ import AssignmentModal, { SessionData, AssignmentResult, ExistingEntry } from "@
 import ManualEntryModal from "@/components/ManualEntryModal";
 import CallLogModal from "@/components/CallLogModal";
 import UnassignedPanel from "@/components/UnassignedPanel";
+import TodayEntriesSheet from "@/components/TodayEntriesSheet";
 import WelcomeBanner from "@/components/WelcomeBanner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +40,7 @@ const StartPage = () => {
 
   // Unassigned panel
   const [unassignedOpen, setUnassignedOpen] = useState(false);
+  const [todaySheetOpen, setTodaySheetOpen] = useState(false);
 
   const fetchSummary = async () => {
     const today = new Date().toISOString().split("T")[0];
@@ -248,7 +250,7 @@ const StartPage = () => {
           todayCount={todayCount}
           todayMinutes={todayMinutes}
           unassignedCount={unassignedCount}
-          onTodayClick={() => navigate("/reports")}
+          onTodayClick={() => setTodaySheetOpen(true)}
           onUnassignedClick={() => setUnassignedOpen(true)}
         />
       )}
@@ -289,6 +291,23 @@ const StartPage = () => {
         onOpenChange={setUnassignedOpen}
         onAssignEntry={handleAssignFromPanel}
         onCountChange={setUnassignedCount}
+      />
+
+      {/* Today's Entries Sheet */}
+      <TodayEntriesSheet
+        open={todaySheetOpen}
+        onOpenChange={setTodaySheetOpen}
+        onEntryTap={(entry) => {
+          setTodaySheetOpen(false);
+          setEditingEntry(entry as any);
+          setPendingSession({
+            durationMinutes: entry.duration_minutes,
+            breakMinutes: entry.break_minutes ?? 0,
+            startedAt: null,
+            entryType: entry.entry_type ?? "timer",
+          });
+          setAssignModalOpen(true);
+        }}
       />
     </div>
   );

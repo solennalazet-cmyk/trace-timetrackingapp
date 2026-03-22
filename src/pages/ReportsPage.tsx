@@ -700,6 +700,17 @@ const ReportsPage = () => {
         onSave={handleEditSave} onSkip={() => { setAssignOpen(false); setEditEntry(null); }} />
       <BillingDialog open={billingOpen} onOpenChange={setBillingOpen} onComplete={loadData} />
       <PaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} />
+      <UnassignedPanel
+        open={unassignedOpen}
+        onOpenChange={setUnassignedOpen}
+        onAssignEntry={(entry) => {
+          setUnassignedOpen(false);
+          setEditEntry(entry as ExistingEntry);
+          setEditSession({ durationMinutes: entry.duration_minutes, breakMinutes: entry.break_minutes ?? 0, startedAt: null, entryType: entry.entry_type ?? "timer" });
+          setAssignOpen(true);
+        }}
+        onCountChange={() => {}}
+      />
     </div>
   );
 };

@@ -40,6 +40,7 @@ const StartPage = () => {
 
   // Unassigned panel
   const [unassignedOpen, setUnassignedOpen] = useState(false);
+  const [todaySheetOpen, setTodaySheetOpen] = useState(false);
 
   const fetchSummary = async () => {
     const today = new Date().toISOString().split("T")[0];

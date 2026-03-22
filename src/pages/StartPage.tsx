@@ -139,6 +139,7 @@ const StartPage = () => {
       const { error } = await supabase.from("time_entries").update({
         client_id: assignment.clientId,
         project_id: assignment.projectId,
+        task_id: assignment.taskId,
         notes: assignment.notes || null,
         tags: assignment.tags.length ? assignment.tags : null,
         billable: assignment.billable,

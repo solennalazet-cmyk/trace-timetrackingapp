@@ -289,6 +289,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
       onSave(session, {
         clientId: clientId || null,
         projectId: projectId || null,
+        taskId: taskId || null,
         taskName,
         notes,
         tags,

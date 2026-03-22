@@ -210,6 +210,7 @@ const ReportsPage = () => {
     try {
       await supabase.from("time_entries").update({
         client_id: a.clientId, project_id: a.projectId,
+        task_id: a.taskId,
         notes: a.notes || null, tags: a.tags.length ? a.tags : null,
         billable: a.billable, rate_amount: a.rateAmount,
         rate_currency: a.rateCurrency, rate_unit: a.rateAmount ? a.rateUnit : null,

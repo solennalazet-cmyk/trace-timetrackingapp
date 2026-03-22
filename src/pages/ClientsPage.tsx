@@ -148,9 +148,22 @@ const ClientsPage = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const q = search.toLowerCase();
+  const matchingProjectIds = new Set(
+    projects.filter((p) => p.name.toLowerCase().includes(q)).map((p) => p.id)
+  );
+  const matchingProjectClientIds = new Set(
+    projects.filter((p) => p.name.toLowerCase().includes(q) && p.client_id).map((p) => p.client_id!)
+  );
+  const filteredTasks = tasks.filter((t) => t.name.toLowerCase().includes(q));
+
   const filtered = clients.filter((c) => {
-    const q = search.toLowerCase();
-    return c.name.toLowerCase().includes(q) || (c.nif ?? "").toLowerCase().includes(q) || (c.email ?? "").toLowerCase().includes(q);
+    if (!q) return true;
+    // Direct client match
+    if (c.name.toLowerCase().includes(q) || (c.nif ?? "").toLowerCase().includes(q) || (c.email ?? "").toLowerCase().includes(q)) return true;
+    // Client has a matching project
+    if (matchingProjectClientIds.has(c.id)) return true;
+    return false;
   });
 
   const getClientStats = (id: string) => monthlyStats.find((s) => s.clientId === id);

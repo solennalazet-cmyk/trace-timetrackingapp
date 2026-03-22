@@ -271,17 +271,43 @@ const ReportsPage = () => {
     { name: "Non-billable", value: nonBillableMins, fill: "hsl(240 5% 75%)" },
   ].filter((d) => d.value > 0);
 
+  const clientHoursData = useMemo(() => {
+    const map: Record<string, number> = {};
+    rangeEntries.forEach((e) => {
+      const key = e.client_id ?? "unassigned";
+      map[key] = (map[key] || 0) + e.duration_minutes / 60;
+    });
+    const named = Object.entries(map)
+      .filter(([id]) => id !== "unassigned")
+      .map(([id, hours]) => ({ name: clients[id] ?? "Unassigned", hours: +hours.toFixed(1), isUnassigned: false }))
+      .sort((a, b) => b.hours - a.hours);
+    if (map["unassigned"]) named.push({ name: "Unassigned", hours: +map["unassigned"].toFixed(1), isUnassigned: true });
+    return named;
+  }, [rangeEntries, clients]);
+
   const projectHoursData = useMemo(() => {
-    const map: Record<string, { hours: number; clientName: string }> = {};
+    const map: Record<string, number> = {};
     rangeEntries.forEach((e) => {
       const key = e.project_id ?? "unassigned";
-      if (!map[key]) map[key] = { hours: 0, clientName: e.client_id ? (clients[e.client_id] ?? "") : "" };
-      map[key].hours += e.duration_minutes / 60;
+      map[key] = (map[key] || 0) + e.duration_minutes / 60;
     });
-    return Object.entries(map)
-      .map(([id, d]) => ({ name: id === "unassigned" ? "Unassigned" : (projects[id] ?? "Unknown"), hours: +d.hours.toFixed(1), client: d.clientName }))
+    const named = Object.entries(map)
+      .filter(([id]) => id !== "unassigned")
+      .map(([id, hours]) => ({ name: projects[id] ?? "Unassigned", hours: +hours.toFixed(1), isUnassigned: false }))
       .sort((a, b) => b.hours - a.hours);
-  }, [rangeEntries, clients, projects]);
+    if (map["unassigned"]) named.push({ name: "Unassigned", hours: +map["unassigned"].toFixed(1), isUnassigned: true });
+    return named;
+  }, [rangeEntries, projects]);
+
+  const taskHoursData = useMemo(() => {
+    const withTask = rangeEntries.filter((e) => e.task_id);
+    if (withTask.length === 0) return [];
+    const map: Record<string, number> = {};
+    withTask.forEach((e) => { map[e.task_id!] = (map[e.task_id!] || 0) + e.duration_minutes / 60; });
+    return Object.entries(map)
+      .map(([id, hours]) => ({ name: tasks[id] ?? "Unknown", hours: +hours.toFixed(1) }))
+      .sort((a, b) => b.hours - a.hours);
+  }, [rangeEntries, tasks]);
 
   const dailyData = useMemo(() => {
     const days = getDaysInRange(rangeStart);
@@ -293,12 +319,22 @@ const ReportsPage = () => {
     }));
   }, [rangeEntries, rangeStart]);
 
+  // Trash count
+  const [trashCount, setTrashCount] = useState(0);
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("time_entries").select("id", { count: "exact", head: true })
+      .eq("user_id", user.id).not("deleted_at", "is", null)
+      .then(({ count }) => setTrashCount(count ?? 0));
+  }, [user, rangeEntries]);
+
   // Break stats
   const breakEntries = rangeEntries.filter((e) => (e.break_minutes ?? 0) > 0);
   const totalBreakMins = breakEntries.reduce((s, e) => s + (e.break_minutes ?? 0), 0);
   const avgBreakPerDay = dailyData.length > 0 ? totalBreakMins / dailyData.length : 0;
   const breakPct = totalMins > 0 ? (totalBreakMins / totalMins) * 100 : 0;
   const longestBreak = breakEntries.reduce((max, e) => Math.max(max, e.break_minutes ?? 0), 0);
+
 
   const handleEdit = (entry: TimeEntry) => {
     setEditEntry(entry as ExistingEntry);

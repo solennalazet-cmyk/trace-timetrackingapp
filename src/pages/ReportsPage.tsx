@@ -271,17 +271,43 @@ const ReportsPage = () => {
     { name: "Non-billable", value: nonBillableMins, fill: "hsl(240 5% 75%)" },
   ].filter((d) => d.value > 0);
 
+  const clientHoursData = useMemo(() => {
+    const map: Record<string, number> = {};
+    rangeEntries.forEach((e) => {
+      const key = e.client_id ?? "unassigned";
+      map[key] = (map[key] || 0) + e.duration_minutes / 60;
+    });
+    const named = Object.entries(map)
+      .filter(([id]) => id !== "unassigned")
+      .map(([id, hours]) => ({ name: clients[id] ?? "Unassigned", hours: +hours.toFixed(1), isUnassigned: false }))
+      .sort((a, b) => b.hours - a.hours);
+    if (map["unassigned"]) named.push({ name: "Unassigned", hours: +map["unassigned"].toFixed(1), isUnassigned: true });
+    return named;
+  }, [rangeEntries, clients]);
+
   const projectHoursData = useMemo(() => {
-    const map: Record<string, { hours: number; clientName: string }> = {};
+    const map: Record<string, number> = {};
     rangeEntries.forEach((e) => {
       const key = e.project_id ?? "unassigned";
-      if (!map[key]) map[key] = { hours: 0, clientName: e.client_id ? (clients[e.client_id] ?? "") : "" };
-      map[key].hours += e.duration_minutes / 60;
+      map[key] = (map[key] || 0) + e.duration_minutes / 60;
     });
-    return Object.entries(map)
-      .map(([id, d]) => ({ name: id === "unassigned" ? "Unassigned" : (projects[id] ?? "Unknown"), hours: +d.hours.toFixed(1), client: d.clientName }))
+    const named = Object.entries(map)
+      .filter(([id]) => id !== "unassigned")
+      .map(([id, hours]) => ({ name: projects[id] ?? "Unassigned", hours: +hours.toFixed(1), isUnassigned: false }))
       .sort((a, b) => b.hours - a.hours);
-  }, [rangeEntries, clients, projects]);
+    if (map["unassigned"]) named.push({ name: "Unassigned", hours: +map["unassigned"].toFixed(1), isUnassigned: true });
+    return named;
+  }, [rangeEntries, projects]);
+
+  const taskHoursData = useMemo(() => {
+    const withTask = rangeEntries.filter((e) => e.task_id);
+    if (withTask.length === 0) return [];
+    const map: Record<string, number> = {};
+    withTask.forEach((e) => { map[e.task_id!] = (map[e.task_id!] || 0) + e.duration_minutes / 60; });
+    return Object.entries(map)
+      .map(([id, hours]) => ({ name: tasks[id] ?? "Unknown", hours: +hours.toFixed(1) }))
+      .sort((a, b) => b.hours - a.hours);
+  }, [rangeEntries, tasks]);
 
   const dailyData = useMemo(() => {
     const days = getDaysInRange(rangeStart);
@@ -293,12 +319,22 @@ const ReportsPage = () => {
     }));
   }, [rangeEntries, rangeStart]);
 
+  // Trash count
+  const [trashCount, setTrashCount] = useState(0);
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("time_entries").select("id", { count: "exact", head: true })
+      .eq("user_id", user.id).not("deleted_at", "is", null)
+      .then(({ count }) => setTrashCount(count ?? 0));
+  }, [user, rangeEntries]);
+
   // Break stats
   const breakEntries = rangeEntries.filter((e) => (e.break_minutes ?? 0) > 0);
   const totalBreakMins = breakEntries.reduce((s, e) => s + (e.break_minutes ?? 0), 0);
   const avgBreakPerDay = dailyData.length > 0 ? totalBreakMins / dailyData.length : 0;
   const breakPct = totalMins > 0 ? (totalBreakMins / totalMins) * 100 : 0;
   const longestBreak = breakEntries.reduce((max, e) => Math.max(max, e.break_minutes ?? 0), 0);
+
 
   const handleEdit = (entry: TimeEntry) => {
     setEditEntry(entry as ExistingEntry);
@@ -663,6 +699,25 @@ const ReportsPage = () => {
                   </div>
                 )}
 
+                {/* Hours by Client */}
+                {clientHoursData.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Hours by Client</h4>
+                    <ResponsiveContainer width="100%" height={clientHoursData.length * 36 + 20}>
+                      <BarChart data={clientHoursData} layout="vertical" margin={{ left: 0, right: 10 }}>
+                        <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}h`} />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
+                        <Tooltip formatter={(v: number) => [`${v.toFixed(1)}h`]} />
+                        <Bar dataKey="hours" radius={[0, 4, 4, 0]}>
+                          {clientHoursData.map((d, i) => (
+                            <Cell key={i} fill={d.isUnassigned ? "hsl(var(--muted-foreground))" : CLIENT_COLORS[i % CLIENT_COLORS.length]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+
                 {/* Hours by Project */}
                 {projectHoursData.length > 0 && (
                   <div className="mb-6">
@@ -673,25 +728,44 @@ const ReportsPage = () => {
                         <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
                         <Tooltip formatter={(v: number) => [`${v.toFixed(1)}h`]} />
                         <Bar dataKey="hours" radius={[0, 4, 4, 0]}>
-                          {projectHoursData.map((_, i) => <Cell key={i} fill={CLIENT_COLORS[i % CLIENT_COLORS.length]} />)}
+                          {projectHoursData.map((d, i) => (
+                            <Cell key={i} fill={d.isUnassigned ? "hsl(var(--muted-foreground))" : CLIENT_COLORS[i % CLIENT_COLORS.length]} />
+                          ))}
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 )}
 
-                {/* Daily Activity line */}
+                {/* Hours by Task — only when tasks exist */}
+                {taskHoursData.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Hours by Task</h4>
+                    <ResponsiveContainer width="100%" height={taskHoursData.length * 36 + 20}>
+                      <BarChart data={taskHoursData} layout="vertical" margin={{ left: 0, right: 10 }}>
+                        <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}h`} />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
+                        <Tooltip formatter={(v: number) => [`${v.toFixed(1)}h`]} />
+                        <Bar dataKey="hours" radius={[0, 4, 4, 0]}>
+                          {taskHoursData.map((_, i) => <Cell key={i} fill={CLIENT_COLORS[i % CLIENT_COLORS.length]} />)}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+
+                {/* Daily Activity */}
                 {dailyData.length > 0 && (
                   <div className="mb-6">
                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Daily Activity</h4>
                     <ResponsiveContainer width="100%" height={160}>
-                      <LineChart data={dailyData}>
+                      <BarChart data={dailyData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="date" tick={{ fontSize: 9 }} />
                         <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}h`} width={30} />
                         <Tooltip formatter={(v: number) => [`${v.toFixed(1)}h`]} />
-                        <Line type="monotone" dataKey="hours" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
-                      </LineChart>
+                        <Bar dataKey="hours" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                      </BarChart>
                     </ResponsiveContainer>
                   </div>
                 )}
@@ -757,14 +831,16 @@ const ReportsPage = () => {
           )}
 
           {/* ═══════════════════════════════════════════
-              SECTION 5 — Trash link
+              SECTION 5 — Trash link (only when non-empty)
               ═══════════════════════════════════════════ */}
-          <div className="flex justify-center py-4">
-            <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-              <Trash2 className="w-4 h-4" />
-              View Trash
-            </button>
-          </div>
+          {trashCount > 0 && (
+            <div className="flex justify-center py-4">
+              <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <Trash2 className="w-4 h-4" />
+                Trash · {trashCount} {trashCount === 1 ? "entry" : "entries"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

@@ -29,6 +29,7 @@ import {
   saveAnonymousEntry,
 } from "@/lib/anonymous-store";
 import { toast } from "sonner";
+import { resolveRate } from "@/lib/resolve-rate";
 
 interface CallLogModalProps {
   open: boolean;
@@ -106,11 +107,18 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
 
   // Rate resolution
   useEffect(() => {
-    const sc = clientsFull.find((c) => c.id === clientId);
-    const sp = allProjectsFull.find((p) => p.id === projectId);
-    if (sp?.rate) { setRateAmount(String(sp.rate)); setRateCurrency(sp.currency ?? sc?.currency ?? "EUR"); }
-    else if (sc?.default_rate) { setRateAmount(String(sc.default_rate)); setRateCurrency(sc.currency ?? "EUR"); }
-  }, [clientId, projectId, clientsFull, allProjectsFull]);
+    if (!user) {
+      const sp = allProjectsFull.find((p) => p.id === projectId);
+      const sc = clientsFull.find((c) => c.id === clientId);
+      if (sp?.rate) { setRateAmount(String(sp.rate)); setRateCurrency(sp.currency ?? sc?.currency ?? "EUR"); }
+      else if (sc?.default_rate) { setRateAmount(String(sc.default_rate)); setRateCurrency(sc.currency ?? "EUR"); }
+      return;
+    }
+    if (!clientId && !projectId) return;
+    resolveRate(clientId || null, projectId || null, user.id).then((r) => {
+      if (r.amount != null) { setRateAmount(String(r.amount)); setRateCurrency(r.currency); }
+    });
+  }, [clientId, projectId, user]);
 
   // Draw dial
   useEffect(() => {

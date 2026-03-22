@@ -29,6 +29,7 @@ import {
   getAnonymousTasks, saveAnonymousTask,
 } from "@/lib/anonymous-store";
 import { toast } from "sonner";
+import { resolveRate } from "@/lib/resolve-rate";
 
 export interface SessionData {
   durationMinutes: number;
@@ -202,17 +203,19 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
   // Rate resolution when client/project changes
   useEffect(() => {
     if (existingEntry) return; // Don't override on edit
-    const selectedClient = clientsFull.find((c) => c.id === clientId);
-    const selectedProject = allProjectsFull.find((p) => p.id === projectId);
-
-    if (selectedProject?.rate) {
-      setRateAmount(String(selectedProject.rate));
-      setRateCurrency(selectedProject.currency ?? selectedClient?.currency ?? "EUR");
-    } else if (selectedClient?.default_rate) {
-      setRateAmount(String(selectedClient.default_rate));
-      setRateCurrency(selectedClient.currency ?? "EUR");
+    if (!user) {
+      // Local fallback for anonymous
+      const sp = allProjectsFull.find((p) => p.id === projectId);
+      const sc = clientsFull.find((c) => c.id === clientId);
+      if (sp?.rate) { setRateAmount(String(sp.rate)); setRateCurrency(sp.currency ?? sc?.currency ?? "EUR"); }
+      else if (sc?.default_rate) { setRateAmount(String(sc.default_rate)); setRateCurrency(sc.currency ?? "EUR"); }
+      return;
     }
-  }, [clientId, projectId, clientsFull, allProjectsFull, existingEntry]);
+    if (!clientId && !projectId) return;
+    resolveRate(clientId || null, projectId || null, user.id).then((r) => {
+      if (r.amount != null) { setRateAmount(String(r.amount)); setRateCurrency(r.currency); }
+    });
+  }, [clientId, projectId, user, existingEntry]);
 
   if (!session) return null;
 

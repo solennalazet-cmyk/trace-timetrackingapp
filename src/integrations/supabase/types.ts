@@ -236,6 +236,7 @@ export type Database = {
           break_minutes: number | null
           client_id: string | null
           created_at: string | null
+          deleted_at: string | null
           duration_minutes: number
           entry_date: string | null
           entry_type: string | null
@@ -257,6 +258,7 @@ export type Database = {
           break_minutes?: number | null
           client_id?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           duration_minutes: number
           entry_date?: string | null
           entry_type?: string | null
@@ -278,6 +280,7 @@ export type Database = {
           break_minutes?: number | null
           client_id?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           duration_minutes?: number
           entry_date?: string | null
           entry_type?: string | null

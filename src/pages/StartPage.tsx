@@ -250,7 +250,7 @@ const StartPage = () => {
           todayCount={todayCount}
           todayMinutes={todayMinutes}
           unassignedCount={unassignedCount}
-          onTodayClick={() => navigate("/reports")}
+          onTodayClick={() => setTodaySheetOpen(true)}
           onUnassignedClick={() => setUnassignedOpen(true)}
         />
       )}

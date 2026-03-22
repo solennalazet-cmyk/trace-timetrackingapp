@@ -141,6 +141,7 @@ const ClientsPage = () => {
       setProjects(ap.map((p: any) => ({ id: p.id, name: p.name, client_id: p.client_id ?? null, rate: p.rate ?? null, currency: p.currency ?? null })));
       setMonthlyStats([]);
       setProjectStats([]);
+      setTasks([]);
     }
     setLoading(false);
   }, [user]);

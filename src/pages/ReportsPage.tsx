@@ -16,6 +16,8 @@ import EntryDetailSheet, { type TimeEntry } from "@/components/EntryDetailSheet"
 import AssignmentModal, { type SessionData, type AssignmentResult, type ExistingEntry } from "@/components/AssignmentModal";
 import BillingDialog from "@/components/BillingDialog";
 import PaywallModal from "@/components/PaywallModal";
+import ClientBillingSummary from "@/components/ClientBillingSummary";
+import UnassignedPanel from "@/components/UnassignedPanel";
 import { toast } from "sonner";
 
 type DateRange = "today" | "7days" | "30days" | "month";
@@ -97,7 +99,9 @@ const ReportsPage = () => {
   const [editSession, setEditSession] = useState<SessionData | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
   const [billingOpen, setBillingOpen] = useState(false);
+  const [billingClientId, setBillingClientId] = useState<string | null>(null);
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [unassignedOpen, setUnassignedOpen] = useState(false);
 
   // Recent activity filters
   const [search, setSearch] = useState("");
@@ -189,29 +193,7 @@ const ReportsPage = () => {
     });
   }, [rangeEntries, rangeStart, clientIds]);
 
-  // === SECTION 2: Client billing summary ===
-  const clientBillingSummary = useMemo(() => {
-    const map: Record<string, { hours: number; billableHours: number; value: number; unbilledValue: number; currency: string }> = {};
-    rangeEntries.forEach((e) => {
-      const key = e.client_id ?? "unassigned";
-      if (!map[key]) map[key] = { hours: 0, billableHours: 0, value: 0, unbilledValue: 0, currency: e.rate_currency ?? "EUR" };
-      map[key].hours += e.duration_minutes / 60;
-      if (e.billable) {
-        map[key].billableHours += e.duration_minutes / 60;
-        map[key].value += e.billable_value || 0;
-        if (e.billing_status === "unbilled") {
-          map[key].unbilledValue += e.billable_value || 0;
-        }
-      }
-    });
-    return Object.entries(map)
-      .map(([id, d]) => ({
-        id,
-        name: id === "unassigned" ? "Unassigned" : (clients[id] ?? "Unknown"),
-        ...d,
-      }))
-      .sort((a, b) => b.hours - a.hours);
-  }, [rangeEntries, clients]);
+  // (Client billing summary is now a separate component with its own date range)
 
   // === SECTION 3: Filtered recent activity ===
   const filteredEntries = useMemo(() => {
@@ -451,58 +433,31 @@ const ReportsPage = () => {
           {/* ═══════════════════════════════════════════
               SECTION 2 — Client Billing Summary
               ═══════════════════════════════════════════ */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-foreground">Client Billing</h3>
-              {isPro && (
-                <Button size="sm" className="bg-primary text-primary-foreground rounded-full h-8 px-4 text-xs font-bold gap-1" onClick={() => setBillingOpen(true)}>
-                  <CreditCard className="w-3.5 h-3.5" /> Bill Clients
-                </Button>
-              )}
+          <ClientBillingSummary
+            allEntries={rangeEntries}
+            clients={clients}
+            projects={projects}
+            isPro={isPro}
+            onBillClient={(clientId) => {
+              setBillingClientId(clientId);
+              setBillingOpen(true);
+            }}
+            onOpenUnassigned={() => setUnassignedOpen(true)}
+          />
+
+          {/* Invoice totals row */}
+          {(invoicedTotal > 0 || paidTotal > 0) && (
+            <div className="flex gap-2 mb-6">
+              <div className="flex-1 p-2.5 rounded-xl border border-border bg-card">
+                <p className="text-[10px] text-muted-foreground">Invoiced</p>
+                <p className="font-mono text-base font-bold text-foreground">€{invoicedTotal.toFixed(0)}</p>
+              </div>
+              <div className="flex-1 p-2.5 rounded-xl border border-border bg-card">
+                <p className="text-[10px] text-muted-foreground">Paid</p>
+                <p className="font-mono text-base font-bold text-foreground">€{paidTotal.toFixed(0)}</p>
+              </div>
             </div>
-
-            {clientBillingSummary.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">No entries in this period.</p>
-            ) : (
-              <div className="space-y-2">
-                {clientBillingSummary.map((c, i) => {
-                  const sym = CURRENCY_SYMBOLS[c.currency] ?? "€";
-                  return (
-                    <div key={c.id} className="p-3 rounded-xl border border-border bg-card">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.id === "unassigned" ? "hsl(240 5% 75%)" : CLIENT_COLORS[i % CLIENT_COLORS.length] }} />
-                          <span className="text-sm font-medium text-foreground">{c.name}</span>
-                        </div>
-                        <span className="font-mono text-sm font-semibold text-foreground">{formatHHMM(Math.round(c.hours * 60))}</span>
-                      </div>
-                      <div className="flex gap-3 text-xs text-muted-foreground">
-                        <span>Billable: {c.billableHours.toFixed(1)}h</span>
-                        <span>Value: {sym}{c.value.toFixed(2)}</span>
-                        {c.unbilledValue > 0 && (
-                          <span className="text-primary font-medium">Unbilled: {sym}{c.unbilledValue.toFixed(2)}</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Invoice totals row */}
-            {(invoicedTotal > 0 || paidTotal > 0) && (
-              <div className="flex gap-2 mt-3">
-                <div className="flex-1 p-2.5 rounded-xl border border-border bg-card">
-                  <p className="text-[10px] text-muted-foreground">Invoiced</p>
-                  <p className="font-mono text-base font-bold text-foreground">€{invoicedTotal.toFixed(0)}</p>
-                </div>
-                <div className="flex-1 p-2.5 rounded-xl border border-border bg-card">
-                  <p className="text-[10px] text-muted-foreground">Paid</p>
-                  <p className="font-mono text-base font-bold text-foreground">€{paidTotal.toFixed(0)}</p>
-                </div>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* ═══════════════════════════════════════════
               SECTION 3 — Recent Activity (filterable)
@@ -745,6 +700,17 @@ const ReportsPage = () => {
         onSave={handleEditSave} onSkip={() => { setAssignOpen(false); setEditEntry(null); }} />
       <BillingDialog open={billingOpen} onOpenChange={setBillingOpen} onComplete={loadData} />
       <PaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} />
+      <UnassignedPanel
+        open={unassignedOpen}
+        onOpenChange={setUnassignedOpen}
+        onAssignEntry={(entry) => {
+          setUnassignedOpen(false);
+          setEditEntry(entry as ExistingEntry);
+          setEditSession({ durationMinutes: entry.duration_minutes, breakMinutes: entry.break_minutes ?? 0, startedAt: null, entryType: entry.entry_type ?? "timer" });
+          setAssignOpen(true);
+        }}
+        onCountChange={() => {}}
+      />
     </div>
   );
 };

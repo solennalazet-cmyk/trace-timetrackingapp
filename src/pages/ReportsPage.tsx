@@ -18,6 +18,7 @@ import BillingDialog from "@/components/BillingDialog";
 import PaywallModal from "@/components/PaywallModal";
 import ClientBillingSummary from "@/components/ClientBillingSummary";
 import UnassignedPanel from "@/components/UnassignedPanel";
+import TrashView from "@/components/TrashView";
 import { toast } from "sonner";
 
 type DateRange = "today" | "7days" | "30days" | "month";

@@ -92,7 +92,7 @@ const ReportsPage = () => {
   const isFree = profile?.plan === "free";
   const isPro = profile?.plan === "pro" || profile?.plan === "trial";
 
-  const [range, setRange] = useState<DateRange>("7days");
+  const [range, setRange] = useState<DateRange>("week");
   const [todayEntries, setTodayEntries] = useState<TimeEntry[]>([]);
   const [rangeEntries, setRangeEntries] = useState<TimeEntry[]>([]);
   const [clients, setClients] = useState<Record<string, string>>({});

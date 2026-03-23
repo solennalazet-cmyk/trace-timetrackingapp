@@ -21,10 +21,11 @@ import UnassignedPanel from "@/components/UnassignedPanel";
 import TrashView from "@/components/TrashView";
 import { toast } from "sonner";
 
-type DateRange = "today" | "7days" | "30days" | "month";
+type DateRange = "today" | "week" | "7days" | "30days" | "month";
 
 const RANGES: { key: DateRange; label: string }[] = [
   { key: "today", label: "Today" },
+  { key: "week", label: "This week" },
   { key: "7days", label: "7 days" },
   { key: "30days", label: "30 days" },
   { key: "month", label: "This month" },

@@ -49,6 +49,13 @@ const getDateRangeStart = (range: DateRange): string => {
   let d: Date;
   switch (range) {
     case "today": d = now; break;
+    case "week": {
+      // Monday of current week
+      const day = now.getDay(); // 0=Sun, 1=Mon...
+      const diff = day === 0 ? 6 : day - 1; // days since Monday
+      d = new Date(now.getTime() - diff * 86400000);
+      break;
+    }
     case "7days": d = new Date(now.getTime() - 6 * 86400000); break;
     case "30days": d = new Date(now.getTime() - 29 * 86400000); break;
     case "month": d = new Date(now.getFullYear(), now.getMonth(), 1); break;

@@ -21,10 +21,11 @@ import UnassignedPanel from "@/components/UnassignedPanel";
 import TrashView from "@/components/TrashView";
 import { toast } from "sonner";
 
-type DateRange = "today" | "7days" | "30days" | "month";
+type DateRange = "today" | "week" | "7days" | "30days" | "month";
 
 const RANGES: { key: DateRange; label: string }[] = [
   { key: "today", label: "Today" },
+  { key: "week", label: "This week" },
   { key: "7days", label: "7 days" },
   { key: "30days", label: "30 days" },
   { key: "month", label: "This month" },
@@ -48,6 +49,13 @@ const getDateRangeStart = (range: DateRange): string => {
   let d: Date;
   switch (range) {
     case "today": d = now; break;
+    case "week": {
+      // Monday of current week
+      const day = now.getDay(); // 0=Sun, 1=Mon...
+      const diff = day === 0 ? 6 : day - 1; // days since Monday
+      d = new Date(now.getTime() - diff * 86400000);
+      break;
+    }
     case "7days": d = new Date(now.getTime() - 6 * 86400000); break;
     case "30days": d = new Date(now.getTime() - 29 * 86400000); break;
     case "month": d = new Date(now.getFullYear(), now.getMonth(), 1); break;
@@ -84,7 +92,7 @@ const ReportsPage = () => {
   const isFree = profile?.plan === "free";
   const isPro = profile?.plan === "pro" || profile?.plan === "trial";
 
-  const [range, setRange] = useState<DateRange>("7days");
+  const [range, setRange] = useState<DateRange>("week");
   const [todayEntries, setTodayEntries] = useState<TimeEntry[]>([]);
   const [rangeEntries, setRangeEntries] = useState<TimeEntry[]>([]);
   const [clients, setClients] = useState<Record<string, string>>({});

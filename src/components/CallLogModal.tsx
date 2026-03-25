@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import CreatableCombobox, { ComboboxItem } from "@/components/CreatableCombobox";
 import TagsInput from "@/components/TagsInput";
+import ScrollPicker from "@/components/ScrollPicker";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {

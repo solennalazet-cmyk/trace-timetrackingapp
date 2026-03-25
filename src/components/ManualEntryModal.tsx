@@ -232,12 +232,12 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[400px] rounded-t-2xl sm:rounded-2xl p-6">
+      <DialogContent className="max-w-[400px] rounded-t-2xl sm:rounded-2xl p-6 flex flex-col">
         <DialogHeader>
           <DialogTitle>Manual Entry</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-3">
+        <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
           {/* Date */}
           <div>
             <Label>Date</Label>

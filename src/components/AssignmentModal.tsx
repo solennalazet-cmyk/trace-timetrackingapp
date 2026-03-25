@@ -331,7 +331,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleSkipOrDismiss(); }}>
-      <DialogContent className="max-w-[400px] rounded-t-2xl sm:rounded-2xl p-6">
+      <DialogContent className="max-w-[400px] rounded-t-2xl sm:rounded-2xl p-6 flex flex-col">
         <DialogHeader>
           <DialogTitle>
             {existingEntry
@@ -363,7 +363,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
           )}
         </div>
 
-        <div className="space-y-3 text-foreground">
+        <div className="space-y-3 text-foreground overflow-y-auto flex-1 min-h-0">
           {/* Client */}
           <div>
             <Label className="text-foreground">Client</Label>

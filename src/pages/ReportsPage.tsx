@@ -526,12 +526,26 @@ const ReportsPage = () => {
             clients={clients}
             projects={projects}
             isPro={isPro}
+            clientColorMap={clientColorMap}
             onBillClient={(clientId) => {
               setBillingClientId(clientId);
               setBillingOpen(true);
             }}
             onOpenUnassigned={() => setUnassignedOpen(true)}
             onEditEntry={handleEdit}
+            onDeleteEntry={async (entryId) => {
+              if (user) {
+                await supabase.from("time_entries").update({ deleted_at: new Date().toISOString() }).eq("id", entryId);
+                toast("Entry deleted.", {
+                  action: { label: "Undo", onClick: async () => {
+                    await supabase.from("time_entries").update({ deleted_at: null }).eq("id", entryId);
+                    loadData();
+                  }},
+                  duration: 5000,
+                });
+                loadData();
+              }
+            }}
           />
 
           {/* Invoice totals row */}

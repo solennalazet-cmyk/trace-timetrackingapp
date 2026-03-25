@@ -190,11 +190,16 @@ const ReportsPage = () => {
   const clientIds = useMemo(() => [...new Set(rangeEntries.map((e) => e.client_id).filter(Boolean))] as string[], [rangeEntries]);
   const hasUnassigned = rangeEntries.some((e) => !e.client_id);
 
+  // Shared color map for consistent colors between chart and summary
+  const clientColorMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    clientIds.forEach((id, i) => { map[id] = CLIENT_COLORS[i % CLIENT_COLORS.length]; });
+    map["unassigned"] = "hsl(240 5% 75%)";
+    return map;
+  }, [clientIds]);
+
   const stackedChartData = useMemo(() => {
     const days = getDaysInRange(rangeStart);
-    const colorMap: Record<string, string> = {};
-    clientIds.forEach((id, i) => { colorMap[id] = CLIENT_COLORS[i % CLIENT_COLORS.length]; });
-    colorMap["unassigned"] = "hsl(240 5% 75%)";
 
     return days.map((day) => {
       const dayEntries = rangeEntries.filter((e) => e.entry_date === day);

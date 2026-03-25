@@ -50,13 +50,10 @@ const RATE_UNITS = [
 
 const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
   const { user } = useAuth();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const [durationMinutes, setDurationMinutes] = useState(15);
-  const [directInput, setDirectInput] = useState(false);
-  const [directHours, setDirectHours] = useState("0");
-  const [directMins, setDirectMins] = useState("15");
-  const [dragging, setDragging] = useState(false);
+  const [pickerHours, setPickerHours] = useState(0);
+  const [pickerMinutes, setPickerMinutes] = useState(15);
+  const [pickerSeconds, setPickerSeconds] = useState(0);
 
   const [clientId, setClientId] = useState("");
   const [clientName, setClientName] = useState("");

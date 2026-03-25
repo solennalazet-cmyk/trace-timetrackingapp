@@ -75,6 +75,13 @@ const FocusMode = ({ onComplete }: FocusModeProps) => {
   const svgRef = useRef<SVGSVGElement>(null);
 
   const formatCountdown = (ms: number) => {
+    const totalSec = Math.ceil(ms / 1000);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  };
+
+  const handleDrag = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
       if (status !== "idle" || !svgRef.current) return;
       const rect = svgRef.current.getBoundingClientRect();

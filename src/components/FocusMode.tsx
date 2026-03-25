@@ -1,8 +1,11 @@
 import { useFocusTimer } from "@/hooks/useFocusTimer";
 import CircularTimer from "./CircularTimer";
 import { Button } from "@/components/ui/button";
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect, useState } from "react";
 import { Pause, Play, Square } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { playTimerSound } from "@/lib/timer-sounds";
 
 interface FocusModeProps {
   onComplete: (data: { durationMinutes: number; breakMinutes: number; startedAt: string | null }) => void;

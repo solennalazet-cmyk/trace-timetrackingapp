@@ -12,10 +12,7 @@ const AppLayout = () => {
   return (
     <div className="gradient-bg min-h-screen">
       <div className="relative max-w-[420px] mx-auto min-h-screen">
-        <Header />
         <div className="pt-14">
-          <TrialBanner />
-        </div>
         <main className="pb-20 px-4">
           <Outlet />
         </main>

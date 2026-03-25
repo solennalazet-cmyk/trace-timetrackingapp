@@ -96,12 +96,11 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
     const plan = profile.plan;
     const status = profile.subscription_status;
 
-    if (plan === "trial") {
+    if (plan === "trial" || plan === "free") {
       return (
         <div className="space-y-3">
-          <p className="text-sm font-medium">Plan: Free Trial</p>
-          <Progress value={(trialDaysUsed / 14) * 100} className="h-2" />
-          <p className="text-xs text-muted-foreground">{trialDaysLeft} days remaining in your trial.</p>
+          <p className="text-sm font-medium">Plan: Free</p>
+          <p className="text-xs text-muted-foreground">You're on the free plan.</p>
           <Button
             className="w-full bg-primary text-primary-foreground rounded-[28px] h-12 font-bold"
             onClick={handleUpgrade}

@@ -96,7 +96,7 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
 
   useEffect(() => {
     if (!open) return;
-    setDurationMinutes(15); setDirectInput(false); setDirectHours("0"); setDirectMins("15");
+    setPickerHours(0); setPickerMinutes(15); setPickerSeconds(0);
     setClientId(""); setClientName(""); setProjectId(""); setProjectName("");
     setTaskId(""); setTaskName(""); setNotes("");
     setBillable(true); setRateAmount(""); setRateCurrency("EUR"); setRateUnit("hour");

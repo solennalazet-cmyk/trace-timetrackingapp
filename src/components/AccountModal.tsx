@@ -112,25 +112,6 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
       );
     }
 
-    if (plan === "free") {
-      return (
-        <div className="space-y-3">
-          <p className="text-sm font-medium">Plan: Free</p>
-          <p className="text-xs text-muted-foreground">You're on the free plan.</p>
-          <div className="text-xs text-muted-foreground space-y-0.5">
-            <p>✓ Unlimited: timer, shift, manual entry, timeline</p>
-            <p>✦ Pro features: reports, invoicing, call logging, unlimited clients & projects</p>
-          </div>
-          <Button
-            className="w-full bg-primary text-primary-foreground rounded-[28px] h-12 font-bold"
-            onClick={handleUpgrade}
-            disabled={upgradeLoading}
-          >
-            {upgradeLoading ? "Redirecting…" : "Upgrade to Pro — €10/month"}
-          </Button>
-        </div>
-      );
-    }
 
     if (plan === "pro") {
       if (status === "past_due") {

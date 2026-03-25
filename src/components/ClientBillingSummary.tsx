@@ -79,9 +79,11 @@ interface ClientBillingSummaryProps {
   clients: Record<string, string>;
   projects: Record<string, string>;
   isPro: boolean;
+  clientColorMap?: Record<string, string>;
   onBillClient: (clientId: string) => void;
   onOpenUnassigned: () => void;
   onEditEntry?: (entry: TimeEntry) => void;
+  onDeleteEntry?: (entryId: string) => void;
 }
 
 interface ClientSummary {

@@ -118,53 +118,8 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
     });
   }, [clientId, projectId, user]);
 
-  // Draw dial
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const size = 180;
-    canvas.width = size * 2; canvas.height = size * 2;
-    canvas.style.width = `${size}px`; canvas.style.height = `${size}px`;
-    ctx.scale(2, 2);
-    const cx = size / 2, cy = size / 2, r = 70;
-
-    ctx.clearRect(0, 0, size, size);
-
-    // Background ring
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.strokeStyle = "hsl(240 5% 85%)"; ctx.lineWidth = 6; ctx.stroke();
-
-    // Active arc
-    const angle = (durationMinutes / 120) * Math.PI * 2 - Math.PI / 2;
-    ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI / 2, angle);
-    ctx.strokeStyle = "hsl(var(--primary))"; ctx.lineWidth = 6; ctx.lineCap = "round"; ctx.stroke();
-
-    // Handle
-    const hx = cx + r * Math.cos(angle);
-    const hy = cy + r * Math.sin(angle);
-    ctx.beginPath(); ctx.arc(hx, hy, 10, 0, Math.PI * 2);
-    ctx.fillStyle = "hsl(var(--primary))"; ctx.fill();
-    ctx.strokeStyle = "hsl(var(--primary-foreground))"; ctx.lineWidth = 2; ctx.stroke();
-  }, [durationMinutes]);
-
-  const handleDialInteraction = (e: React.MouseEvent | React.TouchEvent) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-    const x = clientX - rect.left - rect.width / 2;
-    const y = clientY - rect.top - rect.height / 2;
-    let angle = Math.atan2(y, x) + Math.PI / 2;
-    if (angle < 0) angle += Math.PI * 2;
-    const mins = Math.round((angle / (Math.PI * 2)) * 120);
-    const clamped = Math.max(1, Math.min(120, mins));
-    setDurationMinutes(clamped);
-    setDirectHours(String(Math.floor(clamped / 60)));
-    setDirectMins(String(clamped % 60));
-  };
+  // Compute total duration in minutes from picker
+  const durationMinutes = pickerHours * 60 + pickerMinutes + (pickerSeconds > 0 ? 1 : 0);
 
   const handleCreateClient = async (name: string): Promise<ComboboxItem | null> => {
     if (user) {

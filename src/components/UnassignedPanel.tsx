@@ -67,25 +67,37 @@ const SwipeDeleteRow = ({
   onSwipeLeft: () => void;
 }) => {
   const startX = useRef(0);
+  const startY = useRef(0);
   const currentX = useRef(0);
   const rowRef = useRef<HTMLDivElement>(null);
+  const swiping = useRef(false);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     startX.current = e.touches[0].clientX;
+    startY.current = e.touches[0].clientY;
     currentX.current = 0;
+    swiping.current = false;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    const diff = e.touches[0].clientX - startX.current;
-    if (diff < 0 && rowRef.current) {
-      currentX.current = diff;
-      rowRef.current.style.transform = `translateX(${Math.max(diff, -100)}px)`;
-      rowRef.current.style.opacity = `${Math.max(1 + diff / 200, 0.3)}`;
+    const dx = startX.current - e.touches[0].clientX;
+    const dy = Math.abs(e.touches[0].clientY - startY.current);
+    if (dx > 10 && dx > dy * 2) swiping.current = true;
+    if (swiping.current && rowRef.current) {
+      const diff = e.touches[0].clientX - startX.current;
+      if (diff < 0) {
+        currentX.current = diff;
+        rowRef.current.style.transform = `translateX(${Math.max(diff, -100)}px)`;
+        rowRef.current.style.opacity = `${Math.max(1 + diff / 200, 0.3)}`;
+      }
     }
   };
 
-  const handleTouchEnd = () => {
-    if (currentX.current < -80) {
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const deltaX = startX.current - e.changedTouches[0].clientX;
+    const deltaY = Math.abs(startY.current - e.changedTouches[0].clientY);
+
+    if (deltaX > 60 && deltaX > deltaY * 2) {
       if (rowRef.current) {
         rowRef.current.style.transition = "transform 0.2s, opacity 0.2s";
         rowRef.current.style.transform = "translateX(-100%)";

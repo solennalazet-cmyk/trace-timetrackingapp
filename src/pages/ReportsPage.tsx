@@ -520,6 +520,7 @@ const ReportsPage = () => {
               setBillingOpen(true);
             }}
             onOpenUnassigned={() => setUnassignedOpen(true)}
+            onEditEntry={handleEdit}
           />
 
           {/* Invoice totals row */}

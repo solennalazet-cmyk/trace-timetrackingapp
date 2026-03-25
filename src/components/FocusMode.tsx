@@ -1,8 +1,11 @@
 import { useFocusTimer } from "@/hooks/useFocusTimer";
 import CircularTimer from "./CircularTimer";
 import { Button } from "@/components/ui/button";
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect, useState } from "react";
 import { Pause, Play, Square } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { playTimerSound } from "@/lib/timer-sounds";
 
 interface FocusModeProps {
   onComplete: (data: { durationMinutes: number; breakMinutes: number; startedAt: string | null }) => void;
@@ -33,6 +36,41 @@ const FocusMode = ({ onComplete }: FocusModeProps) => {
     reset,
     restart,
   } = useFocusTimer();
+
+  const { user } = useAuth();
+  const [timerSound, setTimerSound] = useState("chime");
+  const prevStatusRef = useRef(status);
+
+  // Load sound setting
+  useEffect(() => {
+    const loadSound = async () => {
+      if (user) {
+        const { data } = await supabase
+          .from("user_settings")
+          .select("timer_sound")
+          .eq("user_id", user.id)
+          .single();
+        if (data?.timer_sound) setTimerSound(data.timer_sound);
+      } else {
+        try {
+          const raw = localStorage.getItem("trace_user_settings");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed.timer_sound) setTimerSound(parsed.timer_sound);
+          }
+        } catch {}
+      }
+    };
+    loadSound();
+  }, [user]);
+
+  // Play sound when status transitions to "completed"
+  useEffect(() => {
+    if (prevStatusRef.current !== "completed" && status === "completed") {
+      playTimerSound(timerSound);
+    }
+    prevStatusRef.current = status;
+  }, [status, timerSound]);
 
   const svgRef = useRef<SVGSVGElement>(null);
 

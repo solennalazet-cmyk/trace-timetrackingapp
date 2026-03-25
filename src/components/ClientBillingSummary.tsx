@@ -125,10 +125,12 @@ const ClientBillingSummary = ({
   const { clientSummaries, unassignedSummary } = useMemo(() => {
     const clientMap: Record<string, ClientSummary> = {};
     let unassignedMins = 0;
+    const unassignedEntries: TimeEntry[] = [];
 
     filteredEntries.forEach((e) => {
       if (!e.client_id) {
         unassignedMins += e.duration_minutes;
+        unassignedEntries.push(e);
         return;
       }
 
@@ -160,10 +162,11 @@ const ClientBillingSummary = ({
     Object.values(clientMap).forEach((c) => {
       c.entries.sort((a, b) => (b.entry_date ?? "").localeCompare(a.entry_date ?? ""));
     });
+    unassignedEntries.sort((a, b) => (b.entry_date ?? "").localeCompare(a.entry_date ?? ""));
 
     return {
       clientSummaries: Object.values(clientMap).sort((a, b) => b.totalMins - a.totalMins),
-      unassignedSummary: { totalMins: unassignedMins },
+      unassignedSummary: { totalMins: unassignedMins, entries: unassignedEntries },
     };
   }, [filteredEntries, clients]);
 

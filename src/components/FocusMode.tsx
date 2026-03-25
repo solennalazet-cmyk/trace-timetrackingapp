@@ -37,16 +37,44 @@ const FocusMode = ({ onComplete }: FocusModeProps) => {
     restart,
   } = useFocusTimer();
 
+  const { user } = useAuth();
+  const [timerSound, setTimerSound] = useState("chime");
+  const prevStatusRef = useRef(status);
+
+  // Load sound setting
+  useEffect(() => {
+    const loadSound = async () => {
+      if (user) {
+        const { data } = await supabase
+          .from("user_settings")
+          .select("timer_sound")
+          .eq("user_id", user.id)
+          .single();
+        if (data?.timer_sound) setTimerSound(data.timer_sound);
+      } else {
+        try {
+          const raw = localStorage.getItem("trace_user_settings");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed.timer_sound) setTimerSound(parsed.timer_sound);
+          }
+        } catch {}
+      }
+    };
+    loadSound();
+  }, [user]);
+
+  // Play sound when status transitions to "completed"
+  useEffect(() => {
+    if (prevStatusRef.current !== "completed" && status === "completed") {
+      playTimerSound(timerSound);
+    }
+    prevStatusRef.current = status;
+  }, [status, timerSound]);
+
   const svgRef = useRef<SVGSVGElement>(null);
 
   const formatCountdown = (ms: number) => {
-    const totalSec = Math.ceil(ms / 1000);
-    const m = Math.floor(totalSec / 60);
-    const s = totalSec % 60;
-    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  };
-
-  const handleDrag = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
       if (status !== "idle" || !svgRef.current) return;
       const rect = svgRef.current.getBoundingClientRect();

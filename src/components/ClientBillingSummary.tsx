@@ -254,7 +254,7 @@ const ClientBillingSummary = ({
               <div className="p-3">
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: CLIENT_COLORS[i % CLIENT_COLORS.length] }} />
+                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: clientColorMap?.[c.id] ?? CLIENT_COLORS[i % CLIENT_COLORS.length] }} />
                     <span className="text-sm font-medium text-foreground">{c.name}</span>
                   </div>
                   <button onClick={() => toggleExpand(c.id)} className="p-1 rounded hover:bg-muted/50 transition-colors">

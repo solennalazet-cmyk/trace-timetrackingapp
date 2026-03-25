@@ -102,9 +102,11 @@ const ClientBillingSummary = ({
   clients,
   projects,
   isPro,
+  clientColorMap,
   onBillClient,
   onOpenUnassigned,
   onEditEntry,
+  onDeleteEntry,
 }: ClientBillingSummaryProps) => {
   const [billingRange, setBillingRange] = useState<BillingRange>("week");
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());

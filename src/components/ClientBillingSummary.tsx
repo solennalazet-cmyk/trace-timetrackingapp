@@ -325,26 +325,70 @@ const ClientBillingSummary = ({
           );
         })}
 
-        {/* Unassigned row */}
-        {unassignedSummary.totalMins > 0 && (
-          <div className="rounded-xl border border-border bg-card p-3">
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "hsl(240 5% 75%)" }} />
-                <span className="text-sm font-medium text-foreground">Unassigned</span>
+        {/* Unassigned row — collapsible */}
+        {unassignedSummary.entries.length > 0 && (
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="p-3">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "hsl(240 5% 75%)" }} />
+                  <span className="text-sm font-medium text-foreground">Unassigned</span>
+                </div>
+                <button onClick={() => toggleExpand("__unassigned__")} className="p-1 rounded hover:bg-muted/50 transition-colors">
+                  {expandedClients.has("__unassigned__")
+                    ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                    : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  }
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {formatHM(unassignedSummary.totalMins)} total · not billable
+              </p>
+              <div className="flex justify-end mt-1.5">
+                <button
+                  onClick={onOpenUnassigned}
+                  className="text-xs font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-primary/15 text-foreground hover:bg-primary/25 transition-colors"
+                >
+                  Assign entries <ArrowRight className="w-3 h-3" />
+                </button>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {formatHM(unassignedSummary.totalMins)} total · not billable
-            </p>
-            <div className="flex justify-end mt-1.5">
-              <button
-                onClick={onOpenUnassigned}
-                className="text-xs font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-primary/15 text-foreground hover:bg-primary/25 transition-colors"
-              >
-                Assign entries <ArrowRight className="w-3 h-3" />
-              </button>
-            </div>
+
+            {expandedClients.has("__unassigned__") && (
+              <div className="border-t border-border bg-muted/20 max-h-60 overflow-y-auto">
+                {unassignedSummary.entries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between px-3 py-2 text-xs border-b border-border last:border-b-0 hover:bg-muted/40 transition-colors"
+                  >
+                    <button
+                      onClick={() => onEditEntry?.(entry)}
+                      className="flex flex-col gap-0.5 text-left flex-1 min-w-0"
+                    >
+                      <span className="text-muted-foreground">
+                        {new Date(entry.entry_date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
+                      </span>
+                      <span className="text-foreground font-medium truncate">
+                        {entry.project_name ?? "No project"}
+                        {entry.task_name ? ` · ${entry.task_name}` : ""}
+                      </span>
+                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="font-mono text-foreground">{formatHM(entry.duration_minutes)}</span>
+                      {onDeleteEntry && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onDeleteEntry(entry.id); }}
+                          className="p-1 rounded hover:bg-destructive/10 transition-colors"
+                          title="Delete entry"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

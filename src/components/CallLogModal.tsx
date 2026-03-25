@@ -201,9 +201,6 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
     setSaving(false);
   };
 
-  const displayH = Math.floor(durationMinutes / 60);
-  const displayM = durationMinutes % 60;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[400px] rounded-t-2xl sm:rounded-2xl p-6">
@@ -212,36 +209,16 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
         </DialogHeader>
 
         <div className="space-y-3">
-          {/* Circular dial */}
-          <div className="flex flex-col items-center gap-2">
-            <canvas
-              ref={canvasRef}
-              className="cursor-pointer"
-              onMouseDown={(e) => { setDragging(true); handleDialInteraction(e); }}
-              onMouseMove={(e) => { if (dragging) handleDialInteraction(e); }}
-              onMouseUp={() => setDragging(false)}
-              onMouseLeave={() => setDragging(false)}
-              onTouchStart={(e) => { setDragging(true); handleDialInteraction(e); }}
-              onTouchMove={(e) => { if (dragging) handleDialInteraction(e); }}
-              onTouchEnd={() => setDragging(false)}
-            />
-            {directInput ? (
-              <div className="flex items-center gap-1">
-                <Input type="number" className="w-16 text-center" value={directHours}
-                  onChange={(e) => { setDirectHours(e.target.value); setDurationMinutes((parseInt(e.target.value) || 0) * 60 + (parseInt(directMins) || 0)); }} />
-                <span className="text-muted-foreground font-medium">:</span>
-                <Input type="number" className="w-16 text-center" value={directMins}
-                  onChange={(e) => { setDirectMins(e.target.value); setDurationMinutes((parseInt(directHours) || 0) * 60 + (parseInt(e.target.value) || 0)); }} />
-              </div>
-            ) : (
-              <button
-                onClick={() => setDirectInput(true)}
-                className="font-mono text-2xl font-bold text-foreground"
-              >
-                {String(displayH).padStart(2, "0")}:{String(displayM).padStart(2, "0")}
-              </button>
-            )}
-          </div>
+          {/* Scroll picker */}
+          <ScrollPicker
+            hours={pickerHours}
+            minutes={pickerMinutes}
+            seconds={pickerSeconds}
+            onChangeHours={setPickerHours}
+            onChangeMinutes={setPickerMinutes}
+            onChangeSeconds={setPickerSeconds}
+            maxHours={23}
+          />
 
           {/* Client */}
           <div><Label>Client</Label><CreatableCombobox items={clients} value={clientId} displayValue={clientName} placeholder="Select client"

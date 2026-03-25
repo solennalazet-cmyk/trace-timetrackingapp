@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import CreatableCombobox, { ComboboxItem } from "@/components/CreatableCombobox";
 import TagsInput from "@/components/TagsInput";
+import ScrollPicker from "@/components/ScrollPicker";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -49,13 +50,10 @@ const RATE_UNITS = [
 
 const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
   const { user } = useAuth();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const [durationMinutes, setDurationMinutes] = useState(15);
-  const [directInput, setDirectInput] = useState(false);
-  const [directHours, setDirectHours] = useState("0");
-  const [directMins, setDirectMins] = useState("15");
-  const [dragging, setDragging] = useState(false);
+  const [pickerHours, setPickerHours] = useState(0);
+  const [pickerMinutes, setPickerMinutes] = useState(15);
+  const [pickerSeconds, setPickerSeconds] = useState(0);
 
   const [clientId, setClientId] = useState("");
   const [clientName, setClientName] = useState("");
@@ -98,7 +96,7 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
 
   useEffect(() => {
     if (!open) return;
-    setDurationMinutes(15); setDirectInput(false); setDirectHours("0"); setDirectMins("15");
+    setPickerHours(0); setPickerMinutes(15); setPickerSeconds(0);
     setClientId(""); setClientName(""); setProjectId(""); setProjectName("");
     setTaskId(""); setTaskName(""); setNotes("");
     setBillable(true); setRateAmount(""); setRateCurrency("EUR"); setRateUnit("hour");
@@ -120,53 +118,8 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
     });
   }, [clientId, projectId, user]);
 
-  // Draw dial
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const size = 180;
-    canvas.width = size * 2; canvas.height = size * 2;
-    canvas.style.width = `${size}px`; canvas.style.height = `${size}px`;
-    ctx.scale(2, 2);
-    const cx = size / 2, cy = size / 2, r = 70;
-
-    ctx.clearRect(0, 0, size, size);
-
-    // Background ring
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.strokeStyle = "hsl(240 5% 85%)"; ctx.lineWidth = 6; ctx.stroke();
-
-    // Active arc
-    const angle = (durationMinutes / 120) * Math.PI * 2 - Math.PI / 2;
-    ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI / 2, angle);
-    ctx.strokeStyle = "hsl(var(--primary))"; ctx.lineWidth = 6; ctx.lineCap = "round"; ctx.stroke();
-
-    // Handle
-    const hx = cx + r * Math.cos(angle);
-    const hy = cy + r * Math.sin(angle);
-    ctx.beginPath(); ctx.arc(hx, hy, 10, 0, Math.PI * 2);
-    ctx.fillStyle = "hsl(var(--primary))"; ctx.fill();
-    ctx.strokeStyle = "hsl(var(--primary-foreground))"; ctx.lineWidth = 2; ctx.stroke();
-  }, [durationMinutes]);
-
-  const handleDialInteraction = (e: React.MouseEvent | React.TouchEvent) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-    const x = clientX - rect.left - rect.width / 2;
-    const y = clientY - rect.top - rect.height / 2;
-    let angle = Math.atan2(y, x) + Math.PI / 2;
-    if (angle < 0) angle += Math.PI * 2;
-    const mins = Math.round((angle / (Math.PI * 2)) * 120);
-    const clamped = Math.max(1, Math.min(120, mins));
-    setDurationMinutes(clamped);
-    setDirectHours(String(Math.floor(clamped / 60)));
-    setDirectMins(String(clamped % 60));
-  };
+  // Compute total duration in minutes from picker
+  const durationMinutes = pickerHours * 60 + pickerMinutes + (pickerSeconds > 0 ? 1 : 0);
 
   const handleCreateClient = async (name: string): Promise<ComboboxItem | null> => {
     if (user) {
@@ -248,9 +201,6 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
     setSaving(false);
   };
 
-  const displayH = Math.floor(durationMinutes / 60);
-  const displayM = durationMinutes % 60;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[400px] rounded-t-2xl sm:rounded-2xl p-6">
@@ -259,36 +209,16 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
         </DialogHeader>
 
         <div className="space-y-3">
-          {/* Circular dial */}
-          <div className="flex flex-col items-center gap-2">
-            <canvas
-              ref={canvasRef}
-              className="cursor-pointer"
-              onMouseDown={(e) => { setDragging(true); handleDialInteraction(e); }}
-              onMouseMove={(e) => { if (dragging) handleDialInteraction(e); }}
-              onMouseUp={() => setDragging(false)}
-              onMouseLeave={() => setDragging(false)}
-              onTouchStart={(e) => { setDragging(true); handleDialInteraction(e); }}
-              onTouchMove={(e) => { if (dragging) handleDialInteraction(e); }}
-              onTouchEnd={() => setDragging(false)}
-            />
-            {directInput ? (
-              <div className="flex items-center gap-1">
-                <Input type="number" className="w-16 text-center" value={directHours}
-                  onChange={(e) => { setDirectHours(e.target.value); setDurationMinutes((parseInt(e.target.value) || 0) * 60 + (parseInt(directMins) || 0)); }} />
-                <span className="text-muted-foreground font-medium">:</span>
-                <Input type="number" className="w-16 text-center" value={directMins}
-                  onChange={(e) => { setDirectMins(e.target.value); setDurationMinutes((parseInt(directHours) || 0) * 60 + (parseInt(e.target.value) || 0)); }} />
-              </div>
-            ) : (
-              <button
-                onClick={() => setDirectInput(true)}
-                className="font-mono text-2xl font-bold text-foreground"
-              >
-                {String(displayH).padStart(2, "0")}:{String(displayM).padStart(2, "0")}
-              </button>
-            )}
-          </div>
+          {/* Scroll picker */}
+          <ScrollPicker
+            hours={pickerHours}
+            minutes={pickerMinutes}
+            seconds={pickerSeconds}
+            onChangeHours={setPickerHours}
+            onChangeMinutes={setPickerMinutes}
+            onChangeSeconds={setPickerSeconds}
+            maxHours={23}
+          />
 
           {/* Client */}
           <div><Label>Client</Label><CreatableCombobox items={clients} value={clientId} displayValue={clientName} placeholder="Select client"

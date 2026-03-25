@@ -12,10 +12,12 @@ const AppLayout = () => {
   return (
     <div className="gradient-bg min-h-screen">
       <div className="relative max-w-[420px] mx-auto min-h-screen">
+        <Header />
         <div className="pt-14">
-        <main className="pb-20 px-4">
-          <Outlet />
-        </main>
+          <main className="pb-20 px-4">
+            <Outlet />
+          </main>
+        </div>
         <BottomNav />
       </div>
       <AuthModal open={authOpen} onOpenChange={setAuthOpen} />

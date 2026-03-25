@@ -66,8 +66,14 @@ const getDateRangeStart = (range: DateRange): string => {
 const getDaysInRange = (startStr: string): string[] => {
   const days: string[] = [];
   const start = new Date(startStr + "T00:00:00");
+  // Always start on Monday of the week containing the start date
+  const startDay = start.getDay(); // 0=Sun
+  const diffToMon = startDay === 0 ? 6 : startDay - 1;
+  const monday = new Date(start);
+  monday.setDate(monday.getDate() - diffToMon);
+
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  let d = new Date(start);
+  let d = new Date(monday);
   while (d <= today) {
     days.push(d.toISOString().split("T")[0]);
     d.setDate(d.getDate() + 1);
@@ -520,6 +526,7 @@ const ReportsPage = () => {
               setBillingOpen(true);
             }}
             onOpenUnassigned={() => setUnassignedOpen(true)}
+            onEditEntry={handleEdit}
           />
 
           {/* Invoice totals row */}

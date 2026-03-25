@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import { ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -38,7 +37,7 @@ const getBillingRangeStart = (range: BillingRange): string => {
     case "week": {
       d = new Date(now);
       const day = d.getDay();
-      const diff = day === 0 ? 6 : day - 1; // Monday start
+      const diff = day === 0 ? 6 : day - 1;
       d.setDate(d.getDate() - diff);
       break;
     }
@@ -57,7 +56,7 @@ const getBillingRangeStart = (range: BillingRange): string => {
 const getBillingRangeEnd = (range: BillingRange): string => {
   const now = new Date();
   if (range === "last-month") {
-    const d = new Date(now.getFullYear(), now.getMonth(), 0); // last day of prev month
+    const d = new Date(now.getFullYear(), now.getMonth(), 0);
     return d.toISOString().split("T")[0];
   }
   return now.toISOString().split("T")[0];
@@ -82,6 +81,7 @@ interface ClientBillingSummaryProps {
   isPro: boolean;
   onBillClient: (clientId: string) => void;
   onOpenUnassigned: () => void;
+  onEditEntry?: (entry: TimeEntry) => void;
 }
 
 interface ClientSummary {
@@ -92,7 +92,7 @@ interface ClientSummary {
   billableValue: number;
   outstanding: number;
   currency: string;
-  projectBreakdown: { id: string; name: string; mins: number; value: number; unbilled: boolean }[];
+  entries: TimeEntry[];
 }
 
 const ClientBillingSummary = ({
@@ -102,6 +102,7 @@ const ClientBillingSummary = ({
   isPro,
   onBillClient,
   onOpenUnassigned,
+  onEditEntry,
 }: ClientBillingSummaryProps) => {
   const [billingRange, setBillingRange] = useState<BillingRange>("week");
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
@@ -109,7 +110,6 @@ const ClientBillingSummary = ({
   const rangeStart = getBillingRangeStart(billingRange);
   const rangeEnd = getBillingRangeEnd(billingRange);
 
-  // Filter entries to billing range
   const filteredEntries = useMemo(() =>
     allEntries.filter((e) => {
       const d = e.entry_date ?? "";
@@ -118,7 +118,6 @@ const ClientBillingSummary = ({
     [allEntries, rangeStart, rangeEnd]
   );
 
-  // Build client summaries
   const { clientSummaries, unassignedSummary } = useMemo(() => {
     const clientMap: Record<string, ClientSummary> = {};
     let unassignedMins = 0;
@@ -138,11 +137,12 @@ const ClientBillingSummary = ({
           billableValue: 0,
           outstanding: 0,
           currency: e.rate_currency ?? "EUR",
-          projectBreakdown: [],
+          entries: [],
         };
       }
       const c = clientMap[e.client_id];
       c.totalMins += e.duration_minutes;
+      c.entries.push(e);
       if (e.billable) {
         c.billableMins += e.duration_minutes;
         c.billableValue += e.billable_value || 0;
@@ -152,35 +152,16 @@ const ClientBillingSummary = ({
       }
     });
 
-    // Build project breakdowns
+    // Sort entries reverse chronological
     Object.values(clientMap).forEach((c) => {
-      const projMap: Record<string, { mins: number; value: number; hasUnbilled: boolean }> = {};
-      filteredEntries
-        .filter((e) => e.client_id === c.id)
-        .forEach((e) => {
-          const pid = e.project_id ?? "unassigned";
-          if (!projMap[pid]) projMap[pid] = { mins: 0, value: 0, hasUnbilled: false };
-          projMap[pid].mins += e.duration_minutes;
-          projMap[pid].value += e.billable_value || 0;
-          if (e.billing_status === "unbilled" && e.billable) projMap[pid].hasUnbilled = true;
-        });
-
-      c.projectBreakdown = Object.entries(projMap)
-        .map(([id, d]) => ({
-          id,
-          name: id === "unassigned" ? "Unassigned" : (projects[id] ?? "Unknown"),
-          mins: d.mins,
-          value: d.value,
-          unbilled: d.hasUnbilled,
-        }))
-        .sort((a, b) => b.mins - a.mins);
+      c.entries.sort((a, b) => (b.entry_date ?? "").localeCompare(a.entry_date ?? ""));
     });
 
     return {
       clientSummaries: Object.values(clientMap).sort((a, b) => b.totalMins - a.totalMins),
       unassignedSummary: { totalMins: unassignedMins },
     };
-  }, [filteredEntries, clients, projects]);
+  }, [filteredEntries, clients]);
 
   // Daily breakdown
   const dailyBreakdown = useMemo(() => {
@@ -220,19 +201,23 @@ const ClientBillingSummary = ({
 
   const rangeLabel = BILLING_RANGES.find((r) => r.key === billingRange)?.label ?? "This week";
 
+  const RangeSelector = () => (
+    <Select value={billingRange} onValueChange={(v) => setBillingRange(v as BillingRange)}>
+      <SelectTrigger className="h-7 w-auto text-xs gap-1 border-border rounded-full px-3">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {BILLING_RANGES.map((r) => <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>)}
+      </SelectContent>
+    </Select>
+  );
+
   if (filteredEntries.length === 0) {
     return (
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-foreground">Client Summary</h3>
-          <Select value={billingRange} onValueChange={(v) => setBillingRange(v as BillingRange)}>
-            <SelectTrigger className="h-7 w-auto text-xs gap-1 border-border rounded-full px-3">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {BILLING_RANGES.map((r) => <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <RangeSelector />
         </div>
         <div className="text-center py-8">
           <p className="text-sm text-muted-foreground">No entries for this period.</p>
@@ -247,14 +232,7 @@ const ClientBillingSummary = ({
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-foreground">Client Summary</h3>
-        <Select value={billingRange} onValueChange={(v) => setBillingRange(v as BillingRange)}>
-          <SelectTrigger className="h-7 w-auto text-xs gap-1 border-border rounded-full px-3">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {BILLING_RANGES.map((r) => <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <RangeSelector />
       </div>
 
       {/* Client rows */}
@@ -289,7 +267,7 @@ const ClientBillingSummary = ({
                   {isPro && c.outstanding > 0 && (
                     <button
                       onClick={() => onBillClient(c.id)}
-                      className="text-xs text-primary font-medium hover:underline flex items-center gap-0.5"
+                      className="text-xs font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-primary/15 text-foreground hover:bg-primary/25 transition-colors"
                     >
                       Bill client <ArrowRight className="w-3 h-3" />
                     </button>
@@ -297,28 +275,43 @@ const ClientBillingSummary = ({
                 </div>
               </div>
 
-              {/* Expanded: project breakdown */}
+              {/* Expanded: session list (reverse chronological) */}
               {isExpanded && (
-                <div className="border-t border-border px-3 py-2 bg-muted/20">
-                  {c.projectBreakdown.map((p, pi) => (
-                    <div key={p.id} className="flex items-center justify-between py-1.5 text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">{pi === c.projectBreakdown.length - 1 ? "└──" : "├──"}</span>
-                        <span className="text-foreground font-medium">{p.name}</span>
-                      </div>
-                      <div className="flex items-center gap-3 text-muted-foreground">
-                        <span>{formatHM(p.mins)}</span>
-                        {p.value > 0 ? (
-                          <span>
-                            {sym}{p.value.toFixed(2)}
-                            {p.unbilled && <span className="text-primary ml-1">unbilled</span>}
+                <div className="border-t border-border bg-muted/20 max-h-60 overflow-y-auto">
+                  {c.entries.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-3">No sessions</p>
+                  ) : (
+                    c.entries.map((entry) => (
+                      <button
+                        key={entry.id}
+                        onClick={() => onEditEntry?.(entry)}
+                        className="w-full flex items-center justify-between px-3 py-2 text-xs border-b border-border last:border-b-0 hover:bg-muted/40 transition-colors text-left"
+                      >
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-muted-foreground">
+                            {new Date(entry.entry_date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
                           </span>
-                        ) : (
-                          <span>—</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                          <span className="text-foreground font-medium">
+                            {entry.project_name ?? "No project"}
+                            {entry.task_name ? ` · ${entry.task_name}` : ""}
+                          </span>
+                        </div>
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="font-mono text-foreground">{formatHM(entry.duration_minutes)}</span>
+                          {entry.billable && entry.billable_value ? (
+                            <span className="font-mono text-muted-foreground">
+                              {sym}{entry.billable_value.toFixed(2)}
+                              {entry.billing_status === "unbilled" && (
+                                <span className="ml-1 text-accent-foreground font-medium">unbilled</span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </div>
+                      </button>
+                    ))
+                  )}
                 </div>
               )}
             </div>
@@ -340,7 +333,7 @@ const ClientBillingSummary = ({
             <div className="flex justify-end mt-1.5">
               <button
                 onClick={onOpenUnassigned}
-                className="text-xs text-primary font-medium hover:underline flex items-center gap-0.5"
+                className="text-xs font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-primary/15 text-foreground hover:bg-primary/25 transition-colors"
               >
                 Assign entries <ArrowRight className="w-3 h-3" />
               </button>

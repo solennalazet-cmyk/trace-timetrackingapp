@@ -363,7 +363,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
           )}
         </div>
 
-        <div className="space-y-3 text-foreground">
+        <div className="space-y-3 text-foreground overflow-y-auto flex-1 min-h-0">
           {/* Client */}
           <div>
             <Label className="text-foreground">Client</Label>

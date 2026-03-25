@@ -39,10 +39,6 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
     day: "numeric", month: "long", year: "numeric",
   });
 
-  const trialDaysUsed = profile.trial_started_at
-    ? Math.floor((Date.now() - new Date(profile.trial_started_at).getTime()) / 86400000)
-    : 0;
-  const trialDaysLeft = Math.max(0, 14 - trialDaysUsed);
 
   const handleNameSave = async () => {
     if (!nameValue.trim()) { setEditingName(false); return; }

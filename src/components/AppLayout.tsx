@@ -3,7 +3,7 @@ import { Outlet } from "react-router-dom";
 import Header from "./Header";
 import BottomNav from "./BottomNav";
 import AnonymousBanner from "./AnonymousBanner";
-import TrialBanner from "./TrialBanner";
+
 import AuthModal from "./AuthModal";
 
 const AppLayout = () => {

@@ -111,3 +111,12 @@
   opacity: 1;
   transition: opacity 150ms ease;
 }
+
+/* Hide scrollbar for scroll pickers */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

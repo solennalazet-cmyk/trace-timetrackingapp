@@ -39,10 +39,6 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
     day: "numeric", month: "long", year: "numeric",
   });
 
-  const trialDaysUsed = profile.trial_started_at
-    ? Math.floor((Date.now() - new Date(profile.trial_started_at).getTime()) / 86400000)
-    : 0;
-  const trialDaysLeft = Math.max(0, 14 - trialDaysUsed);
 
   const handleNameSave = async () => {
     if (!nameValue.trim()) { setEditingName(false); return; }
@@ -100,12 +96,11 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
     const plan = profile.plan;
     const status = profile.subscription_status;
 
-    if (plan === "trial") {
+    if (plan === "trial" || plan === "free") {
       return (
         <div className="space-y-3">
-          <p className="text-sm font-medium">Plan: Free Trial</p>
-          <Progress value={(trialDaysUsed / 14) * 100} className="h-2" />
-          <p className="text-xs text-muted-foreground">{trialDaysLeft} days remaining in your trial.</p>
+          <p className="text-sm font-medium">Plan: Free</p>
+          <p className="text-xs text-muted-foreground">You're on the free plan.</p>
           <Button
             className="w-full bg-primary text-primary-foreground rounded-[28px] h-12 font-bold"
             onClick={handleUpgrade}
@@ -117,25 +112,6 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
       );
     }
 
-    if (plan === "free") {
-      return (
-        <div className="space-y-3">
-          <p className="text-sm font-medium">Plan: Free</p>
-          <p className="text-xs text-muted-foreground">You're on the free plan.</p>
-          <div className="text-xs text-muted-foreground space-y-0.5">
-            <p>✓ Unlimited: timer, shift, manual entry, timeline</p>
-            <p>✦ Pro features: reports, invoicing, call logging, unlimited clients & projects</p>
-          </div>
-          <Button
-            className="w-full bg-primary text-primary-foreground rounded-[28px] h-12 font-bold"
-            onClick={handleUpgrade}
-            disabled={upgradeLoading}
-          >
-            {upgradeLoading ? "Redirecting…" : "Upgrade to Pro — €10/month"}
-          </Button>
-        </div>
-      );
-    }
 
     if (plan === "pro") {
       if (status === "past_due") {

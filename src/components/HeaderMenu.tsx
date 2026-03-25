@@ -40,13 +40,9 @@ const HeaderMenu = () => {
   const planBadge = () => {
     if (!profile) return null;
     switch (profile.plan) {
-      case "trial": {
-        const days = profile.trial_started_at
-          ? Math.max(0, 14 - Math.floor((Date.now() - new Date(profile.trial_started_at).getTime()) / 86400000))
-          : 0;
-        return <span className="text-[10px] font-bold bg-accent text-foreground px-1.5 py-0.5 rounded">TRIAL · {days}d left</span>;
-      }
+      case "trial":
       case "free":
+        return <span className="text-[10px] font-bold bg-muted text-muted-foreground px-1.5 py-0.5 rounded">FREE</span>;
         return <span className="text-[10px] font-bold bg-muted text-muted-foreground px-1.5 py-0.5 rounded">FREE</span>;
       case "pro":
         return (

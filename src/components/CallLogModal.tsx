@@ -212,10 +212,8 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
           <ScrollPicker
             hours={pickerHours}
             minutes={pickerMinutes}
-            seconds={pickerSeconds}
             onChangeHours={setPickerHours}
             onChangeMinutes={setPickerMinutes}
-            onChangeSeconds={setPickerSeconds}
             maxHours={23}
           />
 

@@ -17,11 +17,6 @@ const FAB = ({ onManualEntry, onLogCall }: FABProps) => {
   const isFree = profile?.plan === "free";
 
   const handleLogCall = () => {
-    if (isFree) {
-      setOpen(false);
-      setPaywallOpen(true);
-      return;
-    }
     setOpen(false);
     onLogCall();
   };
@@ -52,7 +47,6 @@ const FAB = ({ onManualEntry, onLogCall }: FABProps) => {
             >
               <Phone className="w-4 h-4 text-muted-foreground" />
               Log Call
-              {(isFree || profile?.plan === "trial") && <ProBadge />}
             </button>
           </div>
         )}

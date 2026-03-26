@@ -53,7 +53,6 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
 
   const [pickerHours, setPickerHours] = useState(0);
   const [pickerMinutes, setPickerMinutes] = useState(15);
-  const [pickerSeconds, setPickerSeconds] = useState(0);
 
   const [clientId, setClientId] = useState("");
   const [clientName, setClientName] = useState("");

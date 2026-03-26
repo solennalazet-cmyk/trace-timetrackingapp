@@ -47,7 +47,6 @@ const FAB = ({ onManualEntry, onLogCall }: FABProps) => {
             >
               <Phone className="w-4 h-4 text-muted-foreground" />
               Log Call
-              {(isFree || profile?.plan === "trial") && <ProBadge />}
             </button>
           </div>
         )}

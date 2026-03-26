@@ -53,7 +53,6 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
 
   const [pickerHours, setPickerHours] = useState(0);
   const [pickerMinutes, setPickerMinutes] = useState(15);
-  const [pickerSeconds, setPickerSeconds] = useState(0);
 
   const [clientId, setClientId] = useState("");
   const [clientName, setClientName] = useState("");
@@ -96,7 +95,7 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
 
   useEffect(() => {
     if (!open) return;
-    setPickerHours(0); setPickerMinutes(15); setPickerSeconds(0);
+    setPickerHours(0); setPickerMinutes(15);
     setClientId(""); setClientName(""); setProjectId(""); setProjectName("");
     setTaskId(""); setTaskName(""); setNotes("");
     setBillable(true); setRateAmount(""); setRateCurrency("EUR"); setRateUnit("hour");
@@ -119,7 +118,7 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
   }, [clientId, projectId, user]);
 
   // Compute total duration in minutes from picker
-  const durationMinutes = pickerHours * 60 + pickerMinutes + (pickerSeconds > 0 ? 1 : 0);
+  const durationMinutes = pickerHours * 60 + pickerMinutes;
 
   const handleCreateClient = async (name: string): Promise<ComboboxItem | null> => {
     if (user) {
@@ -213,10 +212,8 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
           <ScrollPicker
             hours={pickerHours}
             minutes={pickerMinutes}
-            seconds={pickerSeconds}
             onChangeHours={setPickerHours}
             onChangeMinutes={setPickerMinutes}
-            onChangeSeconds={setPickerSeconds}
             maxHours={23}
           />
 

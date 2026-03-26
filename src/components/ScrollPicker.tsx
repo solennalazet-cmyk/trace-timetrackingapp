@@ -14,37 +14,120 @@ const CENTER_INDEX = Math.floor(VISIBLE_ITEMS / 2);
 const ScrollPickerColumn = ({ values, selected, onChange, label }: ScrollPickerColumnProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const isUserScrolling = useRef(false);
-  const scrollTimeout = useRef<ReturnType<typeof setTimeout>>();
+  const touchStartY = useRef(0);
+  const scrollStartTop = useRef(0);
+  const velocityY = useRef(0);
+  const lastTouchY = useRef(0);
+  const lastTouchTime = useRef(0);
+  const animFrameRef = useRef<number>();
 
-  const scrollToIndex = useCallback((index: number, smooth = false) => {
+  const getScrollTop = () => containerRef.current?.scrollTop ?? 0;
+
+  const setScrollTop = useCallback((top: number) => {
+    if (containerRef.current) containerRef.current.scrollTop = top;
+  }, []);
+
+  const snapToNearest = useCallback((smooth = true) => {
     const el = containerRef.current;
     if (!el) return;
-    const top = index * ITEM_HEIGHT;
-    el.scrollTo({ top, behavior: smooth ? "smooth" : "auto" });
-  }, []);
+    const index = Math.round(el.scrollTop / ITEM_HEIGHT);
+    const clamped = Math.max(0, Math.min(values.length - 1, index));
+    const target = clamped * ITEM_HEIGHT;
+    if (smooth) {
+      el.scrollTo({ top: target, behavior: "smooth" });
+    } else {
+      el.scrollTop = target;
+    }
+    if (values[clamped] !== selected) {
+      onChange(values[clamped]);
+    }
+  }, [values, selected, onChange]);
 
   // Scroll to selected value on mount / when selected changes externally
   useEffect(() => {
     if (isUserScrolling.current) return;
     const idx = values.indexOf(selected);
-    if (idx >= 0) scrollToIndex(idx);
-  }, [selected, values, scrollToIndex]);
+    if (idx >= 0) {
+      setScrollTop(idx * ITEM_HEIGHT);
+    }
+  }, [selected, values, setScrollTop]);
 
-  const handleScroll = () => {
-    isUserScrolling.current = true;
-    if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
-    scrollTimeout.current = setTimeout(() => {
-      const el = containerRef.current;
-      if (!el) return;
-      const index = Math.round(el.scrollTop / ITEM_HEIGHT);
-      const clamped = Math.max(0, Math.min(values.length - 1, index));
-      scrollToIndex(clamped, true);
-      if (values[clamped] !== selected) {
-        onChange(values[clamped]);
+  // Touch-based scrolling for reliable mobile behavior
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      isUserScrolling.current = true;
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      touchStartY.current = e.touches[0].clientY;
+      scrollStartTop.current = el.scrollTop;
+      lastTouchY.current = e.touches[0].clientY;
+      lastTouchTime.current = Date.now();
+      velocityY.current = 0;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      const currentY = e.touches[0].clientY;
+      const diff = touchStartY.current - currentY;
+      const now = Date.now();
+      const dt = now - lastTouchTime.current;
+      if (dt > 0) {
+        velocityY.current = (lastTouchY.current - currentY) / dt;
       }
+      lastTouchY.current = currentY;
+      lastTouchTime.current = now;
+
+      const maxScroll = (values.length - 1) * ITEM_HEIGHT;
+      const newTop = Math.max(0, Math.min(maxScroll, scrollStartTop.current + diff));
+      el.scrollTop = newTop;
+    };
+
+    const onTouchEnd = () => {
+      // Apply momentum
+      const v = velocityY.current;
+      if (Math.abs(v) > 0.3) {
+        const momentum = v * 120;
+        const maxScroll = (values.length - 1) * ITEM_HEIGHT;
+        const target = Math.max(0, Math.min(maxScroll, el.scrollTop + momentum));
+        el.scrollTo({ top: target, behavior: "smooth" });
+        setTimeout(() => {
+          snapToNearest(true);
+          isUserScrolling.current = false;
+        }, 200);
+      } else {
+        snapToNearest(true);
+        isUserScrolling.current = false;
+      }
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: false });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd);
+
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [values, snapToNearest]);
+
+  // Mouse wheel support for desktop
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    const el = containerRef.current;
+    if (!el) return;
+    isUserScrolling.current = true;
+    const maxScroll = (values.length - 1) * ITEM_HEIGHT;
+    const newTop = Math.max(0, Math.min(maxScroll, el.scrollTop + e.deltaY));
+    el.scrollTop = newTop;
+    clearTimeout((handleWheel as any)._timeout);
+    (handleWheel as any)._timeout = setTimeout(() => {
+      snapToNearest(true);
       isUserScrolling.current = false;
-    }, 80);
-  };
+    }, 100);
+  }, [values, snapToNearest]);
 
   const padding = CENTER_INDEX * ITEM_HEIGHT;
 
@@ -77,12 +160,8 @@ const ScrollPickerColumn = ({ values, selected, onChange, label }: ScrollPickerC
         />
         <div
           ref={containerRef}
-          className="h-full overflow-y-auto scrollbar-hide overscroll-contain"
-          style={{
-            scrollSnapType: "y mandatory",
-            WebkitOverflowScrolling: "touch",
-          }}
-          onScroll={handleScroll}
+          className="h-full overflow-hidden scrollbar-hide overscroll-contain touch-none"
+          onWheel={handleWheel}
         >
           {/* Top padding so first item can center */}
           <div style={{ height: padding }} />
@@ -92,10 +171,7 @@ const ScrollPickerColumn = ({ values, selected, onChange, label }: ScrollPickerC
               <div
                 key={val}
                 className="flex items-center justify-center select-none"
-                style={{
-                  height: ITEM_HEIGHT,
-                  scrollSnapAlign: "start",
-                }}
+                style={{ height: ITEM_HEIGHT }}
               >
                 <span
                   className={
@@ -121,33 +197,40 @@ const ScrollPickerColumn = ({ values, selected, onChange, label }: ScrollPickerC
 interface ScrollPickerProps {
   hours: number;
   minutes: number;
-  seconds: number;
+  seconds?: number;
   onChangeHours: (h: number) => void;
   onChangeMinutes: (m: number) => void;
-  onChangeSeconds: (s: number) => void;
+  onChangeSeconds?: (s: number) => void;
   maxHours?: number;
+  showSeconds?: boolean;
 }
 
 const ScrollPicker = ({
-  hours, minutes, seconds,
+  hours, minutes,
   onChangeHours, onChangeMinutes, onChangeSeconds,
   maxHours = 23,
+  showSeconds = false,
+  seconds = 0,
 }: ScrollPickerProps) => {
   const hourValues = Array.from({ length: maxHours + 1 }, (_, i) => i);
   const minuteValues = Array.from({ length: 60 }, (_, i) => i);
   const secondValues = Array.from({ length: 60 }, (_, i) => i);
 
   return (
-    <div className="flex items-center gap-0 w-full max-w-[300px] mx-auto">
+    <div className="flex items-center gap-0 w-full max-w-[260px] mx-auto">
       <ScrollPickerColumn values={hourValues} selected={hours} onChange={onChangeHours} label="Hours" />
       <div className="flex flex-col items-center justify-center pt-5" style={{ height: 5 * ITEM_HEIGHT }}>
         <span className="text-2xl font-bold text-muted-foreground">:</span>
       </div>
       <ScrollPickerColumn values={minuteValues} selected={minutes} onChange={onChangeMinutes} label="Min" />
-      <div className="flex flex-col items-center justify-center pt-5" style={{ height: 5 * ITEM_HEIGHT }}>
-        <span className="text-2xl font-bold text-muted-foreground">:</span>
-      </div>
-      <ScrollPickerColumn values={secondValues} selected={seconds} onChange={onChangeSeconds} label="Sec" />
+      {showSeconds && onChangeSeconds && (
+        <>
+          <div className="flex flex-col items-center justify-center pt-5" style={{ height: 5 * ITEM_HEIGHT }}>
+            <span className="text-2xl font-bold text-muted-foreground">:</span>
+          </div>
+          <ScrollPickerColumn values={secondValues} selected={seconds} onChange={onChangeSeconds} label="Sec" />
+        </>
+      )}
     </div>
   );
 };

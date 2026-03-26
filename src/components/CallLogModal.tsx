@@ -118,7 +118,7 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
   }, [clientId, projectId, user]);
 
   // Compute total duration in minutes from picker
-  const durationMinutes = pickerHours * 60 + pickerMinutes + (pickerSeconds > 0 ? 1 : 0);
+  const durationMinutes = pickerHours * 60 + pickerMinutes;
 
   const handleCreateClient = async (name: string): Promise<ComboboxItem | null> => {
     if (user) {

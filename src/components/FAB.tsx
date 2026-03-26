@@ -17,11 +17,6 @@ const FAB = ({ onManualEntry, onLogCall }: FABProps) => {
   const isFree = profile?.plan === "free";
 
   const handleLogCall = () => {
-    if (isFree) {
-      setOpen(false);
-      setPaywallOpen(true);
-      return;
-    }
     setOpen(false);
     onLogCall();
   };

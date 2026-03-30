@@ -7,6 +7,8 @@ import {
   ChevronDown, ChevronUp, Timer, PenLine, Clock, Phone, ChevronRight, Crown,
   CreditCard, Download, Trash2, Search, X,
 } from "lucide-react";
+import { startOfWeek } from "date-fns";
+import DateRangePicker from "@/components/DateRangePicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,16 +23,6 @@ import UnassignedPanel from "@/components/UnassignedPanel";
 import TrashView from "@/components/TrashView";
 import { toast } from "sonner";
 
-type DateRange = "today" | "week" | "7days" | "30days" | "month";
-
-const RANGES: { key: DateRange; label: string }[] = [
-  { key: "today", label: "Today" },
-  { key: "week", label: "This week" },
-  { key: "7days", label: "7 days" },
-  { key: "30days", label: "30 days" },
-  { key: "month", label: "This month" },
-];
-
 const CLIENT_COLORS = [
   "hsl(45 93% 58%)", "hsl(200 80% 55%)", "hsl(340 75% 55%)", "hsl(150 60% 45%)",
   "hsl(270 60% 60%)", "hsl(25 90% 55%)", "hsl(180 50% 45%)", "hsl(0 70% 55%)",
@@ -44,37 +36,12 @@ const formatHHMM = (mins: number) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
-const getDateRangeStart = (range: DateRange): string => {
-  const now = new Date();
-  let d: Date;
-  switch (range) {
-    case "today": d = now; break;
-    case "week": {
-      // Monday of current week
-      const day = now.getDay(); // 0=Sun, 1=Mon...
-      const diff = day === 0 ? 6 : day - 1; // days since Monday
-      d = new Date(now.getTime() - diff * 86400000);
-      break;
-    }
-    case "7days": d = new Date(now.getTime() - 6 * 86400000); break;
-    case "30days": d = new Date(now.getTime() - 29 * 86400000); break;
-    case "month": d = new Date(now.getFullYear(), now.getMonth(), 1); break;
-  }
-  return d.toISOString().split("T")[0];
-};
-
-const getDaysInRange = (startStr: string): string[] => {
+const getDaysInRange = (startStr: string, endStr: string): string[] => {
   const days: string[] = [];
   const start = new Date(startStr + "T00:00:00");
-  // Always start on Monday of the week containing the start date
-  const startDay = start.getDay(); // 0=Sun
-  const diffToMon = startDay === 0 ? 6 : startDay - 1;
-  const monday = new Date(start);
-  monday.setDate(monday.getDate() - diffToMon);
-
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  let d = new Date(monday);
-  while (d <= today) {
+  const end = new Date(endStr + "T00:00:00");
+  let d = new Date(start);
+  while (d <= end) {
     days.push(d.toISOString().split("T")[0]);
     d.setDate(d.getDate() + 1);
   }
@@ -98,7 +65,8 @@ const ReportsPage = () => {
   const isFree = profile?.plan === "free";
   const isPro = profile?.plan === "pro" || profile?.plan === "trial";
 
-  const [range, setRange] = useState<DateRange>("week");
+  const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [dateTo, setDateTo] = useState<Date>(new Date());
   const [todayEntries, setTodayEntries] = useState<TimeEntry[]>([]);
   const [rangeEntries, setRangeEntries] = useState<TimeEntry[]>([]);
   const [clients, setClients] = useState<Record<string, string>>({});
@@ -125,12 +93,12 @@ const ReportsPage = () => {
   const [clientFilter, setClientFilter] = useState("");
   const [projectFilter, setProjectFilter] = useState("");
   const [taskFilter, setTaskFilter] = useState("");
-  const [activityRange, setActivityRange] = useState<DateRange>("7days");
   const [showCharts, setShowCharts] = useState(true);
   const [showTrash, setShowTrash] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
-  const rangeStart = getDateRangeStart(range);
+  const rangeStart = dateFrom.toISOString().split("T")[0];
+  const rangeEnd = dateTo.toISOString().split("T")[0];
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -140,7 +108,7 @@ const ReportsPage = () => {
         supabase.from("time_entries").select(entrySelect)
           .eq("user_id", user.id).eq("entry_date", today).is("deleted_at", null),
         supabase.from("time_entries").select(entrySelect)
-          .eq("user_id", user.id).gte("entry_date", rangeStart).is("deleted_at", null).order("entry_date", { ascending: false }),
+          .eq("user_id", user.id).gte("entry_date", rangeStart).lte("entry_date", rangeEnd).is("deleted_at", null).order("entry_date", { ascending: false }),
         supabase.from("clients").select("id, name").eq("user_id", user.id),
         supabase.from("projects").select("id, name").eq("user_id", user.id),
         supabase.from("tasks").select("id, name").eq("user_id", user.id),
@@ -166,12 +134,12 @@ const ReportsPage = () => {
     } else {
       const all = getAnonymousEntries();
       const todayE = all.filter((e: any) => e.entry_date === today).map((e: any, i: number) => ({ ...e, id: e.id ?? `anon-${i}` }));
-      const rangeE = all.filter((e: any) => (e.entry_date ?? "") >= rangeStart).map((e: any, i: number) => ({ ...e, id: e.id ?? `anon-r-${i}` }));
+      const rangeE = all.filter((e: any) => (e.entry_date ?? "") >= rangeStart && (e.entry_date ?? "") <= rangeEnd).map((e: any, i: number) => ({ ...e, id: e.id ?? `anon-r-${i}` }));
       setTodayEntries(todayE); setRangeEntries(rangeE);
       setClients({}); setProjectsMap({}); setTasksMap({}); setInvoices([]);
     }
     setLoading(false);
-  }, [user, rangeStart, today]);
+  }, [user, rangeStart, rangeEnd, today]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -199,7 +167,7 @@ const ReportsPage = () => {
   }, [clientIds]);
 
   const stackedChartData = useMemo(() => {
-    const days = getDaysInRange(rangeStart);
+    const days = getDaysInRange(rangeStart, rangeEnd);
 
     return days.map((day) => {
       const dayEntries = rangeEntries.filter((e) => e.entry_date === day);
@@ -220,14 +188,8 @@ const ReportsPage = () => {
   // (Client billing summary is now a separate component with its own date range)
 
   // === SECTION 3: Filtered recent activity ===
-  const activityRangeStart = getDateRangeStart(activityRange);
-
-  const activityEntries = useMemo(() => {
-    return rangeEntries.filter((e) => (e.entry_date ?? "") >= activityRangeStart);
-  }, [rangeEntries, activityRangeStart]);
-
   const filteredEntries = useMemo(() => {
-    let result = activityEntries;
+    let result = rangeEntries;
     if (typeFilter !== "all") result = result.filter((e) => e.entry_type === typeFilter);
     if (billableFilter === "billable") result = result.filter((e) => e.billable);
     if (billableFilter === "non-billable") result = result.filter((e) => !e.billable);
@@ -245,7 +207,7 @@ const ReportsPage = () => {
       );
     }
     return result;
-  }, [activityEntries, typeFilter, billableFilter, clientFilter, projectFilter, taskFilter, search]);
+  }, [rangeEntries, typeFilter, billableFilter, clientFilter, projectFilter, taskFilter, search]);
 
   const activitySummary = useMemo(() => {
     const totalMins = filteredEntries.reduce((s, e) => s + e.duration_minutes, 0);
@@ -277,15 +239,15 @@ const ReportsPage = () => {
   // Unique projects/tasks for context filters
   const projectOptions = useMemo(() => {
     const map: Record<string, string> = {};
-    activityEntries.forEach((e) => { if (e.project_id && e.project_name) map[e.project_id] = e.project_name; });
+    rangeEntries.forEach((e) => { if (e.project_id && e.project_name) map[e.project_id] = e.project_name; });
     return Object.entries(map).sort((a, b) => a[1].localeCompare(b[1]));
-  }, [activityEntries]);
+  }, [rangeEntries]);
 
   const taskOptions = useMemo(() => {
     const map: Record<string, string> = {};
-    activityEntries.forEach((e) => { if (e.task_id && e.task_name) map[e.task_id] = e.task_name; });
+    rangeEntries.forEach((e) => { if (e.task_id && e.task_name) map[e.task_id] = e.task_name; });
     return Object.entries(map).sort((a, b) => a[1].localeCompare(b[1]));
-  }, [activityEntries]);
+  }, [rangeEntries]);
 
   // === SECTION 4: Chart data ===
   const pieData = [
@@ -332,7 +294,7 @@ const ReportsPage = () => {
   }, [rangeEntries, tasks]);
 
   const dailyData = useMemo(() => {
-    const days = getDaysInRange(rangeStart);
+    const days = getDaysInRange(rangeStart, rangeEnd);
     const map: Record<string, number> = {};
     rangeEntries.forEach((e) => { map[e.entry_date ?? ""] = (map[e.entry_date ?? ""] || 0) + e.duration_minutes / 60; });
     return days.map((d) => ({
@@ -415,17 +377,12 @@ const ReportsPage = () => {
   return (
     <div className="pb-24 px-4 overflow-x-hidden">
       {/* Date range filter */}
-      <div className="flex gap-1 mb-4 overflow-x-auto">
-        {RANGES.map((r) => (
-          <button key={r.key} onClick={() => setRange(r.key)}
-            className="px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-colors"
-            style={{
-              background: range === r.key ? "hsl(var(--primary))" : "transparent",
-              color: range === r.key ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
-              border: range === r.key ? "none" : "1px solid hsl(var(--border))",
-            }}
-          >{r.label}</button>
-        ))}
+      <div className="mb-4">
+        <DateRangePicker
+          from={dateFrom}
+          to={dateTo}
+          onChange={(f, t) => { setDateFrom(f); setDateTo(t); }}
+        />
       </div>
 
       {/* Pro content wrapper */}
@@ -571,19 +528,8 @@ const ReportsPage = () => {
               <p className="text-xs text-muted-foreground">Your entries, filtered by time and context.</p>
             </div>
 
-            {/* Date range pills */}
-            <div className="flex gap-1.5 mb-3 overflow-x-auto">
-              {RANGES.map((r) => (
-                <button key={r.key} onClick={() => setActivityRange(r.key)}
-                  className="px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-colors"
-                  style={{
-                    background: activityRange === r.key ? "hsl(var(--primary))" : "transparent",
-                    color: activityRange === r.key ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
-                    border: activityRange === r.key ? "none" : "1px solid hsl(var(--border))",
-                  }}
-                >{r.label}</button>
-              ))}
-            </div>
+
+
 
             {/* Context filters */}
             <div className="flex gap-1.5 flex-wrap mb-3">

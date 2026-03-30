@@ -207,7 +207,7 @@ const ReportsPage = () => {
       );
     }
     return result;
-  }, [activityEntries, typeFilter, billableFilter, clientFilter, projectFilter, taskFilter, search]);
+  }, [rangeEntries, typeFilter, billableFilter, clientFilter, projectFilter, taskFilter, search]);
 
   const activitySummary = useMemo(() => {
     const totalMins = filteredEntries.reduce((s, e) => s + e.duration_minutes, 0);

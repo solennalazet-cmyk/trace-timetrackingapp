@@ -188,14 +188,8 @@ const ReportsPage = () => {
   // (Client billing summary is now a separate component with its own date range)
 
   // === SECTION 3: Filtered recent activity ===
-  const activityRangeStart = getDateRangeStart(activityRange);
-
-  const activityEntries = useMemo(() => {
-    return rangeEntries.filter((e) => (e.entry_date ?? "") >= activityRangeStart);
-  }, [rangeEntries, activityRangeStart]);
-
   const filteredEntries = useMemo(() => {
-    let result = activityEntries;
+    let result = rangeEntries;
     if (typeFilter !== "all") result = result.filter((e) => e.entry_type === typeFilter);
     if (billableFilter === "billable") result = result.filter((e) => e.billable);
     if (billableFilter === "non-billable") result = result.filter((e) => !e.billable);

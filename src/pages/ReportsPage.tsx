@@ -7,6 +7,8 @@ import {
   ChevronDown, ChevronUp, Timer, PenLine, Clock, Phone, ChevronRight, Crown,
   CreditCard, Download, Trash2, Search, X,
 } from "lucide-react";
+import { startOfWeek } from "date-fns";
+import DateRangePicker from "@/components/DateRangePicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";

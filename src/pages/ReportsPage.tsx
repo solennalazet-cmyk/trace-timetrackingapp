@@ -239,9 +239,9 @@ const ReportsPage = () => {
   // Unique projects/tasks for context filters
   const projectOptions = useMemo(() => {
     const map: Record<string, string> = {};
-    activityEntries.forEach((e) => { if (e.project_id && e.project_name) map[e.project_id] = e.project_name; });
+    rangeEntries.forEach((e) => { if (e.project_id && e.project_name) map[e.project_id] = e.project_name; });
     return Object.entries(map).sort((a, b) => a[1].localeCompare(b[1]));
-  }, [activityEntries]);
+  }, [rangeEntries]);
 
   const taskOptions = useMemo(() => {
     const map: Record<string, string> = {};

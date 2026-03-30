@@ -167,7 +167,7 @@ const ReportsPage = () => {
   }, [clientIds]);
 
   const stackedChartData = useMemo(() => {
-    const days = getDaysInRange(rangeStart);
+    const days = getDaysInRange(rangeStart, rangeEnd);
 
     return days.map((day) => {
       const dayEntries = rangeEntries.filter((e) => e.entry_date === day);

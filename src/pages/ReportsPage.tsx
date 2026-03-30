@@ -294,7 +294,7 @@ const ReportsPage = () => {
   }, [rangeEntries, tasks]);
 
   const dailyData = useMemo(() => {
-    const days = getDaysInRange(rangeStart);
+    const days = getDaysInRange(rangeStart, rangeEnd);
     const map: Record<string, number> = {};
     rangeEntries.forEach((e) => { map[e.entry_date ?? ""] = (map[e.entry_date ?? ""] || 0) + e.duration_minutes / 60; });
     return days.map((d) => ({

@@ -377,17 +377,12 @@ const ReportsPage = () => {
   return (
     <div className="pb-24 px-4 overflow-x-hidden">
       {/* Date range filter */}
-      <div className="flex gap-1 mb-4 overflow-x-auto">
-        {RANGES.map((r) => (
-          <button key={r.key} onClick={() => setRange(r.key)}
-            className="px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-colors"
-            style={{
-              background: range === r.key ? "hsl(var(--primary))" : "transparent",
-              color: range === r.key ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
-              border: range === r.key ? "none" : "1px solid hsl(var(--border))",
-            }}
-          >{r.label}</button>
-        ))}
+      <div className="mb-4">
+        <DateRangePicker
+          from={dateFrom}
+          to={dateTo}
+          onChange={(f, t) => { setDateFrom(f); setDateTo(t); }}
+        />
       </div>
 
       {/* Pro content wrapper */}

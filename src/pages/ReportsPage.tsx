@@ -108,7 +108,7 @@ const ReportsPage = () => {
         supabase.from("time_entries").select(entrySelect)
           .eq("user_id", user.id).eq("entry_date", today).is("deleted_at", null),
         supabase.from("time_entries").select(entrySelect)
-          .eq("user_id", user.id).gte("entry_date", rangeStart).is("deleted_at", null).order("entry_date", { ascending: false }),
+          .eq("user_id", user.id).gte("entry_date", rangeStart).lte("entry_date", rangeEnd).is("deleted_at", null).order("entry_date", { ascending: false }),
         supabase.from("clients").select("id, name").eq("user_id", user.id),
         supabase.from("projects").select("id, name").eq("user_id", user.id),
         supabase.from("tasks").select("id, name").eq("user_id", user.id),

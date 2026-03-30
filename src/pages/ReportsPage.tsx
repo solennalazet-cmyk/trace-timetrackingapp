@@ -245,9 +245,9 @@ const ReportsPage = () => {
 
   const taskOptions = useMemo(() => {
     const map: Record<string, string> = {};
-    activityEntries.forEach((e) => { if (e.task_id && e.task_name) map[e.task_id] = e.task_name; });
+    rangeEntries.forEach((e) => { if (e.task_id && e.task_name) map[e.task_id] = e.task_name; });
     return Object.entries(map).sort((a, b) => a[1].localeCompare(b[1]));
-  }, [activityEntries]);
+  }, [rangeEntries]);
 
   // === SECTION 4: Chart data ===
   const pieData = [

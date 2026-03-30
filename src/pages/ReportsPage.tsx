@@ -528,19 +528,8 @@ const ReportsPage = () => {
               <p className="text-xs text-muted-foreground">Your entries, filtered by time and context.</p>
             </div>
 
-            {/* Date range pills */}
-            <div className="flex gap-1.5 mb-3 overflow-x-auto">
-              {RANGES.map((r) => (
-                <button key={r.key} onClick={() => setActivityRange(r.key)}
-                  className="px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-colors"
-                  style={{
-                    background: activityRange === r.key ? "hsl(var(--primary))" : "transparent",
-                    color: activityRange === r.key ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
-                    border: activityRange === r.key ? "none" : "1px solid hsl(var(--border))",
-                  }}
-                >{r.label}</button>
-              ))}
-            </div>
+
+
 
             {/* Context filters */}
             <div className="flex gap-1.5 flex-wrap mb-3">

@@ -134,12 +134,12 @@ const ReportsPage = () => {
     } else {
       const all = getAnonymousEntries();
       const todayE = all.filter((e: any) => e.entry_date === today).map((e: any, i: number) => ({ ...e, id: e.id ?? `anon-${i}` }));
-      const rangeE = all.filter((e: any) => (e.entry_date ?? "") >= rangeStart).map((e: any, i: number) => ({ ...e, id: e.id ?? `anon-r-${i}` }));
+      const rangeE = all.filter((e: any) => (e.entry_date ?? "") >= rangeStart && (e.entry_date ?? "") <= rangeEnd).map((e: any, i: number) => ({ ...e, id: e.id ?? `anon-r-${i}` }));
       setTodayEntries(todayE); setRangeEntries(rangeE);
       setClients({}); setProjectsMap({}); setTasksMap({}); setInvoices([]);
     }
     setLoading(false);
-  }, [user, rangeStart, today]);
+  }, [user, rangeStart, rangeEnd, today]);
 
   useEffect(() => { loadData(); }, [loadData]);
 

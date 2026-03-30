@@ -134,7 +134,7 @@ const SwipeDeleteRow = ({
 
 const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: UnassignedPanelProps) => {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  
   const [entries, setEntries] = useState<UnassignedEntry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<UnassignedEntry | null>(null);
   const [loading, setLoading] = useState(false);

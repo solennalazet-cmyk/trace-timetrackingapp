@@ -23,16 +23,6 @@ import UnassignedPanel from "@/components/UnassignedPanel";
 import TrashView from "@/components/TrashView";
 import { toast } from "sonner";
 
-type DateRange = "today" | "week" | "7days" | "30days" | "month";
-
-const RANGES: { key: DateRange; label: string }[] = [
-  { key: "today", label: "Today" },
-  { key: "week", label: "This week" },
-  { key: "7days", label: "7 days" },
-  { key: "30days", label: "30 days" },
-  { key: "month", label: "This month" },
-];
-
 const CLIENT_COLORS = [
   "hsl(45 93% 58%)", "hsl(200 80% 55%)", "hsl(340 75% 55%)", "hsl(150 60% 45%)",
   "hsl(270 60% 60%)", "hsl(25 90% 55%)", "hsl(180 50% 45%)", "hsl(0 70% 55%)",

@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getAnonymousEntries } from "@/lib/anonymous-store";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+
 
 interface UnassignedEntry {
   id: string;
@@ -134,7 +134,7 @@ const SwipeDeleteRow = ({
 
 const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: UnassignedPanelProps) => {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  
   const [entries, setEntries] = useState<UnassignedEntry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<UnassignedEntry | null>(null);
   const [loading, setLoading] = useState(false);
@@ -211,9 +211,9 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
           <div className="flex items-center justify-between">
             <SheetTitle>Unassigned Work ({entries.length})</SheetTitle>
             <button
-              onClick={() => { onOpenChange(false); navigate("/reports"); }}
+              onClick={() => onOpenChange(false)}
               className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-              title="View Trash"
+              title="Dismiss"
             >
               <Trash2 className="w-4 h-4" />
             </button>

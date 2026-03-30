@@ -331,160 +331,164 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleSkipOrDismiss(); }}>
-      <DialogContent className="max-w-[400px] rounded-t-2xl sm:rounded-2xl p-6 flex flex-col">
-        <DialogHeader>
-          <DialogTitle>
-            {existingEntry
-              ? "Edit Entry"
-              : session.entryType === "shift"
-                ? "Shift Complete"
-                : "Session Complete"}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="fixed inset-x-0 top-0 z-50 mx-auto flex h-[100dvh] max-h-[100dvh] w-full max-w-lg flex-col overflow-hidden p-0 sm:top-auto sm:h-auto sm:max-h-[90dvh] sm:rounded-2xl">
+        <div className="shrink-0 px-6 pt-6 pb-2">
+          <DialogHeader>
+            <DialogTitle>
+              {existingEntry
+                ? "Edit Entry"
+                : session.entryType === "shift"
+                  ? "Shift Complete"
+                  : "Session Complete"}
+            </DialogTitle>
+          </DialogHeader>
 
-        {/* Duration summary */}
-        <div className="flex items-center gap-3 py-2 px-3 rounded-lg bg-muted/50 mb-2">
-          <div className="text-center">
-            <p className="font-mono text-2xl font-bold text-timer-display">
-              {formatDuration(session.durationMinutes)}
-            </p>
-            <p className="text-[11px] text-muted-foreground">Duration</p>
-          </div>
-          {session.breakMinutes > 0 && (
-            <>
-              <div className="w-px h-8 bg-border" />
-              <div className="text-center">
-                <p className="font-mono text-lg font-semibold text-muted-foreground">
-                  {formatDuration(session.breakMinutes)}
-                </p>
-                <p className="text-[11px] text-muted-foreground">Break</p>
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="space-y-3 text-foreground overflow-y-auto flex-1 min-h-0">
-          {/* Client */}
-          <div>
-            <Label className="text-foreground">Client</Label>
-            <CreatableCombobox
-              items={clients}
-              value={clientId}
-              displayValue={clientName}
-              placeholder="Select client (optional)"
-              onSelect={(id, name) => {
-                setClientId(id);
-                setClientName(name);
-                setProjectId("");
-                setProjectName("");
-              }}
-              onCreate={async (name) => {
-                const created = await handleCreateClient(name);
-                if (created) { setClientId(created.id); setClientName(created.name); setProjectId(""); setProjectName(""); }
-                return created;
-              }}
-            />
-          </div>
-
-          {/* Billable toggle + rate */}
-          <div className="flex items-center justify-between">
-            <Label className="text-foreground">Billable</Label>
-            <Switch checked={billable} onCheckedChange={setBillable} />
-          </div>
-          {billable && (
-            <div className="flex gap-2">
-              <div className="w-20">
-                <Select value={rateCurrency} onValueChange={setRateCurrency}>
-                  <SelectTrigger className="h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CURRENCIES.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex-1">
-                <Input
-                  type="number"
-                  placeholder="0.00"
-                  value={rateAmount}
-                  onChange={(e) => setRateAmount(e.target.value)}
-                />
-              </div>
-              <div className="w-28">
-                <Select value={rateUnit} onValueChange={setRateUnit}>
-                  <SelectTrigger className="h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {RATE_UNITS.map((u) => (
-                      <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          {/* Duration summary */}
+          <div className="flex items-center gap-3 py-2 px-3 rounded-lg bg-muted/50 mt-2">
+            <div className="text-center">
+              <p className="font-mono text-2xl font-bold text-timer-display">
+                {formatDuration(session.durationMinutes)}
+              </p>
+              <p className="text-[11px] text-muted-foreground">Duration</p>
             </div>
-          )}
-
-          {/* Project */}
-          <div>
-            <Label className="text-foreground">Project</Label>
-            <CreatableCombobox
-              items={filteredProjects}
-              value={projectId}
-              displayValue={projectName}
-              placeholder="Select project (optional)"
-              onSelect={(id, name) => { setProjectId(id); setProjectName(name); }}
-              onCreate={async (name) => {
-                const created = await handleCreateProject(name);
-                if (created) { setProjectId(created.id); setProjectName(created.name); }
-                return created;
-              }}
-            />
-          </div>
-
-          {/* Task */}
-          <div>
-            <Label className="text-foreground">Task</Label>
-            <CreatableCombobox
-              items={tasks}
-              value={taskId}
-              displayValue={taskName}
-              placeholder="What were you working on?"
-              onSelect={(id, name) => { setTaskId(id); setTaskName(name); }}
-              onCreate={async (name) => {
-                const created = await handleCreateTask(name);
-                if (created) { setTaskId(created.id); setTaskName(created.name); }
-                return created;
-              }}
-            />
-          </div>
-
-          {/* Notes */}
-          <div>
-            <Label className="text-foreground">Notes</Label>
-            <Textarea
-              placeholder="Optional notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={2}
-            />
-          </div>
-
-          {/* Tags */}
-          <div>
-            <Label className="text-foreground">Tags</Label>
-            <TagsInput
-              value={tags}
-              onChange={setTags}
-              suggestions={allTags}
-            />
+            {session.breakMinutes > 0 && (
+              <>
+                <div className="w-px h-8 bg-border" />
+                <div className="text-center">
+                  <p className="font-mono text-lg font-semibold text-muted-foreground">
+                    {formatDuration(session.breakMinutes)}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">Break</p>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
-        <DialogFooter>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-4">
+          <div className="space-y-3 text-foreground">
+            {/* Client */}
+            <div>
+              <Label className="text-foreground">Client</Label>
+              <CreatableCombobox
+                items={clients}
+                value={clientId}
+                displayValue={clientName}
+                placeholder="Select client (optional)"
+                onSelect={(id, name) => {
+                  setClientId(id);
+                  setClientName(name);
+                  setProjectId("");
+                  setProjectName("");
+                }}
+                onCreate={async (name) => {
+                  const created = await handleCreateClient(name);
+                  if (created) { setClientId(created.id); setClientName(created.name); setProjectId(""); setProjectName(""); }
+                  return created;
+                }}
+              />
+            </div>
+
+            {/* Billable toggle + rate */}
+            <div className="flex items-center justify-between">
+              <Label className="text-foreground">Billable</Label>
+              <Switch checked={billable} onCheckedChange={setBillable} />
+            </div>
+            {billable && (
+              <div className="flex gap-2">
+                <div className="w-20">
+                  <Select value={rateCurrency} onValueChange={setRateCurrency}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CURRENCIES.map((c) => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1">
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    value={rateAmount}
+                    onChange={(e) => setRateAmount(e.target.value)}
+                  />
+                </div>
+                <div className="w-28">
+                  <Select value={rateUnit} onValueChange={setRateUnit}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RATE_UNITS.map((u) => (
+                        <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
+            {/* Project */}
+            <div>
+              <Label className="text-foreground">Project</Label>
+              <CreatableCombobox
+                items={filteredProjects}
+                value={projectId}
+                displayValue={projectName}
+                placeholder="Select project (optional)"
+                onSelect={(id, name) => { setProjectId(id); setProjectName(name); }}
+                onCreate={async (name) => {
+                  const created = await handleCreateProject(name);
+                  if (created) { setProjectId(created.id); setProjectName(created.name); }
+                  return created;
+                }}
+              />
+            </div>
+
+            {/* Task */}
+            <div>
+              <Label className="text-foreground">Task</Label>
+              <CreatableCombobox
+                items={tasks}
+                value={taskId}
+                displayValue={taskName}
+                placeholder="What were you working on?"
+                onSelect={(id, name) => { setTaskId(id); setTaskName(name); }}
+                onCreate={async (name) => {
+                  const created = await handleCreateTask(name);
+                  if (created) { setTaskId(created.id); setTaskName(created.name); }
+                  return created;
+                }}
+              />
+            </div>
+
+            {/* Notes */}
+            <div>
+              <Label className="text-foreground">Notes</Label>
+              <Textarea
+                placeholder="Optional notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={2}
+              />
+            </div>
+
+            {/* Tags */}
+            <div>
+              <Label className="text-foreground">Tags</Label>
+              <TagsInput
+                value={tags}
+                onChange={setTags}
+                suggestions={allTags}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="shrink-0 border-t bg-background px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex gap-3">
           {!existingEntry && (
             <Button
               variant="outline"
@@ -501,7 +505,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
           >
             {existingEntry ? "Update Entry" : "Save Entry"}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

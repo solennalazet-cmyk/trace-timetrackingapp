@@ -65,7 +65,8 @@ const ReportsPage = () => {
   const isFree = profile?.plan === "free";
   const isPro = profile?.plan === "pro" || profile?.plan === "trial";
 
-  const [range, setRange] = useState<DateRange>("week");
+  const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [dateTo, setDateTo] = useState<Date>(new Date());
   const [todayEntries, setTodayEntries] = useState<TimeEntry[]>([]);
   const [rangeEntries, setRangeEntries] = useState<TimeEntry[]>([]);
   const [clients, setClients] = useState<Record<string, string>>({});
@@ -92,12 +93,12 @@ const ReportsPage = () => {
   const [clientFilter, setClientFilter] = useState("");
   const [projectFilter, setProjectFilter] = useState("");
   const [taskFilter, setTaskFilter] = useState("");
-  const [activityRange, setActivityRange] = useState<DateRange>("7days");
   const [showCharts, setShowCharts] = useState(true);
   const [showTrash, setShowTrash] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
-  const rangeStart = getDateRangeStart(range);
+  const rangeStart = dateFrom.toISOString().split("T")[0];
+  const rangeEnd = dateTo.toISOString().split("T")[0];
 
   const loadData = useCallback(async () => {
     setLoading(true);

@@ -71,29 +71,35 @@ const FocusMode = ({ onComplete }: FocusModeProps) => {
     }
   }, [status]);
 
-  // Schedule a background notification using setTimeout for exact completion time
+  // Schedule a browser notification for when the timer completes (works in background)
+  const notifScheduledRef = useRef(false);
   useEffect(() => {
-    if (status !== "running") return;
-    const elapsed = Date.now() - (useFocusTimer as any).length; // not used, we compute below
-    // Compute ms until completion
-    const msUntilDone = remainingMs;
-    if (msUntilDone <= 0) return;
+    if (status === "running" && !notifScheduledRef.current) {
+      notifScheduledRef.current = true;
+      const msUntilDone = remainingMs;
+      if (msUntilDone <= 0) return;
 
-    const notifTimeout = setTimeout(() => {
-      // Show browser notification even if tab is backgrounded
-      if ("Notification" in window && Notification.permission === "granted") {
-        try {
-          new Notification("Focus session complete!", {
-            body: "Your timer has finished. Time to assign your work.",
-            icon: "/favicon.ico",
-            tag: "focus-timer-complete",
-          });
-        } catch {}
-      }
-    }, msUntilDone);
+      const notifTimeout = setTimeout(() => {
+        if ("Notification" in window && Notification.permission === "granted") {
+          try {
+            new Notification("Focus session complete!", {
+              body: "Your timer has finished. Time to assign your work.",
+              icon: "/favicon.ico",
+              tag: "focus-timer-complete",
+            });
+          } catch {}
+        }
+      }, msUntilDone);
 
-    return () => clearTimeout(notifTimeout);
-  }, [status, remainingMs]);
+      return () => {
+        clearTimeout(notifTimeout);
+        notifScheduledRef.current = false;
+      };
+    }
+    if (status !== "running") {
+      notifScheduledRef.current = false;
+    }
+  }, [status]);
 
   // Play sound when status transitions to "completed"
   useEffect(() => {

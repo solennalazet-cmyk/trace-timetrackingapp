@@ -64,6 +64,37 @@ const FocusMode = ({ onComplete }: FocusModeProps) => {
     loadSound();
   }, [user]);
 
+  // Request notification permission when starting a focus session
+  useEffect(() => {
+    if (status === "running" && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, [status]);
+
+  // Schedule a background notification using setTimeout for exact completion time
+  useEffect(() => {
+    if (status !== "running") return;
+    const elapsed = Date.now() - (useFocusTimer as any).length; // not used, we compute below
+    // Compute ms until completion
+    const msUntilDone = remainingMs;
+    if (msUntilDone <= 0) return;
+
+    const notifTimeout = setTimeout(() => {
+      // Show browser notification even if tab is backgrounded
+      if ("Notification" in window && Notification.permission === "granted") {
+        try {
+          new Notification("Focus session complete!", {
+            body: "Your timer has finished. Time to assign your work.",
+            icon: "/favicon.ico",
+            tag: "focus-timer-complete",
+          });
+        } catch {}
+      }
+    }, msUntilDone);
+
+    return () => clearTimeout(notifTimeout);
+  }, [status, remainingMs]);
+
   // Play sound when status transitions to "completed"
   useEffect(() => {
     if (prevStatusRef.current !== "completed" && status === "completed") {

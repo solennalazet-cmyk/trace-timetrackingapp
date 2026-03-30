@@ -76,8 +76,18 @@ export function useFocusTimer() {
         setRemainingMs(remaining);
       };
       intervalRef.current = setInterval(tick, 200);
+
+      // Also check on visibility change (handles screen off / tab switch)
+      const onVisibility = () => {
+        if (document.visibilityState === "visible") {
+          tick();
+        }
+      };
+      document.addEventListener("visibilitychange", onVisibility);
+
       return () => {
         if (intervalRef.current) clearInterval(intervalRef.current);
+        document.removeEventListener("visibilitychange", onVisibility);
       };
     }
   }, [status, totalSeconds]);

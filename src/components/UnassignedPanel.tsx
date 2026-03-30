@@ -211,9 +211,9 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
           <div className="flex items-center justify-between">
             <SheetTitle>Unassigned Work ({entries.length})</SheetTitle>
             <button
-              onClick={() => { onOpenChange(false); navigate("/reports"); }}
+              onClick={() => onOpenChange(false)}
               className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-              title="View Trash"
+              title="Dismiss"
             >
               <Trash2 className="w-4 h-4" />
             </button>

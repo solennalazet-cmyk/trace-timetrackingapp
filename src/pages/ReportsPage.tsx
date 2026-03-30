@@ -36,37 +36,12 @@ const formatHHMM = (mins: number) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
-const getDateRangeStart = (range: DateRange): string => {
-  const now = new Date();
-  let d: Date;
-  switch (range) {
-    case "today": d = now; break;
-    case "week": {
-      // Monday of current week
-      const day = now.getDay(); // 0=Sun, 1=Mon...
-      const diff = day === 0 ? 6 : day - 1; // days since Monday
-      d = new Date(now.getTime() - diff * 86400000);
-      break;
-    }
-    case "7days": d = new Date(now.getTime() - 6 * 86400000); break;
-    case "30days": d = new Date(now.getTime() - 29 * 86400000); break;
-    case "month": d = new Date(now.getFullYear(), now.getMonth(), 1); break;
-  }
-  return d.toISOString().split("T")[0];
-};
-
-const getDaysInRange = (startStr: string): string[] => {
+const getDaysInRange = (startStr: string, endStr: string): string[] => {
   const days: string[] = [];
   const start = new Date(startStr + "T00:00:00");
-  // Always start on Monday of the week containing the start date
-  const startDay = start.getDay(); // 0=Sun
-  const diffToMon = startDay === 0 ? 6 : startDay - 1;
-  const monday = new Date(start);
-  monday.setDate(monday.getDate() - diffToMon);
-
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  let d = new Date(monday);
-  while (d <= today) {
+  const end = new Date(endStr + "T00:00:00");
+  let d = new Date(start);
+  while (d <= end) {
     days.push(d.toISOString().split("T")[0]);
     d.setDate(d.getDate() + 1);
   }

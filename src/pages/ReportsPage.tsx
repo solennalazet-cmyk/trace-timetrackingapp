@@ -66,7 +66,11 @@ const ReportsPage = () => {
   const isPro = profile?.plan === "pro" || profile?.plan === "trial";
 
   const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const [dateTo, setDateTo] = useState<Date>(new Date());
+  const [dateTo, setDateTo] = useState<Date>(() => {
+    const sun = new Date(startOfWeek(new Date(), { weekStartsOn: 1 }));
+    sun.setDate(sun.getDate() + 6);
+    return sun;
+  });
   const [todayEntries, setTodayEntries] = useState<TimeEntry[]>([]);
   const [rangeEntries, setRangeEntries] = useState<TimeEntry[]>([]);
   const [clients, setClients] = useState<Record<string, string>>({});
@@ -173,7 +177,7 @@ const ReportsPage = () => {
       const dayEntries = rangeEntries.filter((e) => e.entry_date === day);
       const row: any = {
         date: day,
-        label: new Date(day + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+        label: new Date(day + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }),
         _total: dayEntries.reduce((s, e) => s + e.duration_minutes / 60, 0),
       };
       clientIds.forEach((cid) => {
@@ -298,7 +302,7 @@ const ReportsPage = () => {
     const map: Record<string, number> = {};
     rangeEntries.forEach((e) => { map[e.entry_date ?? ""] = (map[e.entry_date ?? ""] || 0) + e.duration_minutes / 60; });
     return days.map((d) => ({
-      date: new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+      date: new Date(d + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }),
       hours: +(map[d] || 0).toFixed(1),
     }));
   }, [rangeEntries, rangeStart]);

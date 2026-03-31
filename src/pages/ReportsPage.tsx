@@ -66,7 +66,11 @@ const ReportsPage = () => {
   const isPro = profile?.plan === "pro" || profile?.plan === "trial";
 
   const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const [dateTo, setDateTo] = useState<Date>(new Date());
+  const [dateTo, setDateTo] = useState<Date>(() => {
+    const sun = new Date(startOfWeek(new Date(), { weekStartsOn: 1 }));
+    sun.setDate(sun.getDate() + 6);
+    return sun;
+  });
   const [todayEntries, setTodayEntries] = useState<TimeEntry[]>([]);
   const [rangeEntries, setRangeEntries] = useState<TimeEntry[]>([]);
   const [clients, setClients] = useState<Record<string, string>>({});

@@ -302,7 +302,7 @@ const ReportsPage = () => {
     const map: Record<string, number> = {};
     rangeEntries.forEach((e) => { map[e.entry_date ?? ""] = (map[e.entry_date ?? ""] || 0) + e.duration_minutes / 60; });
     return days.map((d) => ({
-      date: new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+      date: new Date(d + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }),
       hours: +(map[d] || 0).toFixed(1),
     }));
   }, [rangeEntries, rangeStart]);

@@ -177,7 +177,7 @@ const ReportsPage = () => {
       const dayEntries = rangeEntries.filter((e) => e.entry_date === day);
       const row: any = {
         date: day,
-        label: new Date(day + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+        label: new Date(day + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }),
         _total: dayEntries.reduce((s, e) => s + e.duration_minutes / 60, 0),
       };
       clientIds.forEach((cid) => {

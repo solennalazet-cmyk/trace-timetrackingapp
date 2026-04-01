@@ -36,6 +36,7 @@ function clearLS(key: string) {
 export function useTimer(mode: TimerMode) {
   const { user } = useAuth();
   const lsKey = LS_KEYS[mode] || LS_KEYS.stopwatch;
+  const stoppedRef = useRef(false);
 
   // Initialize from localStorage synchronously
   const initial = readLS(lsKey);
@@ -89,7 +90,7 @@ export function useTimer(mode: TimerMode) {
 
   // Sync with Supabase on load for authenticated users
   useEffect(() => {
-    if (!user || mode === "focus") return;
+    if (!user || mode === "focus" || stoppedRef.current) return;
     const syncFromSupabase = async () => {
       const { data } = await supabase
         .from("active_sessions")
@@ -125,6 +126,7 @@ export function useTimer(mode: TimerMode) {
 
   const start = useCallback(() => {
     const now = new Date().toISOString();
+    stoppedRef.current = false;
     const state: TimerState = {
       startedAt: now,
       pausedAt: null,
@@ -195,6 +197,7 @@ export function useTimer(mode: TimerMode) {
     const breakMinutes = Math.round(timerState.totalPausedMs / 60000);
     const startedAt = timerState.startedAt;
 
+    stoppedRef.current = true;
     clearLS(lsKey);
     setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
 

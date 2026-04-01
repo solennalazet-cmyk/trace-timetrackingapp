@@ -126,6 +126,7 @@ export function useTimer(mode: TimerMode) {
 
   const start = useCallback(() => {
     const now = new Date().toISOString();
+    stoppedRef.current = false;
     const state: TimerState = {
       startedAt: now,
       pausedAt: null,

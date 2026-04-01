@@ -16,6 +16,9 @@ const LS_KEYS: Record<string, string> = {
   shift: "trace_active_shift",
 };
 
+// Module-level set to track recently-stopped modes across component remounts
+const recentlyStopped = new Set<string>();
+
 function readLS(key: string): TimerState | null {
   try {
     const raw = localStorage.getItem(key);
@@ -36,7 +39,6 @@ function clearLS(key: string) {
 export function useTimer(mode: TimerMode) {
   const { user } = useAuth();
   const lsKey = LS_KEYS[mode] || LS_KEYS.stopwatch;
-  const stoppedRef = useRef(false);
 
   // Initialize from localStorage synchronously
   const initial = readLS(lsKey);
@@ -90,7 +92,7 @@ export function useTimer(mode: TimerMode) {
 
   // Sync with Supabase on load for authenticated users
   useEffect(() => {
-    if (!user || mode === "focus" || stoppedRef.current) return;
+    if (!user || mode === "focus" || recentlyStopped.has(mode)) return;
     const syncFromSupabase = async () => {
       const { data } = await supabase
         .from("active_sessions")
@@ -126,7 +128,7 @@ export function useTimer(mode: TimerMode) {
 
   const start = useCallback(() => {
     const now = new Date().toISOString();
-    stoppedRef.current = false;
+    recentlyStopped.delete(mode);
     const state: TimerState = {
       startedAt: now,
       pausedAt: null,
@@ -197,7 +199,7 @@ export function useTimer(mode: TimerMode) {
     const breakMinutes = Math.round(timerState.totalPausedMs / 60000);
     const startedAt = timerState.startedAt;
 
-    stoppedRef.current = true;
+    recentlyStopped.add(mode);
     clearLS(lsKey);
     setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
 

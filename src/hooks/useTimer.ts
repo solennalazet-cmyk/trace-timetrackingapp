@@ -90,7 +90,7 @@ export function useTimer(mode: TimerMode) {
 
   // Sync with Supabase on load for authenticated users
   useEffect(() => {
-    if (!user || mode === "focus") return;
+    if (!user || mode === "focus" || stoppedRef.current) return;
     const syncFromSupabase = async () => {
       const { data } = await supabase
         .from("active_sessions")

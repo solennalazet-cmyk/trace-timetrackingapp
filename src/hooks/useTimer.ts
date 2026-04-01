@@ -16,6 +16,9 @@ const LS_KEYS: Record<string, string> = {
   shift: "trace_active_shift",
 };
 
+// Module-level set to track recently-stopped modes across component remounts
+const recentlyStopped = new Set<string>();
+
 function readLS(key: string): TimerState | null {
   try {
     const raw = localStorage.getItem(key);

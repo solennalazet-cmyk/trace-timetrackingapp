@@ -39,7 +39,6 @@ function clearLS(key: string) {
 export function useTimer(mode: TimerMode) {
   const { user } = useAuth();
   const lsKey = LS_KEYS[mode] || LS_KEYS.stopwatch;
-  const stoppedRef = useRef(false);
 
   // Initialize from localStorage synchronously
   const initial = readLS(lsKey);

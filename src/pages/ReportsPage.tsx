@@ -36,15 +36,26 @@ const formatHHMM = (mins: number) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
+const toLocalDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 const getDaysInRange = (startStr: string, endStr: string): string[] => {
   const days: string[] = [];
-  const start = new Date(startStr + "T00:00:00");
-  const end = new Date(endStr + "T00:00:00");
+  const [startYear, startMonth, startDay] = startStr.split("-").map(Number);
+  const [endYear, endMonth, endDay] = endStr.split("-").map(Number);
+  const start = new Date(startYear, startMonth - 1, startDay);
+  const end = new Date(endYear, endMonth - 1, endDay);
   let d = new Date(start);
+
   while (d <= end) {
-    days.push(d.toISOString().split("T")[0]);
+    days.push(toLocalDateKey(d));
     d.setDate(d.getDate() + 1);
   }
+
   return days;
 };
 
@@ -100,9 +111,9 @@ const ReportsPage = () => {
   const [showCharts, setShowCharts] = useState(true);
   const [showTrash, setShowTrash] = useState(false);
 
-  const today = new Date().toISOString().split("T")[0];
-  const rangeStart = dateFrom.toISOString().split("T")[0];
-  const rangeEnd = dateTo.toISOString().split("T")[0];
+  const today = toLocalDateKey(new Date());
+  const rangeStart = toLocalDateKey(dateFrom);
+  const rangeEnd = toLocalDateKey(dateTo);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -430,10 +441,18 @@ const ReportsPage = () => {
             {stackedChartData.length > 0 && (
               <>
                 <div className="w-full overflow-x-auto" style={{ minHeight: 200 }}>
-                  <div style={{ minWidth: Math.max(stackedChartData.length * 32, 300) }}>
+                  <div style={{ minWidth: Math.max(stackedChartData.length * 72, 420) }}>
                     <ResponsiveContainer width="100%" height={180}>
                       <BarChart data={stackedChartData} barCategoryGap="20%">
-                        <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                        <XAxis
+                          dataKey="label"
+                          interval={0}
+                          minTickGap={0}
+                          tickMargin={8}
+                          tick={{ fontSize: 10 }}
+                          tickLine={false}
+                          axisLine={false}
+                        />
                         <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={30} tickFormatter={(v) => `${v}h`} />
                         <Tooltip
                           contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}

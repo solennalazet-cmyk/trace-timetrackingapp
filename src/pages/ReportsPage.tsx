@@ -36,6 +36,25 @@ const formatHHMM = (mins: number) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
+const renderCompactDateTick = ({ x, y, payload }: any) => {
+  const [weekday, ...rest] = String(payload?.value ?? "").split(" ");
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0}
+        y={0}
+        textAnchor="middle"
+        fill="hsl(var(--muted-foreground))"
+        fontSize="10"
+      >
+        <tspan x={0} dy={12}>{weekday}</tspan>
+        <tspan x={0} dy={10}>{rest.join(" ")}</tspan>
+      </text>
+    </g>
+  );
+};
+
 const toLocalDateKey = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -440,16 +459,16 @@ const ReportsPage = () => {
             {/* Stacked bar chart */}
             {stackedChartData.length > 0 && (
               <>
-                <div className="w-full overflow-x-auto" style={{ minHeight: 200 }}>
-                  <div style={{ minWidth: Math.max(stackedChartData.length * 72, 420) }}>
-                    <ResponsiveContainer width="100%" height={180}>
-                      <BarChart data={stackedChartData} barCategoryGap="20%">
+                <div className="w-full" style={{ minHeight: 220 }}>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={stackedChartData} barCategoryGap="12%" margin={{ top: 8, right: 0, left: -20, bottom: 0 }}>
                         <XAxis
                           dataKey="label"
+                          height={42}
                           interval={0}
                           minTickGap={0}
-                          tickMargin={8}
-                          tick={{ fontSize: 10 }}
+                          tickMargin={6}
+                          tick={renderCompactDateTick}
                           tickLine={false}
                           axisLine={false}
                         />
@@ -470,9 +489,8 @@ const ReportsPage = () => {
                         {hasUnassigned && (
                           <Bar dataKey="unassigned" stackId="a" fill="hsl(240 5% 75%)" radius={[3, 3, 0, 0]} name="unassigned" />
                         )}
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
 
                 {/* Legend */}

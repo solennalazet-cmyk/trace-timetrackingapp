@@ -36,15 +36,45 @@ const formatHHMM = (mins: number) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
+const renderCompactDateTick = ({ x, y, payload }: any) => {
+  const [weekday, ...rest] = String(payload?.value ?? "").split(" ");
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0}
+        y={0}
+        textAnchor="middle"
+        fill="hsl(var(--muted-foreground))"
+        fontSize="10"
+      >
+        <tspan x={0} dy={12}>{weekday}</tspan>
+        <tspan x={0} dy={10}>{rest.join(" ")}</tspan>
+      </text>
+    </g>
+  );
+};
+
+const toLocalDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 const getDaysInRange = (startStr: string, endStr: string): string[] => {
   const days: string[] = [];
-  const start = new Date(startStr + "T00:00:00");
-  const end = new Date(endStr + "T00:00:00");
+  const [startYear, startMonth, startDay] = startStr.split("-").map(Number);
+  const [endYear, endMonth, endDay] = endStr.split("-").map(Number);
+  const start = new Date(startYear, startMonth - 1, startDay);
+  const end = new Date(endYear, endMonth - 1, endDay);
   let d = new Date(start);
+
   while (d <= end) {
-    days.push(d.toISOString().split("T")[0]);
+    days.push(toLocalDateKey(d));
     d.setDate(d.getDate() + 1);
   }
+
   return days;
 };
 
@@ -100,9 +130,9 @@ const ReportsPage = () => {
   const [showCharts, setShowCharts] = useState(true);
   const [showTrash, setShowTrash] = useState(false);
 
-  const today = new Date().toISOString().split("T")[0];
-  const rangeStart = dateFrom.toISOString().split("T")[0];
-  const rangeEnd = dateTo.toISOString().split("T")[0];
+  const today = toLocalDateKey(new Date());
+  const rangeStart = toLocalDateKey(dateFrom);
+  const rangeEnd = toLocalDateKey(dateTo);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -429,11 +459,19 @@ const ReportsPage = () => {
             {/* Stacked bar chart */}
             {stackedChartData.length > 0 && (
               <>
-                <div className="w-full overflow-x-auto" style={{ minHeight: 200 }}>
-                  <div style={{ minWidth: Math.max(stackedChartData.length * 32, 300) }}>
-                    <ResponsiveContainer width="100%" height={180}>
-                      <BarChart data={stackedChartData} barCategoryGap="20%">
-                        <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                <div className="w-full" style={{ minHeight: 220 }}>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={stackedChartData} barCategoryGap="12%" margin={{ top: 8, right: 0, left: -20, bottom: 0 }}>
+                        <XAxis
+                          dataKey="label"
+                          height={42}
+                          interval={0}
+                          minTickGap={0}
+                          tickMargin={6}
+                          tick={renderCompactDateTick}
+                          tickLine={false}
+                          axisLine={false}
+                        />
                         <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={30} tickFormatter={(v) => `${v}h`} />
                         <Tooltip
                           contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
@@ -451,9 +489,8 @@ const ReportsPage = () => {
                         {hasUnassigned && (
                           <Bar dataKey="unassigned" stackId="a" fill="hsl(240 5% 75%)" radius={[3, 3, 0, 0]} name="unassigned" />
                         )}
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
 
                 {/* Legend */}

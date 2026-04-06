@@ -331,7 +331,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleSkipOrDismiss(); }}>
-      <DialogContent className="fixed inset-x-0 top-0 z-50 mx-auto flex h-[100dvh] max-h-[100dvh] w-full max-w-lg flex-col overflow-hidden p-0 sm:top-auto sm:h-auto sm:max-h-[90dvh] sm:rounded-2xl">
+      <DialogContent className="fixed left-[50%] top-0 z-50 flex h-[100dvh] max-h-[100dvh] w-full max-w-lg translate-x-[-50%] flex-col overflow-hidden p-0 sm:top-[50%] sm:h-auto sm:max-h-[90dvh] sm:translate-y-[-50%] sm:rounded-2xl">
         <div className="shrink-0 px-6 pt-6 pb-2">
           <DialogHeader>
             <DialogTitle>

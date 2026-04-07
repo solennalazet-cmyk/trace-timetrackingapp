@@ -310,7 +310,7 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                       <Input id="forgotEmail" type="email" className="h-10 rounded-xl" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required />
                     </div>
                     {renderTurnstile()}
-                    <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitDisabled}>
+                    <Button type="submit" className="w-full rounded-[28px] h-12 font-bold bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitDisabled}>
                       {loading ? "Sending…" : "Send reset link"}
                     </Button>
                     <button type="button" className="text-sm text-muted-foreground underline w-full text-center" onClick={() => setShowForgot(false)}>

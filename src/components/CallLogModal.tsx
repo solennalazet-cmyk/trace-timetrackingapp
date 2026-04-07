@@ -203,8 +203,8 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[400px] rounded-t-2xl sm:rounded-2xl p-6">
-        <DialogHeader>
+      <DialogContent className="max-w-[400px] rounded-2xl p-0">
+        <DialogHeader className="px-6 pt-6 pb-0">
           <DialogTitle>Log Call</DialogTitle>
         </DialogHeader>
 

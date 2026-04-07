@@ -129,6 +129,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
         default_billable: updated.default_billable,
         daily_hour_target: updated.daily_hour_target,
         idle_reminder_minutes: updated.idle_reminder_minutes,
+        default_report_range: updated.default_report_range,
       } as any, { onConflict: "user_id" });
     } else {
       localStorage.setItem(LS_KEY, JSON.stringify(updated));

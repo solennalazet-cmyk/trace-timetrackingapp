@@ -322,7 +322,7 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                 <form onSubmit={handleLogin} className="space-y-3">
                   <div>
                     <Label htmlFor="loginEmail">Email</Label>
-                    <Input id="loginEmail" type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />
+                    <Input id="loginEmail" type="email" className="h-10 rounded-xl" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />
                   </div>
                   <div className="relative">
                     <Label htmlFor="loginPassword">Password</Label>

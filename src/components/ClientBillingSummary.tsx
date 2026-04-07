@@ -1,12 +1,6 @@
 import { useState, useMemo } from "react";
 import { ChevronDown, ChevronUp, ArrowRight, Trash2, X } from "lucide-react";
 import { type TimeEntry } from "@/components/EntryDetailSheet";
-import { toLocalDateKey } from "@/lib/utils";
-
-const CLIENT_COLORS = [
-  "hsl(45 93% 58%)", "hsl(200 80% 55%)", "hsl(340 75% 55%)", "hsl(150 60% 45%)",
-  "hsl(270 60% 60%)", "hsl(25 90% 55%)", "hsl(180 50% 45%)", "hsl(0 70% 55%)",
-];
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
@@ -14,20 +8,6 @@ const formatHM = (mins: number) => {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return `${h}h ${String(m).padStart(2, "0")}m`;
-};
-
-const getDaysInRange = (startStr: string, endStr: string): string[] => {
-  const days: string[] = [];
-  const [sY, sM, sD] = startStr.split("-").map(Number);
-  const [eY, eM, eD] = endStr.split("-").map(Number);
-  const start = new Date(sY, sM - 1, sD);
-  const end = new Date(eY, eM - 1, eD);
-  let d = new Date(start);
-  while (d <= end) {
-    days.push(toLocalDateKey(d));
-    d.setDate(d.getDate() + 1);
-  }
-  return days;
 };
 
 interface ClientBillingSummaryProps {
@@ -112,7 +92,6 @@ const ClientBillingSummary = ({
       }
     });
 
-    // Sort entries reverse chronological
     Object.values(clientMap).forEach((c) => {
       c.entries.sort((a, b) => (b.entry_date ?? "").localeCompare(a.entry_date ?? ""));
     });
@@ -124,33 +103,14 @@ const ClientBillingSummary = ({
     };
   }, [allEntries, clients]);
 
-  // Daily breakdown
-  const dailyBreakdown = useMemo(() => {
-    const days = getDaysInRange(rangeStart, rangeEnd);
-    const dayMap: Record<string, { mins: number; value: number }> = {};
-    allEntries.forEach((e) => {
-      const d = e.entry_date ?? "";
-      if (!dayMap[d]) dayMap[d] = { mins: 0, value: 0 };
-      dayMap[d].mins += e.duration_minutes;
-      dayMap[d].value += e.billable_value || 0;
-    });
-    const totalMins = allEntries.reduce((s, e) => s + e.duration_minutes, 0);
-    const totalValue = allEntries.reduce((s, e) => s + (e.billable_value || 0), 0);
-
-    return {
-      days: days.map((d) => {
-        const dateObj = new Date(d + "T00:00:00");
-        return {
-          date: d,
-          label: dateObj.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }),
-          mins: dayMap[d]?.mins ?? 0,
-          value: dayMap[d]?.value ?? 0,
-        };
-      }),
-      totalMins,
-      totalValue,
-    };
-  }, [allEntries, rangeStart, rangeEnd]);
+  // Calculate days in range for avg/day
+  const daysInRange = useMemo(() => {
+    const [sY, sM, sD] = rangeStart.split("-").map(Number);
+    const [eY, eM, eD] = rangeEnd.split("-").map(Number);
+    const start = new Date(sY, sM - 1, sD);
+    const end = new Date(eY, eM - 1, eD);
+    return Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
+  }, [rangeStart, rangeEnd]);
 
   const toggleExpand = (id: string) => {
     setExpandedClients((prev) => {
@@ -162,8 +122,7 @@ const ClientBillingSummary = ({
 
   if (allEntries.length === 0) {
     return (
-      <div className="mb-6">
-        <h3 className="text-sm font-semibold text-foreground mb-3">Client Summary</h3>
+      <div className="mb-4">
         <div className="text-center py-8">
           <p className="text-sm text-muted-foreground">No entries for this period.</p>
           <p className="text-xs text-muted-foreground mt-1">Start tracking to see your billing summary.</p>
@@ -172,142 +131,160 @@ const ClientBillingSummary = ({
     );
   }
 
+  const CLIENT_COLORS = [
+    "hsl(45 93% 58%)", "hsl(200 80% 55%)", "hsl(340 75% 55%)", "hsl(150 60% 45%)",
+    "hsl(270 60% 60%)", "hsl(25 90% 55%)", "hsl(180 50% 45%)", "hsl(0 70% 55%)",
+  ];
+
   return (
-    <div className="mb-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-foreground">Client Summary</h3>
-        {activeClientFilter && (
-          <button
-            onClick={() => onFilterClient?.(null)}
-            className="text-xs font-medium flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/15 text-foreground hover:bg-primary/25 transition-colors"
+    <div className="space-y-2">
+      {clientSummaries.map((c, i) => {
+        const sym = CURRENCY_SYMBOLS[c.currency] ?? "€";
+        const isExpanded = expandedClients.has(c.id);
+        const avgPerDay = c.totalMins / daysInRange;
+        const color = clientColorMap?.[c.id] ?? CLIENT_COLORS[i % CLIENT_COLORS.length];
+
+        return (
+          <div
+            key={c.id}
+            className={`rounded-2xl border bg-card overflow-hidden transition-all ${
+              activeClientFilter === c.id ? "border-primary ring-1 ring-primary/30" : "border-border"
+            }`}
           >
-            Clear filter <X className="w-3 h-3" />
-          </button>
-        )}
-      </div>
+            {/* Card header — clickable to expand */}
+            <button
+              onClick={() => toggleExpand(c.id)}
+              className="w-full text-left p-4"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-3 h-3 rounded-full shrink-0" style={{ background: color }} />
+                  <span className="text-sm font-semibold text-foreground">{c.name}</span>
+                </div>
+                {isExpanded
+                  ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                  : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                }
+              </div>
 
-      {/* Client rows */}
-      <div className="space-y-2">
-        {clientSummaries.map((c, i) => {
-          const sym = CURRENCY_SYMBOLS[c.currency] ?? "€";
-          const isExpanded = expandedClients.has(c.id);
+              {/* Key metrics row */}
+              <div className="flex items-baseline gap-4">
+                <div>
+                  <p className="text-lg font-bold font-mono text-foreground">{formatHM(c.totalMins)}</p>
+                  <p className="text-[10px] text-muted-foreground">Total</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold font-mono text-foreground">{sym}{c.billableValue.toFixed(0)}</p>
+                  <p className="text-[10px] text-muted-foreground">Billable</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium font-mono text-muted-foreground">{formatHM(Math.round(avgPerDay))}</p>
+                  <p className="text-[10px] text-muted-foreground">Avg/day</p>
+                </div>
+              </div>
+            </button>
 
-          return (
-            <div key={c.id} className={`rounded-xl border bg-card overflow-hidden transition-colors ${activeClientFilter === c.id ? "border-primary ring-1 ring-primary/30" : "border-border"}`}>
-              {/* Main row */}
-              <div className="p-3">
-                <div className="flex items-center justify-between mb-1">
+            {/* Expanded: sessions + billing */}
+            {isExpanded && (
+              <div className="border-t border-border">
+                {/* Actions row */}
+                <div className="flex items-center justify-between px-4 py-2.5 bg-muted/20">
                   <button
                     onClick={() => onFilterClient?.(activeClientFilter === c.id ? null : c.id)}
-                    className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                    className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: clientColorMap?.[c.id] ?? CLIENT_COLORS[i % CLIENT_COLORS.length] }} />
-                    <span className="text-sm font-medium text-foreground">{c.name}</span>
+                    {activeClientFilter === c.id ? "Clear filter" : "Filter charts"}
                   </button>
-                  <button onClick={() => toggleExpand(c.id)} className="p-1 rounded hover:bg-muted/50 transition-colors">
-                    {isExpanded
-                      ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                      : <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                    }
-                  </button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {formatHM(c.totalMins)} total · {formatHM(c.billableMins)} billable
-                </p>
-                <div className="flex items-center justify-between mt-1.5">
-                  <p className="text-xs text-muted-foreground">
-                    {sym}{c.billableValue.toFixed(2)} billable value · {sym}{c.outstanding.toFixed(2)} outstanding
-                  </p>
-                  {isPro && c.outstanding > 0 && (
-                    <button
-                      onClick={() => onBillClient(c.id)}
-                      className="text-xs font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-primary/15 text-foreground hover:bg-primary/25 transition-colors"
-                    >
-                      Bill client <ArrowRight className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Expanded: session list (reverse chronological) */}
-              {isExpanded && (
-                <div className="border-t border-border bg-muted/20 max-h-60 overflow-y-auto">
-                  {c.entries.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-3">No sessions</p>
-                  ) : (
-                    c.entries.map((entry) => (
+                  <div className="flex items-center gap-3">
+                    {c.outstanding > 0 && (
+                      <span className="text-[11px] text-muted-foreground">{sym}{c.outstanding.toFixed(0)} outstanding</span>
+                    )}
+                    {isPro && c.outstanding > 0 && (
                       <button
-                        key={entry.id}
-                        onClick={() => onEditEntry?.(entry)}
-                        className="w-full flex items-center justify-between px-3 py-2 text-xs border-b border-border last:border-b-0 hover:bg-muted/40 transition-colors text-left"
+                        onClick={() => onBillClient(c.id)}
+                        className="text-[11px] font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-primary/15 text-foreground hover:bg-primary/25 transition-colors"
                       >
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-muted-foreground">
-                            {new Date(entry.entry_date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
-                          </span>
-                          <span className="text-foreground font-medium">
-                            {entry.project_name ?? "No project"}
-                            {entry.task_name ? ` · ${entry.task_name}` : ""}
-                          </span>
-                        </div>
-                        <div className="flex flex-col items-end gap-0.5">
-                          <span className="font-mono text-foreground">{formatHM(entry.duration_minutes)}</span>
-                          {entry.billable && entry.billable_value ? (
-                            <span className="font-mono text-muted-foreground">
-                              {sym}{entry.billable_value.toFixed(2)}
-                              {entry.billing_status === "unbilled" && (
-                                <span className="ml-1 text-accent-foreground font-medium">unbilled</span>
-                              )}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </div>
+                        Bill client <ArrowRight className="w-3 h-3" />
                       </button>
-                    ))
-                  )}
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
-          );
-        })}
 
-        {/* Unassigned row — collapsible */}
-        {unassignedSummary.entries.length > 0 && (
-          <div className="rounded-xl border border-border bg-card overflow-hidden">
-            <div className="p-3">
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "hsl(240 5% 75%)" }} />
-                  <span className="text-sm font-medium text-foreground">Unassigned</span>
+                {/* Session list */}
+                <div className="max-h-60 overflow-y-auto">
+                  {c.entries.map((entry) => (
+                    <button
+                      key={entry.id}
+                      onClick={() => onEditEntry?.(entry)}
+                      className="w-full flex items-center justify-between px-4 py-2.5 text-xs border-b border-border last:border-b-0 hover:bg-muted/40 transition-colors text-left"
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-muted-foreground">
+                          {new Date(entry.entry_date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
+                        </span>
+                        <span className="text-foreground font-medium">
+                          {entry.project_name ?? "No project"}
+                          {entry.task_name ? ` · ${entry.task_name}` : ""}
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span className="font-mono text-foreground">{formatHM(entry.duration_minutes)}</span>
+                        {entry.billable && entry.billable_value ? (
+                          <span className="font-mono text-muted-foreground">
+                            {sym}{entry.billable_value.toFixed(2)}
+                            {entry.billing_status === "unbilled" && (
+                              <span className="ml-1 text-primary font-medium">unbilled</span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
                 </div>
-                <button onClick={() => toggleExpand("__unassigned__")} className="p-1 rounded hover:bg-muted/50 transition-colors">
-                  {expandedClients.has("__unassigned__")
-                    ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                    : <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                  }
-                </button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {formatHM(unassignedSummary.totalMins)} total · not billable
-              </p>
-              <div className="flex justify-end mt-1.5">
+            )}
+          </div>
+        );
+      })}
+
+      {/* Unassigned */}
+      {unassignedSummary.entries.length > 0 && (
+        <div className="rounded-2xl border border-border bg-card overflow-hidden">
+          <button
+            onClick={() => toggleExpand("__unassigned__")}
+            className="w-full text-left p-4"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-3 h-3 rounded-full shrink-0" style={{ background: "hsl(240 5% 75%)" }} />
+                <span className="text-sm font-semibold text-foreground">Unassigned</span>
+              </div>
+              {expandedClients.has("__unassigned__")
+                ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              }
+            </div>
+            <p className="text-lg font-bold font-mono text-foreground">{formatHM(unassignedSummary.totalMins)}</p>
+            <p className="text-[10px] text-muted-foreground">Not billable</p>
+          </button>
+
+          {expandedClients.has("__unassigned__") && (
+            <div className="border-t border-border">
+              <div className="flex justify-end px-4 py-2.5 bg-muted/20">
                 <button
                   onClick={onOpenUnassigned}
-                  className="text-xs font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-primary/15 text-foreground hover:bg-primary/25 transition-colors"
+                  className="text-[11px] font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-primary/15 text-foreground hover:bg-primary/25 transition-colors"
                 >
                   Assign entries <ArrowRight className="w-3 h-3" />
                 </button>
               </div>
-            </div>
-
-            {expandedClients.has("__unassigned__") && (
-              <div className="border-t border-border bg-muted/20 max-h-60 overflow-y-auto">
+              <div className="max-h-60 overflow-y-auto">
                 {unassignedSummary.entries.map((entry) => (
                   <div
                     key={entry.id}
-                    className="flex items-center justify-between px-3 py-2 text-xs border-b border-border last:border-b-0 hover:bg-muted/40 transition-colors"
+                    className="flex items-center justify-between px-4 py-2.5 text-xs border-b border-border last:border-b-0 hover:bg-muted/40 transition-colors"
                   >
                     <button
                       onClick={() => onEditEntry?.(entry)}
@@ -318,7 +295,6 @@ const ClientBillingSummary = ({
                       </span>
                       <span className="text-foreground font-medium truncate">
                         {entry.project_name ?? "No project"}
-                        {entry.task_name ? ` · ${entry.task_name}` : ""}
                       </span>
                     </button>
                     <div className="flex items-center gap-2 shrink-0">
@@ -327,7 +303,6 @@ const ClientBillingSummary = ({
                         <button
                           onClick={(e) => { e.stopPropagation(); onDeleteEntry(entry.id); }}
                           className="p-1 rounded hover:bg-destructive/10 transition-colors"
-                          title="Delete entry"
                         >
                           <Trash2 className="w-3.5 h-3.5 text-destructive" />
                         </button>
@@ -336,40 +311,10 @@ const ClientBillingSummary = ({
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Daily Breakdown */}
-      <div className="mt-4">
-        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Daily Breakdown</h4>
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          {dailyBreakdown.days.map((day) => (
-            <div key={day.date} className="flex items-center justify-between px-3 py-2 text-xs border-b border-border last:border-b-0">
-              <span className="text-muted-foreground">{day.label}</span>
-              <div className="flex items-center gap-4">
-                <span className={`font-mono ${day.mins > 0 ? "text-foreground" : "text-muted-foreground"}`}>
-                  {formatHM(day.mins)}
-                </span>
-                <span className={`font-mono w-16 text-right ${day.value > 0 ? "text-foreground" : "text-muted-foreground"}`}>
-                  {day.value > 0 ? `€${day.value.toFixed(0)}` : "—"}
-                </span>
-              </div>
             </div>
-          ))}
-          {/* Total row */}
-          <div className="flex items-center justify-between px-3 py-2.5 text-xs font-bold bg-muted/30 border-t border-border">
-            <span className="text-foreground">{rangeLabel}</span>
-            <div className="flex items-center gap-4">
-              <span className="font-mono text-foreground">{formatHM(dailyBreakdown.totalMins)}</span>
-              <span className="font-mono w-16 text-right text-foreground">
-                {dailyBreakdown.totalValue > 0 ? `€${dailyBreakdown.totalValue.toFixed(0)}` : "—"}
-              </span>
-            </div>
-          </div>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
 };

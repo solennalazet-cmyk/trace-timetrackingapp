@@ -267,7 +267,7 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
               <form onSubmit={handleSignUp} className="space-y-3">
                 <div>
                   <Label htmlFor="fullName">Full Name</Label>
-                  <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+                  <Input id="fullName" className="h-10 rounded-xl" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
                 </div>
                 <div>
                   <Label htmlFor="signupEmail">Email</Label>

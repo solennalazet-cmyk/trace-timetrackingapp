@@ -396,10 +396,10 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
 
           <SettingsDivider />
 
-          {/* ── Idle Reminder ── */}
+           {/* ── Idle Reminder ── */}
           <SettingsSection
             title="Idle reminder"
-            description="Get a notification if no timer is running. Set to 0 to disable."
+            description="Remind you to stop a running session after a period of inactivity."
           >
             <div className="flex items-center gap-3">
               <Select

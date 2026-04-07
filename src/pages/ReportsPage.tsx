@@ -243,7 +243,7 @@ const ReportsPage = () => {
       map[key] = (map[key] || 0) + e.duration_minutes;
     });
     clientIds.forEach((id, i) => {
-      if (map[id]) data.push({ name: clients[id] ?? "Unknown", value: map[id], fill: CLIENT_COLORS[i % CLIENT_COLORS.length] });
+      if (map[id]) data.push({ name: clients[id] ?? "Unknown", value: map[id], fill: getClientColor(id) });
     });
     if (map["unassigned"]) data.push({ name: "Unassigned", value: map["unassigned"], fill: "hsl(240 5% 75%)" });
     return data;

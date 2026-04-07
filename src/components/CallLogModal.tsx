@@ -7,6 +7,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { toLocalDateKey } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -175,7 +176,7 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
 
       const entry: any = {
         duration_minutes: durationMinutes, break_minutes: 0,
-        entry_type: "call", entry_date: new Date().toISOString().split("T")[0],
+        entry_type: "call", entry_date: toLocalDateKey(new Date()),
         billable, billing_status: "unbilled",
         client_id: clientId || null, project_id: projectId || null,
         notes: notes || null, tags: null,

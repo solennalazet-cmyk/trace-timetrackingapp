@@ -3,6 +3,7 @@ import { Search, Plus, Briefcase, ChevronDown, ChevronUp, Mail, Hash, Pencil, Tr
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { toLocalDateKey } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { getAnonymousClients, saveAnonymousClient, getAnonymousProjects, saveAnonymousProject } from "@/lib/anonymous-store";
 import ClientFormModal from "@/components/ClientFormModal";
@@ -115,7 +116,7 @@ const ClientsPage = () => {
 
       // Monthly stats + task entry counts
       const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+      const monthStart = toLocalDateKey(new Date(now.getFullYear(), now.getMonth(), 1));
       const [{ data: entries }, { data: taskEntries }] = await Promise.all([
         supabase.from("time_entries")
           .select("client_id, project_id, duration_minutes, billable_value")

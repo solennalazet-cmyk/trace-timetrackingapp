@@ -104,7 +104,7 @@ const RATE_UNITS = [
   { value: "project", label: "Per project" },
 ];
 
-const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: AssignmentModalProps) => {
+const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip, onDelete }: AssignmentModalProps) => {
   const { user } = useAuth();
   const [clientId, setClientId] = useState("");
   const [clientName, setClientName] = useState("");

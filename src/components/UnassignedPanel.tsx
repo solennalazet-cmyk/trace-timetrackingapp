@@ -198,10 +198,13 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
 
   const handleAssign = (entry: UnassignedEntry) => {
     setEntries((prev) => prev.filter((e) => e.id !== entry.id));
-    onCountChange(entries.length - 1);
+    onCountChange(Math.max(entries.length - 1, 0));
     setSelectedEntry(null);
     onOpenChange(false);
-    requestAnimationFrame(() => onAssignEntry(entry));
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    window.setTimeout(() => onAssignEntry(entry), 240);
   };
 
   return (

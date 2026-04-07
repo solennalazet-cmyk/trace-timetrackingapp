@@ -30,6 +30,7 @@ interface Settings {
   time_format: string;
   default_billable: boolean;
   daily_hour_target: number;
+  revenue_target: number;
   idle_reminder_minutes: number;
   default_report_range: string;
 }

@@ -459,18 +459,21 @@ const ReportsPage = () => {
               manual: "hsl(150 60% 45%)",
               shift: "hsl(270 60% 60%)",
               focus: "hsl(340 75% 55%)",
+              call: "hsl(25 90% 55%)",
             };
             const ENTRY_TYPE_LABELS: Record<string, string> = {
               stopwatch: "Stopwatch",
               manual: "Manual",
               shift: "Shift",
               focus: "Focus",
+              call: "Call Log",
             };
             const ENTRY_TYPE_ICONS: Record<string, React.ReactNode> = {
               stopwatch: <Timer className="w-3 h-3" />,
               manual: <PenLine className="w-3 h-3" />,
               shift: <Clock className="w-3 h-3" />,
               focus: <Phone className="w-3 h-3" />,
+              call: <Phone className="w-3 h-3" />,
             };
 
             // Aggregate by entry type

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import HeaderMenu from "./HeaderMenu";
+import logo from "@/assets/logo.png";
 
 const Header = () => {
   return (

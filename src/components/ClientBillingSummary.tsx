@@ -71,6 +71,8 @@ const ClientBillingSummary = ({
   onOpenUnassigned,
   onEditEntry,
   onDeleteEntry,
+  activeClientFilter,
+  onFilterClient,
 }: ClientBillingSummaryProps) => {
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
 

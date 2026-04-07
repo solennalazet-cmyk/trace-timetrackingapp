@@ -573,8 +573,8 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip, onDelet
           {existingEntry && onDelete ? (
             <>
               <Button
-                variant="destructive"
-                className="h-12 flex-1 rounded-[28px] font-bold"
+                variant="outline"
+                className="h-12 flex-1 rounded-[28px] font-bold border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20"
                 onClick={() => onDelete(existingEntry.id)}
               >
                 Delete

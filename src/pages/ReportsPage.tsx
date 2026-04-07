@@ -452,6 +452,98 @@ const ReportsPage = () => {
             </div>
           )}
 
+          {/* ── Entry Type Mini Donuts ── */}
+          {rangeEntries.length > 0 && (() => {
+            const ENTRY_TYPE_COLORS: Record<string, string> = {
+              stopwatch: "hsl(200 80% 55%)",
+              manual: "hsl(150 60% 45%)",
+              shift: "hsl(270 60% 60%)",
+              focus: "hsl(340 75% 55%)",
+            };
+            const ENTRY_TYPE_LABELS: Record<string, string> = {
+              stopwatch: "Stopwatch",
+              manual: "Manual",
+              shift: "Shift",
+              focus: "Focus",
+            };
+            const ENTRY_TYPE_ICONS: Record<string, React.ReactNode> = {
+              stopwatch: <Timer className="w-3 h-3" />,
+              manual: <PenLine className="w-3 h-3" />,
+              shift: <Clock className="w-3 h-3" />,
+              focus: <Phone className="w-3 h-3" />,
+            };
+
+            // Aggregate by entry type
+            const byType: Record<string, { mins: number; value: number; count: number }> = {};
+            displayEntries.forEach((e) => {
+              const t = e.entry_type ?? "stopwatch";
+              if (!byType[t]) byType[t] = { mins: 0, value: 0, count: 0 };
+              byType[t].mins += e.duration_minutes;
+              byType[t].value += e.billable_value || 0;
+              byType[t].count += 1;
+            });
+
+            const types = Object.keys(byType);
+            if (types.length === 0) return null;
+
+            const hoursData = types.map((t) => ({ name: ENTRY_TYPE_LABELS[t] ?? t, value: byType[t].mins, fill: ENTRY_TYPE_COLORS[t] ?? "hsl(var(--muted-foreground))" }));
+            const turnoverData = types.map((t) => ({ name: ENTRY_TYPE_LABELS[t] ?? t, value: byType[t].value, fill: ENTRY_TYPE_COLORS[t] ?? "hsl(var(--muted-foreground))" })).filter((d) => d.value > 0);
+            const avgData = types.map((t) => ({ name: ENTRY_TYPE_LABELS[t] ?? t, value: byType[t].count > 0 ? Math.round(byType[t].mins / byType[t].count) : 0, fill: ENTRY_TYPE_COLORS[t] ?? "hsl(var(--muted-foreground))" }));
+
+            const totalTurnover = turnoverData.reduce((s, d) => s + d.value, 0);
+
+            const MiniDonut = ({ data, centerLabel, centerSub, size = 120 }: { data: { name: string; value: number; fill: string }[]; centerLabel: string; centerSub: string; size?: number }) => (
+              <div className="relative shrink-0" style={{ width: size, height: size }}>
+                <ResponsiveContainer width={size} height={size}>
+                  <PieChart>
+                    <Pie data={data} innerRadius={size * 0.32} outerRadius={size * 0.46} dataKey="value" stroke="hsl(var(--background))" strokeWidth={2} paddingAngle={1}>
+                      {data.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                    </Pie>
+                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: 11, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }} formatter={(value: number, name: string) => {
+                      if (centerSub === "turnover") return [`€${value.toFixed(0)}`, name];
+                      return [formatHHMM(value), name];
+                    }} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-xs font-bold font-mono text-foreground">{centerLabel}</span>
+                  <span className="text-[9px] text-muted-foreground">{centerSub === "turnover" ? "turnover" : centerSub}</span>
+                </div>
+              </div>
+            );
+
+            return (
+              <div className="mb-5">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">By Entry Type</h3>
+                <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1">
+                  <div className="shrink-0 flex flex-col items-center">
+                    <MiniDonut data={hoursData} centerLabel={formatHHMM(totalMins)} centerSub="hours" />
+                    <span className="text-[10px] text-muted-foreground mt-1">Hours</span>
+                  </div>
+                  {turnoverData.length > 0 && (
+                    <div className="shrink-0 flex flex-col items-center">
+                      <MiniDonut data={turnoverData} centerLabel={`€${totalTurnover.toFixed(0)}`} centerSub="turnover" />
+                      <span className="text-[10px] text-muted-foreground mt-1">Turnover</span>
+                    </div>
+                  )}
+                  <div className="shrink-0 flex flex-col items-center">
+                    <MiniDonut data={avgData} centerLabel={formatHHMM(Math.round(totalMins / (displayEntries.length || 1)))} centerSub="avg" />
+                    <span className="text-[10px] text-muted-foreground mt-1">Avg Session</span>
+                  </div>
+                </div>
+                {/* Shared legend */}
+                <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-2">
+                  {types.map((t) => (
+                    <div key={t} className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <div className="w-2 h-2 rounded-full" style={{ background: ENTRY_TYPE_COLORS[t] ?? "hsl(var(--muted-foreground))" }} />
+                      {ENTRY_TYPE_ICONS[t]} {ENTRY_TYPE_LABELS[t] ?? t}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           {rangeEntries.length === 0 && (
             <div className="text-center py-10 mb-6">
               <p className="text-sm text-muted-foreground">No data for this period.</p>

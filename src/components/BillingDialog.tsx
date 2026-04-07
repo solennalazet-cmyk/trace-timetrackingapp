@@ -157,7 +157,7 @@ const BillingDialog = ({ open, onOpenChange, onComplete }: BillingDialogProps) =
         </DialogHeader>
 
         {step === 1 && (
-          <div className="space-y-3">
+          <div className="px-6 pb-6 pt-4 space-y-3">
             <p className="text-sm text-muted-foreground">Select clients to bill</p>
             {clientsData.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">No unbilled entries.</p>}
             {clientsData.map((c) => (

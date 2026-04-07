@@ -171,11 +171,17 @@ const ReportsPage = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Filtered view entries (client filter from summary applies to metrics/chart)
+  const displayEntries = useMemo(() => {
+    if (!clientFilter) return rangeEntries;
+    return rangeEntries.filter((e) => e.client_id === clientFilter);
+  }, [rangeEntries, clientFilter]);
+
   // Metrics
-  const totalMins = rangeEntries.reduce((s, e) => s + e.duration_minutes, 0);
-  const billableMins = rangeEntries.filter((e) => e.billable).reduce((s, e) => s + e.duration_minutes, 0);
+  const totalMins = displayEntries.reduce((s, e) => s + e.duration_minutes, 0);
+  const billableMins = displayEntries.filter((e) => e.billable).reduce((s, e) => s + e.duration_minutes, 0);
   const nonBillableMins = totalMins - billableMins;
-  const billableValue = rangeEntries.reduce((s, e) => s + (e.billable_value || 0), 0);
+  const billableValue = displayEntries.reduce((s, e) => s + (e.billable_value || 0), 0);
   const invoicedTotal = invoices.filter((i) => i.status === "sent" || i.status === "paid").reduce((s, i) => s + (i.total_amount || 0), 0);
   const paidTotal = invoices.filter((i) => i.status === "paid").reduce((s, i) => s + (i.total_amount || 0), 0);
 
@@ -184,7 +190,7 @@ const ReportsPage = () => {
 
   // === SECTION 1: Stacked bar chart data ===
   const clientIds = useMemo(() => [...new Set(rangeEntries.map((e) => e.client_id).filter(Boolean))] as string[], [rangeEntries]);
-  const hasUnassigned = rangeEntries.some((e) => !e.client_id);
+  const hasUnassigned = displayEntries.some((e) => !e.client_id);
 
   // Shared color map for consistent colors between chart and summary
   const clientColorMap = useMemo(() => {
@@ -196,22 +202,25 @@ const ReportsPage = () => {
 
   const stackedChartData = useMemo(() => {
     const days = getDaysInRange(rangeStart, rangeEnd);
+    const chartClientIds = clientFilter ? [clientFilter] : clientIds;
 
     return days.map((day) => {
-      const dayEntries = rangeEntries.filter((e) => e.entry_date === day);
+      const dayEntries = displayEntries.filter((e) => e.entry_date === day);
       const row: any = {
         date: day,
         label: new Date(day + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }),
         _total: dayEntries.reduce((s, e) => s + e.duration_minutes / 60, 0),
       };
-      clientIds.forEach((cid) => {
+      chartClientIds.forEach((cid) => {
         row[cid] = dayEntries.filter((e) => e.client_id === cid).reduce((s, e) => s + e.duration_minutes / 60, 0);
       });
-      const unassigned = dayEntries.filter((e) => !e.client_id).reduce((s, e) => s + e.duration_minutes / 60, 0);
-      if (unassigned > 0) row["unassigned"] = unassigned;
+      if (!clientFilter) {
+        const unassigned = dayEntries.filter((e) => !e.client_id).reduce((s, e) => s + e.duration_minutes / 60, 0);
+        if (unassigned > 0) row["unassigned"] = unassigned;
+      }
       return row;
     });
-  }, [rangeEntries, rangeStart, clientIds]);
+  }, [displayEntries, rangeStart, clientIds, clientFilter]);
 
   // (Client billing summary is now a separate component with its own date range)
 

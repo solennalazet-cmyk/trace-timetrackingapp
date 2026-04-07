@@ -477,6 +477,14 @@ const TimelinePage = () => {
         existingEntry={editEntry}
         onSave={handleEditSave}
         onSkip={() => { setAssignOpen(false); setEditEntry(null); setEditSession(null); }}
+        onDelete={async (entryId) => {
+          await supabase.from("time_entries").update({ deleted_at: new Date().toISOString() }).eq("id", entryId);
+          toast("Entry deleted.");
+          setAssignOpen(false);
+          setEditEntry(null);
+          setEditSession(null);
+          loadData();
+        }}
       />
     </div>
   );

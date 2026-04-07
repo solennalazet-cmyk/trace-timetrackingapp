@@ -270,6 +270,14 @@ const StartPage = () => {
         existingEntry={editingEntry}
         onSave={handleAssignSave}
         onSkip={handleAssignSkip}
+        onDelete={async (entryId) => {
+          await supabase.from("time_entries").update({ deleted_at: new Date().toISOString() }).eq("id", entryId);
+          toast("Entry deleted.");
+          toast("Entry deleted.");
+          setAssignModalOpen(false);
+          setEditingEntry(null);
+          fetchSummary();
+        }}
       />
 
       {/* Manual Entry Modal */}

@@ -876,7 +876,14 @@ const ReportsPage = () => {
       {/* Modals */}
       <EntryDetailSheet entry={selectedEntry} open={detailOpen} onOpenChange={setDetailOpen} onEdit={handleEdit} onDeleted={() => loadData()} />
       <AssignmentModal open={assignOpen} session={editSession} existingEntry={editEntry}
-        onSave={handleEditSave} onSkip={() => { setAssignOpen(false); setEditEntry(null); }} />
+        onSave={handleEditSave} onSkip={() => { setAssignOpen(false); setEditEntry(null); }}
+        onDelete={async (entryId) => {
+          await supabase.from("time_entries").update({ deleted_at: new Date().toISOString() }).eq("id", entryId);
+          toast("Entry deleted.");
+          setAssignOpen(false);
+          setEditEntry(null);
+          loadData();
+        }} />
       <BillingDialog open={billingOpen} onOpenChange={setBillingOpen} onComplete={loadData} />
       <PaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} />
       <UnassignedPanel

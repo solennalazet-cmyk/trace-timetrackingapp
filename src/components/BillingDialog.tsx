@@ -219,7 +219,7 @@ const BillingDialog = ({ open, onOpenChange, onComplete }: BillingDialogProps) =
         )}
 
         {step === 4 && (
-          <div className="space-y-3">
+          <div className="px-6 pb-6 pt-4 space-y-3">
             <p className="text-sm text-muted-foreground">Choose delivery method</p>
             <div className="grid grid-cols-2 gap-3">
               <div className="p-4 rounded-xl border border-border opacity-50 cursor-not-allowed text-center space-y-2">

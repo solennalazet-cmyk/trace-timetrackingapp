@@ -337,7 +337,7 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
           <div><Label>Tags</Label><TagsInput value={tags} onChange={setTags} suggestions={allTags} /></div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="px-6 pb-6 pt-2">
           <Button variant="outline" className="flex-1 rounded-[28px] h-12 font-bold" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-12 font-bold" onClick={handleSave} disabled={!canSave || saving}>Save Entry</Button>
         </DialogFooter>

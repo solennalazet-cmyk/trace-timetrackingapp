@@ -337,7 +337,7 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                     Forgot password?
                   </button>
                   {renderTurnstile()}
-                  <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitDisabled}>
+                  <Button type="submit" className="w-full rounded-[28px] h-12 font-bold bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitDisabled}>
                     {loading ? "Signing in…" : "Sign in"}
                   </Button>
                 </form>

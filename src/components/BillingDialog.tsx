@@ -151,8 +151,8 @@ const BillingDialog = ({ open, onOpenChange, onComplete }: BillingDialogProps) =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[420px] rounded-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-[420px] rounded-2xl max-h-[85vh] overflow-y-auto p-0">
+        <DialogHeader className="px-6 pt-6 pb-0">
           <DialogTitle>Bill Clients</DialogTitle>
         </DialogHeader>
 

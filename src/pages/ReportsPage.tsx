@@ -670,7 +670,7 @@ const ReportsPage = () => {
                       }}
                     />
                     {(clientFilter ? [clientFilter] : clientIds).map((cid, i) => (
-                      <Bar key={cid} dataKey={cid} stackId="a" fill={clientColorMap[cid] ?? CLIENT_COLORS[i % CLIENT_COLORS.length]}
+                      <Bar key={cid} dataKey={cid} stackId="a" fill={clientColorMap[cid] ?? getClientColor(cid)}
                         radius={i === (clientFilter ? 0 : clientIds.length - 1) && !hasUnassigned ? [3, 3, 0, 0] : undefined}
                         name={cid} />
                     ))}

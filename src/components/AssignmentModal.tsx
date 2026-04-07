@@ -79,6 +79,7 @@ interface AssignmentModalProps {
   existingEntry?: ExistingEntry | null;
   onSave: (session: SessionData, assignment: AssignmentResult) => void;
   onSkip: (session: SessionData) => void;
+  onDelete?: (entryId: string) => void;
 }
 
 interface ClientFull {

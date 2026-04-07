@@ -106,8 +106,11 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
             onClick={handleUpgrade}
             disabled={upgradeLoading}
           >
-            {upgradeLoading ? "Redirecting…" : "Upgrade to Pro — €10/month"}
+            {upgradeLoading ? "Redirecting…" : "Upgrade to Pro — €3.99/month"}
           </Button>
+          <p className="text-xs text-muted-foreground mt-1">
+            Or €39/year <span className="font-medium text-foreground">(save 20%)</span> · Prices include VAT
+          </p>
         </div>
       );
     }
@@ -175,7 +178,7 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
             </span>
           </div>
           <p className="text-xs text-muted-foreground">Status: Active</p>
-          <p className="text-xs text-muted-foreground">Next billing: {nextBilling} — €10.00</p>
+          <p className="text-xs text-muted-foreground">Next billing: {nextBilling} — €3.99</p>
           <Button
             variant="outline"
             className="w-full rounded-[28px] h-10 gap-1"

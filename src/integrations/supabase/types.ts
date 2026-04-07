@@ -352,7 +352,10 @@ export type Database = {
       }
       user_settings: {
         Row: {
+          daily_hour_target: number | null
+          default_billable: boolean | null
           id: string
+          idle_reminder_minutes: number | null
           pause_mode: string | null
           round_amount: string | null
           round_amount_to: number | null
@@ -360,13 +363,18 @@ export type Database = {
           round_duration_to: number | null
           show_logged_today: boolean | null
           theme: string | null
+          time_format: string | null
           timer_presets: number[] | null
           timer_sound: string | null
           updated_at: string | null
           user_id: string
+          week_start_day: number | null
         }
         Insert: {
+          daily_hour_target?: number | null
+          default_billable?: boolean | null
           id?: string
+          idle_reminder_minutes?: number | null
           pause_mode?: string | null
           round_amount?: string | null
           round_amount_to?: number | null
@@ -374,13 +382,18 @@ export type Database = {
           round_duration_to?: number | null
           show_logged_today?: boolean | null
           theme?: string | null
+          time_format?: string | null
           timer_presets?: number[] | null
           timer_sound?: string | null
           updated_at?: string | null
           user_id: string
+          week_start_day?: number | null
         }
         Update: {
+          daily_hour_target?: number | null
+          default_billable?: boolean | null
           id?: string
+          idle_reminder_minutes?: number | null
           pause_mode?: string | null
           round_amount?: string | null
           round_amount_to?: number | null
@@ -388,10 +401,12 @@ export type Database = {
           round_duration_to?: number | null
           show_logged_today?: boolean | null
           theme?: string | null
+          time_format?: string | null
           timer_presets?: number[] | null
           timer_sound?: string | null
           updated_at?: string | null
           user_id?: string
+          week_start_day?: number | null
         }
         Relationships: []
       }

@@ -189,7 +189,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
               {settings.timer_presets.map((mins, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/20 text-foreground text-sm font-medium"
                 >
                   {editingPreset === i ? (
                     <Input

@@ -26,10 +26,17 @@ const RANGES: { key: DateRange; label: string }[] = [
   { key: "month", label: "This month" },
 ];
 
-const CLIENT_COLORS = [
-  "hsl(45 93% 58%)", "hsl(200 80% 55%)", "hsl(340 75% 55%)", "hsl(150 60% 45%)",
-  "hsl(270 60% 60%)", "hsl(25 90% 55%)", "hsl(180 50% 45%)", "hsl(0 70% 55%)",
+const SUNRISE_PALETTE = [
+  "hsl(38 92% 55%)", "hsl(22 88% 55%)", "hsl(340 72% 55%)", "hsl(310 60% 52%)",
+  "hsl(270 58% 58%)", "hsl(220 75% 58%)", "hsl(190 70% 48%)", "hsl(355 68% 52%)",
+  "hsl(50 85% 52%)", "hsl(285 55% 52%)",
 ];
+const hashStringToIndex = (str: string, max: number): number => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  return Math.abs(hash) % max;
+};
+const getClientColor = (id: string) => SUNRISE_PALETTE[hashStringToIndex(id, SUNRISE_PALETTE.length)];
 
 const formatHHMM = (mins: number) => {
   const h = Math.floor(mins / 60);
@@ -171,7 +178,7 @@ const TimelinePage = () => {
     const days = getDaysInRange(rangeStart);
     const clientIds = [...new Set(entries.map((e) => e.client_id).filter(Boolean))] as string[];
     const colorMap: Record<string, string> = {};
-    clientIds.forEach((id, i) => { colorMap[id] = CLIENT_COLORS[i % CLIENT_COLORS.length]; });
+    clientIds.forEach((id) => { colorMap[id] = getClientColor(id); });
     colorMap["unassigned"] = "hsl(240 5% 75%)";
 
     return days.map((day) => {
@@ -335,7 +342,7 @@ const TimelinePage = () => {
                     labelFormatter={(label) => label}
                   />
                   {clientIds.map((cid, i) => (
-                    <Bar key={cid} dataKey={cid} stackId="a" fill={CLIENT_COLORS[i % CLIENT_COLORS.length]} radius={i === clientIds.length - 1 && !hasUnassigned ? [3, 3, 0, 0] : undefined} name={clients[cid] ?? cid} />
+                    <Bar key={cid} dataKey={cid} stackId="a" fill={getClientColor(cid)} radius={i === clientIds.length - 1 && !hasUnassigned ? [3, 3, 0, 0] : undefined} name={clients[cid] ?? cid} />
                   ))}
                   {hasUnassigned && (
                     <Bar dataKey="unassigned" stackId="a" fill="hsl(240 5% 75%)" radius={[3, 3, 0, 0]} name="Unassigned" />
@@ -349,7 +356,7 @@ const TimelinePage = () => {
           <div className="flex flex-wrap gap-3 mb-4">
             {clientIds.map((cid, i) => (
               <div key={cid} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ background: CLIENT_COLORS[i % CLIENT_COLORS.length] }} />
+                <div className="w-2.5 h-2.5 rounded-full" style={{ background: getClientColor(cid) }} />
                 {clients[cid] ?? "Unknown"}
               </div>
             ))}

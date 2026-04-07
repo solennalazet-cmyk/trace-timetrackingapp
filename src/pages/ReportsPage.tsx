@@ -23,10 +23,31 @@ import TrashView from "@/components/TrashView";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 
-const CLIENT_COLORS = [
-  "hsl(45 93% 58%)", "hsl(200 80% 55%)", "hsl(340 75% 55%)", "hsl(150 60% 45%)",
-  "hsl(270 60% 60%)", "hsl(25 90% 55%)", "hsl(180 50% 45%)", "hsl(0 70% 55%)",
+// Sunrise palette – harmonises with the brand gradient (golden → rose → violet → blue)
+const SUNRISE_PALETTE = [
+  "hsl(38 92% 55%)",   // warm amber
+  "hsl(22 88% 55%)",   // burnt orange
+  "hsl(340 72% 55%)",  // rose
+  "hsl(310 60% 52%)",  // magenta
+  "hsl(270 58% 58%)",  // violet
+  "hsl(220 75% 58%)",  // blue
+  "hsl(190 70% 48%)",  // teal
+  "hsl(355 68% 52%)",  // coral
+  "hsl(50 85% 52%)",   // gold
+  "hsl(285 55% 52%)",  // purple
 ];
+
+// Deterministic color for a client ID – stays the same across sessions
+const hashStringToIndex = (str: string, max: number): number => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash) % max;
+};
+
+const getClientColor = (clientId: string): string =>
+  SUNRISE_PALETTE[hashStringToIndex(clientId, SUNRISE_PALETTE.length)];
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
@@ -196,7 +217,7 @@ const ReportsPage = () => {
 
   const clientColorMap = useMemo(() => {
     const map: Record<string, string> = {};
-    clientIds.forEach((id, i) => { map[id] = CLIENT_COLORS[i % CLIENT_COLORS.length]; });
+    clientIds.forEach((id) => { map[id] = getClientColor(id); });
     map["unassigned"] = "hsl(240 5% 75%)";
     return map;
   }, [clientIds]);
@@ -222,7 +243,7 @@ const ReportsPage = () => {
       map[key] = (map[key] || 0) + e.duration_minutes;
     });
     clientIds.forEach((id, i) => {
-      if (map[id]) data.push({ name: clients[id] ?? "Unknown", value: map[id], fill: CLIENT_COLORS[i % CLIENT_COLORS.length] });
+      if (map[id]) data.push({ name: clients[id] ?? "Unknown", value: map[id], fill: getClientColor(id) });
     });
     if (map["unassigned"]) data.push({ name: "Unassigned", value: map["unassigned"], fill: "hsl(240 5% 75%)" });
     return data;
@@ -355,7 +376,7 @@ const ReportsPage = () => {
                   : "border-border text-muted-foreground hover:bg-muted/30"
               }`}
             >
-              <div className="w-2 h-2 rounded-full" style={{ background: CLIENT_COLORS[i % CLIENT_COLORS.length] }} />
+              <div className="w-2 h-2 rounded-full" style={{ background: getClientColor(id) }} />
               {clients[id] ?? "Unknown"}
             </button>
           ))}
@@ -455,11 +476,11 @@ const ReportsPage = () => {
           {/* ── Entry Type Mini Donuts ── */}
           {rangeEntries.length > 0 && (() => {
             const ENTRY_TYPE_COLORS: Record<string, string> = {
-              stopwatch: "hsl(200 80% 55%)",
-              manual: "hsl(150 60% 45%)",
-              shift: "hsl(270 60% 60%)",
-              focus: "hsl(340 75% 55%)",
-              call: "hsl(25 90% 55%)",
+              stopwatch: "hsl(220 75% 58%)",  // blue
+              manual: "hsl(38 92% 55%)",      // amber
+              shift: "hsl(270 58% 58%)",      // violet
+              focus: "hsl(340 72% 55%)",      // rose
+              call: "hsl(22 88% 55%)",        // burnt orange
             };
             const ENTRY_TYPE_LABELS: Record<string, string> = {
               stopwatch: "Stopwatch",
@@ -649,7 +670,7 @@ const ReportsPage = () => {
                       }}
                     />
                     {(clientFilter ? [clientFilter] : clientIds).map((cid, i) => (
-                      <Bar key={cid} dataKey={cid} stackId="a" fill={clientColorMap[cid] ?? CLIENT_COLORS[i % CLIENT_COLORS.length]}
+                      <Bar key={cid} dataKey={cid} stackId="a" fill={clientColorMap[cid] ?? getClientColor(cid)}
                         radius={i === (clientFilter ? 0 : clientIds.length - 1) && !hasUnassigned ? [3, 3, 0, 0] : undefined}
                         name={cid} />
                     ))}

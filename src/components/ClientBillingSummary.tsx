@@ -131,10 +131,17 @@ const ClientBillingSummary = ({
     );
   }
 
-  const CLIENT_COLORS = [
-    "hsl(45 93% 58%)", "hsl(200 80% 55%)", "hsl(340 75% 55%)", "hsl(150 60% 45%)",
-    "hsl(270 60% 60%)", "hsl(25 90% 55%)", "hsl(180 50% 45%)", "hsl(0 70% 55%)",
+  const SUNRISE_PALETTE = [
+    "hsl(38 92% 55%)", "hsl(22 88% 55%)", "hsl(340 72% 55%)", "hsl(310 60% 52%)",
+    "hsl(270 58% 58%)", "hsl(220 75% 58%)", "hsl(190 70% 48%)", "hsl(355 68% 52%)",
+    "hsl(50 85% 52%)", "hsl(285 55% 52%)",
   ];
+  const hashStringToIndex = (str: string, max: number): number => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+    return Math.abs(hash) % max;
+  };
+  const getClientColor = (id: string) => SUNRISE_PALETTE[hashStringToIndex(id, SUNRISE_PALETTE.length)];
 
   return (
     <div className="space-y-2">
@@ -142,7 +149,7 @@ const ClientBillingSummary = ({
         const sym = CURRENCY_SYMBOLS[c.currency] ?? "€";
         const isExpanded = expandedClients.has(c.id);
         const avgPerDay = c.totalMins / daysInRange;
-        const color = clientColorMap?.[c.id] ?? CLIENT_COLORS[i % CLIENT_COLORS.length];
+        const color = clientColorMap?.[c.id] ?? getClientColor(c.id);
 
         return (
           <div

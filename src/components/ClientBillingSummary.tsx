@@ -149,7 +149,7 @@ const ClientBillingSummary = ({
         const sym = CURRENCY_SYMBOLS[c.currency] ?? "€";
         const isExpanded = expandedClients.has(c.id);
         const avgPerDay = c.totalMins / daysInRange;
-        const color = clientColorMap?.[c.id] ?? CLIENT_COLORS[i % CLIENT_COLORS.length];
+        const color = clientColorMap?.[c.id] ?? getClientColor(c.id);
 
         return (
           <div

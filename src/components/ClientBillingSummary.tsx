@@ -194,14 +194,17 @@ const ClientBillingSummary = ({
           const isExpanded = expandedClients.has(c.id);
 
           return (
-            <div key={c.id} className="rounded-xl border border-border bg-card overflow-hidden">
+            <div key={c.id} className={`rounded-xl border bg-card overflow-hidden transition-colors ${activeClientFilter === c.id ? "border-primary ring-1 ring-primary/30" : "border-border"}`}>
               {/* Main row */}
               <div className="p-3">
                 <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onFilterClient?.(activeClientFilter === c.id ? null : c.id)}
+                    className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                  >
                     <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: clientColorMap?.[c.id] ?? CLIENT_COLORS[i % CLIENT_COLORS.length] }} />
                     <span className="text-sm font-medium text-foreground">{c.name}</span>
-                  </div>
+                  </button>
                   <button onClick={() => toggleExpand(c.id)} className="p-1 rounded hover:bg-muted/50 transition-colors">
                     {isExpanded
                       ? <ChevronUp className="w-4 h-4 text-muted-foreground" />

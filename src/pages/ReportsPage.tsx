@@ -528,6 +528,8 @@ const ReportsPage = () => {
             }}
             onOpenUnassigned={() => setUnassignedOpen(true)}
             onEditEntry={handleEdit}
+            activeClientFilter={clientFilter}
+            onFilterClient={(id) => setClientFilter(id ?? "")}
             onDeleteEntry={async (entryId) => {
               if (user) {
                 await supabase.from("time_entries").update({ deleted_at: new Date().toISOString() }).eq("id", entryId);

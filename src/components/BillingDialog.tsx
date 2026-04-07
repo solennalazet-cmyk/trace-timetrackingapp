@@ -176,7 +176,7 @@ const BillingDialog = ({ open, onOpenChange, onComplete }: BillingDialogProps) =
         )}
 
         {step === 2 && (
-          <div className="space-y-3">
+          <div className="px-6 pb-6 pt-4 space-y-3">
             <p className="text-sm text-muted-foreground">Select date range</p>
             <div className="flex gap-2">
               <Popover>

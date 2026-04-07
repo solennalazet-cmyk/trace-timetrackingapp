@@ -287,7 +287,7 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                   <Input id="confirmPassword" type="password" className="h-10 rounded-xl" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
                 </div>
                 {renderTurnstile()}
-                <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitDisabled}>
+                <Button type="submit" className="w-full rounded-[28px] h-12 font-bold bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitDisabled}>
                   {loading ? "Creating account…" : "Create account"}
                 </Button>
               </form>

@@ -271,7 +271,7 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                 </div>
                 <div>
                   <Label htmlFor="signupEmail">Email</Label>
-                  <Input id="signupEmail" type="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} required />
+                  <Input id="signupEmail" type="email" className="h-10 rounded-xl" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} required />
                 </div>
                 <div className="relative">
                   <Label htmlFor="signupPassword">Password</Label>

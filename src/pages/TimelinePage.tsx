@@ -342,7 +342,7 @@ const TimelinePage = () => {
                     labelFormatter={(label) => label}
                   />
                   {clientIds.map((cid, i) => (
-                    <Bar key={cid} dataKey={cid} stackId="a" fill={CLIENT_COLORS[i % CLIENT_COLORS.length]} radius={i === clientIds.length - 1 && !hasUnassigned ? [3, 3, 0, 0] : undefined} name={clients[cid] ?? cid} />
+                    <Bar key={cid} dataKey={cid} stackId="a" fill={getClientColor(cid)} radius={i === clientIds.length - 1 && !hasUnassigned ? [3, 3, 0, 0] : undefined} name={clients[cid] ?? cid} />
                   ))}
                   {hasUnassigned && (
                     <Bar dataKey="unassigned" stackId="a" fill="hsl(240 5% 75%)" radius={[3, 3, 0, 0]} name="Unassigned" />

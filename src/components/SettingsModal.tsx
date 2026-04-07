@@ -305,6 +305,34 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
 
           <SettingsDivider />
 
+          {/* ── Default Report Range ── */}
+          <SettingsSection
+            title="Default report range"
+            description="Initial date range when opening Reports."
+          >
+            <div className="flex flex-wrap gap-2">
+              {([
+                { value: "weekly", label: "Weekly" },
+                { value: "biweekly", label: "Biweekly" },
+                { value: "monthly", label: "Monthly" },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => persist({ ...settings, default_report_range: opt.value })}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                    settings.default_report_range === opt.value
+                      ? "border-primary bg-primary/20 text-foreground"
+                      : "border-border text-muted-foreground hover:bg-muted/30"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </SettingsSection>
+
+          <SettingsDivider />
+
           {/* ── Time Format ── */}
           <SettingsSection
             title="Time format"

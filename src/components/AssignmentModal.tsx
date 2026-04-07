@@ -331,7 +331,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleSkipOrDismiss(); }}>
-      <DialogContent className="left-1/2 top-1/2 bottom-auto z-50 flex h-[min(100dvh-1rem,56rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl p-0 sm:w-[min(100vw-2rem,32rem)]">
+      <DialogContent className="inset-0 z-50 m-auto flex w-[calc(100vw-1rem)] max-w-lg flex-col overflow-hidden rounded-2xl p-0 sm:w-[min(100vw-2rem,32rem)] h-[min(100dvh-1rem,56rem)] max-h-[calc(100dvh-1rem)] translate-x-0 translate-y-0 data-[state=open]:slide-in-from-bottom-0 data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=closed]:slide-out-to-top-0 sm:data-[state=open]:slide-in-from-top-0">
         <div className="shrink-0 px-6 pt-6 pb-2">
           <DialogHeader>
             <DialogTitle>

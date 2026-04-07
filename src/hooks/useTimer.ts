@@ -47,12 +47,18 @@ export function useTimer(mode: TimerMode) {
   );
   const [elapsedMs, setElapsedMs] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedRef = useRef(0);
 
   const status: TimerStatus = !timerState.startedAt
     ? "idle"
     : timerState.pausedAt
     ? "paused"
     : "running";
+
+  // Keep ref in sync
+  useEffect(() => {
+    elapsedRef.current = elapsedMs;
+  }, [elapsedMs]);
 
   // Compute elapsed
   const computeElapsed = useCallback(() => {
@@ -195,24 +201,30 @@ export function useTimer(mode: TimerMode) {
   }, [timerState, lsKey, user]);
 
   const stop = useCallback(() => {
-    const durationMinutes = Math.round(elapsedMs / 60000);
+    const durationMinutes = Math.round(elapsedRef.current / 60000);
     const breakMinutes = Math.round(timerState.totalPausedMs / 60000);
     const startedAt = timerState.startedAt;
 
     recentlyStopped.add(mode);
     clearLS(lsKey);
     setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+    setElapsedMs(0);
 
     if (user) {
       supabase
         .from("active_sessions")
         .delete()
         .eq("user_id", user.id)
-        .then();
+        .then(({ error }) => {
+          if (error) {
+            // Retry once on failure to prevent ghost sessions
+            supabase.from("active_sessions").delete().eq("user_id", user.id).then();
+          }
+        });
     }
 
     return { durationMinutes, breakMinutes, startedAt };
-  }, [elapsedMs, timerState, lsKey, user]);
+  }, [timerState, lsKey, user, mode]);
 
   return {
     status,

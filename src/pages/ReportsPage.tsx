@@ -217,7 +217,7 @@ const ReportsPage = () => {
 
   const clientColorMap = useMemo(() => {
     const map: Record<string, string> = {};
-    clientIds.forEach((id, i) => { map[id] = CLIENT_COLORS[i % CLIENT_COLORS.length]; });
+    clientIds.forEach((id) => { map[id] = getClientColor(id); });
     map["unassigned"] = "hsl(240 5% 75%)";
     return map;
   }, [clientIds]);

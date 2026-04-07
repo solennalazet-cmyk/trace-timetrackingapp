@@ -1,21 +1,6 @@
 import { useState, useMemo } from "react";
 import { ChevronDown, ChevronUp, ArrowRight, Trash2 } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { type TimeEntry } from "@/components/EntryDetailSheet";
-
-type BillingRange = "week" | "month" | "last-month" | "custom";
-
-const BILLING_RANGES: { key: BillingRange; label: string }[] = [
-  { key: "week", label: "This week" },
-  { key: "month", label: "This month" },
-  { key: "last-month", label: "Last month" },
-];
 
 const CLIENT_COLORS = [
   "hsl(45 93% 58%)", "hsl(200 80% 55%)", "hsl(340 75% 55%)", "hsl(150 60% 45%)",
@@ -30,45 +15,22 @@ const formatHM = (mins: number) => {
   return `${h}h ${String(m).padStart(2, "0")}m`;
 };
 
-const getBillingRangeStart = (range: BillingRange): string => {
-  const now = new Date();
-  let d: Date;
-  switch (range) {
-    case "week": {
-      d = new Date(now);
-      const day = d.getDay();
-      const diff = day === 0 ? 6 : day - 1;
-      d.setDate(d.getDate() - diff);
-      break;
-    }
-    case "month":
-      d = new Date(now.getFullYear(), now.getMonth(), 1);
-      break;
-    case "last-month":
-      d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      break;
-    default:
-      d = new Date(now.getTime() - 6 * 86400000);
-  }
-  return d.toISOString().split("T")[0];
+const toLocalDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 };
 
-const getBillingRangeEnd = (range: BillingRange): string => {
-  const now = new Date();
-  if (range === "last-month") {
-    const d = new Date(now.getFullYear(), now.getMonth(), 0);
-    return d.toISOString().split("T")[0];
-  }
-  return now.toISOString().split("T")[0];
-};
-
-const getDaysInBillingRange = (startStr: string, endStr: string): string[] => {
+const getDaysInRange = (startStr: string, endStr: string): string[] => {
   const days: string[] = [];
-  const start = new Date(startStr + "T00:00:00");
-  const end = new Date(endStr + "T00:00:00");
+  const [sY, sM, sD] = startStr.split("-").map(Number);
+  const [eY, eM, eD] = endStr.split("-").map(Number);
+  const start = new Date(sY, sM - 1, sD);
+  const end = new Date(eY, eM - 1, eD);
   let d = new Date(start);
   while (d <= end) {
-    days.push(d.toISOString().split("T")[0]);
+    days.push(toLocalDateKey(d));
     d.setDate(d.getDate() + 1);
   }
   return days;
@@ -80,6 +42,9 @@ interface ClientBillingSummaryProps {
   projects: Record<string, string>;
   isPro: boolean;
   clientColorMap?: Record<string, string>;
+  rangeStart: string;
+  rangeEnd: string;
+  rangeLabel: string;
   onBillClient: (clientId: string) => void;
   onOpenUnassigned: () => void;
   onEditEntry?: (entry: TimeEntry) => void;
@@ -103,31 +68,22 @@ const ClientBillingSummary = ({
   projects,
   isPro,
   clientColorMap,
+  rangeStart,
+  rangeEnd,
+  rangeLabel,
   onBillClient,
   onOpenUnassigned,
   onEditEntry,
   onDeleteEntry,
 }: ClientBillingSummaryProps) => {
-  const [billingRange, setBillingRange] = useState<BillingRange>("week");
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
-
-  const rangeStart = getBillingRangeStart(billingRange);
-  const rangeEnd = getBillingRangeEnd(billingRange);
-
-  const filteredEntries = useMemo(() =>
-    allEntries.filter((e) => {
-      const d = e.entry_date ?? "";
-      return d >= rangeStart && d <= rangeEnd;
-    }),
-    [allEntries, rangeStart, rangeEnd]
-  );
 
   const { clientSummaries, unassignedSummary } = useMemo(() => {
     const clientMap: Record<string, ClientSummary> = {};
     let unassignedMins = 0;
     const unassignedEntries: TimeEntry[] = [];
 
-    filteredEntries.forEach((e) => {
+    allEntries.forEach((e) => {
       if (!e.client_id) {
         unassignedMins += e.duration_minutes;
         unassignedEntries.push(e);
@@ -168,20 +124,20 @@ const ClientBillingSummary = ({
       clientSummaries: Object.values(clientMap).sort((a, b) => b.totalMins - a.totalMins),
       unassignedSummary: { totalMins: unassignedMins, entries: unassignedEntries },
     };
-  }, [filteredEntries, clients]);
+  }, [allEntries, clients]);
 
   // Daily breakdown
   const dailyBreakdown = useMemo(() => {
-    const days = getDaysInBillingRange(rangeStart, rangeEnd);
+    const days = getDaysInRange(rangeStart, rangeEnd);
     const dayMap: Record<string, { mins: number; value: number }> = {};
-    filteredEntries.forEach((e) => {
+    allEntries.forEach((e) => {
       const d = e.entry_date ?? "";
       if (!dayMap[d]) dayMap[d] = { mins: 0, value: 0 };
       dayMap[d].mins += e.duration_minutes;
       dayMap[d].value += e.billable_value || 0;
     });
-    const totalMins = filteredEntries.reduce((s, e) => s + e.duration_minutes, 0);
-    const totalValue = filteredEntries.reduce((s, e) => s + (e.billable_value || 0), 0);
+    const totalMins = allEntries.reduce((s, e) => s + e.duration_minutes, 0);
+    const totalValue = allEntries.reduce((s, e) => s + (e.billable_value || 0), 0);
 
     return {
       days: days.map((d) => {
@@ -196,7 +152,7 @@ const ClientBillingSummary = ({
       totalMins,
       totalValue,
     };
-  }, [filteredEntries, rangeStart, rangeEnd]);
+  }, [allEntries, rangeStart, rangeEnd]);
 
   const toggleExpand = (id: string) => {
     setExpandedClients((prev) => {
@@ -206,26 +162,10 @@ const ClientBillingSummary = ({
     });
   };
 
-  const rangeLabel = BILLING_RANGES.find((r) => r.key === billingRange)?.label ?? "This week";
-
-  const RangeSelector = () => (
-    <Select value={billingRange} onValueChange={(v) => setBillingRange(v as BillingRange)}>
-      <SelectTrigger className="h-7 w-auto text-xs gap-1 border-border rounded-full px-3">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {BILLING_RANGES.map((r) => <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>)}
-      </SelectContent>
-    </Select>
-  );
-
-  if (filteredEntries.length === 0) {
+  if (allEntries.length === 0) {
     return (
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-foreground">Client Summary</h3>
-          <RangeSelector />
-        </div>
+        <h3 className="text-sm font-semibold text-foreground mb-3">Client Summary</h3>
         <div className="text-center py-8">
           <p className="text-sm text-muted-foreground">No entries for this period.</p>
           <p className="text-xs text-muted-foreground mt-1">Start tracking to see your billing summary.</p>
@@ -237,10 +177,7 @@ const ClientBillingSummary = ({
   return (
     <div className="mb-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-foreground">Client Summary</h3>
-        <RangeSelector />
-      </div>
+      <h3 className="text-sm font-semibold text-foreground mb-3">Client Summary</h3>
 
       {/* Client rows */}
       <div className="space-y-2">

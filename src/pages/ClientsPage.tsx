@@ -486,14 +486,6 @@ const ClientsPage = () => {
                     >
                       <Pencil className="w-3.5 h-3.5" /> Edit client
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1 rounded-lg flex-1 text-destructive border-destructive/30 hover:bg-destructive/10"
-                      onClick={() => setDeleteClientId(client.id)}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> Delete
-                    </Button>
                   </div>
                 </div>
               )}

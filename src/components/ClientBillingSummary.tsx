@@ -43,6 +43,8 @@ interface ClientBillingSummaryProps {
   onOpenUnassigned: () => void;
   onEditEntry?: (entry: TimeEntry) => void;
   onDeleteEntry?: (entryId: string) => void;
+  activeClientFilter?: string;
+  onFilterClient?: (clientId: string | null) => void;
 }
 
 interface ClientSummary {

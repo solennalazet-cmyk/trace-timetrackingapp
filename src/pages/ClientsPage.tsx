@@ -39,10 +39,6 @@ interface Project {
   currency: string | null;
 }
 
-interface Task {
-  id: string;
-  name: string;
-}
 
 interface MonthlyStats {
   clientId: string;

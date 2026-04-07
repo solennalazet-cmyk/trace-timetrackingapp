@@ -237,7 +237,7 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
           <DialogTitle>Manual Entry</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
+        <div className="px-6 space-y-3 overflow-y-auto flex-1 min-h-0 pt-4">
           {/* Date */}
           <div>
             <Label>Date</Label>

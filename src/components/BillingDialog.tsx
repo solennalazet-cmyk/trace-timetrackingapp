@@ -161,7 +161,7 @@ const BillingDialog = ({ open, onOpenChange, onComplete }: BillingDialogProps) =
             <p className="text-sm text-muted-foreground">Select clients to bill</p>
             {clientsData.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">No unbilled entries.</p>}
             {clientsData.map((c) => (
-              <label key={c.id} className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/30 cursor-pointer">
+              <label key={c.id} className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/30 cursor-pointer">
                 <Checkbox checked={selectedClients.has(c.id)} onCheckedChange={() => toggleClient(c.id)} />
                 <div className="flex-1">
                   <p className="text-sm font-medium">{c.name}</p>

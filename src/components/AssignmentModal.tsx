@@ -20,6 +20,8 @@ import {
 import CreatableCombobox, { ComboboxItem } from "@/components/CreatableCombobox";
 import TagsInput from "@/components/TagsInput";
 import { formatDuration } from "@/hooks/useTimer";
+import { toLocalDateKey } from "@/lib/utils";
+import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {

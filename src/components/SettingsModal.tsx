@@ -408,9 +408,29 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
             </div>
           </SettingsSection>
 
-          <SettingsDivider />
+          {/* ── Revenue Target ── */}
+          <SettingsSection
+            title="Revenue target"
+            description="Monthly revenue goal. Progress shows in Reports, pro-rated to date range. Set to 0 to disable."
+          >
+            <div className="flex items-center gap-3">
+              <Input
+                type="number"
+                min={0}
+                step={100}
+                value={settings.revenue_target || ""}
+                placeholder="0"
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value);
+                  persist({ ...settings, revenue_target: isNaN(v) ? 0 : Math.max(0, v) });
+                }}
+                className="w-24 h-10 rounded-xl text-center"
+              />
+              <span className="text-sm text-muted-foreground">€ / month</span>
+            </div>
+          </SettingsSection>
 
-           {/* ── Idle Reminder ── */}
+          <SettingsDivider />
           <SettingsSection
             title="Idle reminder"
             description="Remind you to stop a running session after a period of inactivity."

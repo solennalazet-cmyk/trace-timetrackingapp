@@ -476,11 +476,11 @@ const ReportsPage = () => {
           {/* ── Entry Type Mini Donuts ── */}
           {rangeEntries.length > 0 && (() => {
             const ENTRY_TYPE_COLORS: Record<string, string> = {
-              stopwatch: "hsl(200 80% 55%)",
-              manual: "hsl(150 60% 45%)",
-              shift: "hsl(270 60% 60%)",
-              focus: "hsl(340 75% 55%)",
-              call: "hsl(25 90% 55%)",
+              stopwatch: "hsl(220 75% 58%)",  // blue
+              manual: "hsl(38 92% 55%)",      // amber
+              shift: "hsl(270 58% 58%)",      // violet
+              focus: "hsl(340 72% 55%)",      // rose
+              call: "hsl(22 88% 55%)",        // burnt orange
             };
             const ENTRY_TYPE_LABELS: Record<string, string> = {
               stopwatch: "Stopwatch",

@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/sheet";
 import { Timer, PenLine, Clock, Phone } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { toLocalDateKey } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { getAnonymousEntries } from "@/lib/anonymous-store";
 
@@ -137,7 +138,7 @@ const TodayEntriesSheet = ({ open, onOpenChange, onEntryTap }: TodayEntriesSheet
     setHiddenIds(new Set());
     const load = async () => {
       setLoading(true);
-      const today = new Date().toISOString().split("T")[0];
+      const today = toLocalDateKey(new Date());
       if (user) {
         const { data } = await supabase
           .from("time_entries")

@@ -13,6 +13,7 @@ import UnassignedPanel from "@/components/UnassignedPanel";
 import TodayEntriesSheet from "@/components/TodayEntriesSheet";
 import WelcomeBanner from "@/components/WelcomeBanner";
 import { useAuth } from "@/contexts/AuthContext";
+import { toLocalDateKey } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { saveAnonymousEntry, getAnonymousEntries } from "@/lib/anonymous-store";
 import { toast } from "sonner";
@@ -43,7 +44,7 @@ const StartPage = () => {
   const [todaySheetOpen, setTodaySheetOpen] = useState(false);
 
   const fetchSummary = async () => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = toLocalDateKey(new Date());
     if (user) {
       const { data: todayEntries } = await supabase
         .from("time_entries")
@@ -115,7 +116,7 @@ const StartPage = () => {
       duration_minutes: session.durationMinutes,
       break_minutes: session.breakMinutes,
       entry_type: session.entryType,
-      entry_date: new Date().toISOString().split("T")[0],
+      entry_date: toLocalDateKey(new Date()),
       billable: assignment?.billable ?? true,
       billing_status: "unbilled",
       client_id: assignment?.clientId || null,

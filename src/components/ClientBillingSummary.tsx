@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { ChevronDown, ChevronUp, ArrowRight, Trash2 } from "lucide-react";
 import { type TimeEntry } from "@/components/EntryDetailSheet";
+import { toLocalDateKey } from "@/lib/utils";
 
 const CLIENT_COLORS = [
   "hsl(45 93% 58%)", "hsl(200 80% 55%)", "hsl(340 75% 55%)", "hsl(150 60% 45%)",
@@ -13,13 +14,6 @@ const formatHM = (mins: number) => {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return `${h}h ${String(m).padStart(2, "0")}m`;
-};
-
-const toLocalDateKey = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
 };
 
 const getDaysInRange = (startStr: string, endStr: string): string[] => {

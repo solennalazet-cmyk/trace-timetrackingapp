@@ -7,6 +7,7 @@ import { BarChart3, List, Search, Timer, PenLine, Clock, Phone, ChevronRight, Fl
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { toLocalDateKey } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { getAnonymousEntries } from "@/lib/anonymous-store";
 import EntryDetailSheet, { type TimeEntry } from "@/components/EntryDetailSheet";
@@ -45,7 +46,7 @@ const getDateRangeStart = (range: DateRange): string => {
     case "30days": d = new Date(now.getTime() - 29 * 86400000); break;
     case "month": d = new Date(now.getFullYear(), now.getMonth(), 1); break;
   }
-  return d.toISOString().split("T")[0];
+  return toLocalDateKey(d);
 };
 
 const getDaysInRange = (startStr: string): string[] => {
@@ -55,7 +56,7 @@ const getDaysInRange = (startStr: string): string[] => {
   today.setHours(0, 0, 0, 0);
   let d = new Date(start);
   while (d <= today) {
-    days.push(d.toISOString().split("T")[0]);
+    days.push(toLocalDateKey(d));
     d.setDate(d.getDate() + 1);
   }
   return days;
@@ -158,7 +159,7 @@ const TimelinePage = () => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const d = new Date(today);
     while (true) {
-      const ds = d.toISOString().split("T")[0];
+      const ds = toLocalDateKey(d);
       if (dateSet.has(ds)) { count++; d.setDate(d.getDate() - 1); }
       else break;
     }

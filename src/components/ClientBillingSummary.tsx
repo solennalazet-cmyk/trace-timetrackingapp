@@ -175,7 +175,17 @@ const ClientBillingSummary = ({
   return (
     <div className="mb-6">
       {/* Header */}
-      <h3 className="text-sm font-semibold text-foreground mb-3">Client Summary</h3>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-foreground">Client Summary</h3>
+        {activeClientFilter && (
+          <button
+            onClick={() => onFilterClient?.(null)}
+            className="text-xs font-medium flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/15 text-foreground hover:bg-primary/25 transition-colors"
+          >
+            Clear filter <X className="w-3 h-3" />
+          </button>
+        )}
+      </div>
 
       {/* Client rows */}
       <div className="space-y-2">

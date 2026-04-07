@@ -271,8 +271,8 @@ const StartPage = () => {
         onSave={handleAssignSave}
         onSkip={handleAssignSkip}
         onDelete={async (entryId) => {
-          const { user } = await import("@/contexts/AuthContext").then(() => ({ user: null }));
           await supabase.from("time_entries").update({ deleted_at: new Date().toISOString() }).eq("id", entryId);
+          toast("Entry deleted.");
           toast("Entry deleted.");
           setAssignModalOpen(false);
           setEditingEntry(null);

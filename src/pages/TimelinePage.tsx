@@ -356,7 +356,7 @@ const TimelinePage = () => {
           <div className="flex flex-wrap gap-3 mb-4">
             {clientIds.map((cid, i) => (
               <div key={cid} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ background: CLIENT_COLORS[i % CLIENT_COLORS.length] }} />
+                <div className="w-2.5 h-2.5 rounded-full" style={{ background: getClientColor(cid) }} />
                 {clients[cid] ?? "Unknown"}
               </div>
             ))}

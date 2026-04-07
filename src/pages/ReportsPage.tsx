@@ -376,7 +376,7 @@ const ReportsPage = () => {
                   : "border-border text-muted-foreground hover:bg-muted/30"
               }`}
             >
-              <div className="w-2 h-2 rounded-full" style={{ background: CLIENT_COLORS[i % CLIENT_COLORS.length] }} />
+              <div className="w-2 h-2 rounded-full" style={{ background: getClientColor(id) }} />
               {clients[id] ?? "Unknown"}
             </button>
           ))}

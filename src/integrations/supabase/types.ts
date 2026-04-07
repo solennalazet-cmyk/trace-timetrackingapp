@@ -354,6 +354,10 @@ export type Database = {
         Row: {
           id: string
           pause_mode: string | null
+          round_amount: string | null
+          round_amount_to: number | null
+          round_duration: string | null
+          round_duration_to: number | null
           show_logged_today: boolean | null
           theme: string | null
           timer_presets: number[] | null
@@ -364,6 +368,10 @@ export type Database = {
         Insert: {
           id?: string
           pause_mode?: string | null
+          round_amount?: string | null
+          round_amount_to?: number | null
+          round_duration?: string | null
+          round_duration_to?: number | null
           show_logged_today?: boolean | null
           theme?: string | null
           timer_presets?: number[] | null
@@ -374,6 +382,10 @@ export type Database = {
         Update: {
           id?: string
           pause_mode?: string | null
+          round_amount?: string | null
+          round_amount_to?: number | null
+          round_duration?: string | null
+          round_duration_to?: number | null
           show_logged_today?: boolean | null
           theme?: string | null
           timer_presets?: number[] | null

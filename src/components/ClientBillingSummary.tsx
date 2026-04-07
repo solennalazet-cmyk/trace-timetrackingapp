@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ChevronDown, ChevronUp, ArrowRight, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, ArrowRight, Trash2, X } from "lucide-react";
 import { type TimeEntry } from "@/components/EntryDetailSheet";
 import { toLocalDateKey } from "@/lib/utils";
 

@@ -208,7 +208,7 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
           <DialogTitle>Log Call</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-3">
+        <div className="px-6 space-y-3 pt-4">
           {/* Scroll picker */}
           <ScrollPicker
             hours={pickerHours}

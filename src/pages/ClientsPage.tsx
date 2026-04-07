@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Search, Plus, Briefcase, ChevronDown, ChevronUp, Mail, Hash, Pencil, Trash2, Check, X } from "lucide-react";
+import { Search, Plus, Briefcase, ChevronDown, ChevronUp, Mail, Hash, Pencil } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,7 +39,6 @@ interface Project {
   currency: string | null;
 }
 
-
 interface MonthlyStats {
   clientId: string;
   hours: number;
@@ -72,8 +71,9 @@ const ClientsPage = () => {
   const [search, setSearch] = useState("");
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [monthlyStats, setMonthlyStats] = useState<MonthlyStats[]>([]);
+  const [projectStats, setProjectStats] = useState<ProjectStats[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [loading, setLoading] = useState(true);
 
   // Modals
@@ -92,26 +92,19 @@ const ClientsPage = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     if (user) {
-      const [{ data: c }, { data: p }, { data: tk }] = await Promise.all([
+      const [{ data: c }, { data: p }] = await Promise.all([
         supabase.from("clients").select("id, name, email, nif, currency, default_rate").eq("user_id", user.id).order("name"),
         supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", user.id),
-        supabase.from("tasks").select("id, name").eq("user_id", user.id).order("name"),
       ]);
       setClients((c ?? []) as Client[]);
       setProjects((p ?? []) as Project[]);
-      setTasks((tk ?? []) as Task[]);
 
-      // Monthly stats + task entry counts
+      // Monthly stats
       const now = new Date();
       const monthStart = toLocalDateKey(new Date(now.getFullYear(), now.getMonth(), 1));
-      const [{ data: entries }, { data: taskEntries }] = await Promise.all([
-        supabase.from("time_entries")
-          .select("client_id, project_id, duration_minutes, billable_value")
-          .eq("user_id", user.id).gte("entry_date", monthStart).not("client_id", "is", null).is("deleted_at", null),
-        supabase.from("time_entries")
-          .select("task_id")
-          .eq("user_id", user.id).not("task_id", "is", null).is("deleted_at", null),
-      ]);
+      const { data: entries } = await supabase.from("time_entries")
+        .select("client_id, project_id, duration_minutes, billable_value")
+        .eq("user_id", user.id).gte("entry_date", monthStart).not("client_id", "is", null).is("deleted_at", null);
 
       const statsMap: Record<string, { hours: number; value: number }> = {};
       const projStatsMap: Record<string, { hours: number; value: number }> = {};
@@ -129,13 +122,6 @@ const ClientsPage = () => {
       });
       setMonthlyStats(Object.entries(statsMap).map(([clientId, s]) => ({ clientId, ...s })));
       setProjectStats(Object.entries(projStatsMap).map(([projectId, s]) => ({ projectId, ...s })));
-
-      // Task entry counts
-      const teCounts: Record<string, number> = {};
-      taskEntries?.forEach((e) => {
-        if (e.task_id) teCounts[e.task_id] = (teCounts[e.task_id] || 0) + 1;
-      });
-      setTaskEntryCounts(teCounts);
     } else {
       const ac = getAnonymousClients();
       setClients(ac.map((c: any) => ({ id: c.id, name: c.name, email: c.email ?? null, nif: c.nif ?? null, currency: c.currency ?? "EUR", default_rate: c.default_rate ?? null })));
@@ -143,7 +129,6 @@ const ClientsPage = () => {
       setProjects(ap.map((p: any) => ({ id: p.id, name: p.name, client_id: p.client_id ?? null, rate: p.rate ?? null, currency: p.currency ?? null })));
       setMonthlyStats([]);
       setProjectStats([]);
-      setTasks([]);
     }
     setLoading(false);
   }, [user]);
@@ -151,19 +136,13 @@ const ClientsPage = () => {
   useEffect(() => { loadData(); }, [loadData]);
 
   const q = search.toLowerCase();
-  const matchingProjectIds = new Set(
-    projects.filter((p) => p.name.toLowerCase().includes(q)).map((p) => p.id)
-  );
   const matchingProjectClientIds = new Set(
     projects.filter((p) => p.name.toLowerCase().includes(q) && p.client_id).map((p) => p.client_id!)
   );
-  const filteredTasks = tasks.filter((t) => t.name.toLowerCase().includes(q));
 
   const filtered = clients.filter((c) => {
     if (!q) return true;
-    // Direct client match
     if (c.name.toLowerCase().includes(q) || (c.nif ?? "").toLowerCase().includes(q) || (c.email ?? "").toLowerCase().includes(q)) return true;
-    // Client has a matching project
     if (matchingProjectClientIds.has(c.id)) return true;
     return false;
   });
@@ -211,7 +190,6 @@ const ClientsPage = () => {
   const handleDeleteClient = async () => {
     if (!deleteClientId) return;
     if (user) {
-      // Nullify references
       await supabase.from("time_entries").update({ client_id: null }).eq("client_id", deleteClientId);
       await supabase.from("projects").delete().eq("client_id", deleteClientId);
       await supabase.from("clients").delete().eq("id", deleteClientId);
@@ -270,51 +248,6 @@ const ClientsPage = () => {
     loadData();
   };
 
-  // --- Task handlers ---
-  const handleAddTask = async () => {
-    const name = newTaskName.trim();
-    if (!name) return;
-    // Duplicate check
-    if (tasks.some((t) => t.name.toLowerCase() === name.toLowerCase())) {
-      toast.error("A task with that name already exists.");
-      return;
-    }
-    if (user) {
-      const { error } = await supabase.from("tasks").insert({ name, user_id: user.id });
-      if (error) { toast.error("Failed to add task."); return; }
-    }
-    setAddingTask(false);
-    setNewTaskName("");
-    toast.success("Task added.");
-    loadData();
-  };
-
-  const handleRenameTask = async (taskId: string) => {
-    const name = editingTaskName.trim();
-    if (!name) return;
-    if (tasks.some((t) => t.id !== taskId && t.name.toLowerCase() === name.toLowerCase())) {
-      toast.error("A task with that name already exists.");
-      return;
-    }
-    if (user) {
-      await supabase.from("tasks").update({ name }).eq("id", taskId);
-    }
-    setEditingTaskId(null);
-    toast.success("Task renamed.");
-    loadData();
-  };
-
-  const handleDeleteTask = async () => {
-    if (!deleteTaskId) return;
-    if (user) {
-      await supabase.from("time_entries").update({ task_id: null }).eq("task_id", deleteTaskId);
-      await supabase.from("tasks").delete().eq("id", deleteTaskId);
-    }
-    setDeleteTaskId(null);
-    toast.success("Task deleted.");
-    loadData();
-  };
-
   const sym = (currency: string | null) => CURRENCY_SYMBOLS[currency ?? "EUR"] ?? "€";
 
   if (loading) {
@@ -328,7 +261,7 @@ const ClientsPage = () => {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           className="pl-9"
-          placeholder="Search clients, projects, tasks..."
+          placeholder="Search clients, projects..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -358,7 +291,7 @@ const ClientsPage = () => {
       )}
 
       {/* No search results */}
-      {search && filtered.length === 0 && filteredTasks.length === 0 && (
+      {search && filtered.length === 0 && (
         <p className="text-center text-sm text-muted-foreground py-8">No results match your search.</p>
       )}
 
@@ -536,20 +469,6 @@ const ClientsPage = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteProject} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete Task Confirm */}
-      <AlertDialog open={!!deleteTaskId} onOpenChange={(o) => { if (!o) setDeleteTaskId(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete "{tasks.find((t) => t.id === deleteTaskId)?.name}"?</AlertDialogTitle>
-            <AlertDialogDescription>This task will be removed permanently.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteTask} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

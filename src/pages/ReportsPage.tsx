@@ -525,6 +525,9 @@ const ReportsPage = () => {
             projects={projects}
             isPro={isPro}
             clientColorMap={clientColorMap}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            rangeLabel={`${dateFrom.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} — ${dateTo.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`}
             onBillClient={(clientId) => {
               setBillingClientId(clientId);
               setBillingOpen(true);

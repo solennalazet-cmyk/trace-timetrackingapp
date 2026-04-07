@@ -276,7 +276,7 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                 <div className="relative">
                   <Label htmlFor="signupPassword">Password</Label>
                   <div className="relative">
-                    <Input id="signupPassword" type={showSignupPw ? "text" : "password"} value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} required minLength={8} />
+                    <Input id="signupPassword" type={showSignupPw ? "text" : "password"} className="h-10 rounded-xl" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} required minLength={8} />
                     <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowSignupPw(!showSignupPw)} aria-label="Toggle password visibility">
                       {showSignupPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>

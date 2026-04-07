@@ -49,6 +49,7 @@ const DEFAULTS: Settings = {
   time_format: "24h",
   default_billable: true,
   daily_hour_target: 0,
+  revenue_target: 0,
   idle_reminder_minutes: 0,
   default_report_range: "monthly",
 };

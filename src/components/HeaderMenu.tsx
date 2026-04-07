@@ -43,7 +43,6 @@ const HeaderMenu = () => {
       case "trial":
       case "free":
         return <span className="text-[10px] font-bold bg-muted text-muted-foreground px-1.5 py-0.5 rounded">FREE</span>;
-        return <span className="text-[10px] font-bold bg-muted text-muted-foreground px-1.5 py-0.5 rounded">FREE</span>;
       case "pro":
         return (
           <span

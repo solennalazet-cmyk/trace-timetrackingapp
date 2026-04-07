@@ -151,17 +151,17 @@ const BillingDialog = ({ open, onOpenChange, onComplete }: BillingDialogProps) =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[420px] rounded-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-[420px] rounded-2xl max-h-[85vh] overflow-y-auto p-0">
+        <DialogHeader className="px-6 pt-6 pb-0">
           <DialogTitle>Bill Clients</DialogTitle>
         </DialogHeader>
 
         {step === 1 && (
-          <div className="space-y-3">
+          <div className="px-6 pb-6 pt-4 space-y-3">
             <p className="text-sm text-muted-foreground">Select clients to bill</p>
             {clientsData.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">No unbilled entries.</p>}
             {clientsData.map((c) => (
-              <label key={c.id} className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/30 cursor-pointer">
+              <label key={c.id} className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/30 cursor-pointer">
                 <Checkbox checked={selectedClients.has(c.id)} onCheckedChange={() => toggleClient(c.id)} />
                 <div className="flex-1">
                   <p className="text-sm font-medium">{c.name}</p>
@@ -176,7 +176,7 @@ const BillingDialog = ({ open, onOpenChange, onComplete }: BillingDialogProps) =
         )}
 
         {step === 2 && (
-          <div className="space-y-3">
+          <div className="px-6 pb-6 pt-4 space-y-3">
             <p className="text-sm text-muted-foreground">Select date range</p>
             <div className="flex gap-2">
               <Popover>
@@ -204,8 +204,8 @@ const BillingDialog = ({ open, onOpenChange, onComplete }: BillingDialogProps) =
         )}
 
         {step === 3 && (
-          <div className="space-y-3">
-            <div className="p-3 rounded-lg bg-muted/50 space-y-1">
+          <div className="px-6 pb-6 pt-4 space-y-3">
+            <div className="p-3 rounded-xl bg-muted/50 space-y-1">
               {selected.map((c) => <p key={c.id} className="text-sm font-medium">{c.name}</p>)}
               <p className="text-xs text-muted-foreground">Period: {format(dateFrom, "d MMM")} – {format(dateTo, "d MMM yyyy")}</p>
               <p className="text-xs text-muted-foreground">Entries: {totalEntries} sessions · {totalHours.toFixed(1)}h</p>
@@ -219,7 +219,7 @@ const BillingDialog = ({ open, onOpenChange, onComplete }: BillingDialogProps) =
         )}
 
         {step === 4 && (
-          <div className="space-y-3">
+          <div className="px-6 pb-6 pt-4 space-y-3">
             <p className="text-sm text-muted-foreground">Choose delivery method</p>
             <div className="grid grid-cols-2 gap-3">
               <div className="p-4 rounded-xl border border-border opacity-50 cursor-not-allowed text-center space-y-2">

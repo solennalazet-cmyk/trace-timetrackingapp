@@ -267,16 +267,16 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
               <form onSubmit={handleSignUp} className="space-y-3">
                 <div>
                   <Label htmlFor="fullName">Full Name</Label>
-                  <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+                  <Input id="fullName" className="h-10 rounded-xl" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
                 </div>
                 <div>
                   <Label htmlFor="signupEmail">Email</Label>
-                  <Input id="signupEmail" type="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} required />
+                  <Input id="signupEmail" type="email" className="h-10 rounded-xl" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} required />
                 </div>
                 <div className="relative">
                   <Label htmlFor="signupPassword">Password</Label>
                   <div className="relative">
-                    <Input id="signupPassword" type={showSignupPw ? "text" : "password"} value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} required minLength={8} />
+                    <Input id="signupPassword" type={showSignupPw ? "text" : "password"} className="h-10 rounded-xl" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} required minLength={8} />
                     <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowSignupPw(!showSignupPw)} aria-label="Toggle password visibility">
                       {showSignupPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -284,10 +284,10 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                 </div>
                 <div>
                   <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                  <Input id="confirmPassword" type="password" className="h-10 rounded-xl" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
                 </div>
                 {renderTurnstile()}
-                <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitDisabled}>
+                <Button type="submit" className="w-full rounded-[28px] h-12 font-bold bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitDisabled}>
                   {loading ? "Creating account…" : "Create account"}
                 </Button>
               </form>
@@ -307,10 +307,10 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                   <form onSubmit={handleForgotPassword} className="space-y-3">
                     <div>
                       <Label htmlFor="forgotEmail">Email</Label>
-                      <Input id="forgotEmail" type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required />
+                      <Input id="forgotEmail" type="email" className="h-10 rounded-xl" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required />
                     </div>
                     {renderTurnstile()}
-                    <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitDisabled}>
+                    <Button type="submit" className="w-full rounded-[28px] h-12 font-bold bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitDisabled}>
                       {loading ? "Sending…" : "Send reset link"}
                     </Button>
                     <button type="button" className="text-sm text-muted-foreground underline w-full text-center" onClick={() => setShowForgot(false)}>
@@ -322,12 +322,12 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                 <form onSubmit={handleLogin} className="space-y-3">
                   <div>
                     <Label htmlFor="loginEmail">Email</Label>
-                    <Input id="loginEmail" type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />
+                    <Input id="loginEmail" type="email" className="h-10 rounded-xl" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />
                   </div>
                   <div className="relative">
                     <Label htmlFor="loginPassword">Password</Label>
                     <div className="relative">
-                      <Input id="loginPassword" type={showLoginPw ? "text" : "password"} value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required />
+                      <Input id="loginPassword" type={showLoginPw ? "text" : "password"} className="h-10 rounded-xl" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required />
                       <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowLoginPw(!showLoginPw)} aria-label="Toggle password visibility">
                         {showLoginPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -337,7 +337,7 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                     Forgot password?
                   </button>
                   {renderTurnstile()}
-                  <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitDisabled}>
+                  <Button type="submit" className="w-full rounded-[28px] h-12 font-bold bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitDisabled}>
                     {loading ? "Signing in…" : "Sign in"}
                   </Button>
                 </form>

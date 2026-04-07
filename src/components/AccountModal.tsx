@@ -195,12 +195,12 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[420px] rounded-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-[420px] rounded-2xl max-h-[85vh] overflow-y-auto p-0">
+          <DialogHeader className="px-6 pt-6 pb-0">
             <DialogTitle>Account & Subscription</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-6">
+          <div className="px-6 pb-6 space-y-6">
             {/* Profile */}
             <div>
               <h3 className="text-sm font-semibold text-foreground mb-2">Profile</h3>
@@ -209,8 +209,8 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
                   <span className="text-xs text-muted-foreground">Name</span>
                   {editingName ? (
                     <div className="flex items-center gap-1">
-                      <Input
-                        className="w-40 h-7 text-sm"
+                    <Input
+                        className="w-40 h-7 text-sm rounded-xl"
                         value={nameValue}
                         onChange={(e) => setNameValue(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && handleNameSave()}

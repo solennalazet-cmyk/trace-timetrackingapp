@@ -203,12 +203,12 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[400px] rounded-t-2xl sm:rounded-2xl p-6">
-        <DialogHeader>
+      <DialogContent className="max-w-[400px] rounded-2xl p-0">
+        <DialogHeader className="px-6 pt-6 pb-0">
           <DialogTitle>Log Call</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-3">
+        <div className="px-6 space-y-3 pt-4">
           {/* Scroll picker */}
           <ScrollPicker
             hours={pickerHours}
@@ -250,7 +250,7 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
           <div><Label>Notes</Label><Textarea placeholder="Optional notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="px-6 pb-6 pt-2">
           <Button variant="outline" className="flex-1 rounded-[28px] h-12 font-bold" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-12 font-bold" onClick={handleSave} disabled={durationMinutes <= 0 || saving}>Save Call</Button>
         </DialogFooter>

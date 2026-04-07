@@ -41,30 +41,32 @@ const PaywallModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[380px] rounded-2xl text-center">
-        <div className="flex justify-center mb-4">
-          <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-            <Crown className="w-6 h-6 text-primary" />
+      <DialogContent className="max-w-[380px] rounded-2xl p-0">
+        <div className="px-6 pt-6 pb-6 text-center">
+          <div className="flex justify-center mb-4">
+            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+              <Crown className="w-6 h-6 text-primary" />
+            </div>
           </div>
+          <h2 className="text-lg font-semibold text-foreground">{headline}</h2>
+          <p className="text-sm text-muted-foreground mt-2">{body}</p>
+          <Button
+            className="w-full mt-4 rounded-[28px] h-12 font-bold bg-primary text-primary-foreground hover:bg-primary/90"
+            onClick={handleUpgrade}
+            disabled={loading}
+          >
+            {loading ? "Redirecting…" : "Upgrade to Pro — €10/month"}
+          </Button>
+          <button
+            className="text-sm text-muted-foreground underline mt-3 block mx-auto"
+            onClick={() => onOpenChange(false)}
+          >
+            Maybe later
+          </button>
+          <p className="text-xs text-muted-foreground mt-2">
+            Cancel anytime. No hidden fees.
+          </p>
         </div>
-        <h2 className="text-lg font-semibold text-foreground">{headline}</h2>
-        <p className="text-sm text-muted-foreground mt-2">{body}</p>
-        <Button
-          className="w-full mt-4 bg-primary text-primary-foreground hover:bg-primary/90"
-          onClick={handleUpgrade}
-          disabled={loading}
-        >
-          {loading ? "Redirecting…" : "Upgrade to Pro — €10/month"}
-        </Button>
-        <button
-          className="text-sm text-muted-foreground underline mt-2"
-          onClick={() => onOpenChange(false)}
-        >
-          Maybe later
-        </button>
-        <p className="text-xs text-muted-foreground mt-2">
-          Cancel anytime. No hidden fees.
-        </p>
       </DialogContent>
     </Dialog>
   );

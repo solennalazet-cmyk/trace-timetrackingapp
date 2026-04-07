@@ -49,15 +49,15 @@ const FeedbackModal = ({ open, onOpenChange }: FeedbackModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[380px] rounded-2xl">
-        <DialogHeader>
+      <DialogContent className="max-w-[380px] rounded-2xl p-0">
+        <DialogHeader className="px-6 pt-6 pb-0">
           <DialogTitle>Send Feedback</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label>Type</Label>
+        <form onSubmit={handleSubmit} className="px-6 pb-6 pt-4 space-y-4">
+          <div className="space-y-1.5">
+            <Label className="text-sm">Type</Label>
             <Select value={type} onValueChange={setType}>
-              <SelectTrigger>
+              <SelectTrigger className="h-10 rounded-xl">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -67,20 +67,21 @@ const FeedbackModal = ({ open, onOpenChange }: FeedbackModalProps) => {
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <Label htmlFor="feedback-message">Message</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="feedback-message" className="text-sm">Message</Label>
             <Textarea
               id="feedback-message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Tell us what's on your mind…"
               rows={4}
+              className="rounded-xl"
               required
             />
           </div>
           <Button
             type="submit"
-            className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+            className="w-full rounded-[28px] h-12 font-bold bg-primary text-primary-foreground hover:bg-primary/90"
             disabled={loading || !message.trim()}
           >
             {loading ? "Sending…" : "Send"}

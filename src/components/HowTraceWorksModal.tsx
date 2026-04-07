@@ -33,11 +33,11 @@ const steps = [
 const HowTraceWorksModal = ({ open, onOpenChange }: HowTraceWorksModalProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[380px] rounded-2xl">
-        <DialogHeader>
+      <DialogContent className="max-w-[380px] rounded-2xl p-0">
+        <DialogHeader className="px-6 pt-6 pb-0">
           <DialogTitle className="font-mono text-timer-display text-xl">How Trace Works</DialogTitle>
         </DialogHeader>
-        <div className="space-y-6 py-4">
+        <div className="px-6 space-y-6 pt-4">
           {steps.map((step, i) => (
             <div key={i} className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
@@ -50,9 +50,14 @@ const HowTraceWorksModal = ({ open, onOpenChange }: HowTraceWorksModalProps) => 
             </div>
           ))}
         </div>
-        <Button onClick={() => onOpenChange(false)} className="w-full">
-          Got it
-        </Button>
+        <div className="px-6 pb-6 pt-2">
+          <Button
+            onClick={() => onOpenChange(false)}
+            className="w-full rounded-[28px] h-12 font-bold bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            Got it
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

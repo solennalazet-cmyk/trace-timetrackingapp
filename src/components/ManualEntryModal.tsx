@@ -232,12 +232,12 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[400px] rounded-t-2xl sm:rounded-2xl p-6 flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-[400px] rounded-2xl p-0 flex flex-col max-h-[85vh]">
+        <DialogHeader className="px-6 pt-6 pb-0">
           <DialogTitle>Manual Entry</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
+        <div className="px-6 space-y-3 overflow-y-auto flex-1 min-h-0 pt-4">
           {/* Date */}
           <div>
             <Label>Date</Label>
@@ -337,7 +337,7 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
           <div><Label>Tags</Label><TagsInput value={tags} onChange={setTags} suggestions={allTags} /></div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="px-6 pb-6 pt-2">
           <Button variant="outline" className="flex-1 rounded-[28px] h-12 font-bold" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-12 font-bold" onClick={handleSave} disabled={!canSave || saving}>Save Entry</Button>
         </DialogFooter>

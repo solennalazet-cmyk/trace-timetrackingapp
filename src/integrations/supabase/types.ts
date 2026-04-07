@@ -212,21 +212,32 @@ export type Database = {
           created_at: string | null
           id: string
           name: string
+          project_id: string | null
           user_id: string
         }
         Insert: {
           created_at?: string | null
           id?: string
           name: string
+          project_id?: string | null
           user_id: string
         }
         Update: {
           created_at?: string | null
           id?: string
           name?: string
+          project_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       time_entries: {
         Row: {

@@ -365,6 +365,7 @@ export type Database = {
         Row: {
           daily_hour_target: number | null
           default_billable: boolean | null
+          default_report_range: string | null
           id: string
           idle_reminder_minutes: number | null
           pause_mode: string | null
@@ -384,6 +385,7 @@ export type Database = {
         Insert: {
           daily_hour_target?: number | null
           default_billable?: boolean | null
+          default_report_range?: string | null
           id?: string
           idle_reminder_minutes?: number | null
           pause_mode?: string | null
@@ -403,6 +405,7 @@ export type Database = {
         Update: {
           daily_hour_target?: number | null
           default_billable?: boolean | null
+          default_report_range?: string | null
           id?: string
           idle_reminder_minutes?: number | null
           pause_mode?: string | null

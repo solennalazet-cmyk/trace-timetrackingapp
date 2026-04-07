@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ChevronDown, ChevronUp, ArrowRight, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, ArrowRight, Trash2, X } from "lucide-react";
 import { type TimeEntry } from "@/components/EntryDetailSheet";
 import { toLocalDateKey } from "@/lib/utils";
 
@@ -43,6 +43,8 @@ interface ClientBillingSummaryProps {
   onOpenUnassigned: () => void;
   onEditEntry?: (entry: TimeEntry) => void;
   onDeleteEntry?: (entryId: string) => void;
+  activeClientFilter?: string;
+  onFilterClient?: (clientId: string | null) => void;
 }
 
 interface ClientSummary {
@@ -69,6 +71,8 @@ const ClientBillingSummary = ({
   onOpenUnassigned,
   onEditEntry,
   onDeleteEntry,
+  activeClientFilter,
+  onFilterClient,
 }: ClientBillingSummaryProps) => {
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
 
@@ -171,7 +175,17 @@ const ClientBillingSummary = ({
   return (
     <div className="mb-6">
       {/* Header */}
-      <h3 className="text-sm font-semibold text-foreground mb-3">Client Summary</h3>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-foreground">Client Summary</h3>
+        {activeClientFilter && (
+          <button
+            onClick={() => onFilterClient?.(null)}
+            className="text-xs font-medium flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/15 text-foreground hover:bg-primary/25 transition-colors"
+          >
+            Clear filter <X className="w-3 h-3" />
+          </button>
+        )}
+      </div>
 
       {/* Client rows */}
       <div className="space-y-2">
@@ -180,14 +194,17 @@ const ClientBillingSummary = ({
           const isExpanded = expandedClients.has(c.id);
 
           return (
-            <div key={c.id} className="rounded-xl border border-border bg-card overflow-hidden">
+            <div key={c.id} className={`rounded-xl border bg-card overflow-hidden transition-colors ${activeClientFilter === c.id ? "border-primary ring-1 ring-primary/30" : "border-border"}`}>
               {/* Main row */}
               <div className="p-3">
                 <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onFilterClient?.(activeClientFilter === c.id ? null : c.id)}
+                    className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                  >
                     <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: clientColorMap?.[c.id] ?? CLIENT_COLORS[i % CLIENT_COLORS.length] }} />
                     <span className="text-sm font-medium text-foreground">{c.name}</span>
-                  </div>
+                  </button>
                   <button onClick={() => toggleExpand(c.id)} className="p-1 rounded hover:bg-muted/50 transition-colors">
                     {isExpanded
                       ? <ChevronUp className="w-4 h-4 text-muted-foreground" />

@@ -178,7 +178,7 @@ const TimelinePage = () => {
     const days = getDaysInRange(rangeStart);
     const clientIds = [...new Set(entries.map((e) => e.client_id).filter(Boolean))] as string[];
     const colorMap: Record<string, string> = {};
-    clientIds.forEach((id, i) => { colorMap[id] = CLIENT_COLORS[i % CLIENT_COLORS.length]; });
+    clientIds.forEach((id) => { colorMap[id] = getClientColor(id); });
     colorMap["unassigned"] = "hsl(240 5% 75%)";
 
     return days.map((day) => {

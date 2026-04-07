@@ -293,7 +293,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                   onClick={() => persist({ ...settings, week_start_day: opt.value })}
                   className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
                     settings.week_start_day === opt.value
-                      ? "border-primary bg-primary/10 text-foreground"
+                      ? "border-primary bg-primary/20 text-foreground"
                       : "border-border text-muted-foreground hover:bg-muted/30"
                   }`}
                 >
@@ -317,7 +317,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                   onClick={() => persist({ ...settings, time_format: opt.value })}
                   className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
                     settings.time_format === opt.value
-                      ? "border-primary bg-primary/10 text-foreground"
+                      ? "border-primary bg-primary/20 text-foreground"
                       : "border-border text-muted-foreground hover:bg-muted/30"
                   }`}
                 >
@@ -482,7 +482,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                   onClick={() => persist({ ...settings, theme: t })}
                   className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
                     settings.theme === t
-                      ? "border-primary bg-primary/10 text-foreground"
+                      ? "border-primary bg-primary/20 text-foreground"
                       : "border-border text-muted-foreground hover:bg-muted/30"
                   }`}
                 >

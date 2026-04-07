@@ -207,7 +207,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                     </button>
                   )}
                   {settings.timer_presets.length > 1 && (
-                    <button onClick={() => removePreset(i)} className="text-primary/50 hover:text-destructive">
+                    <button onClick={() => removePreset(i)} className="text-muted-foreground hover:text-destructive">
                       <X className="w-3 h-3" />
                     </button>
                   )}

@@ -381,25 +381,57 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip }: Assig
             </DialogTitle>
           </DialogHeader>
 
-          <div className="mt-2 flex items-center gap-3 rounded-lg bg-muted/50 px-3 py-2">
-            <div className="text-center">
-              <p className="font-mono text-2xl font-bold text-timer-display">
-                {formatDuration(session.durationMinutes)}
-              </p>
-              <p className="text-[11px] text-muted-foreground">Duration</p>
-            </div>
-            {session.breakMinutes > 0 && (
-              <>
-                <div className="h-8 w-px bg-border" />
-                <div className="text-center">
-                  <p className="font-mono text-lg font-semibold text-muted-foreground">
-                    {formatDuration(session.breakMinutes)}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">Break</p>
+          {(() => {
+            const entryDate = existingEntry?.entry_date ?? toLocalDateKey(new Date());
+            const entryType = existingEntry?.entry_type ?? session.entryType;
+            const modeLabels: Record<string, string> = {
+              timer: "Stopwatch",
+              focus: "Focus",
+              shift: "Shift",
+              call: "Call Log",
+              manual: "Manual",
+            };
+            const modeLabel = modeLabels[entryType] ?? entryType;
+            const dateObj = new Date(entryDate + "T00:00:00");
+            const dateLabel = format(dateObj, "EEE d MMM yyyy");
+
+            return (
+              <div className="mt-2 rounded-lg bg-muted/50 px-3 py-2">
+                <div className="flex items-center gap-3">
+                  <div className="text-center">
+                    <p className="font-mono text-2xl font-bold text-timer-display">
+                      {formatDuration(session.durationMinutes)}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">Duration</p>
+                  </div>
+                  {session.breakMinutes > 0 && (
+                    <>
+                      <div className="h-8 w-px bg-border" />
+                      <div className="text-center">
+                        <p className="font-mono text-lg font-semibold text-muted-foreground">
+                          {formatDuration(session.breakMinutes)}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">Break</p>
+                      </div>
+                    </>
+                  )}
                 </div>
-              </>
-            )}
-          </div>
+                <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <span>{dateLabel}</span>
+                  <span>·</span>
+                  <span>{modeLabel}</span>
+                  {entryType === "shift" && session.startedAt && (
+                    <>
+                      <span>·</span>
+                      <span>
+                        {format(new Date(session.startedAt), "HH:mm")} – {format(new Date(new Date(session.startedAt).getTime() + session.durationMinutes * 60000 + (session.breakMinutes || 0) * 60000), "HH:mm")}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         <div ref={scrollAreaRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-4">

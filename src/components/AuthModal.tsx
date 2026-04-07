@@ -327,7 +327,7 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                   <div className="relative">
                     <Label htmlFor="loginPassword">Password</Label>
                     <div className="relative">
-                      <Input id="loginPassword" type={showLoginPw ? "text" : "password"} value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required />
+                      <Input id="loginPassword" type={showLoginPw ? "text" : "password"} className="h-10 rounded-xl" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required />
                       <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowLoginPw(!showLoginPw)} aria-label="Toggle password visibility">
                         {showLoginPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>

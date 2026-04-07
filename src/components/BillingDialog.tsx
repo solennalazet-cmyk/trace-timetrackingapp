@@ -204,8 +204,8 @@ const BillingDialog = ({ open, onOpenChange, onComplete }: BillingDialogProps) =
         )}
 
         {step === 3 && (
-          <div className="space-y-3">
-            <div className="p-3 rounded-lg bg-muted/50 space-y-1">
+          <div className="px-6 pb-6 pt-4 space-y-3">
+            <div className="p-3 rounded-xl bg-muted/50 space-y-1">
               {selected.map((c) => <p key={c.id} className="text-sm font-medium">{c.name}</p>)}
               <p className="text-xs text-muted-foreground">Period: {format(dateFrom, "d MMM")} – {format(dateTo, "d MMM yyyy")}</p>
               <p className="text-xs text-muted-foreground">Entries: {totalEntries} sessions · {totalHours.toFixed(1)}h</p>

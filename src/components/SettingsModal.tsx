@@ -94,6 +94,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
           default_billable: (data as any).default_billable ?? DEFAULTS.default_billable,
           daily_hour_target: (data as any).daily_hour_target ?? DEFAULTS.daily_hour_target,
           idle_reminder_minutes: (data as any).idle_reminder_minutes ?? DEFAULTS.idle_reminder_minutes,
+          default_report_range: (data as any).default_report_range ?? DEFAULTS.default_report_range,
         });
       }
     } else {

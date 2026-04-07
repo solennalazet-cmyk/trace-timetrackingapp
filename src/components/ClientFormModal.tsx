@@ -69,41 +69,41 @@ const ClientFormModal = ({ open, onOpenChange, onSave, initial, title = "Add Cli
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[400px] rounded-2xl">
-        <DialogHeader>
+      <DialogContent className="max-w-[400px] rounded-2xl p-0">
+        <DialogHeader className="px-6 pt-6 pb-0">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <Label>Organisation name *</Label>
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Client name" />
+        <div className="px-6 space-y-4">
+          <div className="space-y-1.5">
+            <Label className="text-sm">Organisation name *</Label>
+            <Input className="h-10 rounded-xl" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Client name" />
           </div>
-          <div>
-            <Label>Contact email</Label>
-            <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="client@example.com" />
+          <div className="space-y-1.5">
+            <Label className="text-sm">Contact email</Label>
+            <Input className="h-10 rounded-xl" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="client@example.com" />
           </div>
-          <div>
-            <Label>NIF / Tax number</Label>
-            <Input value={form.nif} onChange={(e) => setForm({ ...form, nif: e.target.value })} placeholder="PT123456789" />
+          <div className="space-y-1.5">
+            <Label className="text-sm">NIF / Tax number</Label>
+            <Input className="h-10 rounded-xl" value={form.nif} onChange={(e) => setForm({ ...form, nif: e.target.value })} placeholder="PT123456789" />
           </div>
-          <div>
-            <Label>Currency</Label>
+          <div className="space-y-1.5">
+            <Label className="text-sm">Currency</Label>
             <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {CURRENCIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Label>Default billing rate</Label>
-              <Input type="number" placeholder="0.00" value={form.default_rate} onChange={(e) => setForm({ ...form, default_rate: e.target.value })} />
+          <div className="flex gap-3">
+            <div className="flex-1 space-y-1.5">
+              <Label className="text-sm">Default billing rate</Label>
+              <Input className="h-10 rounded-xl" type="number" placeholder="0.00" value={form.default_rate} onChange={(e) => setForm({ ...form, default_rate: e.target.value })} />
             </div>
-            <div className="w-32">
-              <Label>Unit</Label>
+            <div className="w-32 space-y-1.5">
+              <Label className="text-sm">Unit</Label>
               <Select value={form.rate_unit} onValueChange={(v) => setForm({ ...form, rate_unit: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {RATE_UNITS.map((u) => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}
                 </SelectContent>
@@ -111,7 +111,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, initial, title = "Add Cli
             </div>
           </div>
         </div>
-        <div className="flex gap-3 mt-4">
+        <div className="flex gap-3 px-6 pb-6 pt-2">
           <Button variant="outline" className="flex-1 rounded-[28px] h-12 font-bold" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-12 font-bold" onClick={handleSave} disabled={!form.name.trim() || saving}>
             {initial ? "Save Changes" : "Save Client"}

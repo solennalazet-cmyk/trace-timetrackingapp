@@ -26,6 +26,11 @@ interface Settings {
   round_duration_to: number;
   round_amount: string;
   round_amount_to: number;
+  week_start_day: number;
+  time_format: string;
+  default_billable: boolean;
+  daily_hour_target: number;
+  idle_reminder_minutes: number;
 }
 
 const DEFAULTS: Settings = {
@@ -38,6 +43,11 @@ const DEFAULTS: Settings = {
   round_duration_to: 15,
   round_amount: "none",
   round_amount_to: 0.01,
+  week_start_day: 1,
+  time_format: "24h",
+  default_billable: true,
+  daily_hour_target: 0,
+  idle_reminder_minutes: 0,
 };
 
 const formatPreset = (mins: number) => {
@@ -77,6 +87,11 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
           round_duration_to: (data as any).round_duration_to ?? DEFAULTS.round_duration_to,
           round_amount: (data as any).round_amount ?? DEFAULTS.round_amount,
           round_amount_to: (data as any).round_amount_to ?? DEFAULTS.round_amount_to,
+          week_start_day: (data as any).week_start_day ?? DEFAULTS.week_start_day,
+          time_format: (data as any).time_format ?? DEFAULTS.time_format,
+          default_billable: (data as any).default_billable ?? DEFAULTS.default_billable,
+          daily_hour_target: (data as any).daily_hour_target ?? DEFAULTS.daily_hour_target,
+          idle_reminder_minutes: (data as any).idle_reminder_minutes ?? DEFAULTS.idle_reminder_minutes,
         });
       }
     } else {
@@ -106,6 +121,11 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
         round_duration_to: updated.round_duration_to,
         round_amount: updated.round_amount,
         round_amount_to: updated.round_amount_to,
+        week_start_day: updated.week_start_day,
+        time_format: updated.time_format,
+        default_billable: updated.default_billable,
+        daily_hour_target: updated.daily_hour_target,
+        idle_reminder_minutes: updated.idle_reminder_minutes,
       } as any, { onConflict: "user_id" });
     } else {
       localStorage.setItem(LS_KEY, JSON.stringify(updated));
@@ -252,6 +272,120 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
               ) : (
                 <Volume2 className="w-4 h-4 text-muted-foreground shrink-0" />
               )}
+            </div>
+          </SettingsSection>
+
+          <SettingsDivider />
+
+          {/* ── Week Start Day ── */}
+          <SettingsSection
+            title="Week starts on"
+            description="Affects reports and date range calculations."
+          >
+            <div className="flex gap-2">
+              {([{ value: 1, label: "Monday" }, { value: 0, label: "Sunday" }] as const).map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => persist({ ...settings, week_start_day: opt.value })}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                    settings.week_start_day === opt.value
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border text-muted-foreground hover:bg-muted/30"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </SettingsSection>
+
+          <SettingsDivider />
+
+          {/* ── Time Format ── */}
+          <SettingsSection
+            title="Time format"
+            description="How times are displayed throughout the app."
+          >
+            <div className="flex gap-2">
+              {([{ value: "24h", label: "24h", example: "14:30" }, { value: "12h", label: "12h", example: "2:30 PM" }] as const).map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => persist({ ...settings, time_format: opt.value })}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                    settings.time_format === opt.value
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border text-muted-foreground hover:bg-muted/30"
+                  }`}
+                >
+                  {opt.label} <span className="text-xs text-muted-foreground ml-1">({opt.example})</span>
+                </button>
+              ))}
+            </div>
+          </SettingsSection>
+
+          <SettingsDivider />
+
+          {/* ── Default Billable ── */}
+          <div className="py-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold">New entries are billable</p>
+              <p className="text-xs text-muted-foreground">Default billing status for new time entries.</p>
+            </div>
+            <Switch
+              checked={settings.default_billable}
+              onCheckedChange={(v) => persist({ ...settings, default_billable: v })}
+            />
+          </div>
+
+          <SettingsDivider />
+
+          {/* ── Daily Hour Target ── */}
+          <SettingsSection
+            title="Daily hour target"
+            description="Set a daily work goal. Progress shows in Reports. Set to 0 to disable."
+          >
+            <div className="flex items-center gap-3">
+              <Input
+                type="number"
+                min={0}
+                max={24}
+                step={0.5}
+                value={settings.daily_hour_target || ""}
+                placeholder="0"
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value);
+                  persist({ ...settings, daily_hour_target: isNaN(v) ? 0 : Math.min(24, Math.max(0, v)) });
+                }}
+                className="w-20 h-10 rounded-xl text-center"
+              />
+              <span className="text-sm text-muted-foreground">hours / day</span>
+            </div>
+          </SettingsSection>
+
+          <SettingsDivider />
+
+          {/* ── Idle Reminder ── */}
+          <SettingsSection
+            title="Idle reminder"
+            description="Get a notification if no timer is running. Set to 0 to disable."
+          >
+            <div className="flex items-center gap-3">
+              <Select
+                value={String(settings.idle_reminder_minutes)}
+                onValueChange={(v) => persist({ ...settings, idle_reminder_minutes: parseInt(v) })}
+              >
+                <SelectTrigger className="w-32 h-10 rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Disabled</SelectItem>
+                  <SelectItem value="5">5 minutes</SelectItem>
+                  <SelectItem value="10">10 minutes</SelectItem>
+                  <SelectItem value="15">15 minutes</SelectItem>
+                  <SelectItem value="30">30 minutes</SelectItem>
+                  <SelectItem value="60">1 hour</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </SettingsSection>
 

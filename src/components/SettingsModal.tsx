@@ -31,6 +31,7 @@ interface Settings {
   default_billable: boolean;
   daily_hour_target: number;
   idle_reminder_minutes: number;
+  default_report_range: string;
 }
 
 const DEFAULTS: Settings = {
@@ -48,6 +49,7 @@ const DEFAULTS: Settings = {
   default_billable: true,
   daily_hour_target: 0,
   idle_reminder_minutes: 0,
+  default_report_range: "monthly",
 };
 
 const formatPreset = (mins: number) => {

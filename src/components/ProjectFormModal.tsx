@@ -70,48 +70,48 @@ const ProjectFormModal = ({ open, onOpenChange, onSave, onDelete, initial, clien
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[380px] rounded-2xl">
-        <DialogHeader>
+      <DialogContent className="max-w-[400px] rounded-2xl p-0">
+        <DialogHeader className="px-6 pt-6 pb-0">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <Label>Project name *</Label>
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Project name" />
+        <div className="px-6 space-y-4">
+          <div className="space-y-1.5">
+            <Label className="text-sm">Project name *</Label>
+            <Input className="h-10 rounded-xl" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Project name" />
           </div>
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Label>Rate {clientRate ? `(default: ${clientRate})` : "(optional)"}</Label>
-              <Input type="number" placeholder={clientRate ? String(clientRate) : "0.00"} value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} />
+          <div className="flex gap-3">
+            <div className="flex-1 space-y-1.5">
+              <Label className="text-sm">Rate {clientRate ? `(default: ${clientRate})` : "(optional)"}</Label>
+              <Input className="h-10 rounded-xl" type="number" placeholder={clientRate ? String(clientRate) : "0.00"} value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} />
             </div>
-            <div className="w-28">
-              <Label>Unit</Label>
+            <div className="w-32 space-y-1.5">
+              <Label className="text-sm">Unit</Label>
               <Select value={form.rate_unit} onValueChange={(v) => setForm({ ...form, rate_unit: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {RATE_UNITS.map((u) => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
           </div>
-          <div>
-            <Label>Currency</Label>
+          <div className="space-y-1.5">
+            <Label className="text-sm">Currency</Label>
             <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {CURRENCIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
         </div>
-        <div className="flex gap-3 mt-4">
+        <div className="flex gap-3 px-6 pb-6 pt-2">
           <Button variant="outline" className="flex-1 rounded-[28px] h-12 font-bold" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-12 font-bold" onClick={handleSave} disabled={!form.name.trim() || saving}>
             {initial ? "Save Changes" : "Add Project"}
           </Button>
         </div>
         {onDelete && initial && (
-          <button className="w-full text-center text-sm text-destructive hover:underline mt-2" onClick={onDelete}>
+          <button className="w-full text-center text-sm text-destructive hover:underline px-6 pb-4 -mt-2" onClick={onDelete}>
             Delete project
           </button>
         )}

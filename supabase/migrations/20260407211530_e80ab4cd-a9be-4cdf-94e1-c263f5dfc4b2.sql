@@ -1,0 +1,1 @@
+ALTER TABLE public.user_settings ADD COLUMN IF NOT EXISTS default_report_range TEXT DEFAULT 'monthly';

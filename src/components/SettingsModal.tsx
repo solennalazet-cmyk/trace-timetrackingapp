@@ -31,6 +31,7 @@ interface Settings {
   default_billable: boolean;
   daily_hour_target: number;
   idle_reminder_minutes: number;
+  default_report_range: string;
 }
 
 const DEFAULTS: Settings = {
@@ -48,6 +49,7 @@ const DEFAULTS: Settings = {
   default_billable: true,
   daily_hour_target: 0,
   idle_reminder_minutes: 0,
+  default_report_range: "monthly",
 };
 
 const formatPreset = (mins: number) => {
@@ -92,6 +94,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
           default_billable: (data as any).default_billable ?? DEFAULTS.default_billable,
           daily_hour_target: (data as any).daily_hour_target ?? DEFAULTS.daily_hour_target,
           idle_reminder_minutes: (data as any).idle_reminder_minutes ?? DEFAULTS.idle_reminder_minutes,
+          default_report_range: (data as any).default_report_range ?? DEFAULTS.default_report_range,
         });
       }
     } else {
@@ -126,6 +129,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
         default_billable: updated.default_billable,
         daily_hour_target: updated.daily_hour_target,
         idle_reminder_minutes: updated.idle_reminder_minutes,
+        default_report_range: updated.default_report_range,
       } as any, { onConflict: "user_id" });
     } else {
       localStorage.setItem(LS_KEY, JSON.stringify(updated));
@@ -187,7 +191,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
               {settings.timer_presets.map((mins, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/20 text-foreground text-sm font-medium"
                 >
                   {editingPreset === i ? (
                     <Input
@@ -205,7 +209,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                     </button>
                   )}
                   {settings.timer_presets.length > 1 && (
-                    <button onClick={() => removePreset(i)} className="text-primary/50 hover:text-destructive">
+                    <button onClick={() => removePreset(i)} className="text-muted-foreground hover:text-destructive">
                       <X className="w-3 h-3" />
                     </button>
                   )}
@@ -289,7 +293,35 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                   onClick={() => persist({ ...settings, week_start_day: opt.value })}
                   className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
                     settings.week_start_day === opt.value
-                      ? "border-primary bg-primary/10 text-foreground"
+                      ? "border-primary bg-primary/20 text-foreground"
+                      : "border-border text-muted-foreground hover:bg-muted/30"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </SettingsSection>
+
+          <SettingsDivider />
+
+          {/* ── Default Report Range ── */}
+          <SettingsSection
+            title="Default report range"
+            description="Initial date range when opening Reports."
+          >
+            <div className="flex flex-wrap gap-2">
+              {([
+                { value: "weekly", label: "Weekly" },
+                { value: "biweekly", label: "Biweekly" },
+                { value: "monthly", label: "Monthly" },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => persist({ ...settings, default_report_range: opt.value })}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                    settings.default_report_range === opt.value
+                      ? "border-primary bg-primary/20 text-foreground"
                       : "border-border text-muted-foreground hover:bg-muted/30"
                   }`}
                 >
@@ -313,7 +345,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                   onClick={() => persist({ ...settings, time_format: opt.value })}
                   className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
                     settings.time_format === opt.value
-                      ? "border-primary bg-primary/10 text-foreground"
+                      ? "border-primary bg-primary/20 text-foreground"
                       : "border-border text-muted-foreground hover:bg-muted/30"
                   }`}
                 >
@@ -478,7 +510,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                   onClick={() => persist({ ...settings, theme: t })}
                   className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
                     settings.theme === t
-                      ? "border-primary bg-primary/10 text-foreground"
+                      ? "border-primary bg-primary/20 text-foreground"
                       : "border-border text-muted-foreground hover:bg-muted/30"
                   }`}
                 >

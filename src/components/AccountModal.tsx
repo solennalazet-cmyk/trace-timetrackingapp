@@ -178,7 +178,7 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
             </span>
           </div>
           <p className="text-xs text-muted-foreground">Status: Active</p>
-          <p className="text-xs text-muted-foreground">Next billing: {nextBilling} — €10.00</p>
+          <p className="text-xs text-muted-foreground">Next billing: {nextBilling} — €3.99</p>
           <Button
             variant="outline"
             className="w-full rounded-[28px] h-10 gap-1"

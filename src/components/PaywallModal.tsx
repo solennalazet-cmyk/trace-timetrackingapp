@@ -55,8 +55,11 @@ const PaywallModal = ({
             onClick={handleUpgrade}
             disabled={loading}
           >
-            {loading ? "Redirecting…" : "Upgrade to Pro — €10/month"}
+            {loading ? "Redirecting…" : "Upgrade to Pro — €3.99/month"}
           </Button>
+          <p className="text-xs text-muted-foreground mt-2">
+            Or €39/year <span className="font-medium text-foreground">(save 20%)</span>
+          </p>
           <button
             className="text-sm text-muted-foreground underline mt-3 block mx-auto"
             onClick={() => onOpenChange(false)}
@@ -64,7 +67,7 @@ const PaywallModal = ({
             Maybe later
           </button>
           <p className="text-xs text-muted-foreground mt-2">
-            Cancel anytime. No hidden fees.
+            Prices include VAT. Cancel anytime.
           </p>
         </div>
       </DialogContent>

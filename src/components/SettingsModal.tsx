@@ -30,6 +30,7 @@ interface Settings {
   time_format: string;
   default_billable: boolean;
   daily_hour_target: number;
+  revenue_target: number;
   idle_reminder_minutes: number;
   default_report_range: string;
 }
@@ -48,6 +49,7 @@ const DEFAULTS: Settings = {
   time_format: "24h",
   default_billable: true,
   daily_hour_target: 0,
+  revenue_target: 0,
   idle_reminder_minutes: 0,
   default_report_range: "monthly",
 };
@@ -93,6 +95,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
           time_format: (data as any).time_format ?? DEFAULTS.time_format,
           default_billable: (data as any).default_billable ?? DEFAULTS.default_billable,
           daily_hour_target: (data as any).daily_hour_target ?? DEFAULTS.daily_hour_target,
+          revenue_target: (data as any).revenue_target ?? DEFAULTS.revenue_target,
           idle_reminder_minutes: (data as any).idle_reminder_minutes ?? DEFAULTS.idle_reminder_minutes,
           default_report_range: (data as any).default_report_range ?? DEFAULTS.default_report_range,
         });
@@ -128,6 +131,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
         time_format: updated.time_format,
         default_billable: updated.default_billable,
         daily_hour_target: updated.daily_hour_target,
+        revenue_target: updated.revenue_target,
         idle_reminder_minutes: updated.idle_reminder_minutes,
         default_report_range: updated.default_report_range,
       } as any, { onConflict: "user_id" });
@@ -404,9 +408,29 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
             </div>
           </SettingsSection>
 
-          <SettingsDivider />
+          {/* ── Revenue Target ── */}
+          <SettingsSection
+            title="Revenue target"
+            description="Monthly revenue goal. Progress shows in Reports, pro-rated to date range. Set to 0 to disable."
+          >
+            <div className="flex items-center gap-3">
+              <Input
+                type="number"
+                min={0}
+                step={100}
+                value={settings.revenue_target || ""}
+                placeholder="0"
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value);
+                  persist({ ...settings, revenue_target: isNaN(v) ? 0 : Math.max(0, v) });
+                }}
+                className="w-24 h-10 rounded-xl text-center"
+              />
+              <span className="text-sm text-muted-foreground">€ / month</span>
+            </div>
+          </SettingsSection>
 
-           {/* ── Idle Reminder ── */}
+          <SettingsDivider />
           <SettingsSection
             title="Idle reminder"
             description="Remind you to stop a running session after a period of inactivity."

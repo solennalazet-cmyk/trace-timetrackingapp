@@ -1,16 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
-  LineChart, Line, CartesianGrid,
 } from "recharts";
 import {
-  ChevronDown, ChevronUp, Timer, PenLine, Clock, Phone, ChevronRight, Crown,
-  CreditCard, Download, Trash2, Search, X,
+  ChevronDown, ChevronUp, Timer, PenLine, Clock, Phone,
+  Crown, Download, Trash2, X,
 } from "lucide-react";
-import { startOfWeek } from "date-fns";
+import { startOfWeek, startOfMonth } from "date-fns";
 import DateRangePicker from "@/components/DateRangePicker";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { toLocalDateKey } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +21,7 @@ import ClientBillingSummary from "@/components/ClientBillingSummary";
 import UnassignedPanel from "@/components/UnassignedPanel";
 import TrashView from "@/components/TrashView";
 import { toast } from "sonner";
+import { Progress } from "@/components/ui/progress";
 
 const CLIENT_COLORS = [
   "hsl(45 93% 58%)", "hsl(200 80% 55%)", "hsl(340 75% 55%)", "hsl(150 60% 45%)",
@@ -37,18 +36,25 @@ const formatHHMM = (mins: number) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
+const getDaysInRange = (startStr: string, endStr: string): string[] => {
+  const days: string[] = [];
+  const [sY, sM, sD] = startStr.split("-").map(Number);
+  const [eY, eM, eD] = endStr.split("-").map(Number);
+  const start = new Date(sY, sM - 1, sD);
+  const end = new Date(eY, eM - 1, eD);
+  let d = new Date(start);
+  while (d <= end) {
+    days.push(toLocalDateKey(d));
+    d.setDate(d.getDate() + 1);
+  }
+  return days;
+};
+
 const renderCompactDateTick = ({ x, y, payload }: any) => {
   const [weekday, ...rest] = String(payload?.value ?? "").split(" ");
-
   return (
     <g transform={`translate(${x},${y})`}>
-      <text
-        x={0}
-        y={0}
-        textAnchor="middle"
-        fill="hsl(var(--muted-foreground))"
-        fontSize="10"
-      >
+      <text x={0} y={0} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize="10">
         <tspan x={0} dy={12}>{weekday}</tspan>
         <tspan x={0} dy={10}>{rest.join(" ")}</tspan>
       </text>
@@ -56,46 +62,60 @@ const renderCompactDateTick = ({ x, y, payload }: any) => {
   );
 };
 
-const getDaysInRange = (startStr: string, endStr: string): string[] => {
-  const days: string[] = [];
-  const [startYear, startMonth, startDay] = startStr.split("-").map(Number);
-  const [endYear, endMonth, endDay] = endStr.split("-").map(Number);
-  const start = new Date(startYear, startMonth - 1, startDay);
-  const end = new Date(endYear, endMonth - 1, endDay);
-  let d = new Date(start);
-
-  while (d <= end) {
-    days.push(toLocalDateKey(d));
-    d.setDate(d.getDate() + 1);
-  }
-
-  return days;
-};
-
-const entryTypeIcon = (type: string | null) => {
-  switch (type) {
-    case "manual": return <PenLine className="w-4 h-4 text-muted-foreground" />;
-    case "shift": return <Clock className="w-4 h-4 text-muted-foreground" />;
-    case "call": return <Phone className="w-4 h-4 text-muted-foreground" />;
-    default: return <Timer className="w-4 h-4 text-muted-foreground" />;
-  }
-};
-
-type EntryTypeFilter = "all" | "timer" | "manual" | "shift" | "call";
-type BillableFilter = "all" | "billable" | "non-billable";
-
 const ReportsPage = () => {
   const { user, profile } = useAuth();
   const isFree = profile?.plan === "free";
   const isPro = profile?.plan === "pro" || profile?.plan === "trial";
 
+  // User settings for goals
+  const [dailyHourTarget, setDailyHourTarget] = useState(0);
+  const [revenueTarget, setRevenueTarget] = useState(0);
+  const [weekStartDay, setWeekStartDay] = useState(1);
+  const [defaultRange, setDefaultRange] = useState("monthly");
+
+  // Load user settings
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("user_settings")
+      .select("daily_hour_target, revenue_target, week_start_day, default_report_range")
+      .eq("user_id", user.id).single()
+      .then(({ data }) => {
+        if (data) {
+          setDailyHourTarget((data as any).daily_hour_target ?? 0);
+          setRevenueTarget((data as any).revenue_target ?? 0);
+          setWeekStartDay((data as any).week_start_day ?? 1);
+          setDefaultRange((data as any).default_report_range ?? "monthly");
+        }
+      });
+  }, [user]);
+
+  // Initialize dates based on default range
+  const [datesInitialized, setDatesInitialized] = useState(false);
   const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [dateTo, setDateTo] = useState<Date>(() => {
-    const sun = new Date(startOfWeek(new Date(), { weekStartsOn: 1 }));
-    sun.setDate(sun.getDate() + 6);
-    return sun;
+    const s = startOfWeek(new Date(), { weekStartsOn: 1 });
+    s.setDate(s.getDate() + 6);
+    return s;
   });
-  const [todayEntries, setTodayEntries] = useState<TimeEntry[]>([]);
+
+  useEffect(() => {
+    if (datesInitialized) return;
+    const now = new Date();
+    let from: Date;
+    let to: Date = now;
+
+    if (defaultRange === "monthly") {
+      from = startOfMonth(now);
+    } else if (defaultRange === "biweekly") {
+      from = new Date(now.getTime() - 13 * 86400000);
+    } else {
+      from = startOfWeek(now, { weekStartsOn: weekStartDay as 0 | 1 | 2 | 3 | 4 | 5 | 6 });
+    }
+    setDateFrom(from);
+    setDateTo(to);
+    setDatesInitialized(true);
+  }, [defaultRange, weekStartDay, datesInitialized]);
+
   const [rangeEntries, setRangeEntries] = useState<TimeEntry[]>([]);
   const [clients, setClients] = useState<Record<string, string>>({});
   const [projects, setProjectsMap] = useState<Record<string, string>>({});
@@ -103,7 +123,7 @@ const ReportsPage = () => {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Detail/edit
+  // UI state
   const [selectedEntry, setSelectedEntry] = useState<TimeEntry | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [editEntry, setEditEntry] = useState<ExistingEntry | null>(null);
@@ -113,18 +133,9 @@ const ReportsPage = () => {
   const [billingClientId, setBillingClientId] = useState<string | null>(null);
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [unassignedOpen, setUnassignedOpen] = useState(false);
-
-  // Recent activity filters
-  const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<EntryTypeFilter>("all");
-  const [billableFilter, setBillableFilter] = useState<BillableFilter>("all");
   const [clientFilter, setClientFilter] = useState("");
-  const [projectFilter, setProjectFilter] = useState("");
-  const [taskFilter, setTaskFilter] = useState("");
-  const [showCharts, setShowCharts] = useState(true);
   const [showTrash, setShowTrash] = useState(false);
 
-  const today = toLocalDateKey(new Date());
   const rangeStart = toLocalDateKey(dateFrom);
   const rangeEnd = toLocalDateKey(dateTo);
 
@@ -132,9 +143,7 @@ const ReportsPage = () => {
     setLoading(true);
     if (user) {
       const entrySelect = "id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, billable_value, client_id, project_id, task_id, billing_status, client:clients(id, name), project:projects(id, name), task:tasks(id, name)";
-      const [{ data: te }, { data: re }, { data: c }, { data: p }, { data: t }, { data: inv }] = await Promise.all([
-        supabase.from("time_entries").select(entrySelect)
-          .eq("user_id", user.id).eq("entry_date", today).is("deleted_at", null),
+      const [{ data: re }, { data: c }, { data: p }, { data: t }, { data: inv }] = await Promise.all([
         supabase.from("time_entries").select(entrySelect)
           .eq("user_id", user.id).gte("entry_date", rangeStart).lte("entry_date", rangeEnd).is("deleted_at", null).order("entry_date", { ascending: false }),
         supabase.from("clients").select("id, name").eq("user_id", user.id),
@@ -156,43 +165,35 @@ const ReportsPage = () => {
         task_name: (e.task as any)?.name ?? undefined,
       }));
 
-      setTodayEntries(enrich(te ?? []) as TimeEntry[]);
       setRangeEntries(enrich(re ?? []) as TimeEntry[]);
       setInvoices(inv ?? []);
     } else {
       const all = getAnonymousEntries();
-      const todayE = all.filter((e: any) => e.entry_date === today).map((e: any, i: number) => ({ ...e, id: e.id ?? `anon-${i}` }));
       const rangeE = all.filter((e: any) => (e.entry_date ?? "") >= rangeStart && (e.entry_date ?? "") <= rangeEnd).map((e: any, i: number) => ({ ...e, id: e.id ?? `anon-r-${i}` }));
-      setTodayEntries(todayE); setRangeEntries(rangeE);
+      setRangeEntries(rangeE);
       setClients({}); setProjectsMap({}); setTasksMap({}); setInvoices([]);
     }
     setLoading(false);
-  }, [user, rangeStart, rangeEnd, today]);
+  }, [user, rangeStart, rangeEnd]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Filtered view entries (client filter from summary applies to metrics/chart)
+  // Filtered view by client
   const displayEntries = useMemo(() => {
     if (!clientFilter) return rangeEntries;
     return rangeEntries.filter((e) => e.client_id === clientFilter);
   }, [rangeEntries, clientFilter]);
 
-  // Metrics
+  // Core metrics
   const totalMins = displayEntries.reduce((s, e) => s + e.duration_minutes, 0);
   const billableMins = displayEntries.filter((e) => e.billable).reduce((s, e) => s + e.duration_minutes, 0);
   const nonBillableMins = totalMins - billableMins;
   const billableValue = displayEntries.reduce((s, e) => s + (e.billable_value || 0), 0);
-  const invoicedTotal = invoices.filter((i) => i.status === "sent" || i.status === "paid").reduce((s, i) => s + (i.total_amount || 0), 0);
-  const paidTotal = invoices.filter((i) => i.status === "paid").reduce((s, i) => s + (i.total_amount || 0), 0);
 
-  // Today summary
-  const todayMins = todayEntries.reduce((s, e) => s + e.duration_minutes, 0);
-
-  // === SECTION 1: Stacked bar chart data ===
+  // Client IDs
   const clientIds = useMemo(() => [...new Set(rangeEntries.map((e) => e.client_id).filter(Boolean))] as string[], [rangeEntries]);
   const hasUnassigned = displayEntries.some((e) => !e.client_id);
 
-  // Shared color map for consistent colors between chart and summary
   const clientColorMap = useMemo(() => {
     const map: Record<string, string> = {};
     clientIds.forEach((id, i) => { map[id] = CLIENT_COLORS[i % CLIENT_COLORS.length]; });
@@ -200,10 +201,45 @@ const ReportsPage = () => {
     return map;
   }, [clientIds]);
 
+  // Days in range for pro-rating
+  const daysInRange = useMemo(() => {
+    return getDaysInRange(rangeStart, rangeEnd).length;
+  }, [rangeStart, rangeEnd]);
+
+  // Pro-rated goals
+  const proratedHourTarget = dailyHourTarget > 0 ? dailyHourTarget * daysInRange : 0;
+  const proratedRevenueTarget = revenueTarget > 0 ? revenueTarget * (daysInRange / 30) : 0;
+  const hourProgress = proratedHourTarget > 0 ? Math.min(100, (totalMins / 60 / proratedHourTarget) * 100) : 0;
+  const revenueProgress = proratedRevenueTarget > 0 ? Math.min(100, (billableValue / proratedRevenueTarget) * 100) : 0;
+
+  // ══ DONUT CHART DATA ══
+  // Outer ring: per-client hours
+  const outerDonutData = useMemo(() => {
+    const data: { name: string; value: number; fill: string }[] = [];
+    const map: Record<string, number> = {};
+    rangeEntries.forEach((e) => {
+      const key = e.client_id ?? "unassigned";
+      map[key] = (map[key] || 0) + e.duration_minutes;
+    });
+    clientIds.forEach((id, i) => {
+      if (map[id]) data.push({ name: clients[id] ?? "Unknown", value: map[id], fill: CLIENT_COLORS[i % CLIENT_COLORS.length] });
+    });
+    if (map["unassigned"]) data.push({ name: "Unassigned", value: map["unassigned"], fill: "hsl(240 5% 75%)" });
+    return data;
+  }, [rangeEntries, clientIds, clients]);
+
+  // Inner ring: billable vs non-billable
+  const innerDonutData = useMemo(() => {
+    return [
+      { name: "Billable", value: billableMins, fill: "hsl(var(--primary))" },
+      { name: "Non-billable", value: nonBillableMins, fill: "hsl(var(--muted-foreground) / 0.3)" },
+    ].filter((d) => d.value > 0);
+  }, [billableMins, nonBillableMins]);
+
+  // ══ STACKED BAR CHART ══
   const stackedChartData = useMemo(() => {
     const days = getDaysInRange(rangeStart, rangeEnd);
     const chartClientIds = clientFilter ? [clientFilter] : clientIds;
-
     return days.map((day) => {
       const dayEntries = displayEntries.filter((e) => e.entry_date === day);
       const row: any = {
@@ -215,132 +251,14 @@ const ReportsPage = () => {
         row[cid] = dayEntries.filter((e) => e.client_id === cid).reduce((s, e) => s + e.duration_minutes / 60, 0);
       });
       if (!clientFilter) {
-        const unassigned = dayEntries.filter((e) => !e.client_id).reduce((s, e) => s + e.duration_minutes / 60, 0);
-        if (unassigned > 0) row["unassigned"] = unassigned;
+        const un = dayEntries.filter((e) => !e.client_id).reduce((s, e) => s + e.duration_minutes / 60, 0);
+        if (un > 0) row["unassigned"] = un;
       }
       return row;
     });
-  }, [displayEntries, rangeStart, clientIds, clientFilter]);
+  }, [displayEntries, rangeStart, rangeEnd, clientIds, clientFilter]);
 
-  // (Client billing summary is now a separate component with its own date range)
-
-  // === SECTION 3: Filtered recent activity ===
-  const filteredEntries = useMemo(() => {
-    let result = rangeEntries;
-    if (typeFilter !== "all") result = result.filter((e) => e.entry_type === typeFilter);
-    if (billableFilter === "billable") result = result.filter((e) => e.billable);
-    if (billableFilter === "non-billable") result = result.filter((e) => !e.billable);
-    if (clientFilter) result = result.filter((e) => e.client_id === clientFilter);
-    if (projectFilter) result = result.filter((e) => e.project_id === projectFilter);
-    if (taskFilter) result = result.filter((e) => e.task_id === taskFilter);
-    if (search) {
-      const q = search.toLowerCase();
-      result = result.filter((e) =>
-        (e.client_name ?? "").toLowerCase().includes(q) ||
-        (e.project_name ?? "").toLowerCase().includes(q) ||
-        (e.task_name ?? "").toLowerCase().includes(q) ||
-        (e.notes ?? "").toLowerCase().includes(q) ||
-        (e.tags ?? []).some((t) => t.toLowerCase().includes(q))
-      );
-    }
-    return result;
-  }, [rangeEntries, typeFilter, billableFilter, clientFilter, projectFilter, taskFilter, search]);
-
-  const activitySummary = useMemo(() => {
-    const totalMins = filteredEntries.reduce((s, e) => s + e.duration_minutes, 0);
-    const billableCount = filteredEntries.filter((e) => e.billable).length;
-    const totalValue = filteredEntries.reduce((s, e) => s + (e.billable_value || 0), 0);
-    return { count: filteredEntries.length, totalMins, billableCount, totalValue };
-  }, [filteredEntries]);
-
-  const groupedEntries = useMemo(() => {
-    const groups: { date: string; label: string; entries: TimeEntry[] }[] = [];
-    const dateMap = new Map<string, TimeEntry[]>();
-    filteredEntries.forEach((e) => {
-      const d = e.entry_date ?? "unknown";
-      if (!dateMap.has(d)) dateMap.set(d, []);
-      dateMap.get(d)!.push(e);
-    });
-    const sortedDates = [...dateMap.keys()].sort((a, b) => b.localeCompare(a));
-    sortedDates.forEach((d) => {
-      const dateObj = new Date(d + "T00:00:00");
-      const label = dateObj.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-      groups.push({ date: d, label, entries: dateMap.get(d)! });
-    });
-    return groups;
-  }, [filteredEntries]);
-
-  const hasFilters = typeFilter !== "all" || billableFilter !== "all" || clientFilter !== "" || projectFilter !== "" || taskFilter !== "" || search !== "";
-  const clearFilters = () => { setSearch(""); setTypeFilter("all"); setBillableFilter("all"); setClientFilter(""); setProjectFilter(""); setTaskFilter(""); };
-
-  // Unique projects/tasks for context filters
-  const projectOptions = useMemo(() => {
-    const map: Record<string, string> = {};
-    rangeEntries.forEach((e) => { if (e.project_id && e.project_name) map[e.project_id] = e.project_name; });
-    return Object.entries(map).sort((a, b) => a[1].localeCompare(b[1]));
-  }, [rangeEntries]);
-
-  const taskOptions = useMemo(() => {
-    const map: Record<string, string> = {};
-    rangeEntries.forEach((e) => { if (e.task_id && e.task_name) map[e.task_id] = e.task_name; });
-    return Object.entries(map).sort((a, b) => a[1].localeCompare(b[1]));
-  }, [rangeEntries]);
-
-  // === SECTION 4: Chart data ===
-  const pieData = [
-    { name: "Billable", value: billableMins, fill: "hsl(45 93% 58%)" },
-    { name: "Non-billable", value: nonBillableMins, fill: "hsl(240 5% 75%)" },
-  ].filter((d) => d.value > 0);
-
-  const clientHoursData = useMemo(() => {
-    const map: Record<string, number> = {};
-    rangeEntries.forEach((e) => {
-      const key = e.client_id ?? "unassigned";
-      map[key] = (map[key] || 0) + e.duration_minutes / 60;
-    });
-    const named = Object.entries(map)
-      .filter(([id]) => id !== "unassigned")
-      .map(([id, hours]) => ({ name: clients[id] ?? "Unassigned", hours: +hours.toFixed(1), isUnassigned: false }))
-      .sort((a, b) => b.hours - a.hours);
-    if (map["unassigned"]) named.push({ name: "Unassigned", hours: +map["unassigned"].toFixed(1), isUnassigned: true });
-    return named;
-  }, [rangeEntries, clients]);
-
-  const projectHoursData = useMemo(() => {
-    const map: Record<string, number> = {};
-    rangeEntries.forEach((e) => {
-      const key = e.project_id ?? "unassigned";
-      map[key] = (map[key] || 0) + e.duration_minutes / 60;
-    });
-    const named = Object.entries(map)
-      .filter(([id]) => id !== "unassigned")
-      .map(([id, hours]) => ({ name: projects[id] ?? "Unassigned", hours: +hours.toFixed(1), isUnassigned: false }))
-      .sort((a, b) => b.hours - a.hours);
-    if (map["unassigned"]) named.push({ name: "Unassigned", hours: +map["unassigned"].toFixed(1), isUnassigned: true });
-    return named;
-  }, [rangeEntries, projects]);
-
-  const taskHoursData = useMemo(() => {
-    const withTask = rangeEntries.filter((e) => e.task_id);
-    if (withTask.length === 0) return [];
-    const map: Record<string, number> = {};
-    withTask.forEach((e) => { map[e.task_id!] = (map[e.task_id!] || 0) + e.duration_minutes / 60; });
-    return Object.entries(map)
-      .map(([id, hours]) => ({ name: tasks[id] ?? "Unknown", hours: +hours.toFixed(1) }))
-      .sort((a, b) => b.hours - a.hours);
-  }, [rangeEntries, tasks]);
-
-  const dailyData = useMemo(() => {
-    const days = getDaysInRange(rangeStart, rangeEnd);
-    const map: Record<string, number> = {};
-    rangeEntries.forEach((e) => { map[e.entry_date ?? ""] = (map[e.entry_date ?? ""] || 0) + e.duration_minutes / 60; });
-    return days.map((d) => ({
-      date: new Date(d + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }),
-      hours: +(map[d] || 0).toFixed(1),
-    }));
-  }, [rangeEntries, rangeStart]);
-
-  // Trash count
+  // Trash
   const [trashCount, setTrashCount] = useState(0);
   useEffect(() => {
     if (!user) return;
@@ -348,14 +266,6 @@ const ReportsPage = () => {
       .eq("user_id", user.id).not("deleted_at", "is", null)
       .then(({ count }) => setTrashCount(count ?? 0));
   }, [user, rangeEntries]);
-
-  // Break stats
-  const breakEntries = rangeEntries.filter((e) => (e.break_minutes ?? 0) > 0);
-  const totalBreakMins = breakEntries.reduce((s, e) => s + (e.break_minutes ?? 0), 0);
-  const avgBreakPerDay = dailyData.length > 0 ? totalBreakMins / dailyData.length : 0;
-  const breakPct = totalMins > 0 ? (totalBreakMins / totalMins) * 100 : 0;
-  const longestBreak = breakEntries.reduce((max, e) => Math.max(max, e.break_minutes ?? 0), 0);
-
 
   const handleEdit = (entry: TimeEntry) => {
     setEditEntry(entry as ExistingEntry);
@@ -413,8 +323,8 @@ const ReportsPage = () => {
 
   return (
     <div className="pb-24 px-4 overflow-x-hidden">
-      {/* Date range filter */}
-      <div className="mb-4">
+      {/* ── 1. Date picker ── */}
+      <div className="mb-3">
         <DateRangePicker
           from={dateFrom}
           to={dateTo}
@@ -422,7 +332,45 @@ const ReportsPage = () => {
         />
       </div>
 
-      {/* Pro content wrapper */}
+      {/* ── 2. Client filter chips ── */}
+      {clientIds.length > 0 && (
+        <div className="flex gap-1.5 overflow-x-auto pb-3 -mx-1 px-1 scrollbar-none">
+          <button
+            onClick={() => setClientFilter("")}
+            className={`shrink-0 px-3 py-1.5 text-[11px] font-medium rounded-full border transition-colors ${
+              !clientFilter
+                ? "border-primary bg-primary/20 text-foreground"
+                : "border-border text-muted-foreground hover:bg-muted/30"
+            }`}
+          >
+            All clients
+          </button>
+          {clientIds.map((id, i) => (
+            <button
+              key={id}
+              onClick={() => setClientFilter(clientFilter === id ? "" : id)}
+              className={`shrink-0 px-3 py-1.5 text-[11px] font-medium rounded-full border transition-colors flex items-center gap-1.5 ${
+                clientFilter === id
+                  ? "border-primary bg-primary/20 text-foreground"
+                  : "border-border text-muted-foreground hover:bg-muted/30"
+              }`}
+            >
+              <div className="w-2 h-2 rounded-full" style={{ background: CLIENT_COLORS[i % CLIENT_COLORS.length] }} />
+              {clients[id] ?? "Unknown"}
+            </button>
+          ))}
+          {clientFilter && (
+            <button
+              onClick={() => setClientFilter("")}
+              className="shrink-0 px-2 py-1.5 text-[11px] text-primary hover:underline"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Pro gate */}
       <div className="relative">
         {isFree && (
           <div className="sticky top-20 z-10 flex justify-center pointer-events-auto mb-4">
@@ -431,417 +379,201 @@ const ReportsPage = () => {
               <h3 className="font-semibold text-foreground">Premium Feature</h3>
               <p className="text-sm text-muted-foreground mt-1">Unlock detailed reports, billing insights, and CSV / PDF export.</p>
               <Button className="w-full mt-4 bg-primary text-primary-foreground rounded-[28px] h-12 font-bold" onClick={() => setPaywallOpen(true)}>Upgrade to Pro</Button>
-              <button className="text-sm text-muted-foreground underline mt-2" onClick={() => {}}>Maybe later</button>
             </div>
           </div>
         )}
 
         <div className={isFree ? "blur-sm pointer-events-none select-none" : ""}>
 
-          {/* ═══════════════════════════════════════════
-              SECTION 1 — Timeline Chart (Stacked Bar)
-              ═══════════════════════════════════════════ */}
-          <div className="mb-6">
-            <h3 className="text-sm font-semibold text-foreground mb-3">Timeline</h3>
-
-            {/* Metric cards row */}
-            <div className="flex gap-2 overflow-x-auto mb-3 pb-1 -mx-1 px-1">
-              {[
-                { label: "Total", value: formatHHMM(totalMins) },
-                { label: "Billable", value: formatHHMM(billableMins) },
-                { label: "Non-billable", value: formatHHMM(nonBillableMins) },
-                { label: "Est. value", value: `€${billableValue.toFixed(0)}` },
-              ].map((m) => (
-                <div key={m.label} className="min-w-[90px] p-2.5 rounded-xl border border-border bg-card shrink-0">
-                  <p className="text-[10px] text-muted-foreground whitespace-nowrap">{m.label}</p>
-                  <p className="font-mono text-base font-bold text-foreground whitespace-nowrap">{m.value}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Stacked bar chart */}
-            {stackedChartData.length > 0 && (
-              <>
-                <div className="w-full" style={{ minHeight: 220 }}>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={stackedChartData} barCategoryGap="12%" margin={{ top: 8, right: 0, left: -20, bottom: 0 }}>
-                        <XAxis
-                          dataKey="label"
-                          height={42}
-                          interval={0}
-                          minTickGap={0}
-                          tickMargin={6}
-                          tick={renderCompactDateTick}
-                          tickLine={false}
-                          axisLine={false}
-                        />
-                        <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={30} tickFormatter={(v) => `${v}h`} />
-                        <Tooltip
-                          contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
-                          formatter={(value: number, name: string) => {
-                            const label = name === "unassigned" ? "Unassigned" : (clients[name] ?? name);
-                            return [`${value.toFixed(1)}h`, label];
-                          }}
-                          labelFormatter={(label) => label}
-                        />
-                        {clientIds.map((cid, i) => (
-                          <Bar key={cid} dataKey={cid} stackId="a" fill={CLIENT_COLORS[i % CLIENT_COLORS.length]}
-                            radius={i === clientIds.length - 1 && !hasUnassigned ? [3, 3, 0, 0] : undefined}
-                            name={cid} />
-                        ))}
-                        {hasUnassigned && (
-                          <Bar dataKey="unassigned" stackId="a" fill="hsl(240 5% 75%)" radius={[3, 3, 0, 0]} name="unassigned" />
-                        )}
-                    </BarChart>
+          {/* ── 3. Nested Donut Chart ── */}
+          {outerDonutData.length > 0 && (
+            <div className="mb-6">
+              <div className="flex justify-center">
+                <div className="relative" style={{ width: 220, height: 220 }}>
+                  <ResponsiveContainer width={220} height={220}>
+                    <PieChart>
+                      {/* Outer ring: clients */}
+                      <Pie
+                        data={outerDonutData}
+                        innerRadius={72}
+                        outerRadius={100}
+                        dataKey="value"
+                        stroke="hsl(var(--background))"
+                        strokeWidth={2}
+                        paddingAngle={1}
+                      >
+                        {outerDonutData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                      </Pie>
+                      {/* Inner ring: billable/non-billable */}
+                      <Pie
+                        data={innerDonutData}
+                        innerRadius={50}
+                        outerRadius={68}
+                        dataKey="value"
+                        stroke="hsl(var(--background))"
+                        strokeWidth={2}
+                        paddingAngle={1}
+                      >
+                        {innerDonutData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ borderRadius: 12, fontSize: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
+                        formatter={(value: number) => [formatHHMM(value), ""]}
+                      />
+                    </PieChart>
                   </ResponsiveContainer>
+                  {/* Center label */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-xl font-bold font-mono text-foreground">{formatHHMM(totalMins)}</span>
+                    <span className="text-[10px] text-muted-foreground">total</span>
+                  </div>
                 </div>
-
-                {/* Legend */}
-                <div className="flex flex-wrap gap-3 mt-2">
-                  {clientIds.map((cid, i) => (
-                    <div key={cid} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <div className="w-2.5 h-2.5 rounded-full" style={{ background: CLIENT_COLORS[i % CLIENT_COLORS.length] }} />
-                      {clients[cid] ?? "Unknown"}
-                    </div>
-                  ))}
-                  {hasUnassigned && (
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <div className="w-2.5 h-2.5 rounded-full" style={{ background: "hsl(240 5% 75%)" }} />
-                      Unassigned
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-
-            {stackedChartData.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-6">No data for this period.</p>
-            )}
-          </div>
-
-          {/* ═══════════════════════════════════════════
-              SECTION 2 — Client Billing Summary
-              ═══════════════════════════════════════════ */}
-          <ClientBillingSummary
-            allEntries={rangeEntries}
-            clients={clients}
-            projects={projects}
-            isPro={isPro}
-            clientColorMap={clientColorMap}
-            rangeStart={rangeStart}
-            rangeEnd={rangeEnd}
-            rangeLabel={`${dateFrom.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} — ${dateTo.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`}
-            onBillClient={(clientId) => {
-              setBillingClientId(clientId);
-              setBillingOpen(true);
-            }}
-            onOpenUnassigned={() => setUnassignedOpen(true)}
-            onEditEntry={handleEdit}
-            activeClientFilter={clientFilter}
-            onFilterClient={(id) => setClientFilter(id ?? "")}
-            onDeleteEntry={async (entryId) => {
-              if (user) {
-                await supabase.from("time_entries").update({ deleted_at: new Date().toISOString() }).eq("id", entryId);
-                toast("Entry deleted.", {
-                  action: { label: "Undo", onClick: async () => {
-                    await supabase.from("time_entries").update({ deleted_at: null }).eq("id", entryId);
-                    loadData();
-                  }},
-                  duration: 5000,
-                });
-                loadData();
-              }
-            }}
-          />
-
-          {/* Invoice totals row */}
-          {(invoicedTotal > 0 || paidTotal > 0) && (
-            <div className="flex gap-2 mb-6">
-              <div className="flex-1 p-2.5 rounded-xl border border-border bg-card">
-                <p className="text-[10px] text-muted-foreground">Invoiced</p>
-                <p className="font-mono text-base font-bold text-foreground">€{invoicedTotal.toFixed(0)}</p>
               </div>
-              <div className="flex-1 p-2.5 rounded-xl border border-border bg-card">
-                <p className="text-[10px] text-muted-foreground">Paid</p>
-                <p className="font-mono text-base font-bold text-foreground">€{paidTotal.toFixed(0)}</p>
+
+              {/* Legend */}
+              <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-3">
+                {outerDonutData.map((d) => (
+                  <div key={d.name} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <div className="w-2 h-2 rounded-full" style={{ background: d.fill }} />
+                    {d.name}
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-center gap-4 mt-1">
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <div className="w-2 h-2 rounded-full" style={{ background: "hsl(var(--primary))" }} />
+                  Billable {formatHHMM(billableMins)}
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <div className="w-2 h-2 rounded-full" style={{ background: "hsl(var(--muted-foreground) / 0.3)" }} />
+                  Non-billable {formatHHMM(nonBillableMins)}
+                </div>
               </div>
             </div>
           )}
 
-          {/* ═══════════════════════════════════════════
-              SECTION 3 — Recent Activity (filterable)
-              ═══════════════════════════════════════════ */}
-          <div className="mb-6">
-            <div className="mb-2">
-              <h3 className="text-sm font-semibold text-foreground">Recent Activity</h3>
-              <p className="text-xs text-muted-foreground">Your entries, filtered by time and context.</p>
+          {rangeEntries.length === 0 && (
+            <div className="text-center py-10 mb-6">
+              <p className="text-sm text-muted-foreground">No data for this period.</p>
+              <p className="text-xs text-muted-foreground mt-1">Start tracking to see your reports.</p>
             </div>
+          )}
 
-
-
-
-            {/* Context filters */}
-            <div className="flex gap-1.5 flex-wrap mb-3">
-              {/* Client filter */}
-              {clientFilter ? (
-                <button onClick={() => setClientFilter("")}
-                  className="px-2.5 py-1 text-[11px] font-medium rounded-full flex items-center gap-1 bg-primary text-primary-foreground"
-                >
-                  {clients[clientFilter] ?? "Client"} <X className="w-3 h-3" />
-                </button>
-              ) : Object.keys(clients).length > 0 ? (
-                <select value="" onChange={(e) => setClientFilter(e.target.value)}
-                  className="px-2.5 py-1 text-[11px] font-medium rounded-full border border-border bg-transparent text-muted-foreground appearance-none cursor-pointer"
-                >
-                  <option value="">Client ▾</option>
-                  {Object.entries(clients).map(([id, name]) => (
-                    <option key={id} value={id}>{name}</option>
-                  ))}
-                </select>
-              ) : null}
-
-              {/* Project filter */}
-              {projectFilter ? (
-                <button onClick={() => setProjectFilter("")}
-                  className="px-2.5 py-1 text-[11px] font-medium rounded-full flex items-center gap-1 bg-primary text-primary-foreground"
-                >
-                  {projects[projectFilter] ?? "Project"} <X className="w-3 h-3" />
-                </button>
-              ) : projectOptions.length > 0 ? (
-                <select value="" onChange={(e) => setProjectFilter(e.target.value)}
-                  className="px-2.5 py-1 text-[11px] font-medium rounded-full border border-border bg-transparent text-muted-foreground appearance-none cursor-pointer"
-                >
-                  <option value="">Project ▾</option>
-                  {projectOptions.map(([id, name]) => (
-                    <option key={id} value={id}>{name}</option>
-                  ))}
-                </select>
-              ) : null}
-
-              {/* Task filter */}
-              {taskFilter ? (
-                <button onClick={() => setTaskFilter("")}
-                  className="px-2.5 py-1 text-[11px] font-medium rounded-full flex items-center gap-1 bg-primary text-primary-foreground"
-                >
-                  {tasks[taskFilter] ?? "Task"} <X className="w-3 h-3" />
-                </button>
-              ) : taskOptions.length > 0 ? (
-                <select value="" onChange={(e) => setTaskFilter(e.target.value)}
-                  className="px-2.5 py-1 text-[11px] font-medium rounded-full border border-border bg-transparent text-muted-foreground appearance-none cursor-pointer"
-                >
-                  <option value="">Task ▾</option>
-                  {taskOptions.map(([id, name]) => (
-                    <option key={id} value={id}>{name}</option>
-                  ))}
-                </select>
-              ) : null}
-
-              {hasFilters && (
-                <button onClick={clearFilters} className="text-[11px] text-primary hover:underline">Clear all</button>
+          {/* ── 4. Goal Progress Bars ── */}
+          {(proratedHourTarget > 0 || proratedRevenueTarget > 0) && (
+            <div className="mb-6 space-y-3">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Goals</h3>
+              {proratedHourTarget > 0 && (
+                <div>
+                  <div className="flex items-baseline justify-between mb-1">
+                    <span className="text-xs text-foreground font-medium">Hours</span>
+                    <span className="text-xs text-muted-foreground font-mono">
+                      {(totalMins / 60).toFixed(1)} / {proratedHourTarget.toFixed(1)}h
+                      <span className="ml-1.5 text-foreground font-semibold">{Math.round(hourProgress)}%</span>
+                    </span>
+                  </div>
+                  <Progress value={hourProgress} className="h-2 rounded-full" />
+                </div>
+              )}
+              {proratedRevenueTarget > 0 && (
+                <div>
+                  <div className="flex items-baseline justify-between mb-1">
+                    <span className="text-xs text-foreground font-medium">Revenue</span>
+                    <span className="text-xs text-muted-foreground font-mono">
+                      €{billableValue.toFixed(0)} / €{proratedRevenueTarget.toFixed(0)}
+                      <span className="ml-1.5 text-foreground font-semibold">{Math.round(revenueProgress)}%</span>
+                    </span>
+                  </div>
+                  <Progress value={revenueProgress} className="h-2 rounded-full" />
+                </div>
               )}
             </div>
+          )}
 
-            {/* Summary line */}
-            <p className="text-xs text-muted-foreground mb-3">
-              {activitySummary.count} {activitySummary.count === 1 ? "entry" : "entries"} · {formatHHMM(activitySummary.totalMins)} · {activitySummary.billableCount} billable · €{activitySummary.totalValue.toFixed(0)}
-            </p>
+          {/* ── 5. Client Cards ── */}
+          {rangeEntries.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Clients</h3>
+              <ClientBillingSummary
+                allEntries={rangeEntries}
+                clients={clients}
+                projects={projects}
+                isPro={isPro}
+                clientColorMap={clientColorMap}
+                rangeStart={rangeStart}
+                rangeEnd={rangeEnd}
+                rangeLabel={`${dateFrom.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} — ${dateTo.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`}
+                onBillClient={(clientId) => {
+                  setBillingClientId(clientId);
+                  setBillingOpen(true);
+                }}
+                onOpenUnassigned={() => setUnassignedOpen(true)}
+                onEditEntry={handleEdit}
+                activeClientFilter={clientFilter}
+                onFilterClient={(id) => setClientFilter(id ?? "")}
+                onDeleteEntry={async (entryId) => {
+                  if (user) {
+                    await supabase.from("time_entries").update({ deleted_at: new Date().toISOString() }).eq("id", entryId);
+                    toast("Entry deleted.", {
+                      action: { label: "Undo", onClick: async () => {
+                        await supabase.from("time_entries").update({ deleted_at: null }).eq("id", entryId);
+                        loadData();
+                      }},
+                      duration: 5000,
+                    });
+                    loadData();
+                  }
+                }}
+              />
+            </div>
+          )}
 
-            {/* Entry cards */}
-            {filteredEntries.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-sm text-muted-foreground">No entries match your filters.</p>
-                {hasFilters && <button onClick={clearFilters} className="text-xs text-primary hover:underline mt-1">Clear filters</button>}
+          {/* ── 6. Daily Breakdown Stacked Bar ── */}
+          {stackedChartData.length > 0 && rangeEntries.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Daily Breakdown</h3>
+              <div className="w-full" style={{ minHeight: 200 }}>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={stackedChartData} barCategoryGap="12%" margin={{ top: 8, right: 0, left: -20, bottom: 0 }}>
+                    <XAxis
+                      dataKey="label"
+                      height={42}
+                      interval={0}
+                      minTickGap={0}
+                      tickMargin={6}
+                      tick={renderCompactDateTick}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={30} tickFormatter={(v) => `${v}h`} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
+                      formatter={(value: number, name: string) => {
+                        const label = name === "unassigned" ? "Unassigned" : (clients[name] ?? name);
+                        return [`${value.toFixed(1)}h`, label];
+                      }}
+                    />
+                    {(clientFilter ? [clientFilter] : clientIds).map((cid, i) => (
+                      <Bar key={cid} dataKey={cid} stackId="a" fill={clientColorMap[cid] ?? CLIENT_COLORS[i % CLIENT_COLORS.length]}
+                        radius={i === (clientFilter ? 0 : clientIds.length - 1) && !hasUnassigned ? [3, 3, 0, 0] : undefined}
+                        name={cid} />
+                    ))}
+                    {!clientFilter && hasUnassigned && (
+                      <Bar dataKey="unassigned" stackId="a" fill="hsl(240 5% 75%)" radius={[3, 3, 0, 0]} name="unassigned" />
+                    )}
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
-            ) : (
-              groupedEntries.map((group) => (
-                <div key={group.date} className="mb-3">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{group.label}</p>
-                  <div className="space-y-1.5">
-                    {group.entries.map((entry) => {
-                      const sym = CURRENCY_SYMBOLS[entry.rate_currency ?? "EUR"] ?? "€";
-                      return (
-                        <button key={entry.id}
-                          className="w-full text-left p-3 rounded-xl border border-border bg-card hover:bg-muted/50 transition-colors"
-                          onClick={() => { setSelectedEntry(entry); setDetailOpen(true); }}
-                        >
-                          <div className="flex items-center justify-between mb-0.5">
-                            <div className="flex items-center gap-2 min-w-0">
-                              {entryTypeIcon(entry.entry_type)}
-                              <span className="text-xs text-muted-foreground">
-                                {entry.entry_date ? new Date(entry.entry_date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) : ""}
-                              </span>
-                              <span className="text-xs text-muted-foreground">·</span>
-                              <span className="text-sm font-medium text-foreground truncate">
-                                {entry.client_name || <span className="text-muted-foreground italic">Unassigned</span>}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0 ml-2">
-                              <span className="font-mono text-sm font-semibold text-foreground">{formatHHMM(entry.duration_minutes)}</span>
-                              <span className={`w-2 h-2 rounded-full ${entry.billable ? "bg-primary" : "bg-muted-foreground/30"}`} />
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground pl-6">
-                            {entry.project_name && <span>{entry.project_name}</span>}
-                            {entry.project_name && entry.billable && entry.rate_amount && <span>·</span>}
-                            {entry.billable && entry.rate_amount && (
-                              <span>{sym}{entry.rate_amount}/{entry.rate_unit ?? "hr"}</span>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* ═══════════════════════════════════════════
-              SECTION 4 — Charts
-              ═══════════════════════════════════════════ */}
-          <div className="mb-6">
-            <button className="flex items-center justify-between w-full mb-3" onClick={() => setShowCharts(!showCharts)}>
-              <h3 className="text-sm font-semibold text-foreground">Charts & Insights</h3>
-              {showCharts ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-            </button>
-
-            {showCharts && (
-              <>
-                {/* Billable vs Non-billable */}
-                {pieData.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Billable vs Non-billable</h4>
-                    <div className="flex items-center gap-4">
-                      <ResponsiveContainer width={120} height={120}>
-                        <PieChart>
-                          <Pie data={pieData} innerRadius={35} outerRadius={55} dataKey="value" stroke="none">
-                            {pieData.map((d, i) => <Cell key={i} fill={d.fill} />)}
-                          </Pie>
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <div className="space-y-1">
-                        {pieData.map((d) => (
-                          <div key={d.name} className="flex items-center gap-2 text-xs text-foreground">
-                            <div className="w-2.5 h-2.5 rounded-full" style={{ background: d.fill }} />
-                            {d.name}: {formatHHMM(d.value)} ({totalMins > 0 ? Math.round((d.value / totalMins) * 100) : 0}%)
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Hours by Client */}
-                {clientHoursData.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Hours by Client</h4>
-                    <ResponsiveContainer width="100%" height={clientHoursData.length * 36 + 20}>
-                      <BarChart data={clientHoursData} layout="vertical" margin={{ left: 0, right: 10 }}>
-                        <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}h`} />
-                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
-                        <Tooltip formatter={(v: number) => [`${v.toFixed(1)}h`]} />
-                        <Bar dataKey="hours" radius={[0, 4, 4, 0]}>
-                          {clientHoursData.map((d, i) => (
-                            <Cell key={i} fill={d.isUnassigned ? "hsl(var(--muted-foreground))" : CLIENT_COLORS[i % CLIENT_COLORS.length]} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-
-                {/* Hours by Project */}
-                {projectHoursData.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Hours by Project</h4>
-                    <ResponsiveContainer width="100%" height={projectHoursData.length * 36 + 20}>
-                      <BarChart data={projectHoursData} layout="vertical" margin={{ left: 0, right: 10 }}>
-                        <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}h`} />
-                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
-                        <Tooltip formatter={(v: number) => [`${v.toFixed(1)}h`]} />
-                        <Bar dataKey="hours" radius={[0, 4, 4, 0]}>
-                          {projectHoursData.map((d, i) => (
-                            <Cell key={i} fill={d.isUnassigned ? "hsl(var(--muted-foreground))" : CLIENT_COLORS[i % CLIENT_COLORS.length]} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-
-                {/* Hours by Task — only when tasks exist */}
-                {taskHoursData.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Hours by Task</h4>
-                    <ResponsiveContainer width="100%" height={taskHoursData.length * 36 + 20}>
-                      <BarChart data={taskHoursData} layout="vertical" margin={{ left: 0, right: 10 }}>
-                        <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}h`} />
-                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
-                        <Tooltip formatter={(v: number) => [`${v.toFixed(1)}h`]} />
-                        <Bar dataKey="hours" radius={[0, 4, 4, 0]}>
-                          {taskHoursData.map((_, i) => <Cell key={i} fill={CLIENT_COLORS[i % CLIENT_COLORS.length]} />)}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-
-                {/* Daily Activity */}
-                {dailyData.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Daily Activity</h4>
-                    <ResponsiveContainer width="100%" height={160}>
-                      <BarChart data={dailyData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis dataKey="date" tick={{ fontSize: 9 }} />
-                        <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}h`} width={30} />
-                        <Tooltip formatter={(v: number) => [`${v.toFixed(1)}h`]} />
-                        <Bar dataKey="hours" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-
-                {/* Break Patterns */}
-                {breakEntries.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Time You Stepped Away</h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { label: "Avg break / day", value: `${Math.round(avgBreakPerDay)}m` },
-                        { label: "Break % of total", value: `${breakPct.toFixed(1)}%` },
-                        { label: "Total break time", value: formatHHMM(totalBreakMins) },
-                        { label: "Longest break", value: `${longestBreak}m` },
-                      ].map((s) => (
-                        <div key={s.label} className="p-3 rounded-xl border border-border bg-card">
-                          <p className="text-xs text-muted-foreground">{s.label}</p>
-                          <p className="font-mono text-lg font-bold text-foreground">{s.value}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Export buttons */}
-          <div className="flex gap-2 mb-6">
-            <Button variant="outline" className="flex-1 gap-1 rounded-xl" onClick={handleExportCSV}>
-              <Download className="w-4 h-4" /> Export CSV
-            </Button>
-            <Button variant="outline" className="flex-1 gap-1 rounded-xl" onClick={() => toast.info("PDF export coming soon.")}>
-              <Download className="w-4 h-4" /> Export PDF
-            </Button>
-          </div>
-
-          {/* Invoice History */}
+          {/* ── Invoice History ── */}
           {invoices.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-foreground mb-2">Invoice History</h3>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Invoice History</h3>
               <div className="space-y-1">
                 {invoices.map((inv) => (
-                  <div key={inv.id} className={`flex items-center justify-between px-3 py-2.5 rounded-lg border border-border ${inv.status === "void" ? "opacity-50 line-through" : ""}`}>
+                  <div key={inv.id} className={`flex items-center justify-between px-3 py-2.5 rounded-xl border border-border ${inv.status === "void" ? "opacity-50 line-through" : ""}`}>
                     <div>
                       <p className="text-sm font-medium text-foreground">{clients[inv.client_id] ?? "Unknown"}</p>
                       <p className="text-xs text-muted-foreground">{new Date(inv.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</p>
@@ -862,20 +594,22 @@ const ReportsPage = () => {
             </div>
           )}
 
-          {/* ═══════════════════════════════════════════
-              SECTION 5 — Trash link (only when non-empty)
-              ═══════════════════════════════════════════ */}
+          {/* Export */}
+          <div className="flex gap-2 mb-6">
+            <Button variant="outline" className="flex-1 gap-1 rounded-xl" onClick={handleExportCSV}>
+              <Download className="w-4 h-4" /> Export CSV
+            </Button>
+            <Button variant="outline" className="flex-1 gap-1 rounded-xl" onClick={() => toast.info("PDF export coming soon.")}>
+              <Download className="w-4 h-4" /> Export PDF
+            </Button>
+          </div>
+
+          {/* Trash */}
           {showTrash ? (
-            <TrashView
-              onBack={() => setShowTrash(false)}
-              onCountChange={(c) => setTrashCount(c)}
-            />
+            <TrashView onBack={() => setShowTrash(false)} onCountChange={(c) => setTrashCount(c)} />
           ) : trashCount > 0 ? (
             <div className="flex justify-center py-4">
-              <button
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setShowTrash(true)}
-              >
+              <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors" onClick={() => setShowTrash(true)}>
                 <Trash2 className="w-4 h-4" />
                 Trash · {trashCount} {trashCount === 1 ? "entry" : "entries"}
               </button>

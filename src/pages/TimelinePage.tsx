@@ -483,7 +483,7 @@ const TimelinePage = () => {
           setAssignOpen(false);
           setEditEntry(null);
           setEditSession(null);
-          loadEntries();
+          loadData();
         }}
       />
     </div>

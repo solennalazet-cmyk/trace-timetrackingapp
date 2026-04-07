@@ -307,7 +307,7 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                   <form onSubmit={handleForgotPassword} className="space-y-3">
                     <div>
                       <Label htmlFor="forgotEmail">Email</Label>
-                      <Input id="forgotEmail" type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required />
+                      <Input id="forgotEmail" type="email" className="h-10 rounded-xl" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required />
                     </div>
                     {renderTurnstile()}
                     <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitDisabled}>

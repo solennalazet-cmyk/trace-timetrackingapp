@@ -281,33 +281,35 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
 
           <SettingsDivider />
 
-          {/* ── Week Start Day ── */}
+           {/* ── Week Start Day ── */}
           <SettingsSection
             title="Week starts on"
             description="Affects reports and date range calculations."
           >
-             <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-              {([
-                { value: 1, label: "Mon" },
-                { value: 2, label: "Tue" },
-                { value: 3, label: "Wed" },
-                { value: 4, label: "Thu" },
-                { value: 5, label: "Fri" },
-                { value: 6, label: "Sat" },
-                { value: 0, label: "Sun" },
-              ] as const).map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => persist({ ...settings, week_start_day: opt.value })}
-                  className={`shrink-0 px-3 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                    settings.week_start_day === opt.value
-                      ? "border-primary bg-primary/20 text-foreground"
-                      : "border-border text-muted-foreground hover:bg-muted/30"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+            <div className="overflow-x-auto -mx-6 px-6">
+              <div className="flex gap-2 pb-1 w-max">
+                {([
+                  { value: 1, label: "Mon" },
+                  { value: 2, label: "Tue" },
+                  { value: 3, label: "Wed" },
+                  { value: 4, label: "Thu" },
+                  { value: 5, label: "Fri" },
+                  { value: 6, label: "Sat" },
+                  { value: 0, label: "Sun" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => persist({ ...settings, week_start_day: opt.value })}
+                    className={`shrink-0 px-3 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                      settings.week_start_day === opt.value
+                        ? "border-primary bg-primary/20 text-foreground"
+                        : "border-border text-muted-foreground hover:bg-muted/30"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </SettingsSection>
 

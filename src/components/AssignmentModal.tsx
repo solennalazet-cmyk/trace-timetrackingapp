@@ -570,22 +570,41 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip, onDelet
         </div>
 
         <div className="flex shrink-0 gap-3 border-t bg-background px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          {!existingEntry && (
-            <Button
-              variant="outline"
-              className="h-12 flex-1 rounded-[28px] font-bold"
-              onClick={handleSkipOrDismiss}
-            >
-              Skip
-            </Button>
+          {existingEntry && onDelete ? (
+            <>
+              <Button
+                variant="destructive"
+                className="h-12 flex-1 rounded-[28px] font-bold"
+                onClick={() => onDelete(existingEntry.id)}
+              >
+                Delete
+              </Button>
+              <Button
+                className="h-12 flex-1 rounded-[28px] bg-primary font-bold text-primary-foreground hover:bg-primary/90"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                Assign Entry
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                className="h-12 flex-1 rounded-[28px] font-bold"
+                onClick={handleSkipOrDismiss}
+              >
+                Skip
+              </Button>
+              <Button
+                className="h-12 flex-1 rounded-[28px] bg-primary font-bold text-primary-foreground hover:bg-primary/90"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                Save Entry
+              </Button>
+            </>
           )}
-          <Button
-            className="h-12 flex-1 rounded-[28px] bg-primary font-bold text-primary-foreground hover:bg-primary/90"
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {existingEntry ? "Update Entry" : "Save Entry"}
-          </Button>
         </div>
       </DialogContent>
     </Dialog>

@@ -369,6 +369,7 @@ export type Database = {
           id: string
           idle_reminder_minutes: number | null
           pause_mode: string | null
+          revenue_target: number | null
           round_amount: string | null
           round_amount_to: number | null
           round_duration: string | null
@@ -389,6 +390,7 @@ export type Database = {
           id?: string
           idle_reminder_minutes?: number | null
           pause_mode?: string | null
+          revenue_target?: number | null
           round_amount?: string | null
           round_amount_to?: number | null
           round_duration?: string | null
@@ -409,6 +411,7 @@ export type Database = {
           id?: string
           idle_reminder_minutes?: number | null
           pause_mode?: string | null
+          revenue_target?: number | null
           round_amount?: string | null
           round_amount_to?: number | null
           round_duration?: string | null

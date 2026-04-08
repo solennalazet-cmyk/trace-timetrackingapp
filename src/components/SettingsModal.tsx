@@ -185,7 +185,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
 
-        <div className="px-6 pb-6 space-y-1">
+        <div className="px-6 pb-6 space-y-1 min-w-0 overflow-hidden">
           {/* ── Focus Timer Presets ── */}
           <SettingsSection
             title="Focus Timer Presets"

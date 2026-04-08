@@ -360,6 +360,25 @@ const ReportsPage = () => {
     loadData();
   };
 
+  // Scroll-based header blur for Reports page
+  useEffect(() => {
+    const header = document.getElementById("app-header");
+    if (!header) return;
+    const onScroll = () => {
+      if (window.scrollY > 8) {
+        header.classList.add("backdrop-blur-md", "bg-background/70");
+      } else {
+        header.classList.remove("backdrop-blur-md", "bg-background/70");
+      }
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      header.classList.remove("backdrop-blur-md", "bg-background/70");
+    };
+  }, []);
+
   if (loading) return <div className="flex items-center justify-center min-h-[60vh] text-muted-foreground text-sm">Loading…</div>;
 
   return (

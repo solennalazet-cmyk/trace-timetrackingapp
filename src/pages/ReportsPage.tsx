@@ -595,7 +595,7 @@ const ReportsPage = () => {
                   {turnoverData.length > 0 && (
                     <div className="shrink-0 flex flex-col items-center">
                       <MiniDonut data={turnoverData} centerLabel={`€${totalTurnover.toFixed(0)}`} centerSub="turnover" />
-                      <span className="text-[10px] text-muted-foreground mt-1">Turnover</span>
+                      <span className="text-xs text-muted-foreground mt-1">Turnover</span>
                     </div>
                   )}
                   <div className="shrink-0 flex flex-col items-center">

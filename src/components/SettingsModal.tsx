@@ -180,12 +180,12 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[420px] rounded-2xl max-h-[85vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-[420px] w-[calc(100vw-1rem)] rounded-2xl max-h-[85vh] overflow-y-auto p-0">
         <DialogHeader className="px-6 pt-6 pb-0">
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
 
-        <div className="px-6 pb-6 space-y-1">
+        <div className="px-6 pb-6 space-y-1 min-w-0 overflow-hidden">
           {/* ── Focus Timer Presets ── */}
           <SettingsSection
             title="Focus Timer Presets"

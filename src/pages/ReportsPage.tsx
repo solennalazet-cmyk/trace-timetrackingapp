@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
-  PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
+  PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Sector as RechartsSector,
 } from "recharts";
 import {
   ChevronDown, ChevronUp, Timer, PenLine, Clock, Phone,
@@ -72,12 +72,16 @@ const getDaysInRange = (startStr: string, endStr: string): string[] => {
 };
 
 const renderCompactDateTick = ({ x, y, payload }: any) => {
-  const [weekday, ...rest] = String(payload?.value ?? "").split(" ");
+  const val = String(payload?.value ?? "");
+  // Format: "Wed 2 Apr" — split to weekday + date
+  const parts = val.split(" ");
+  const weekday = parts[0] ?? "";
+  const dateStr = parts.slice(1).join(" ");
   return (
     <g transform={`translate(${x},${y})`}>
-      <text x={0} y={0} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize="11">
-        <tspan x={0} dy={12}>{weekday}</tspan>
-        <tspan x={0} dy={10}>{rest.join(" ")}</tspan>
+      <text x={0} y={0} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize="10">
+        <tspan x={0} dy={10}>{weekday}</tspan>
+        <tspan x={0} dy={11}>{dateStr}</tspan>
       </text>
     </g>
   );
@@ -160,6 +164,8 @@ const ReportsPage = () => {
   const [unassignedOpen, setUnassignedOpen] = useState(false);
   const [clientFilter, setClientFilter] = useState("");
   const [showTrash, setShowTrash] = useState(false);
+  const [activeTimeIdx, setActiveTimeIdx] = useState<number | undefined>(undefined);
+  const [activeTurnIdx, setActiveTurnIdx] = useState<number | undefined>(undefined);
 
   const rangeStart = toLocalDateKey(dateFrom);
   const rangeEnd = toLocalDateKey(dateTo);
@@ -318,7 +324,7 @@ const ReportsPage = () => {
   const stackedChartData = useMemo(() => {
     const days = getDaysInRange(rangeStart, rangeEnd);
     const chartClientIds = clientFilter ? [clientFilter] : clientIds;
-    return days.map((day) => {
+    const allRows = days.map((day) => {
       const dayEntries = displayEntries.filter((e) => e.entry_date === day);
       const row: any = {
         date: day,
@@ -334,6 +340,12 @@ const ReportsPage = () => {
       }
       return row;
     });
+    // Trim empty days from start and end
+    let first = allRows.findIndex((r) => r._total > 0);
+    let last = allRows.length - 1;
+    while (last > first && allRows[last]._total === 0) last--;
+    if (first === -1) return [];
+    return allRows.slice(first, last + 1);
   }, [displayEntries, rangeStart, rangeEnd, clientIds, clientFilter]);
 
   // Trash
@@ -488,7 +500,7 @@ const ReportsPage = () => {
             const total = timeDonutData.reduce((s, d) => s + d.value, 0);
             const totalTurnover = turnoverDonutData.reduce((s, d) => s + d.value, 0);
 
-            const renderInitialsLabel = (props: any, data: { initials: string; value: number }[], dataTotal: number) => {
+            const renderInitialsLabel = (props: any, data: { name: string; initials: string; value: number }[], dataTotal: number) => {
               const { cx, cy, midAngle, innerRadius, outerRadius, index } = props;
               const entry = data[index];
               if (!entry || entry.value / dataTotal < 0.06) return null;
@@ -503,32 +515,49 @@ const ReportsPage = () => {
               );
             };
 
+            const renderActiveShape = (props: any) => {
+              const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload } = props;
+              const RADIAN = Math.PI / 180;
+              const midAngle = (startAngle + endAngle) / 2;
+              const labelRadius = outerRadius + 16;
+              const lx = cx + labelRadius * Math.cos(-midAngle * RADIAN);
+              const ly = cy + labelRadius * Math.sin(-midAngle * RADIAN);
+              return (
+                <g>
+                  <RechartsSector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius + 4} startAngle={startAngle} endAngle={endAngle} fill={fill} stroke="none" />
+                  <text x={lx} y={ly} textAnchor={lx > cx ? "start" : "end"} dominantBaseline="central" fontSize={11} fontWeight={600} fill="hsl(var(--foreground))">
+                    {payload.name}
+                  </text>
+                </g>
+              );
+            };
+
             const sym = "€";
 
             return (
               <div className="mb-6">
                 <div className="flex justify-center gap-4">
                   {/* Time donut */}
-                  <div className="relative" style={{ width: 155, height: 155 }}>
-                    <ResponsiveContainer width={155} height={155}>
+                  <div className="relative" style={{ width: 175, height: 175 }}>
+                    <ResponsiveContainer width={175} height={175}>
                       <PieChart>
                         <Pie
                           data={timeDonutData}
                           innerRadius={42}
                           outerRadius={68}
                           dataKey="value"
-                          stroke="hsl(var(--background))"
-                          strokeWidth={2}
+                          stroke="none"
                           paddingAngle={1}
                           label={(props) => renderInitialsLabel(props, timeDonutData, total)}
                           labelLine={false}
+                          activeIndex={activeTimeIdx}
+                          activeShape={renderActiveShape}
+                          onMouseEnter={(_, idx) => setActiveTimeIdx(idx)}
+                          onMouseLeave={() => setActiveTimeIdx(undefined)}
+                          onClick={(_, idx) => setActiveTimeIdx(prev => prev === idx ? undefined : idx)}
                         >
-                          {timeDonutData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                          {timeDonutData.map((d, i) => <Cell key={i} fill={d.fill} stroke="hsl(var(--background))" strokeWidth={2} />)}
                         </Pie>
-                        <Tooltip
-                          contentStyle={{ borderRadius: 12, fontSize: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
-                          formatter={(value: number) => [formatHHMM(value), ""]}
-                        />
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -539,26 +568,26 @@ const ReportsPage = () => {
 
                   {/* Turnover donut */}
                   {turnoverDonutData.length > 0 && (
-                    <div className="relative" style={{ width: 155, height: 155 }}>
-                      <ResponsiveContainer width={155} height={155}>
+                    <div className="relative" style={{ width: 175, height: 175 }}>
+                      <ResponsiveContainer width={175} height={175}>
                         <PieChart>
                           <Pie
                             data={turnoverDonutData}
                             innerRadius={42}
                             outerRadius={68}
                             dataKey="value"
-                            stroke="hsl(var(--background))"
-                            strokeWidth={2}
+                            stroke="none"
                             paddingAngle={1}
                             label={(props) => renderInitialsLabel(props, turnoverDonutData, totalTurnover)}
                             labelLine={false}
+                            activeIndex={activeTurnIdx}
+                            activeShape={renderActiveShape}
+                            onMouseEnter={(_, idx) => setActiveTurnIdx(idx)}
+                            onMouseLeave={() => setActiveTurnIdx(undefined)}
+                            onClick={(_, idx) => setActiveTurnIdx(prev => prev === idx ? undefined : idx)}
                           >
-                            {turnoverDonutData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                            {turnoverDonutData.map((d, i) => <Cell key={i} fill={d.fill} stroke="hsl(var(--background))" strokeWidth={2} />)}
                           </Pie>
-                          <Tooltip
-                            contentStyle={{ borderRadius: 12, fontSize: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
-                            formatter={(value: number) => [`${sym}${value.toFixed(2)}`, ""]}
-                          />
                         </PieChart>
                       </ResponsiveContainer>
                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -761,10 +790,9 @@ const ReportsPage = () => {
                   <BarChart data={stackedChartData} barCategoryGap="12%" margin={{ top: 8, right: 0, left: -20, bottom: 0 }}>
                     <XAxis
                       dataKey="label"
-                      height={42}
-                      interval={0}
-                      minTickGap={0}
-                      tickMargin={6}
+                      height={44}
+                      interval={stackedChartData.length > 14 ? Math.ceil(stackedChartData.length / 10) - 1 : 0}
+                      tickMargin={4}
                       tick={renderCompactDateTick}
                       tickLine={false}
                       axisLine={false}

@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN billing_interval text;

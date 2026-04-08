@@ -658,7 +658,7 @@ const ReportsPage = () => {
             </div>
           )}
 
-          {/* ── 5. Client Cards ── */}
+          {/* ── 5. Client Cards (horizontal scroll) ── */}
           {rangeEntries.length > 0 && (
             <div className="mb-6">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Clients</h3>

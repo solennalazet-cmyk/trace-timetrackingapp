@@ -104,12 +104,8 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
     setDeleting(false);
     setDeleteOpen(false);
   };
-    const periodEnd = new Date(profile.current_period_end);
-    const subscriptionStart = new Date(periodEnd);
-    subscriptionStart.setFullYear(subscriptionStart.getFullYear() - 1);
-    const daysSinceStart = (Date.now() - subscriptionStart.getTime()) / (1000 * 60 * 60 * 24);
-    return daysSinceStart <= 30;
-  }, [profile]);
+
+
 
   const renderPlanToggle = () => (
     <div className="flex items-center justify-center gap-1 p-1 bg-muted rounded-full mb-3">

@@ -238,28 +238,44 @@ const ReportsPage = () => {
   const revenueProgress = proratedRevenueTarget > 0 ? Math.min(100, (billableValue / proratedRevenueTarget) * 100) : 0;
 
   // ══ DONUT CHART DATA ══
-  // Outer ring: per-client hours
-  const outerDonutData = useMemo(() => {
-    const data: { name: string; value: number; fill: string }[] = [];
+  // Time donut: per-client hours
+  const timeDonutData = useMemo(() => {
+    const data: { name: string; initials: string; value: number; fill: string }[] = [];
     const map: Record<string, number> = {};
     rangeEntries.forEach((e) => {
       const key = e.client_id ?? "unassigned";
       map[key] = (map[key] || 0) + e.duration_minutes;
     });
-    clientIds.forEach((id, i) => {
-      if (map[id]) data.push({ name: clients[id] ?? "Unknown", value: map[id], fill: getClientColor(id) });
+    clientIds.forEach((id) => {
+      if (map[id]) {
+        const name = clients[id] ?? "Unknown";
+        const initials = name.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+        data.push({ name, initials, value: map[id], fill: getClientColor(id) });
+      }
     });
-    if (map["unassigned"]) data.push({ name: "Unassigned", value: map["unassigned"], fill: "hsl(240 5% 75%)" });
+    if (map["unassigned"]) data.push({ name: "Unassigned", initials: "NA", value: map["unassigned"], fill: "hsl(240 5% 75%)" });
     return data;
   }, [rangeEntries, clientIds, clients]);
 
-  // Inner ring: billable vs non-billable
-  const innerDonutData = useMemo(() => {
-    return [
-      { name: "Billable", value: billableMins, fill: "hsl(var(--primary))" },
-      { name: "Non-billable", value: nonBillableMins, fill: "hsl(var(--muted-foreground) / 0.3)" },
-    ].filter((d) => d.value > 0);
-  }, [billableMins, nonBillableMins]);
+  // Turnover donut: per-client billable value
+  const turnoverDonutData = useMemo(() => {
+    const data: { name: string; initials: string; value: number; fill: string }[] = [];
+    const map: Record<string, number> = {};
+    rangeEntries.forEach((e) => {
+      if (!e.client_id || !e.billable_value) return;
+      map[e.client_id] = (map[e.client_id] || 0) + e.billable_value;
+    });
+    clientIds.forEach((id) => {
+      if (map[id]) {
+        const name = clients[id] ?? "Unknown";
+        const initials = name.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+        data.push({ name, initials, value: map[id], fill: getClientColor(id) });
+      }
+    });
+    return data;
+  }, [rangeEntries, clientIds, clients]);
+
+  const totalTurnoverValue = turnoverDonutData.reduce((s, d) => s + d.value, 0);
 
   // ══ STACKED BAR CHART ══
   const stackedChartData = useMemo(() => {

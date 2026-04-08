@@ -125,12 +125,16 @@ const ReportsPage = () => {
     let from: Date;
     let to: Date = now;
 
+    const wsd = weekStartDay as 0 | 1 | 2 | 3 | 4 | 5 | 6;
     if (defaultRange === "monthly") {
       from = startOfMonth(now);
     } else if (defaultRange === "biweekly") {
       from = new Date(now.getTime() - 13 * 86400000);
     } else {
-      from = startOfWeek(now, { weekStartsOn: weekStartDay as 0 | 1 | 2 | 3 | 4 | 5 | 6 });
+      from = startOfWeek(now, { weekStartsOn: wsd });
+      const endOfWk = new Date(from);
+      endOfWk.setDate(endOfWk.getDate() + 6);
+      to = endOfWk;
     }
     setDateFrom(from);
     setDateTo(to);

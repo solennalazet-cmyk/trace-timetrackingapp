@@ -1,51 +1,56 @@
 
 
-# Downgrade Flow: Keep Data Visible, Limit Editing
+# Reports Page — Phase 1 Fixes
 
-## Overview
-When a Pro user downgrades to Free, they return to 2 clients / 3 projects limits. If they exceed those limits, a selection modal prompts them to choose which to keep "active." Inactive ones remain fully visible but non-interactive.
+## 1. Header background with transparency
+**File:** `src/components/Header.tsx`
+- Add `backdrop-blur-md bg-background/70` to the `<header>` element so it's readable over content.
 
-## Key principle: No data loss, no data hiding
-- **Reports**: All time entries for inactive clients/projects remain visible and included in calculations. No filtering by `is_active` in Reports queries.
-- **Projects tab**: Inactive clients and projects appear muted (greyed out, not clickable/editable). Active ones work normally.
-- **Assignment modals** (new entries): Only active clients/projects appear in dropdowns — you can't assign new work to inactive items.
-- **Re-upgrade**: All items become active again automatically.
+## 2. Font sizes — accessibility pass
+**File:** `src/pages/ReportsPage.tsx` and `src/components/ClientBillingSummary.tsx`
+- Client filter chips: `text-[11px]` → `text-xs`
+- Donut center total: `text-xl` → `text-2xl`; sub-label `text-[10px]` → `text-xs`
+- Section headers (`"By Entry Type"`, `"Clients"`, `"Goals"`, `"Daily Breakdown"`): `text-xs` → `text-sm`
+- Goal progress labels: `text-xs` → `text-sm`
+- Client card name: `text-sm` → `text-base`
+- Client card metrics (Total, Billable): `text-lg` → `text-xl`; sub-labels `text-[10px]` → `text-xs`
+- Avg/day: `text-sm` → `text-base`
+- Session list items: `text-xs` → `text-sm`
+- Legend items: `text-[11px]` / `text-[10px]` → `text-xs`
+- Stacked bar tick font: `10` → `11`
 
-## What changes
+## 3. Date range — respect weekStartDay from settings
+**File:** `src/pages/ReportsPage.tsx`
 
-### 1. Database: `is_active` column on `clients` and `projects`
-- `ALTER TABLE clients ADD COLUMN is_active boolean NOT NULL DEFAULT true;`
-- `ALTER TABLE projects ADD COLUMN is_active boolean NOT NULL DEFAULT true;`
+The initial `useState` on lines 115-120 hardcodes `weekStartsOn: 1` before settings load. The `useEffect` on line 122 then recalculates, but `datesInitialized` gets set to `true` immediately on first render because `defaultRange` and `weekStartDay` already have their default values.
 
-### 2. New component: `DowngradeSelectionModal`
-Two-step modal triggered when `plan = "free"` and user exceeds limits:
-- **Step 1**: Choose up to 2 clients to keep active (shows entry count per client).
-- **Step 2**: Choose up to 3 projects to keep active (projects of deactivated clients are pre-unchecked).
-- **Confirm**: Sets `is_active = false` on unselected items.
+Fix: initialize `datesInitialized` as `false` and add a `settingsLoaded` flag. Only run the date initialization effect once settings have actually been fetched from the database. This ensures that for "weekly" range, `startOfWeek` uses the correct `weekStartDay` value from user settings.
 
-### 3. Trigger logic
-In `AppLayout.tsx`, when profile loads with `plan = "free"` and active clients > 2 or active projects > 3, open the modal.
+## 4. Dual side-by-side donut charts with client initials in segments
+**File:** `src/pages/ReportsPage.tsx`
 
-### 4. Projects tab — muted inactive items
-In `ClientsPage.tsx`, fetch ALL clients/projects (no `is_active` filter). Render inactive ones with muted styling (`opacity-50`, no click handler, no edit/delete). Active ones behave normally.
+Replace the single nested donut (lines 410-473) with two side-by-side donuts:
 
-### 5. Assignment modals — filter to active only
-In `AssignmentModal.tsx` and similar, filter dropdowns to `.eq("is_active", true)` so new entries can only be assigned to active items.
+- **Left donut — "Time"**: Outer ring segments proportional to each client's duration. Center shows total `HH:MM`. Size ~150px wide.
+- **Right donut — "Turnover"**: Outer ring segments proportional to each client's billable value (€). Center shows total `€XXX`. Size ~150px wide.
 
-### 6. Reports — no change
-Reports queries do NOT filter by `is_active`. All historical data remains visible regardless of plan.
+**Client initials inside segments**: Use Recharts' `<Label>` or a custom `renderLabel` function on each `<Pie>`. For each segment, compute the midpoint angle and place a `<text>` element with the first two letters of the client name (e.g., "AC" for "Acme Corp"). Only render initials if the segment arc is wide enough (e.g., >15° or >5% of total) to avoid clutter.
 
-### 7. Account modal — note for free users
-Show: "Some clients/projects are inactive. Upgrade to Pro to edit them again."
+Remove the color legend underneath — the initials inside the segments serve as the legend. Keep the billable/non-billable summary line below the donuts as a simple text stat (not colored dots).
 
-### 8. Webhook: re-activate on upgrade
-On `checkout.session.completed` (plan → pro), set all user's clients and projects to `is_active = true`.
+**Turnover donut data**: New `useMemo` that groups by `client_id` and sums `billable_value` instead of `duration_minutes`. Non-billable clients (zero turnover) won't appear in the turnover donut.
 
-## Files modified/created
-- New migration: add `is_active` to `clients` and `projects`
-- New: `src/components/DowngradeSelectionModal.tsx`
-- `src/components/AppLayout.tsx` — trigger modal
-- `src/pages/ClientsPage.tsx` — muted rendering for inactive
-- `src/components/AssignmentModal.tsx` — filter active only in dropdowns
-- `src/components/AccountModal.tsx` — inactive items note
-- `supabase/functions/stripe-webhook/index.ts` — re-activate on upgrade
+## 5. Client cards — colored background
+**File:** `src/components/ClientBillingSummary.tsx`
+
+Replace the current `bg-card` white background with each client's color at low opacity. Change line 157:
+```
+className={`rounded-2xl border bg-card ...`}
+```
+to use an inline `style` with the client color at ~15% opacity as the background, keeping text readable. The colored dot indicator can be removed since the card itself is now colored.
+
+## Files modified
+- `src/components/Header.tsx` — backdrop blur + semi-transparent bg
+- `src/pages/ReportsPage.tsx` — font sizes, date init fix, dual donuts with initials
+- `src/components/ClientBillingSummary.tsx` — font sizes, colored card backgrounds
+

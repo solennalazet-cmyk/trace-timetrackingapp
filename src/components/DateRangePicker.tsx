@@ -14,31 +14,35 @@ interface DateRangePickerProps {
   from: Date;
   to: Date;
   onChange: (from: Date, to: Date) => void;
+  weekStartsOn?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
 }
 
-const QUICK_RANGES = [
-  { label: "This week", getValue: () => {
-    const now = new Date();
-    return { from: startOfWeek(now, { weekStartsOn: 1 }), to: now };
-  }},
-  { label: "Last 7 days", getValue: () => {
-    const now = new Date();
-    return { from: new Date(now.getTime() - 6 * 86400000), to: now };
-  }},
-  { label: "Last 30 days", getValue: () => {
-    const now = new Date();
-    return { from: new Date(now.getTime() - 29 * 86400000), to: now };
-  }},
-  { label: "This month", getValue: () => {
-    const now = new Date();
-    return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
-  }},
-];
-
-export default function DateRangePicker({ from, to, onChange }: DateRangePickerProps) {
+export default function DateRangePicker({ from, to, onChange, weekStartsOn = 1 }: DateRangePickerProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"from" | "to">("from");
   const [tempFrom, setTempFrom] = useState<Date | undefined>(from);
+
+  const QUICK_RANGES = [
+    { label: "This week", getValue: () => {
+      const now = new Date();
+      const s = startOfWeek(now, { weekStartsOn });
+      const e = new Date(s);
+      e.setDate(e.getDate() + 6);
+      return { from: s, to: e };
+    }},
+    { label: "Last 7 days", getValue: () => {
+      const now = new Date();
+      return { from: new Date(now.getTime() - 6 * 86400000), to: now };
+    }},
+    { label: "Last 30 days", getValue: () => {
+      const now = new Date();
+      return { from: new Date(now.getTime() - 29 * 86400000), to: now };
+    }},
+    { label: "This month", getValue: () => {
+      const now = new Date();
+      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
+    }},
+  ];
 
   const handleSelect = (day: Date | undefined) => {
     if (!day) return;
@@ -48,7 +52,6 @@ export default function DateRangePicker({ from, to, onChange }: DateRangePickerP
     } else {
       const start = tempFrom!;
       const end = day;
-      // Ensure from <= to
       if (end < start) {
         onChange(end, start);
       } else {
@@ -92,7 +95,6 @@ export default function DateRangePicker({ from, to, onChange }: DateRangePickerP
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        {/* Instruction banner */}
         <div className="px-4 pt-3 pb-1">
           <p className="text-xs font-medium text-primary">
             {step === "from"
@@ -112,11 +114,11 @@ export default function DateRangePicker({ from, to, onChange }: DateRangePickerP
           onSelect={handleSelect}
           defaultMonth={step === "to" && tempFrom ? tempFrom : from}
           disabled={(date) => {
-            if (step === "to" && tempFrom) return false; // allow any end date
+            if (step === "to" && tempFrom) return false;
             return date > new Date();
           }}
           className={cn("p-3 pointer-events-auto")}
-          weekStartsOn={1}
+          weekStartsOn={weekStartsOn}
           modifiers={{
             rangeStart: step === "to" && tempFrom ? tempFrom : undefined as any,
           }}
@@ -129,7 +131,6 @@ export default function DateRangePicker({ from, to, onChange }: DateRangePickerP
           }}
         />
 
-        {/* Quick ranges */}
         <div className="px-3 pb-3 flex flex-wrap gap-1.5">
           {QUICK_RANGES.map((qr) => (
             <button

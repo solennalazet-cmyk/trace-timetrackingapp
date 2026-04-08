@@ -167,7 +167,7 @@ const ClientBillingSummary = ({
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2.5">
                   <div className="w-3 h-3 rounded-full shrink-0" style={{ background: color }} />
-                  <span className="text-sm font-semibold text-foreground">{c.name}</span>
+                  <span className="text-base font-semibold text-foreground">{c.name}</span>
                 </div>
                 {isExpanded
                   ? <ChevronUp className="w-4 h-4 text-muted-foreground" />

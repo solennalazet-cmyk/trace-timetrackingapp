@@ -144,185 +144,161 @@ const ClientBillingSummary = ({
   const getClientColor = (id: string) => SUNRISE_PALETTE[hashStringToIndex(id, SUNRISE_PALETTE.length)];
 
   return (
-    <div className="space-y-2">
-      {clientSummaries.map((c, i) => {
-        const sym = CURRENCY_SYMBOLS[c.currency] ?? "€";
-        const isExpanded = expandedClients.has(c.id);
-        const avgPerDay = c.totalMins / daysInRange;
-        const color = clientColorMap?.[c.id] ?? getClientColor(c.id);
+    <div>
+      {/* Horizontal scroll client cards */}
+      <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-none -mx-1 px-1">
+        {clientSummaries.map((c) => {
+          const sym = CURRENCY_SYMBOLS[c.currency] ?? "€";
+          const isExpanded = expandedClients.has(c.id);
+          const avgPerDay = c.totalMins / daysInRange;
+          const color = clientColorMap?.[c.id] ?? getClientColor(c.id);
 
-        return (
-          <div
-            key={c.id}
-            className={`rounded-2xl border overflow-hidden transition-all ${
-              activeClientFilter === c.id ? "border-primary ring-1 ring-primary/30" : "border-border/60"
-            }`}
-            style={{ background: `${color.replace(")", " / 0.15)")}` }}
-          >
-            {/* Card header — clickable to expand */}
-            <button
-              onClick={() => toggleExpand(c.id)}
-              className="w-full text-left p-4"
+          return (
+            <div
+              key={c.id}
+              className={`shrink-0 rounded-2xl border overflow-hidden transition-all ${
+                activeClientFilter === c.id ? "border-white/40 ring-1 ring-white/20" : "border-white/15"
+              }`}
+              style={{
+                background: color.replace(")", " / 0.75)"),
+                width: 170,
+              }}
             >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-3 h-3 rounded-full shrink-0" style={{ background: color }} />
-                  <span className="text-base font-semibold text-foreground">{c.name}</span>
+              <button
+                onClick={() => toggleExpand(c.id)}
+                className="w-full text-left p-3"
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-sm font-semibold text-white truncate">{c.name}</span>
+                  {isExpanded
+                    ? <ChevronUp className="w-3.5 h-3.5 text-white/70 shrink-0" />
+                    : <ChevronDown className="w-3.5 h-3.5 text-white/70 shrink-0" />
+                  }
                 </div>
-                {isExpanded
-                  ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                  : <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                }
-              </div>
+                <div className="flex items-baseline gap-3">
+                  <p className="text-xl font-bold font-mono text-white">{formatHM(c.totalMins)}</p>
+                  <p className="text-lg font-bold font-mono text-white/90">{sym}{c.billableValue.toFixed(0)}</p>
+                </div>
+                <p className="text-[11px] text-white/60 mt-0.5">{formatHM(Math.round(avgPerDay))}/day</p>
+              </button>
 
-              {/* Key metrics row */}
-              <div className="flex items-baseline gap-6">
-                <div>
-                  <p className="text-xl font-bold font-mono text-foreground">{formatHM(c.totalMins)}</p>
-                  <p className="text-xs text-muted-foreground">Total</p>
-                </div>
-                <div>
-                  <p className="text-xl font-bold font-mono text-foreground">{sym}{c.billableValue.toFixed(0)}</p>
-                  <p className="text-xs text-muted-foreground">Billable</p>
-                </div>
-                <div>
-                  <p className="text-base font-medium font-mono text-muted-foreground">{formatHM(Math.round(avgPerDay))}</p>
-                  <p className="text-xs text-muted-foreground">Avg/day</p>
-                </div>
-              </div>
-            </button>
-
-            {/* Expanded: sessions + billing */}
-            {isExpanded && (
-              <div className="border-t border-border">
-                {/* Actions row */}
-                <div className="flex items-center justify-between px-4 py-2.5 bg-muted/20">
-                  <button
-                    onClick={() => onFilterClient?.(activeClientFilter === c.id ? null : c.id)}
-                    className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {activeClientFilter === c.id ? "Clear filter" : "Filter charts"}
-                  </button>
-                  <div className="flex items-center gap-3">
-                    {c.outstanding > 0 && (
-                      <span className="text-[11px] text-muted-foreground">{sym}{c.outstanding.toFixed(0)} outstanding</span>
-                    )}
-                    {isPro && c.outstanding > 0 && (
+              {isExpanded && (
+                <div className="border-t border-white/15">
+                  <div className="flex items-center justify-between px-3 py-2 bg-black/10">
+                    <button
+                      onClick={() => onFilterClient?.(activeClientFilter === c.id ? null : c.id)}
+                      className="text-[11px] font-medium text-white/70 hover:text-white transition-colors"
+                    >
+                      {activeClientFilter === c.id ? "Clear filter" : "Filter charts"}
+                    </button>
+                    <div className="flex items-center gap-2">
+                      {c.outstanding > 0 && (
+                        <span className="text-[11px] text-white/60">{sym}{c.outstanding.toFixed(0)} due</span>
+                      )}
+                      {isPro && c.outstanding > 0 && (
+                        <button
+                          onClick={() => onBillClient(c.id)}
+                          className="text-[11px] font-medium flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
+                        >
+                          Bill <ArrowRight className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto">
+                    {c.entries.map((entry) => (
                       <button
-                        onClick={() => onBillClient(c.id)}
-                        className="text-[11px] font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-primary/15 text-foreground hover:bg-primary/25 transition-colors"
+                        key={entry.id}
+                        onClick={() => onEditEntry?.(entry)}
+                        className="w-full flex items-center justify-between px-3 py-2 text-xs border-b border-white/10 last:border-b-0 hover:bg-white/10 transition-colors text-left"
                       >
-                        Bill client <ArrowRight className="w-3 h-3" />
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-white/60">
+                            {new Date(entry.entry_date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
+                          </span>
+                          <span className="text-white font-medium truncate max-w-[100px]">
+                            {entry.project_name ?? "No project"}
+                          </span>
+                        </div>
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="font-mono text-white">{formatHM(entry.duration_minutes)}</span>
+                          {entry.billable && entry.billable_value ? (
+                            <span className="font-mono text-white/70">{sym}{entry.billable_value.toFixed(2)}</span>
+                          ) : null}
+                        </div>
                       </button>
-                    )}
+                    ))}
                   </div>
                 </div>
+              )}
+            </div>
+          );
+        })}
 
-                {/* Session list */}
-                <div className="max-h-60 overflow-y-auto">
-                  {c.entries.map((entry) => (
-                    <button
+        {/* Unassigned card */}
+        {unassignedSummary.entries.length > 0 && (
+          <div className="shrink-0 rounded-2xl border border-white/15 overflow-hidden" style={{ background: "hsl(240 5% 75% / 0.75)", width: 170 }}>
+            <button
+              onClick={() => toggleExpand("__unassigned__")}
+              className="w-full text-left p-3"
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-sm font-semibold text-white">Unassigned</span>
+                {expandedClients.has("__unassigned__")
+                  ? <ChevronUp className="w-3.5 h-3.5 text-white/70" />
+                  : <ChevronDown className="w-3.5 h-3.5 text-white/70" />
+                }
+              </div>
+              <p className="text-xl font-bold font-mono text-white">{formatHM(unassignedSummary.totalMins)}</p>
+              <p className="text-[11px] text-white/60 mt-0.5">Not billable</p>
+            </button>
+
+            {expandedClients.has("__unassigned__") && (
+              <div className="border-t border-white/15">
+                <div className="flex justify-end px-3 py-2 bg-black/10">
+                  <button
+                    onClick={onOpenUnassigned}
+                    className="text-[11px] font-medium flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
+                  >
+                    Assign <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
+                <div className="max-h-48 overflow-y-auto">
+                  {unassignedSummary.entries.map((entry) => (
+                    <div
                       key={entry.id}
-                      onClick={() => onEditEntry?.(entry)}
-                      className="w-full flex items-center justify-between px-4 py-2.5 text-sm border-b border-border last:border-b-0 hover:bg-muted/40 transition-colors text-left"
+                      className="flex items-center justify-between px-3 py-2 text-xs border-b border-white/10 last:border-b-0 hover:bg-white/10 transition-colors"
                     >
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-muted-foreground">
+                      <button
+                        onClick={() => onEditEntry?.(entry)}
+                        className="flex flex-col gap-0.5 text-left flex-1 min-w-0"
+                      >
+                        <span className="text-white/60">
                           {new Date(entry.entry_date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
                         </span>
-                        <span className="text-foreground font-medium">
+                        <span className="text-white font-medium truncate">
                           {entry.project_name ?? "No project"}
-                          {entry.task_name ? ` · ${entry.task_name}` : ""}
                         </span>
-                      </div>
-                      <div className="flex flex-col items-end gap-0.5">
-                        <span className="font-mono text-foreground">{formatHM(entry.duration_minutes)}</span>
-                        {entry.billable && entry.billable_value ? (
-                          <span className="font-mono text-muted-foreground">
-                            {sym}{entry.billable_value.toFixed(2)}
-                            {entry.billing_status === "unbilled" && (
-                              <span className="ml-1 text-primary font-medium">unbilled</span>
-                            )}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
+                      </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="font-mono text-white">{formatHM(entry.duration_minutes)}</span>
+                        {onDeleteEntry && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onDeleteEntry(entry.id); }}
+                            className="p-1 rounded hover:bg-white/20 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-white/70" />
+                          </button>
                         )}
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               </div>
             )}
           </div>
-        );
-      })}
-
-      {/* Unassigned */}
-      {unassignedSummary.entries.length > 0 && (
-        <div className="rounded-2xl border border-border bg-card overflow-hidden">
-          <button
-            onClick={() => toggleExpand("__unassigned__")}
-            className="w-full text-left p-4"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2.5">
-                <div className="w-3 h-3 rounded-full shrink-0" style={{ background: "hsl(240 5% 75%)" }} />
-                <span className="text-sm font-semibold text-foreground">Unassigned</span>
-              </div>
-              {expandedClients.has("__unassigned__")
-                ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                : <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              }
-            </div>
-            <p className="text-lg font-bold font-mono text-foreground">{formatHM(unassignedSummary.totalMins)}</p>
-            <p className="text-[10px] text-muted-foreground">Not billable</p>
-          </button>
-
-          {expandedClients.has("__unassigned__") && (
-            <div className="border-t border-border">
-              <div className="flex justify-end px-4 py-2.5 bg-muted/20">
-                <button
-                  onClick={onOpenUnassigned}
-                  className="text-[11px] font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-primary/15 text-foreground hover:bg-primary/25 transition-colors"
-                >
-                  Assign entries <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-              <div className="max-h-60 overflow-y-auto">
-                {unassignedSummary.entries.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="flex items-center justify-between px-4 py-2.5 text-xs border-b border-border last:border-b-0 hover:bg-muted/40 transition-colors"
-                  >
-                    <button
-                      onClick={() => onEditEntry?.(entry)}
-                      className="flex flex-col gap-0.5 text-left flex-1 min-w-0"
-                    >
-                      <span className="text-muted-foreground">
-                        {new Date(entry.entry_date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
-                      </span>
-                      <span className="text-foreground font-medium truncate">
-                        {entry.project_name ?? "No project"}
-                      </span>
-                    </button>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-mono text-foreground">{formatHM(entry.duration_minutes)}</span>
-                      {onDeleteEntry && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onDeleteEntry(entry.id); }}
-                          className="p-1 rounded hover:bg-destructive/10 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

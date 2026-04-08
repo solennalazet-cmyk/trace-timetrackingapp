@@ -3,7 +3,7 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
 } from "recharts";
 import {
-  ChevronDown, ChevronUp, Timer, PenLine, Clock, Phone,
+  ChevronDown, ChevronUp,
   Crown, Download, Trash2, X,
 } from "lucide-react";
 import { startOfWeek, startOfMonth } from "date-fns";
@@ -55,6 +55,12 @@ const formatHHMM = (mins: number) => {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+const formatCompactHM = (mins: number) => {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${h}h${String(m).padStart(2, "0")}`;
 };
 
 const getDaysInRange = (startStr: string, endStr: string): string[] => {
@@ -475,8 +481,7 @@ const ReportsPage = () => {
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                      <span className="text-lg font-bold font-mono text-foreground">{formatHHMM(totalMins)}</span>
-                      <span className="text-xs text-muted-foreground">time</span>
+                      <span className="text-lg font-bold font-mono text-foreground">{formatCompactHM(totalMins)}</span>
                     </div>
                   </div>
 
@@ -506,7 +511,6 @@ const ReportsPage = () => {
                       </ResponsiveContainer>
                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                         <span className="text-lg font-bold font-mono text-foreground">{sym}{totalTurnoverValue.toFixed(0)}</span>
-                        <span className="text-xs text-muted-foreground">turnover</span>
                       </div>
                     </div>
                   )}
@@ -521,28 +525,14 @@ const ReportsPage = () => {
             );
           })()}
 
-          {/* ── Entry Type Mini Donuts ── */}
+          {/* ── Entry Type Stacked Columns ── */}
           {rangeEntries.length > 0 && (() => {
-            const ENTRY_TYPE_COLORS: Record<string, string> = {
-              stopwatch: "hsl(220 75% 58%)",  // blue
-              manual: "hsl(38 92% 55%)",      // amber
-              shift: "hsl(270 58% 58%)",      // violet
-              focus: "hsl(340 72% 55%)",      // rose
-              call: "hsl(22 88% 55%)",        // burnt orange
-            };
             const ENTRY_TYPE_LABELS: Record<string, string> = {
               stopwatch: "Stopwatch",
               manual: "Manual",
               shift: "Shift",
               focus: "Focus",
               call: "Call Log",
-            };
-            const ENTRY_TYPE_ICONS: Record<string, React.ReactNode> = {
-              stopwatch: <Timer className="w-3 h-3" />,
-              manual: <PenLine className="w-3 h-3" />,
-              shift: <Clock className="w-3 h-3" />,
-              focus: <Phone className="w-3 h-3" />,
-              call: <Phone className="w-3 h-3" />,
             };
 
             // Aggregate by entry type
@@ -558,59 +548,87 @@ const ReportsPage = () => {
             const types = Object.keys(byType);
             if (types.length === 0) return null;
 
-            const hoursData = types.map((t) => ({ name: ENTRY_TYPE_LABELS[t] ?? t, value: byType[t].mins, fill: ENTRY_TYPE_COLORS[t] ?? "hsl(var(--muted-foreground))" }));
-            const turnoverData = types.map((t) => ({ name: ENTRY_TYPE_LABELS[t] ?? t, value: byType[t].value, fill: ENTRY_TYPE_COLORS[t] ?? "hsl(var(--muted-foreground))" })).filter((d) => d.value > 0);
-            const avgData = types.map((t) => ({ name: ENTRY_TYPE_LABELS[t] ?? t, value: byType[t].count > 0 ? Math.round(byType[t].mins / byType[t].count) : 0, fill: ENTRY_TYPE_COLORS[t] ?? "hsl(var(--muted-foreground))" }));
+            const totalTurnover = types.reduce((s, t) => s + byType[t].value, 0);
 
-            const totalTurnover = turnoverData.reduce((s, d) => s + d.value, 0);
+            // Stacked bar data for Hours (billable vs non-billable)
+            const billableByType: Record<string, number> = {};
+            const nonBillableByType: Record<string, number> = {};
+            displayEntries.forEach((e) => {
+              const t = e.entry_type ?? "stopwatch";
+              if (e.billable) {
+                billableByType[t] = (billableByType[t] || 0) + e.duration_minutes;
+              } else {
+                nonBillableByType[t] = (nonBillableByType[t] || 0) + e.duration_minutes;
+              }
+            });
 
-            const MiniDonut = ({ data, centerLabel, centerSub, size = 120 }: { data: { name: string; value: number; fill: string }[]; centerLabel: string; centerSub: string; size?: number }) => (
-              <div className="relative shrink-0" style={{ width: size, height: size }}>
-                <ResponsiveContainer width={size} height={size}>
-                  <PieChart>
-                    <Pie data={data} innerRadius={size * 0.32} outerRadius={size * 0.46} dataKey="value" stroke="hsl(var(--background))" strokeWidth={2} paddingAngle={1}>
-                      {data.map((d, i) => <Cell key={i} fill={d.fill} />)}
-                    </Pie>
-                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: 11, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }} formatter={(value: number, name: string) => {
-                      if (centerSub === "turnover") return [`€${value.toFixed(0)}`, name];
-                      return [formatHHMM(value), name];
-                    }} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-sm font-bold font-mono text-foreground">{centerLabel}</span>
-                  <span className="text-[11px] text-muted-foreground">{centerSub === "turnover" ? "turnover" : centerSub}</span>
-                </div>
-              </div>
-            );
+            const hoursBarData = types.map((t) => ({
+              name: ENTRY_TYPE_LABELS[t] ?? t,
+              billable: Math.round((billableByType[t] || 0) / 60 * 10) / 10,
+              nonBillable: Math.round((nonBillableByType[t] || 0) / 60 * 10) / 10,
+            }));
+
+            const turnoverBarData = types.map((t) => ({
+              name: ENTRY_TYPE_LABELS[t] ?? t,
+              value: Math.round(byType[t].value),
+            })).filter((d) => d.value > 0);
+
+            const avgBarData = types.map((t) => ({
+              name: ENTRY_TYPE_LABELS[t] ?? t,
+              value: byType[t].count > 0 ? Math.round(byType[t].mins / byType[t].count) : 0,
+            }));
 
             return (
               <div className="mb-5">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">By Entry Type</h3>
                 <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1">
-                  <div className="shrink-0 flex flex-col items-center">
-                    <MiniDonut data={hoursData} centerLabel={formatHHMM(totalMins)} centerSub="hours" />
-                    <span className="text-xs text-muted-foreground mt-1">Hours</span>
+                  {/* Hours stacked bar */}
+                  <div className="shrink-0 flex flex-col items-center" style={{ width: 130 }}>
+                    <p className="text-sm font-bold font-mono text-foreground mb-1">{formatCompactHM(totalMins)}</p>
+                    <ResponsiveContainer width={130} height={100}>
+                      <BarChart data={hoursBarData} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
+                        <XAxis dataKey="name" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} interval={0} angle={-30} textAnchor="end" height={30} />
+                        <YAxis hide />
+                        <Tooltip contentStyle={{ borderRadius: 8, fontSize: 11, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }} formatter={(v: number, name: string) => [`${v}h`, name === "billable" ? "Billable" : "Non-billable"]} />
+                        <Bar dataKey="billable" stackId="a" fill="hsl(var(--foreground))" radius={[0, 0, 0, 0]} />
+                        <Bar dataKey="nonBillable" stackId="a" fill="hsl(var(--muted-foreground) / 0.35)" radius={[2, 2, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <div className="flex gap-2 mt-1 text-[10px] text-muted-foreground">
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-foreground inline-block" /> Billable</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-muted-foreground/35 inline-block" /> Non-bill.</span>
+                    </div>
                   </div>
-                  {turnoverData.length > 0 && (
-                    <div className="shrink-0 flex flex-col items-center">
-                      <MiniDonut data={turnoverData} centerLabel={`€${totalTurnover.toFixed(0)}`} centerSub="turnover" />
-                      <span className="text-xs text-muted-foreground mt-1">Turnover</span>
+
+                  {/* Turnover bar */}
+                  {turnoverBarData.length > 0 && (
+                    <div className="shrink-0 flex flex-col items-center" style={{ width: 130 }}>
+                      <p className="text-sm font-bold font-mono text-foreground mb-1">€{totalTurnover.toFixed(0)}</p>
+                      <ResponsiveContainer width={130} height={100}>
+                        <BarChart data={turnoverBarData} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
+                          <XAxis dataKey="name" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} interval={0} angle={-30} textAnchor="end" height={30} />
+                          <YAxis hide />
+                          <Tooltip contentStyle={{ borderRadius: 8, fontSize: 11, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }} formatter={(v: number) => [`€${v}`, "Turnover"]} />
+                          <Bar dataKey="value" fill="hsl(var(--foreground))" radius={[2, 2, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                      <span className="text-[10px] text-muted-foreground mt-1">Turnover</span>
                     </div>
                   )}
-                  <div className="shrink-0 flex flex-col items-center">
-                    <MiniDonut data={avgData} centerLabel={formatHHMM(Math.round(totalMins / (displayEntries.length || 1)))} centerSub="avg" />
-                    <span className="text-xs text-muted-foreground mt-1">Avg Session</span>
+
+                  {/* Avg session bar */}
+                  <div className="shrink-0 flex flex-col items-center" style={{ width: 130 }}>
+                    <p className="text-sm font-bold font-mono text-foreground mb-1">{formatCompactHM(Math.round(totalMins / (displayEntries.length || 1)))}</p>
+                    <ResponsiveContainer width={130} height={100}>
+                      <BarChart data={avgBarData} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
+                        <XAxis dataKey="name" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} interval={0} angle={-30} textAnchor="end" height={30} />
+                        <YAxis hide />
+                        <Tooltip contentStyle={{ borderRadius: 8, fontSize: 11, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }} formatter={(v: number) => [formatHHMM(v), "Avg"]} />
+                        <Bar dataKey="value" fill="hsl(var(--foreground) / 0.6)" radius={[2, 2, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <span className="text-[10px] text-muted-foreground mt-1">Avg Session</span>
                   </div>
-                </div>
-                {/* Shared legend */}
-                <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-2">
-                  {types.map((t) => (
-                    <div key={t} className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <div className="w-2 h-2 rounded-full" style={{ background: ENTRY_TYPE_COLORS[t] ?? "hsl(var(--muted-foreground))" }} />
-                      {ENTRY_TYPE_ICONS[t]} {ENTRY_TYPE_LABELS[t] ?? t}
-                    </div>
-                  ))}
                 </div>
               </div>
             );
@@ -654,7 +672,7 @@ const ReportsPage = () => {
             </div>
           )}
 
-          {/* ── 5. Client Cards ── */}
+          {/* ── 5. Client Cards (horizontal scroll) ── */}
           {rangeEntries.length > 0 && (
             <div className="mb-6">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Clients</h3>

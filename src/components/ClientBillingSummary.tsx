@@ -182,7 +182,7 @@ const ClientBillingSummary = ({
                   <p className="text-xs text-muted-foreground">Total</p>
                 </div>
                 <div>
-                  <p className="text-xl font-bold font-mono text-foreground">{sym}{c.billableValue.toFixed(0)}</p>
+                  <p className="text-lg font-bold font-mono text-foreground">{sym}{c.billableValue.toFixed(0)}</p>
                   <p className="text-xs text-muted-foreground">Billable</p>
                 </div>
                 <div>

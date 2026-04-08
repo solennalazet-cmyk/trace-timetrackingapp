@@ -389,6 +389,7 @@ const ReportsPage = () => {
           from={dateFrom}
           to={dateTo}
           onChange={(f, t) => { setDateFrom(f); setDateTo(t); }}
+          weekStartsOn={weekStartDay as 0 | 1 | 2 | 3 | 4 | 5 | 6}
         />
       </div>
 

@@ -488,7 +488,7 @@ const ReportsPage = () => {
             const total = timeDonutData.reduce((s, d) => s + d.value, 0);
             const totalTurnover = turnoverDonutData.reduce((s, d) => s + d.value, 0);
 
-            const renderInitialsLabel = (props: any, data: { initials: string; value: number }[], dataTotal: number) => {
+            const renderInitialsLabel = (props: any, data: { name: string; initials: string; value: number }[], dataTotal: number) => {
               const { cx, cy, midAngle, innerRadius, outerRadius, index } = props;
               const entry = data[index];
               if (!entry || entry.value / dataTotal < 0.06) return null;
@@ -500,6 +500,23 @@ const ReportsPage = () => {
                 <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={11} fontWeight={700}>
                   {entry.initials}
                 </text>
+              );
+            };
+
+            const renderActiveShape = (props: any) => {
+              const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload } = props;
+              const RADIAN = Math.PI / 180;
+              const midAngle = (startAngle + endAngle) / 2;
+              const labelRadius = outerRadius + 16;
+              const lx = cx + labelRadius * Math.cos(-midAngle * RADIAN);
+              const ly = cy + labelRadius * Math.sin(-midAngle * RADIAN);
+              return (
+                <g>
+                  <RechartsSector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius + 4} startAngle={startAngle} endAngle={endAngle} fill={fill} stroke="none" />
+                  <text x={lx} y={ly} textAnchor={lx > cx ? "start" : "end"} dominantBaseline="central" fontSize={11} fontWeight={600} fill="hsl(var(--foreground))">
+                    {payload.name}
+                  </text>
+                </g>
               );
             };
 

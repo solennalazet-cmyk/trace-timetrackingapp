@@ -94,21 +94,7 @@ const ReportsPage = () => {
   const [weekStartDay, setWeekStartDay] = useState(1);
   const [defaultRange, setDefaultRange] = useState("monthly");
 
-  // Load user settings
-  useEffect(() => {
-    if (!user) return;
-    supabase.from("user_settings")
-      .select("daily_hour_target, revenue_target, week_start_day, default_report_range")
-      .eq("user_id", user.id).single()
-      .then(({ data }) => {
-        if (data) {
-          setDailyHourTarget((data as any).daily_hour_target ?? 0);
-          setRevenueTarget((data as any).revenue_target ?? 0);
-          setWeekStartDay((data as any).week_start_day ?? 1);
-          setDefaultRange((data as any).default_report_range ?? "monthly");
-        }
-      });
-  }, [user]);
+  // Settings are loaded inside the date initialization effect below
 
   // Initialize dates based on default range
   const [settingsLoaded, setSettingsLoaded] = useState(false);

@@ -111,6 +111,7 @@ const ReportsPage = () => {
   }, [user]);
 
   // Initialize dates based on default range
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [datesInitialized, setDatesInitialized] = useState(false);
   const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [dateTo, setDateTo] = useState<Date>(() => {
@@ -119,8 +120,25 @@ const ReportsPage = () => {
     return s;
   });
 
+  // Mark settings as loaded after fetch
   useEffect(() => {
-    if (datesInitialized) return;
+    if (!user) { setSettingsLoaded(true); return; }
+    supabase.from("user_settings")
+      .select("daily_hour_target, revenue_target, week_start_day, default_report_range")
+      .eq("user_id", user.id).single()
+      .then(({ data }) => {
+        if (data) {
+          setDailyHourTarget((data as any).daily_hour_target ?? 0);
+          setRevenueTarget((data as any).revenue_target ?? 0);
+          setWeekStartDay((data as any).week_start_day ?? 1);
+          setDefaultRange((data as any).default_report_range ?? "monthly");
+        }
+        setSettingsLoaded(true);
+      });
+  }, [user]);
+
+  useEffect(() => {
+    if (datesInitialized || !settingsLoaded) return;
     const now = new Date();
     let from: Date;
     let to: Date = now;
@@ -135,7 +153,7 @@ const ReportsPage = () => {
     setDateFrom(from);
     setDateTo(to);
     setDatesInitialized(true);
-  }, [defaultRange, weekStartDay, datesInitialized]);
+  }, [defaultRange, weekStartDay, datesInitialized, settingsLoaded]);
 
   const [rangeEntries, setRangeEntries] = useState<TimeEntry[]>([]);
   const [clients, setClients] = useState<Record<string, string>>({});

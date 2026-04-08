@@ -790,10 +790,9 @@ const ReportsPage = () => {
                   <BarChart data={stackedChartData} barCategoryGap="12%" margin={{ top: 8, right: 0, left: -20, bottom: 0 }}>
                     <XAxis
                       dataKey="label"
-                      height={42}
-                      interval={0}
-                      minTickGap={0}
-                      tickMargin={6}
+                      height={44}
+                      interval={stackedChartData.length > 14 ? Math.ceil(stackedChartData.length / 10) - 1 : 0}
+                      tickMargin={4}
                       tick={renderCompactDateTick}
                       tickLine={false}
                       axisLine={false}

@@ -521,6 +521,44 @@ const ReportsPage = () => {
             );
           })()}
 
+          {/* ── 4. Client Cards ── */}
+          {rangeEntries.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Clients</h3>
+              <ClientBillingSummary
+                allEntries={rangeEntries}
+                clients={clients}
+                projects={projects}
+                isPro={isPro}
+                clientColorMap={clientColorMap}
+                rangeStart={rangeStart}
+                rangeEnd={rangeEnd}
+                rangeLabel={`${dateFrom.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} — ${dateTo.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`}
+                onBillClient={(clientId) => {
+                  setBillingClientId(clientId);
+                  setBillingOpen(true);
+                }}
+                onOpenUnassigned={() => setUnassignedOpen(true)}
+                onEditEntry={handleEdit}
+                activeClientFilter={clientFilter}
+                onFilterClient={(id) => setClientFilter(id ?? "")}
+                onDeleteEntry={async (entryId) => {
+                  if (user) {
+                    await supabase.from("time_entries").update({ deleted_at: new Date().toISOString() }).eq("id", entryId);
+                    toast("Entry deleted.", {
+                      action: { label: "Undo", onClick: async () => {
+                        await supabase.from("time_entries").update({ deleted_at: null }).eq("id", entryId);
+                        loadData();
+                      }},
+                      duration: 5000,
+                    });
+                    loadData();
+                  }
+                }}
+              />
+            </div>
+          )}
+
           {/* ── Entry Type Mini Donuts ── */}
           {rangeEntries.length > 0 && (() => {
             const ENTRY_TYPE_COLORS: Record<string, string> = {

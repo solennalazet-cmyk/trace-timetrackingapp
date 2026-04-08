@@ -186,7 +186,7 @@ const ClientBillingSummary = ({
                   <p className="text-xs text-muted-foreground">Billable</p>
                 </div>
                 <div>
-                  <p className="text-base font-medium font-mono text-muted-foreground">{formatHM(Math.round(avgPerDay))}</p>
+                  <p className="text-sm font-medium font-mono text-muted-foreground">{formatHM(Math.round(avgPerDay))}</p>
                   <p className="text-xs text-muted-foreground">Avg/day</p>
                 </div>
               </div>

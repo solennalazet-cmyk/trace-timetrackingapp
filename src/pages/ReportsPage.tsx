@@ -579,11 +579,11 @@ const ReportsPage = () => {
           })()}
 
           {/* ── 4. Client Cards ── */}
-          {rangeEntries.length > 0 && (
+          {displayEntries.length > 0 && (
             <div className="mb-6">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Clients</h3>
               <ClientBillingSummary
-                allEntries={rangeEntries}
+                allEntries={displayEntries}
                 clients={clients}
                 projects={projects}
                 isPro={isPro}

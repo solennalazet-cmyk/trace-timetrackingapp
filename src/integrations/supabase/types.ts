@@ -135,6 +135,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          billing_interval: string | null
           created_at: string | null
           current_period_end: string | null
           full_name: string | null
@@ -146,6 +147,7 @@ export type Database = {
           trial_started_at: string | null
         }
         Insert: {
+          billing_interval?: string | null
           created_at?: string | null
           current_period_end?: string | null
           full_name?: string | null
@@ -157,6 +159,7 @@ export type Database = {
           trial_started_at?: string | null
         }
         Update: {
+          billing_interval?: string | null
           created_at?: string | null
           current_period_end?: string | null
           full_name?: string | null

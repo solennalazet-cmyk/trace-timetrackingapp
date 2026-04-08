@@ -72,12 +72,16 @@ const getDaysInRange = (startStr: string, endStr: string): string[] => {
 };
 
 const renderCompactDateTick = ({ x, y, payload }: any) => {
-  const [weekday, ...rest] = String(payload?.value ?? "").split(" ");
+  const val = String(payload?.value ?? "");
+  // Format: "Wed 2 Apr" — split to weekday + date
+  const parts = val.split(" ");
+  const weekday = parts[0] ?? "";
+  const dateStr = parts.slice(1).join(" ");
   return (
     <g transform={`translate(${x},${y})`}>
-      <text x={0} y={0} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize="11">
-        <tspan x={0} dy={12}>{weekday}</tspan>
-        <tspan x={0} dy={10}>{rest.join(" ")}</tspan>
+      <text x={0} y={0} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize="10">
+        <tspan x={0} dy={10}>{weekday}</tspan>
+        <tspan x={0} dy={11}>{dateStr}</tspan>
       </text>
     </g>
   );

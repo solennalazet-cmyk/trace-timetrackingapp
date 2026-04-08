@@ -533,7 +533,7 @@ const ReportsPage = () => {
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                       <span className="text-base font-bold font-mono text-foreground">{formatHHMM(totalMins)}</span>
-                      <span className="text-xs text-muted-foreground">time</span>
+                      <span className="text-xs text-muted-foreground">{clientFilter ? (timeDonutData.some(d => d.name !== "No task" && d.name !== "No project") ? (displayEntries.filter(e => e.project_id).length > 0 && new Set(displayEntries.map(e => e.project_id).filter(Boolean)).size > 1 ? "by project" : "by task") : "time") : "time"}</span>
                     </div>
                   </div>
 

@@ -657,7 +657,7 @@ const ReportsPage = () => {
           {/* ── 5. Client Cards ── */}
           {rangeEntries.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Clients</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Clients</h3>
               <ClientBillingSummary
                 allEntries={rangeEntries}
                 clients={clients}

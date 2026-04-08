@@ -626,7 +626,7 @@ const ReportsPage = () => {
           {/* ── 4. Goal Progress Bars ── */}
           {(proratedHourTarget > 0 || proratedRevenueTarget > 0) && (
             <div className="mb-6 space-y-3">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Goals</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Goals</h3>
               {proratedHourTarget > 0 && (
                 <div>
                   <div className="flex items-baseline justify-between mb-1">

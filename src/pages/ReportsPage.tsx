@@ -528,26 +528,26 @@ const ReportsPage = () => {
               <div className="mb-6">
                 <div className="flex justify-center gap-4">
                   {/* Time donut */}
-                  <div className="relative" style={{ width: 155, height: 155 }}>
-                    <ResponsiveContainer width={155} height={155}>
+                  <div className="relative" style={{ width: 175, height: 175 }}>
+                    <ResponsiveContainer width={175} height={175}>
                       <PieChart>
                         <Pie
                           data={timeDonutData}
                           innerRadius={42}
                           outerRadius={68}
                           dataKey="value"
-                          stroke="hsl(var(--background))"
-                          strokeWidth={2}
+                          stroke="none"
                           paddingAngle={1}
                           label={(props) => renderInitialsLabel(props, timeDonutData, total)}
                           labelLine={false}
+                          activeIndex={activeTimeIdx}
+                          activeShape={renderActiveShape}
+                          onMouseEnter={(_, idx) => setActiveTimeIdx(idx)}
+                          onMouseLeave={() => setActiveTimeIdx(undefined)}
+                          onClick={(_, idx) => setActiveTimeIdx(prev => prev === idx ? undefined : idx)}
                         >
-                          {timeDonutData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                          {timeDonutData.map((d, i) => <Cell key={i} fill={d.fill} stroke="hsl(var(--background))" strokeWidth={2} />)}
                         </Pie>
-                        <Tooltip
-                          contentStyle={{ borderRadius: 12, fontSize: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
-                          formatter={(value: number) => [formatHHMM(value), ""]}
-                        />
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">

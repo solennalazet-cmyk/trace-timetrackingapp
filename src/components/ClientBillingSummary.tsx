@@ -178,7 +178,7 @@ const ClientBillingSummary = ({
               {/* Key metrics row */}
               <div className="flex items-baseline gap-6">
                 <div>
-                  <p className="text-xl font-bold font-mono text-foreground">{formatHM(c.totalMins)}</p>
+                  <p className="text-lg font-bold font-mono text-foreground">{formatHM(c.totalMins)}</p>
                   <p className="text-xs text-muted-foreground">Total</p>
                 </div>
                 <div>

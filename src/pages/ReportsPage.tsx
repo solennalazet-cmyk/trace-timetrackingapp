@@ -238,11 +238,48 @@ const ReportsPage = () => {
   const revenueProgress = proratedRevenueTarget > 0 ? Math.min(100, (billableValue / proratedRevenueTarget) * 100) : 0;
 
   // ══ DONUT CHART DATA ══
-  // Time donut: per-client hours
+  // Time donut: per-client hours (or per-project/task when single client filtered)
   const timeDonutData = useMemo(() => {
     const data: { name: string; initials: string; value: number; fill: string }[] = [];
+
+    // Single client filtered → drill down by project (or task if ≤1 project)
+    if (clientFilter) {
+      const projectMins: Record<string, number> = {};
+      const taskMins: Record<string, number> = {};
+      let projectCount = 0;
+      const seenProjects = new Set<string>();
+
+      displayEntries.forEach((e) => {
+        const pKey = e.project_id ?? "no-project";
+        projectMins[pKey] = (projectMins[pKey] || 0) + e.duration_minutes;
+        if (e.project_id && !seenProjects.has(e.project_id)) { seenProjects.add(e.project_id); projectCount++; }
+        const tKey = e.task_id ?? "no-task";
+        taskMins[tKey] = (taskMins[tKey] || 0) + e.duration_minutes;
+      });
+
+      if (projectCount <= 1) {
+        // Show task breakdown
+        Object.entries(taskMins).forEach(([key, mins]) => {
+          const name = key === "no-task" ? "No task" : (tasks[key] ?? "Unknown");
+          const initials = name.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+          const idx = data.length;
+          data.push({ name, initials, value: mins, fill: SUNRISE_PALETTE[idx % SUNRISE_PALETTE.length] });
+        });
+      } else {
+        // Show project breakdown
+        Object.entries(projectMins).forEach(([key, mins]) => {
+          const name = key === "no-project" ? "No project" : (projects[key] ?? "Unknown");
+          const initials = name.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+          const idx = data.length;
+          data.push({ name, initials, value: mins, fill: SUNRISE_PALETTE[idx % SUNRISE_PALETTE.length] });
+        });
+      }
+      return data;
+    }
+
+    // All clients view
     const map: Record<string, number> = {};
-    rangeEntries.forEach((e) => {
+    displayEntries.forEach((e) => {
       const key = e.client_id ?? "unassigned";
       map[key] = (map[key] || 0) + e.duration_minutes;
     });
@@ -255,13 +292,13 @@ const ReportsPage = () => {
     });
     if (map["unassigned"]) data.push({ name: "Unassigned", initials: "NA", value: map["unassigned"], fill: "hsl(240 5% 75%)" });
     return data;
-  }, [rangeEntries, clientIds, clients]);
+  }, [displayEntries, clientIds, clients, clientFilter, projects, tasks]);
 
-  // Turnover donut: per-client billable value
+  // Turnover donut: per-client billable value (always by client, even when filtered)
   const turnoverDonutData = useMemo(() => {
     const data: { name: string; initials: string; value: number; fill: string }[] = [];
     const map: Record<string, number> = {};
-    rangeEntries.forEach((e) => {
+    displayEntries.forEach((e) => {
       if (!e.client_id || !e.billable_value) return;
       map[e.client_id] = (map[e.client_id] || 0) + e.billable_value;
     });
@@ -273,7 +310,7 @@ const ReportsPage = () => {
       }
     });
     return data;
-  }, [rangeEntries, clientIds, clients]);
+  }, [displayEntries, clientIds, clients]);
 
   const totalTurnoverValue = turnoverDonutData.reduce((s, d) => s + d.value, 0);
 
@@ -496,7 +533,7 @@ const ReportsPage = () => {
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                       <span className="text-base font-bold font-mono text-foreground">{formatHHMM(totalMins)}</span>
-                      <span className="text-xs text-muted-foreground">time</span>
+                      <span className="text-xs text-muted-foreground">{clientFilter ? (timeDonutData.some(d => d.name !== "No task" && d.name !== "No project") ? (displayEntries.filter(e => e.project_id).length > 0 && new Set(displayEntries.map(e => e.project_id).filter(Boolean)).size > 1 ? "by project" : "by task") : "time") : "time"}</span>
                     </div>
                   </div>
 
@@ -542,11 +579,11 @@ const ReportsPage = () => {
           })()}
 
           {/* ── 4. Client Cards ── */}
-          {rangeEntries.length > 0 && (
+          {displayEntries.length > 0 && (
             <div className="mb-6">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Clients</h3>
               <ClientBillingSummary
-                allEntries={rangeEntries}
+                allEntries={displayEntries}
                 clients={clients}
                 projects={projects}
                 isPro={isPro}

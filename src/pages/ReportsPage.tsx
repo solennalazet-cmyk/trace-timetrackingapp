@@ -75,7 +75,7 @@ const renderCompactDateTick = ({ x, y, payload }: any) => {
   const [weekday, ...rest] = String(payload?.value ?? "").split(" ");
   return (
     <g transform={`translate(${x},${y})`}>
-      <text x={0} y={0} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize="10">
+      <text x={0} y={0} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize="11">
         <tspan x={0} dy={12}>{weekday}</tspan>
         <tspan x={0} dy={10}>{rest.join(" ")}</tspan>
       </text>

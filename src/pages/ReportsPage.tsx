@@ -630,8 +630,8 @@ const ReportsPage = () => {
               {proratedHourTarget > 0 && (
                 <div>
                   <div className="flex items-baseline justify-between mb-1">
-                    <span className="text-xs text-foreground font-medium">Hours</span>
-                    <span className="text-xs text-muted-foreground font-mono">
+                    <span className="text-sm text-foreground font-medium">Hours</span>
+                    <span className="text-sm text-muted-foreground font-mono">
                       {(totalMins / 60).toFixed(1)} / {proratedHourTarget.toFixed(1)}h
                       <span className="ml-1.5 text-foreground font-semibold">{Math.round(hourProgress)}%</span>
                     </span>

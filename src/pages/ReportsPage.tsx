@@ -590,7 +590,7 @@ const ReportsPage = () => {
                 <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1">
                   <div className="shrink-0 flex flex-col items-center">
                     <MiniDonut data={hoursData} centerLabel={formatHHMM(totalMins)} centerSub="hours" />
-                    <span className="text-[10px] text-muted-foreground mt-1">Hours</span>
+                    <span className="text-xs text-muted-foreground mt-1">Hours</span>
                   </div>
                   {turnoverData.length > 0 && (
                     <div className="shrink-0 flex flex-col items-center">

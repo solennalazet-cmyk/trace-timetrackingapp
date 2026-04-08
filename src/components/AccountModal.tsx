@@ -33,6 +33,21 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
   const [portalLoading, setPortalLoading] = useState(false);
   const [upgradeInterval, setUpgradeInterval] = useState<"monthly" | "yearly">("monthly");
 
+  // Obfuscated support email — assembled at runtime to prevent scraping
+  const supportEmail = useMemo(() => "connect" + "@" + "lla-studio" + ".com", []);
+
+  // Check if yearly subscriber is within 30-day refund window
+  const isInRefundWindow = useMemo(() => {
+    if (!profile || (profile as any).billing_interval !== "year" || profile.plan !== "pro") return false;
+    if (!profile.current_period_end) return false;
+    // current_period_end is end of yearly period; subscription started ~1 year before
+    const periodEnd = new Date(profile.current_period_end);
+    const subscriptionStart = new Date(periodEnd);
+    subscriptionStart.setFullYear(subscriptionStart.getFullYear() - 1);
+    const daysSinceStart = (Date.now() - subscriptionStart.getTime()) / (1000 * 60 * 60 * 24);
+    return daysSinceStart <= 30;
+  }, [profile]);
+
   if (!user || !profile) return null;
 
   const memberSince = new Date(profile.created_at ?? user.created_at ?? "").toLocaleDateString("en-GB", {
@@ -89,15 +104,6 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
     setDeleting(false);
     setDeleteOpen(false);
   };
-
-  // Obfuscated support email — assembled at runtime to prevent scraping
-  const supportEmail = useMemo(() => "connect" + "@" + "lla-studio" + ".com", []);
-
-  // Check if yearly subscriber is within 30-day refund window
-  const isInRefundWindow = useMemo(() => {
-    if ((profile as any).billing_interval !== "year" || profile.plan !== "pro") return false;
-    if (!profile.current_period_end) return false;
-    // current_period_end is end of yearly period; subscription started ~1 year before
     const periodEnd = new Date(profile.current_period_end);
     const subscriptionStart = new Date(periodEnd);
     subscriptionStart.setFullYear(subscriptionStart.getFullYear() - 1);

@@ -362,7 +362,7 @@ const ReportsPage = () => {
         <div className="flex gap-1.5 overflow-x-auto pb-3 -mx-1 px-1 scrollbar-none">
           <button
             onClick={() => setClientFilter("")}
-            className={`shrink-0 px-3 py-1.5 text-[11px] font-medium rounded-full border transition-colors ${
+            className={`shrink-0 px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
               !clientFilter
                 ? "border-primary bg-primary/20 text-foreground"
                 : "border-border text-muted-foreground hover:bg-muted/30"

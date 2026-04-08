@@ -176,18 +176,18 @@ const ClientBillingSummary = ({
               </div>
 
               {/* Key metrics row */}
-              <div className="flex items-baseline gap-4">
+              <div className="flex items-baseline gap-6">
                 <div>
-                  <p className="text-lg font-bold font-mono text-foreground">{formatHM(c.totalMins)}</p>
-                  <p className="text-[10px] text-muted-foreground">Total</p>
+                  <p className="text-xl font-bold font-mono text-foreground">{formatHM(c.totalMins)}</p>
+                  <p className="text-xs text-muted-foreground">Total</p>
                 </div>
                 <div>
-                  <p className="text-lg font-bold font-mono text-foreground">{sym}{c.billableValue.toFixed(0)}</p>
-                  <p className="text-[10px] text-muted-foreground">Billable</p>
+                  <p className="text-xl font-bold font-mono text-foreground">{sym}{c.billableValue.toFixed(0)}</p>
+                  <p className="text-xs text-muted-foreground">Billable</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium font-mono text-muted-foreground">{formatHM(Math.round(avgPerDay))}</p>
-                  <p className="text-[10px] text-muted-foreground">Avg/day</p>
+                  <p className="text-base font-medium font-mono text-muted-foreground">{formatHM(Math.round(avgPerDay))}</p>
+                  <p className="text-xs text-muted-foreground">Avg/day</p>
                 </div>
               </div>
             </button>

@@ -642,8 +642,8 @@ const ReportsPage = () => {
               {proratedRevenueTarget > 0 && (
                 <div>
                   <div className="flex items-baseline justify-between mb-1">
-                    <span className="text-xs text-foreground font-medium">Revenue</span>
-                    <span className="text-xs text-muted-foreground font-mono">
+                    <span className="text-sm text-foreground font-medium">Revenue</span>
+                    <span className="text-sm text-muted-foreground font-mono">
                       €{billableValue.toFixed(0)} / €{proratedRevenueTarget.toFixed(0)}
                       <span className="ml-1.5 text-foreground font-semibold">{Math.round(revenueProgress)}%</span>
                     </span>

@@ -374,7 +374,7 @@ const ReportsPage = () => {
             <button
               key={id}
               onClick={() => setClientFilter(clientFilter === id ? "" : id)}
-              className={`shrink-0 px-3 py-1.5 text-[11px] font-medium rounded-full border transition-colors flex items-center gap-1.5 ${
+              className={`shrink-0 px-3 py-1.5 text-xs font-medium rounded-full border transition-colors flex items-center gap-1.5 ${
                 clientFilter === id
                   ? "border-primary bg-primary/20 text-foreground"
                   : "border-border text-muted-foreground hover:bg-muted/30"

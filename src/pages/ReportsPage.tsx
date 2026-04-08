@@ -320,7 +320,7 @@ const ReportsPage = () => {
   const stackedChartData = useMemo(() => {
     const days = getDaysInRange(rangeStart, rangeEnd);
     const chartClientIds = clientFilter ? [clientFilter] : clientIds;
-    return days.map((day) => {
+    const allRows = days.map((day) => {
       const dayEntries = displayEntries.filter((e) => e.entry_date === day);
       const row: any = {
         date: day,
@@ -336,6 +336,12 @@ const ReportsPage = () => {
       }
       return row;
     });
+    // Trim empty days from start and end
+    let first = allRows.findIndex((r) => r._total > 0);
+    let last = allRows.length - 1;
+    while (last > first && allRows[last]._total === 0) last--;
+    if (first === -1) return [];
+    return allRows.slice(first, last + 1);
   }, [displayEntries, rangeStart, rangeEnd, clientIds, clientFilter]);
 
   // Trash

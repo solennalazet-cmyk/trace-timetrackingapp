@@ -86,6 +86,21 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
     setLoading(false);
   };
 
+  const handleAppleSSO = async () => {
+    setLoading(true);
+    setError("");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "apple",
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+    if (error) {
+      setError("Something went wrong. Check your connection.");
+    }
+    setLoading(false);
+  };
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");

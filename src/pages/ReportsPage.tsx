@@ -606,7 +606,7 @@ const ReportsPage = () => {
                 {/* Shared legend */}
                 <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-2">
                   {types.map((t) => (
-                    <div key={t} className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                    <div key={t} className="flex items-center gap-1 text-xs text-muted-foreground">
                       <div className="w-2 h-2 rounded-full" style={{ background: ENTRY_TYPE_COLORS[t] ?? "hsl(var(--muted-foreground))" }} />
                       {ENTRY_TYPE_ICONS[t]} {ENTRY_TYPE_LABELS[t] ?? t}
                     </div>

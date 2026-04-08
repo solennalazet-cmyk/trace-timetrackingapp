@@ -57,6 +57,12 @@ const formatHHMM = (mins: number) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
+const formatCompactHM = (mins: number) => {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${h}h${String(m).padStart(2, "0")}`;
+};
+
 const getDaysInRange = (startStr: string, endStr: string): string[] => {
   const days: string[] = [];
   const [sY, sM, sD] = startStr.split("-").map(Number);

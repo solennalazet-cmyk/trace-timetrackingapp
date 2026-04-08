@@ -224,7 +224,7 @@ const ClientBillingSummary = ({
                     <button
                       key={entry.id}
                       onClick={() => onEditEntry?.(entry)}
-                      className="w-full flex items-center justify-between px-4 py-2.5 text-xs border-b border-border last:border-b-0 hover:bg-muted/40 transition-colors text-left"
+                      className="w-full flex items-center justify-between px-4 py-2.5 text-sm border-b border-border last:border-b-0 hover:bg-muted/40 transition-colors text-left"
                     >
                       <div className="flex flex-col gap-0.5">
                         <span className="text-muted-foreground">

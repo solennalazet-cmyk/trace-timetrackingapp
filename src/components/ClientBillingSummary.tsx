@@ -154,9 +154,10 @@ const ClientBillingSummary = ({
         return (
           <div
             key={c.id}
-            className={`rounded-2xl border bg-card overflow-hidden transition-all ${
-              activeClientFilter === c.id ? "border-primary ring-1 ring-primary/30" : "border-border"
+            className={`rounded-2xl border overflow-hidden transition-all ${
+              activeClientFilter === c.id ? "border-primary ring-1 ring-primary/30" : "border-border/60"
             }`}
+            style={{ background: `${color.replace(")", " / 0.15)")}` }}
           >
             {/* Card header — clickable to expand */}
             <button
@@ -166,7 +167,7 @@ const ClientBillingSummary = ({
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2.5">
                   <div className="w-3 h-3 rounded-full shrink-0" style={{ background: color }} />
-                  <span className="text-sm font-semibold text-foreground">{c.name}</span>
+                  <span className="text-base font-semibold text-foreground">{c.name}</span>
                 </div>
                 {isExpanded
                   ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
@@ -175,18 +176,18 @@ const ClientBillingSummary = ({
               </div>
 
               {/* Key metrics row */}
-              <div className="flex items-baseline gap-4">
+              <div className="flex items-baseline gap-6">
                 <div>
-                  <p className="text-lg font-bold font-mono text-foreground">{formatHM(c.totalMins)}</p>
-                  <p className="text-[10px] text-muted-foreground">Total</p>
+                  <p className="text-xl font-bold font-mono text-foreground">{formatHM(c.totalMins)}</p>
+                  <p className="text-xs text-muted-foreground">Total</p>
                 </div>
                 <div>
-                  <p className="text-lg font-bold font-mono text-foreground">{sym}{c.billableValue.toFixed(0)}</p>
-                  <p className="text-[10px] text-muted-foreground">Billable</p>
+                  <p className="text-xl font-bold font-mono text-foreground">{sym}{c.billableValue.toFixed(0)}</p>
+                  <p className="text-xs text-muted-foreground">Billable</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium font-mono text-muted-foreground">{formatHM(Math.round(avgPerDay))}</p>
-                  <p className="text-[10px] text-muted-foreground">Avg/day</p>
+                  <p className="text-base font-medium font-mono text-muted-foreground">{formatHM(Math.round(avgPerDay))}</p>
+                  <p className="text-xs text-muted-foreground">Avg/day</p>
                 </div>
               </div>
             </button>
@@ -223,7 +224,7 @@ const ClientBillingSummary = ({
                     <button
                       key={entry.id}
                       onClick={() => onEditEntry?.(entry)}
-                      className="w-full flex items-center justify-between px-4 py-2.5 text-xs border-b border-border last:border-b-0 hover:bg-muted/40 transition-colors text-left"
+                      className="w-full flex items-center justify-between px-4 py-2.5 text-sm border-b border-border last:border-b-0 hover:bg-muted/40 transition-colors text-left"
                     >
                       <div className="flex flex-col gap-0.5">
                         <span className="text-muted-foreground">

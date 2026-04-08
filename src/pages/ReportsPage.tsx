@@ -75,7 +75,7 @@ const renderCompactDateTick = ({ x, y, payload }: any) => {
   const [weekday, ...rest] = String(payload?.value ?? "").split(" ");
   return (
     <g transform={`translate(${x},${y})`}>
-      <text x={0} y={0} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize="10">
+      <text x={0} y={0} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize="11">
         <tspan x={0} dy={12}>{weekday}</tspan>
         <tspan x={0} dy={10}>{rest.join(" ")}</tspan>
       </text>
@@ -94,9 +94,21 @@ const ReportsPage = () => {
   const [weekStartDay, setWeekStartDay] = useState(1);
   const [defaultRange, setDefaultRange] = useState("monthly");
 
-  // Load user settings
+  // Settings are loaded inside the date initialization effect below
+
+  // Initialize dates based on default range
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [datesInitialized, setDatesInitialized] = useState(false);
+  const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [dateTo, setDateTo] = useState<Date>(() => {
+    const s = startOfWeek(new Date(), { weekStartsOn: 1 });
+    s.setDate(s.getDate() + 6);
+    return s;
+  });
+
+  // Mark settings as loaded after fetch
   useEffect(() => {
-    if (!user) return;
+    if (!user) { setSettingsLoaded(true); return; }
     supabase.from("user_settings")
       .select("daily_hour_target, revenue_target, week_start_day, default_report_range")
       .eq("user_id", user.id).single()
@@ -107,20 +119,12 @@ const ReportsPage = () => {
           setWeekStartDay((data as any).week_start_day ?? 1);
           setDefaultRange((data as any).default_report_range ?? "monthly");
         }
+        setSettingsLoaded(true);
       });
   }, [user]);
 
-  // Initialize dates based on default range
-  const [datesInitialized, setDatesInitialized] = useState(false);
-  const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const [dateTo, setDateTo] = useState<Date>(() => {
-    const s = startOfWeek(new Date(), { weekStartsOn: 1 });
-    s.setDate(s.getDate() + 6);
-    return s;
-  });
-
   useEffect(() => {
-    if (datesInitialized) return;
+    if (datesInitialized || !settingsLoaded) return;
     const now = new Date();
     let from: Date;
     let to: Date = now;
@@ -135,7 +139,7 @@ const ReportsPage = () => {
     setDateFrom(from);
     setDateTo(to);
     setDatesInitialized(true);
-  }, [defaultRange, weekStartDay, datesInitialized]);
+  }, [defaultRange, weekStartDay, datesInitialized, settingsLoaded]);
 
   const [rangeEntries, setRangeEntries] = useState<TimeEntry[]>([]);
   const [clients, setClients] = useState<Record<string, string>>({});
@@ -234,28 +238,44 @@ const ReportsPage = () => {
   const revenueProgress = proratedRevenueTarget > 0 ? Math.min(100, (billableValue / proratedRevenueTarget) * 100) : 0;
 
   // ══ DONUT CHART DATA ══
-  // Outer ring: per-client hours
-  const outerDonutData = useMemo(() => {
-    const data: { name: string; value: number; fill: string }[] = [];
+  // Time donut: per-client hours
+  const timeDonutData = useMemo(() => {
+    const data: { name: string; initials: string; value: number; fill: string }[] = [];
     const map: Record<string, number> = {};
     rangeEntries.forEach((e) => {
       const key = e.client_id ?? "unassigned";
       map[key] = (map[key] || 0) + e.duration_minutes;
     });
-    clientIds.forEach((id, i) => {
-      if (map[id]) data.push({ name: clients[id] ?? "Unknown", value: map[id], fill: getClientColor(id) });
+    clientIds.forEach((id) => {
+      if (map[id]) {
+        const name = clients[id] ?? "Unknown";
+        const initials = name.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+        data.push({ name, initials, value: map[id], fill: getClientColor(id) });
+      }
     });
-    if (map["unassigned"]) data.push({ name: "Unassigned", value: map["unassigned"], fill: "hsl(240 5% 75%)" });
+    if (map["unassigned"]) data.push({ name: "Unassigned", initials: "NA", value: map["unassigned"], fill: "hsl(240 5% 75%)" });
     return data;
   }, [rangeEntries, clientIds, clients]);
 
-  // Inner ring: billable vs non-billable
-  const innerDonutData = useMemo(() => {
-    return [
-      { name: "Billable", value: billableMins, fill: "hsl(var(--primary))" },
-      { name: "Non-billable", value: nonBillableMins, fill: "hsl(var(--muted-foreground) / 0.3)" },
-    ].filter((d) => d.value > 0);
-  }, [billableMins, nonBillableMins]);
+  // Turnover donut: per-client billable value
+  const turnoverDonutData = useMemo(() => {
+    const data: { name: string; initials: string; value: number; fill: string }[] = [];
+    const map: Record<string, number> = {};
+    rangeEntries.forEach((e) => {
+      if (!e.client_id || !e.billable_value) return;
+      map[e.client_id] = (map[e.client_id] || 0) + e.billable_value;
+    });
+    clientIds.forEach((id) => {
+      if (map[id]) {
+        const name = clients[id] ?? "Unknown";
+        const initials = name.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+        data.push({ name, initials, value: map[id], fill: getClientColor(id) });
+      }
+    });
+    return data;
+  }, [rangeEntries, clientIds, clients]);
+
+  const totalTurnoverValue = turnoverDonutData.reduce((s, d) => s + d.value, 0);
 
   // ══ STACKED BAR CHART ══
   const stackedChartData = useMemo(() => {
@@ -358,7 +378,7 @@ const ReportsPage = () => {
         <div className="flex gap-1.5 overflow-x-auto pb-3 -mx-1 px-1 scrollbar-none">
           <button
             onClick={() => setClientFilter("")}
-            className={`shrink-0 px-3 py-1.5 text-[11px] font-medium rounded-full border transition-colors ${
+            className={`shrink-0 px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
               !clientFilter
                 ? "border-primary bg-primary/20 text-foreground"
                 : "border-border text-muted-foreground hover:bg-muted/30"
@@ -370,7 +390,7 @@ const ReportsPage = () => {
             <button
               key={id}
               onClick={() => setClientFilter(clientFilter === id ? "" : id)}
-              className={`shrink-0 px-3 py-1.5 text-[11px] font-medium rounded-full border transition-colors flex items-center gap-1.5 ${
+              className={`shrink-0 px-3 py-1.5 text-xs font-medium rounded-full border transition-colors flex items-center gap-1.5 ${
                 clientFilter === id
                   ? "border-primary bg-primary/20 text-foreground"
                   : "border-border text-muted-foreground hover:bg-muted/30"
@@ -383,7 +403,7 @@ const ReportsPage = () => {
           {clientFilter && (
             <button
               onClick={() => setClientFilter("")}
-              className="shrink-0 px-2 py-1.5 text-[11px] text-primary hover:underline"
+              className="shrink-0 px-2 py-1.5 text-xs text-primary hover:underline"
             >
               <X className="w-3 h-3" />
             </button>
@@ -406,72 +426,100 @@ const ReportsPage = () => {
 
         <div className={isFree ? "blur-sm pointer-events-none select-none" : ""}>
 
-          {/* ── 3. Nested Donut Chart ── */}
-          {outerDonutData.length > 0 && (
-            <div className="mb-6">
-              <div className="flex justify-center">
-                <div className="relative" style={{ width: 220, height: 220 }}>
-                  <ResponsiveContainer width={220} height={220}>
-                    <PieChart>
-                      {/* Outer ring: clients */}
-                      <Pie
-                        data={outerDonutData}
-                        innerRadius={72}
-                        outerRadius={100}
-                        dataKey="value"
-                        stroke="hsl(var(--background))"
-                        strokeWidth={2}
-                        paddingAngle={1}
-                      >
-                        {outerDonutData.map((d, i) => <Cell key={i} fill={d.fill} />)}
-                      </Pie>
-                      {/* Inner ring: billable/non-billable */}
-                      <Pie
-                        data={innerDonutData}
-                        innerRadius={50}
-                        outerRadius={68}
-                        dataKey="value"
-                        stroke="hsl(var(--background))"
-                        strokeWidth={2}
-                        paddingAngle={1}
-                      >
-                        {innerDonutData.map((d, i) => <Cell key={i} fill={d.fill} />)}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{ borderRadius: 12, fontSize: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
-                        formatter={(value: number) => [formatHHMM(value), ""]}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  {/* Center label */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-xl font-bold font-mono text-foreground">{formatHHMM(totalMins)}</span>
-                    <span className="text-[10px] text-muted-foreground">total</span>
-                  </div>
-                </div>
-              </div>
+          {/* ── 3. Dual Donut Charts: Time & Turnover ── */}
+          {timeDonutData.length > 0 && (() => {
+            const total = timeDonutData.reduce((s, d) => s + d.value, 0);
+            const totalTurnover = turnoverDonutData.reduce((s, d) => s + d.value, 0);
 
-              {/* Legend */}
-              <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-3">
-                {outerDonutData.map((d) => (
-                  <div key={d.name} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <div className="w-2 h-2 rounded-full" style={{ background: d.fill }} />
-                    {d.name}
+            const renderInitialsLabel = (props: any, data: { initials: string; value: number }[], dataTotal: number) => {
+              const { cx, cy, midAngle, innerRadius, outerRadius, index } = props;
+              const entry = data[index];
+              if (!entry || entry.value / dataTotal < 0.06) return null;
+              const RADIAN = Math.PI / 180;
+              const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+              const x = cx + radius * Math.cos(-midAngle * RADIAN);
+              const y = cy + radius * Math.sin(-midAngle * RADIAN);
+              return (
+                <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={11} fontWeight={700}>
+                  {entry.initials}
+                </text>
+              );
+            };
+
+            const sym = "€";
+
+            return (
+              <div className="mb-6">
+                <div className="flex justify-center gap-4">
+                  {/* Time donut */}
+                  <div className="relative" style={{ width: 155, height: 155 }}>
+                    <ResponsiveContainer width={155} height={155}>
+                      <PieChart>
+                        <Pie
+                          data={timeDonutData}
+                          innerRadius={42}
+                          outerRadius={68}
+                          dataKey="value"
+                          stroke="hsl(var(--background))"
+                          strokeWidth={2}
+                          paddingAngle={1}
+                          label={(props) => renderInitialsLabel(props, timeDonutData, total)}
+                          labelLine={false}
+                        >
+                          {timeDonutData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{ borderRadius: 12, fontSize: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
+                          formatter={(value: number) => [formatHHMM(value), ""]}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <span className="text-lg font-bold font-mono text-foreground">{formatHHMM(totalMins)}</span>
+                      <span className="text-xs text-muted-foreground">time</span>
+                    </div>
                   </div>
-                ))}
-              </div>
-              <div className="flex justify-center gap-4 mt-1">
-                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <div className="w-2 h-2 rounded-full" style={{ background: "hsl(var(--primary))" }} />
-                  Billable {formatHHMM(billableMins)}
+
+                  {/* Turnover donut */}
+                  {turnoverDonutData.length > 0 && (
+                    <div className="relative" style={{ width: 155, height: 155 }}>
+                      <ResponsiveContainer width={155} height={155}>
+                        <PieChart>
+                          <Pie
+                            data={turnoverDonutData}
+                            innerRadius={42}
+                            outerRadius={68}
+                            dataKey="value"
+                            stroke="hsl(var(--background))"
+                            strokeWidth={2}
+                            paddingAngle={1}
+                            label={(props) => renderInitialsLabel(props, turnoverDonutData, totalTurnover)}
+                            labelLine={false}
+                          >
+                            {turnoverDonutData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{ borderRadius: 12, fontSize: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
+                            formatter={(value: number) => [`${sym}${value.toFixed(2)}`, ""]}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="text-lg font-bold font-mono text-foreground">{sym}{totalTurnoverValue.toFixed(0)}</span>
+                        <span className="text-xs text-muted-foreground">turnover</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <div className="w-2 h-2 rounded-full" style={{ background: "hsl(var(--muted-foreground) / 0.3)" }} />
-                  Non-billable {formatHHMM(nonBillableMins)}
+
+                {/* Billable / Non-billable summary text */}
+                <div className="flex justify-center gap-6 mt-3 text-xs text-muted-foreground">
+                  <span>Billable: {formatHHMM(billableMins)}</span>
+                  {nonBillableMins > 0 && <span>Non-billable: {formatHHMM(nonBillableMins)}</span>}
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* ── Entry Type Mini Donuts ── */}
           {rangeEntries.length > 0 && (() => {
@@ -530,35 +578,35 @@ const ReportsPage = () => {
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-xs font-bold font-mono text-foreground">{centerLabel}</span>
-                  <span className="text-[9px] text-muted-foreground">{centerSub === "turnover" ? "turnover" : centerSub}</span>
+                  <span className="text-sm font-bold font-mono text-foreground">{centerLabel}</span>
+                  <span className="text-[11px] text-muted-foreground">{centerSub === "turnover" ? "turnover" : centerSub}</span>
                 </div>
               </div>
             );
 
             return (
               <div className="mb-5">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">By Entry Type</h3>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">By Entry Type</h3>
                 <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1">
                   <div className="shrink-0 flex flex-col items-center">
                     <MiniDonut data={hoursData} centerLabel={formatHHMM(totalMins)} centerSub="hours" />
-                    <span className="text-[10px] text-muted-foreground mt-1">Hours</span>
+                    <span className="text-xs text-muted-foreground mt-1">Hours</span>
                   </div>
                   {turnoverData.length > 0 && (
                     <div className="shrink-0 flex flex-col items-center">
                       <MiniDonut data={turnoverData} centerLabel={`€${totalTurnover.toFixed(0)}`} centerSub="turnover" />
-                      <span className="text-[10px] text-muted-foreground mt-1">Turnover</span>
+                      <span className="text-xs text-muted-foreground mt-1">Turnover</span>
                     </div>
                   )}
                   <div className="shrink-0 flex flex-col items-center">
                     <MiniDonut data={avgData} centerLabel={formatHHMM(Math.round(totalMins / (displayEntries.length || 1)))} centerSub="avg" />
-                    <span className="text-[10px] text-muted-foreground mt-1">Avg Session</span>
+                    <span className="text-xs text-muted-foreground mt-1">Avg Session</span>
                   </div>
                 </div>
                 {/* Shared legend */}
                 <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-2">
                   {types.map((t) => (
-                    <div key={t} className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                    <div key={t} className="flex items-center gap-1 text-xs text-muted-foreground">
                       <div className="w-2 h-2 rounded-full" style={{ background: ENTRY_TYPE_COLORS[t] ?? "hsl(var(--muted-foreground))" }} />
                       {ENTRY_TYPE_ICONS[t]} {ENTRY_TYPE_LABELS[t] ?? t}
                     </div>
@@ -578,12 +626,12 @@ const ReportsPage = () => {
           {/* ── 4. Goal Progress Bars ── */}
           {(proratedHourTarget > 0 || proratedRevenueTarget > 0) && (
             <div className="mb-6 space-y-3">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Goals</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Goals</h3>
               {proratedHourTarget > 0 && (
                 <div>
                   <div className="flex items-baseline justify-between mb-1">
-                    <span className="text-xs text-foreground font-medium">Hours</span>
-                    <span className="text-xs text-muted-foreground font-mono">
+                    <span className="text-sm text-foreground font-medium">Hours</span>
+                    <span className="text-sm text-muted-foreground font-mono">
                       {(totalMins / 60).toFixed(1)} / {proratedHourTarget.toFixed(1)}h
                       <span className="ml-1.5 text-foreground font-semibold">{Math.round(hourProgress)}%</span>
                     </span>
@@ -594,8 +642,8 @@ const ReportsPage = () => {
               {proratedRevenueTarget > 0 && (
                 <div>
                   <div className="flex items-baseline justify-between mb-1">
-                    <span className="text-xs text-foreground font-medium">Revenue</span>
-                    <span className="text-xs text-muted-foreground font-mono">
+                    <span className="text-sm text-foreground font-medium">Revenue</span>
+                    <span className="text-sm text-muted-foreground font-mono">
                       €{billableValue.toFixed(0)} / €{proratedRevenueTarget.toFixed(0)}
                       <span className="ml-1.5 text-foreground font-semibold">{Math.round(revenueProgress)}%</span>
                     </span>
@@ -609,7 +657,7 @@ const ReportsPage = () => {
           {/* ── 5. Client Cards ── */}
           {rangeEntries.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Clients</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Clients</h3>
               <ClientBillingSummary
                 allEntries={rangeEntries}
                 clients={clients}
@@ -647,7 +695,7 @@ const ReportsPage = () => {
           {/* ── 6. Daily Breakdown Stacked Bar ── */}
           {stackedChartData.length > 0 && rangeEntries.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Daily Breakdown</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Daily Breakdown</h3>
               <div className="w-full" style={{ minHeight: 200 }}>
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={stackedChartData} barCategoryGap="12%" margin={{ top: 8, right: 0, left: -20, bottom: 0 }}>

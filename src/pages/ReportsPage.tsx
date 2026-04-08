@@ -624,7 +624,7 @@ const ReportsPage = () => {
 
             return (
               <div className="mb-5">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">By Entry Type</h3>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">By Entry Type</h3>
                 <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1">
                   <div className="shrink-0 flex flex-col items-center">
                     <MiniDonut data={hoursData} centerLabel={formatHHMM(totalMins)} centerSub="hours" />
@@ -664,7 +664,7 @@ const ReportsPage = () => {
           {/* ── 4. Goal Progress Bars ── */}
           {(proratedHourTarget > 0 || proratedRevenueTarget > 0) && (
             <div className="mb-6 space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Goals</h3>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Goals</h3>
               {proratedHourTarget > 0 && (
                 <div>
                   <div className="flex items-baseline justify-between mb-1">
@@ -698,7 +698,7 @@ const ReportsPage = () => {
           {/* ── 6. Daily Breakdown Stacked Bar ── */}
           {stackedChartData.length > 0 && rangeEntries.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Daily Breakdown</h3>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Daily Breakdown</h3>
               <div className="w-full" style={{ minHeight: 200 }}>
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={stackedChartData} barCategoryGap="12%" margin={{ top: 8, right: 0, left: -20, bottom: 0 }}>

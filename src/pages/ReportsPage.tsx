@@ -3,7 +3,7 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
 } from "recharts";
 import {
-  ChevronDown, ChevronUp, Timer, PenLine, Clock, Phone,
+  ChevronDown, ChevronUp,
   Crown, Download, Trash2, X,
 } from "lucide-react";
 import { startOfWeek, startOfMonth } from "date-fns";

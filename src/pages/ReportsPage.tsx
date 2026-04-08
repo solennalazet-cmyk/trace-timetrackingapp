@@ -387,7 +387,7 @@ const ReportsPage = () => {
           {clientFilter && (
             <button
               onClick={() => setClientFilter("")}
-              className="shrink-0 px-2 py-1.5 text-[11px] text-primary hover:underline"
+              className="shrink-0 px-2 py-1.5 text-xs text-primary hover:underline"
             >
               <X className="w-3 h-3" />
             </button>

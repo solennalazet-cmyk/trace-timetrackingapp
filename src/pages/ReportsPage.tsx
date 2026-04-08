@@ -360,6 +360,25 @@ const ReportsPage = () => {
     loadData();
   };
 
+  // Scroll-based header blur for Reports page
+  useEffect(() => {
+    const header = document.getElementById("app-header");
+    if (!header) return;
+    const onScroll = () => {
+      if (window.scrollY > 8) {
+        header.classList.add("backdrop-blur-md", "bg-background/70");
+      } else {
+        header.classList.remove("backdrop-blur-md", "bg-background/70");
+      }
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      header.classList.remove("backdrop-blur-md", "bg-background/70");
+    };
+  }, []);
+
   if (loading) return <div className="flex items-center justify-center min-h-[60vh] text-muted-foreground text-sm">Loading…</div>;
 
   return (
@@ -426,45 +445,7 @@ const ReportsPage = () => {
 
         <div className={isFree ? "blur-sm pointer-events-none select-none" : ""}>
 
-          {/* ── 3. Client Cards ── */}
-          {rangeEntries.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Clients</h3>
-              <ClientBillingSummary
-                allEntries={rangeEntries}
-                clients={clients}
-                projects={projects}
-                isPro={isPro}
-                clientColorMap={clientColorMap}
-                rangeStart={rangeStart}
-                rangeEnd={rangeEnd}
-                rangeLabel={`${dateFrom.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} — ${dateTo.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`}
-                onBillClient={(clientId) => {
-                  setBillingClientId(clientId);
-                  setBillingOpen(true);
-                }}
-                onOpenUnassigned={() => setUnassignedOpen(true)}
-                onEditEntry={handleEdit}
-                activeClientFilter={clientFilter}
-                onFilterClient={(id) => setClientFilter(id ?? "")}
-                onDeleteEntry={async (entryId) => {
-                  if (user) {
-                    await supabase.from("time_entries").update({ deleted_at: new Date().toISOString() }).eq("id", entryId);
-                    toast("Entry deleted.", {
-                      action: { label: "Undo", onClick: async () => {
-                        await supabase.from("time_entries").update({ deleted_at: null }).eq("id", entryId);
-                        loadData();
-                      }},
-                      duration: 5000,
-                    });
-                    loadData();
-                  }
-                }}
-              />
-            </div>
-          )}
-
-          {/* ── 4. Dual Donut Charts: Time & Turnover ── */}
+          {/* ── 3. Dual Donut Charts: Time & Turnover ── */}
           {timeDonutData.length > 0 && (() => {
             const total = timeDonutData.reduce((s, d) => s + d.value, 0);
             const totalTurnover = turnoverDonutData.reduce((s, d) => s + d.value, 0);
@@ -513,7 +494,7 @@ const ReportsPage = () => {
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                      <span className="text-lg font-bold font-mono text-foreground">{formatHHMM(totalMins)}</span>
+                      <span className="text-base font-bold font-mono text-foreground">{formatHHMM(totalMins)}</span>
                       <span className="text-xs text-muted-foreground">time</span>
                     </div>
                   </div>
@@ -543,7 +524,7 @@ const ReportsPage = () => {
                         </PieChart>
                       </ResponsiveContainer>
                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-lg font-bold font-mono text-foreground">{sym}{totalTurnoverValue.toFixed(0)}</span>
+                        <span className="text-base font-bold font-mono text-foreground">{sym}{totalTurnoverValue.toFixed(0)}</span>
                         <span className="text-xs text-muted-foreground">turnover</span>
                       </div>
                     </div>
@@ -558,6 +539,44 @@ const ReportsPage = () => {
               </div>
             );
           })()}
+
+          {/* ── 4. Client Cards ── */}
+          {rangeEntries.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Clients</h3>
+              <ClientBillingSummary
+                allEntries={rangeEntries}
+                clients={clients}
+                projects={projects}
+                isPro={isPro}
+                clientColorMap={clientColorMap}
+                rangeStart={rangeStart}
+                rangeEnd={rangeEnd}
+                rangeLabel={`${dateFrom.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} — ${dateTo.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`}
+                onBillClient={(clientId) => {
+                  setBillingClientId(clientId);
+                  setBillingOpen(true);
+                }}
+                onOpenUnassigned={() => setUnassignedOpen(true)}
+                onEditEntry={handleEdit}
+                activeClientFilter={clientFilter}
+                onFilterClient={(id) => setClientFilter(id ?? "")}
+                onDeleteEntry={async (entryId) => {
+                  if (user) {
+                    await supabase.from("time_entries").update({ deleted_at: new Date().toISOString() }).eq("id", entryId);
+                    toast("Entry deleted.", {
+                      action: { label: "Undo", onClick: async () => {
+                        await supabase.from("time_entries").update({ deleted_at: null }).eq("id", entryId);
+                        loadData();
+                      }},
+                      duration: 5000,
+                    });
+                    loadData();
+                  }
+                }}
+              />
+            </div>
+          )}
 
           {/* ── Entry Type Mini Donuts ── */}
           {rangeEntries.length > 0 && (() => {
@@ -624,7 +643,7 @@ const ReportsPage = () => {
 
             return (
               <div className="mb-5">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">By Entry Type</h3>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">By Entry Type</h3>
                 <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1">
                   <div className="shrink-0 flex flex-col items-center">
                     <MiniDonut data={hoursData} centerLabel={formatHHMM(totalMins)} centerSub="hours" />
@@ -664,7 +683,7 @@ const ReportsPage = () => {
           {/* ── 4. Goal Progress Bars ── */}
           {(proratedHourTarget > 0 || proratedRevenueTarget > 0) && (
             <div className="mb-6 space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Goals</h3>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Goals</h3>
               {proratedHourTarget > 0 && (
                 <div>
                   <div className="flex items-baseline justify-between mb-1">
@@ -698,7 +717,7 @@ const ReportsPage = () => {
           {/* ── 6. Daily Breakdown Stacked Bar ── */}
           {stackedChartData.length > 0 && rangeEntries.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Daily Breakdown</h3>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Daily Breakdown</h3>
               <div className="w-full" style={{ minHeight: 200 }}>
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={stackedChartData} barCategoryGap="12%" margin={{ top: 8, right: 0, left: -20, bottom: 0 }}>

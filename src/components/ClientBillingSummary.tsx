@@ -154,9 +154,10 @@ const ClientBillingSummary = ({
         return (
           <div
             key={c.id}
-            className={`rounded-2xl border bg-card overflow-hidden transition-all ${
-              activeClientFilter === c.id ? "border-primary ring-1 ring-primary/30" : "border-border"
+            className={`rounded-2xl border overflow-hidden transition-all ${
+              activeClientFilter === c.id ? "border-primary ring-1 ring-primary/30" : "border-border/60"
             }`}
+            style={{ background: `${color.replace(")", " / 0.15)")}` }}
           >
             {/* Card header — clickable to expand */}
             <button

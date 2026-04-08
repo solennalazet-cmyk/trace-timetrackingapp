@@ -99,12 +99,8 @@ const ReportsPage = () => {
   // Initialize dates based on default range
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [datesInitialized, setDatesInitialized] = useState(false);
-  const [dateFrom, setDateFrom] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const [dateTo, setDateTo] = useState<Date>(() => {
-    const s = startOfWeek(new Date(), { weekStartsOn: 1 });
-    s.setDate(s.getDate() + 6);
-    return s;
-  });
+  const [dateFrom, setDateFrom] = useState<Date>(new Date());
+  const [dateTo, setDateTo] = useState<Date>(new Date());
 
   // Mark settings as loaded after fetch
   useEffect(() => {

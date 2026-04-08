@@ -160,6 +160,8 @@ const ReportsPage = () => {
   const [unassignedOpen, setUnassignedOpen] = useState(false);
   const [clientFilter, setClientFilter] = useState("");
   const [showTrash, setShowTrash] = useState(false);
+  const [activeTimeIdx, setActiveTimeIdx] = useState<number | undefined>(undefined);
+  const [activeTurnIdx, setActiveTurnIdx] = useState<number | undefined>(undefined);
 
   const rangeStart = toLocalDateKey(dateFrom);
   const rangeEnd = toLocalDateKey(dateTo);

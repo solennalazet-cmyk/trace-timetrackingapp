@@ -586,7 +586,7 @@ const ReportsPage = () => {
 
             return (
               <div className="mb-5">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">By Entry Type</h3>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">By Entry Type</h3>
                 <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1">
                   <div className="shrink-0 flex flex-col items-center">
                     <MiniDonut data={hoursData} centerLabel={formatHHMM(totalMins)} centerSub="hours" />

@@ -35,6 +35,19 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Parse interval from body
+    let interval = "monthly";
+    try {
+      const body = await req.json();
+      if (body?.interval === "yearly") interval = "yearly";
+    } catch {
+      // no body or invalid JSON — default to monthly
+    }
+
+    const priceId = interval === "yearly"
+      ? Deno.env.get("STRIPE_PRICE_ID_YEARLY")!
+      : Deno.env.get("STRIPE_PRICE_ID")!;
+
     // Get or create Stripe customer
     const { data: profile } = await supabase
       .from("profiles")
@@ -60,7 +73,7 @@ Deno.serve(async (req) => {
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer: customerId,
-      line_items: [{ price: Deno.env.get("STRIPE_PRICE_ID")!, quantity: 1 }],
+      line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${origin}/?upgrade=success`,
       cancel_url: `${origin}/`,
       allow_promotion_codes: true,

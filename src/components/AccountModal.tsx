@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import { Crown, AlertTriangle, ExternalLink } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,13 +31,28 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
   const [deleting, setDeleting] = useState(false);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [upgradeInterval, setUpgradeInterval] = useState<"monthly" | "yearly">("monthly");
+
+  // Obfuscated support email — assembled at runtime to prevent scraping
+  const supportEmail = useMemo(() => "connect" + "@" + "lla-studio" + ".com", []);
+
+  // Check if yearly subscriber is within 30-day refund window
+  const isInRefundWindow = useMemo(() => {
+    if (!profile || (profile as any).billing_interval !== "year" || profile.plan !== "pro") return false;
+    if (!profile.current_period_end) return false;
+    // current_period_end is end of yearly period; subscription started ~1 year before
+    const periodEnd = new Date(profile.current_period_end);
+    const subscriptionStart = new Date(periodEnd);
+    subscriptionStart.setFullYear(subscriptionStart.getFullYear() - 1);
+    const daysSinceStart = (Date.now() - subscriptionStart.getTime()) / (1000 * 60 * 60 * 24);
+    return daysSinceStart <= 30;
+  }, [profile]);
 
   if (!user || !profile) return null;
 
   const memberSince = new Date(profile.created_at ?? user.created_at ?? "").toLocaleDateString("en-GB", {
     day: "numeric", month: "long", year: "numeric",
   });
-
 
   const handleNameSave = async () => {
     if (!nameValue.trim()) { setEditingName(false); return; }
@@ -51,7 +65,7 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
   const handleUpgrade = async () => {
     setUpgradeLoading(true);
     try {
-      await redirectToCheckout();
+      await redirectToCheckout(upgradeInterval);
     } catch (err: any) {
       toast.error(err.message || "Failed to start checkout.");
       setUpgradeLoading(false);
@@ -81,7 +95,6 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
       await supabase.from("invoices").delete().eq("user_id", user.id);
       await supabase.from("profiles").delete().eq("id", user.id);
       await signOut();
-      // Clear localStorage but this is account deletion so clearing everything is fine
       localStorage.clear();
       toast.success("Account deleted.");
       navigate("/");
@@ -92,29 +105,70 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
     setDeleteOpen(false);
   };
 
+
+
+  const renderPlanToggle = () => (
+    <div className="flex items-center justify-center gap-1 p-1 bg-muted rounded-full mb-3">
+      <button
+        className={`px-4 py-1.5 text-sm font-medium rounded-full transition-colors ${
+          upgradeInterval === "monthly"
+            ? "bg-background text-foreground shadow-sm"
+            : "text-muted-foreground"
+        }`}
+        onClick={() => setUpgradeInterval("monthly")}
+      >
+        Monthly
+      </button>
+      <button
+        className={`px-4 py-1.5 text-sm font-medium rounded-full transition-colors ${
+          upgradeInterval === "yearly"
+            ? "bg-background text-foreground shadow-sm"
+            : "text-muted-foreground"
+        }`}
+        onClick={() => setUpgradeInterval("yearly")}
+      >
+        Yearly
+      </button>
+    </div>
+  );
+
+  const upgradeButtonText = upgradeLoading
+    ? "Redirecting…"
+    : upgradeInterval === "monthly"
+      ? "Upgrade to Pro — €3.99/month"
+      : "Upgrade to Pro — €39/year";
+
   const renderSubscription = () => {
     const plan = profile.plan;
     const status = profile.subscription_status;
+    const billingInterval = (profile as any).billing_interval;
 
     if (plan === "trial" || plan === "free") {
       return (
         <div className="space-y-3">
           <p className="text-sm font-medium">Plan: Free</p>
           <p className="text-xs text-muted-foreground">You're on the free plan.</p>
+          {renderPlanToggle()}
           <Button
             className="w-full bg-primary text-primary-foreground rounded-[28px] h-12 font-bold"
             onClick={handleUpgrade}
             disabled={upgradeLoading}
           >
-            {upgradeLoading ? "Redirecting…" : "Upgrade to Pro — €3.99/month"}
+            {upgradeButtonText}
           </Button>
-          <p className="text-xs text-muted-foreground mt-1">
-            Or €39/year <span className="font-medium text-foreground">(save 20%)</span> · Prices include VAT
-          </p>
+          {upgradeInterval === "monthly" && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Or €39/year <span className="font-medium text-foreground">(save 20%)</span> · Prices include VAT
+            </p>
+          )}
+          {upgradeInterval === "yearly" && (
+            <p className="text-xs text-muted-foreground mt-1">
+              That's €3.25/month · <span className="font-medium text-foreground">Save 20%</span> · Prices include VAT
+            </p>
+          )}
         </div>
       );
     }
-
 
     if (plan === "pro") {
       if (status === "past_due") {
@@ -148,6 +202,7 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
               <Crown className="w-4 h-4 text-primary" />
             </div>
             <p className="text-xs text-muted-foreground">Access continues until {periodEnd}.</p>
+            {renderPlanToggle()}
             <Button
               className="w-full bg-primary text-primary-foreground rounded-[28px] h-12 font-bold"
               onClick={handleUpgrade}
@@ -163,6 +218,7 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
       const nextBilling = profile.current_period_end
         ? new Date(profile.current_period_end).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
         : "—";
+      const priceLabel = billingInterval === "year" ? "€39/year" : "€3.99/month";
       return (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
@@ -177,8 +233,17 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
               PRO ✦
             </span>
           </div>
-          <p className="text-xs text-muted-foreground">Status: Active</p>
-          <p className="text-xs text-muted-foreground">Next billing: {nextBilling} — €3.99</p>
+          <p className="text-xs text-muted-foreground">Status: Active · {priceLabel}</p>
+          <p className="text-xs text-muted-foreground">Next billing: {nextBilling}</p>
+          {isInRefundWindow && (
+            <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground">
+              You're within your 30-day refund window.{" "}
+              <a href={`mailto:${supportEmail}`} className="text-primary underline">
+                Contact us
+              </a>{" "}
+              to request a refund.
+            </div>
+          )}
           <Button
             variant="outline"
             className="w-full rounded-[28px] h-10 gap-1"

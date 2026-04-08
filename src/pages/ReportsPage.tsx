@@ -426,72 +426,100 @@ const ReportsPage = () => {
 
         <div className={isFree ? "blur-sm pointer-events-none select-none" : ""}>
 
-          {/* ── 3. Nested Donut Chart ── */}
-          {outerDonutData.length > 0 && (
-            <div className="mb-6">
-              <div className="flex justify-center">
-                <div className="relative" style={{ width: 220, height: 220 }}>
-                  <ResponsiveContainer width={220} height={220}>
-                    <PieChart>
-                      {/* Outer ring: clients */}
-                      <Pie
-                        data={outerDonutData}
-                        innerRadius={72}
-                        outerRadius={100}
-                        dataKey="value"
-                        stroke="hsl(var(--background))"
-                        strokeWidth={2}
-                        paddingAngle={1}
-                      >
-                        {outerDonutData.map((d, i) => <Cell key={i} fill={d.fill} />)}
-                      </Pie>
-                      {/* Inner ring: billable/non-billable */}
-                      <Pie
-                        data={innerDonutData}
-                        innerRadius={50}
-                        outerRadius={68}
-                        dataKey="value"
-                        stroke="hsl(var(--background))"
-                        strokeWidth={2}
-                        paddingAngle={1}
-                      >
-                        {innerDonutData.map((d, i) => <Cell key={i} fill={d.fill} />)}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{ borderRadius: 12, fontSize: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
-                        formatter={(value: number) => [formatHHMM(value), ""]}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  {/* Center label */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-xl font-bold font-mono text-foreground">{formatHHMM(totalMins)}</span>
-                    <span className="text-[10px] text-muted-foreground">total</span>
-                  </div>
-                </div>
-              </div>
+          {/* ── 3. Dual Donut Charts: Time & Turnover ── */}
+          {timeDonutData.length > 0 && (() => {
+            const total = timeDonutData.reduce((s, d) => s + d.value, 0);
+            const totalTurnover = turnoverDonutData.reduce((s, d) => s + d.value, 0);
 
-              {/* Legend */}
-              <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-3">
-                {outerDonutData.map((d) => (
-                  <div key={d.name} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <div className="w-2 h-2 rounded-full" style={{ background: d.fill }} />
-                    {d.name}
+            const renderInitialsLabel = (props: any, data: { initials: string; value: number }[], dataTotal: number) => {
+              const { cx, cy, midAngle, innerRadius, outerRadius, index } = props;
+              const entry = data[index];
+              if (!entry || entry.value / dataTotal < 0.06) return null;
+              const RADIAN = Math.PI / 180;
+              const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+              const x = cx + radius * Math.cos(-midAngle * RADIAN);
+              const y = cy + radius * Math.sin(-midAngle * RADIAN);
+              return (
+                <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={11} fontWeight={700}>
+                  {entry.initials}
+                </text>
+              );
+            };
+
+            const sym = "€";
+
+            return (
+              <div className="mb-6">
+                <div className="flex justify-center gap-4">
+                  {/* Time donut */}
+                  <div className="relative" style={{ width: 155, height: 155 }}>
+                    <ResponsiveContainer width={155} height={155}>
+                      <PieChart>
+                        <Pie
+                          data={timeDonutData}
+                          innerRadius={42}
+                          outerRadius={68}
+                          dataKey="value"
+                          stroke="hsl(var(--background))"
+                          strokeWidth={2}
+                          paddingAngle={1}
+                          label={(props) => renderInitialsLabel(props, timeDonutData, total)}
+                          labelLine={false}
+                        >
+                          {timeDonutData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{ borderRadius: 12, fontSize: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
+                          formatter={(value: number) => [formatHHMM(value), ""]}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <span className="text-lg font-bold font-mono text-foreground">{formatHHMM(totalMins)}</span>
+                      <span className="text-xs text-muted-foreground">time</span>
+                    </div>
                   </div>
-                ))}
-              </div>
-              <div className="flex justify-center gap-4 mt-1">
-                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <div className="w-2 h-2 rounded-full" style={{ background: "hsl(var(--primary))" }} />
-                  Billable {formatHHMM(billableMins)}
+
+                  {/* Turnover donut */}
+                  {turnoverDonutData.length > 0 && (
+                    <div className="relative" style={{ width: 155, height: 155 }}>
+                      <ResponsiveContainer width={155} height={155}>
+                        <PieChart>
+                          <Pie
+                            data={turnoverDonutData}
+                            innerRadius={42}
+                            outerRadius={68}
+                            dataKey="value"
+                            stroke="hsl(var(--background))"
+                            strokeWidth={2}
+                            paddingAngle={1}
+                            label={(props) => renderInitialsLabel(props, turnoverDonutData, totalTurnover)}
+                            labelLine={false}
+                          >
+                            {turnoverDonutData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{ borderRadius: 12, fontSize: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
+                            formatter={(value: number) => [`${sym}${value.toFixed(2)}`, ""]}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="text-lg font-bold font-mono text-foreground">{sym}{totalTurnoverValue.toFixed(0)}</span>
+                        <span className="text-xs text-muted-foreground">turnover</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <div className="w-2 h-2 rounded-full" style={{ background: "hsl(var(--muted-foreground) / 0.3)" }} />
-                  Non-billable {formatHHMM(nonBillableMins)}
+
+                {/* Billable / Non-billable summary text */}
+                <div className="flex justify-center gap-6 mt-3 text-xs text-muted-foreground">
+                  <span>Billable: {formatHHMM(billableMins)}</span>
+                  {nonBillableMins > 0 && <span>Non-billable: {formatHHMM(nonBillableMins)}</span>}
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* ── Entry Type Mini Donuts ── */}
           {rangeEntries.length > 0 && (() => {

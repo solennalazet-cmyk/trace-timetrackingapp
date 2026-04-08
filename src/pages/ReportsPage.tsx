@@ -558,26 +558,26 @@ const ReportsPage = () => {
 
                   {/* Turnover donut */}
                   {turnoverDonutData.length > 0 && (
-                    <div className="relative" style={{ width: 155, height: 155 }}>
-                      <ResponsiveContainer width={155} height={155}>
+                    <div className="relative" style={{ width: 175, height: 175 }}>
+                      <ResponsiveContainer width={175} height={175}>
                         <PieChart>
                           <Pie
                             data={turnoverDonutData}
                             innerRadius={42}
                             outerRadius={68}
                             dataKey="value"
-                            stroke="hsl(var(--background))"
-                            strokeWidth={2}
+                            stroke="none"
                             paddingAngle={1}
                             label={(props) => renderInitialsLabel(props, turnoverDonutData, totalTurnover)}
                             labelLine={false}
+                            activeIndex={activeTurnIdx}
+                            activeShape={renderActiveShape}
+                            onMouseEnter={(_, idx) => setActiveTurnIdx(idx)}
+                            onMouseLeave={() => setActiveTurnIdx(undefined)}
+                            onClick={(_, idx) => setActiveTurnIdx(prev => prev === idx ? undefined : idx)}
                           >
-                            {turnoverDonutData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                            {turnoverDonutData.map((d, i) => <Cell key={i} fill={d.fill} stroke="hsl(var(--background))" strokeWidth={2} />)}
                           </Pie>
-                          <Tooltip
-                            contentStyle={{ borderRadius: 12, fontSize: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
-                            formatter={(value: number) => [`${sym}${value.toFixed(2)}`, ""]}
-                          />
                         </PieChart>
                       </ResponsiveContainer>
                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">

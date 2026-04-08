@@ -578,8 +578,8 @@ const ReportsPage = () => {
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-xs font-bold font-mono text-foreground">{centerLabel}</span>
-                  <span className="text-[9px] text-muted-foreground">{centerSub === "turnover" ? "turnover" : centerSub}</span>
+                  <span className="text-sm font-bold font-mono text-foreground">{centerLabel}</span>
+                  <span className="text-[11px] text-muted-foreground">{centerSub === "turnover" ? "turnover" : centerSub}</span>
                 </div>
               </div>
             );

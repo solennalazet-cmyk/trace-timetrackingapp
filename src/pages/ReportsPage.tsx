@@ -600,7 +600,7 @@ const ReportsPage = () => {
                   )}
                   <div className="shrink-0 flex flex-col items-center">
                     <MiniDonut data={avgData} centerLabel={formatHHMM(Math.round(totalMins / (displayEntries.length || 1)))} centerSub="avg" />
-                    <span className="text-[10px] text-muted-foreground mt-1">Avg Session</span>
+                    <span className="text-xs text-muted-foreground mt-1">Avg Session</span>
                   </div>
                 </div>
                 {/* Shared legend */}

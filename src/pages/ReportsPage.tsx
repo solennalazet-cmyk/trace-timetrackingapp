@@ -511,7 +511,6 @@ const ReportsPage = () => {
                       </ResponsiveContainer>
                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                         <span className="text-lg font-bold font-mono text-foreground">{sym}{totalTurnoverValue.toFixed(0)}</span>
-                        <span className="text-xs text-muted-foreground">turnover</span>
                       </div>
                     </div>
                   )}

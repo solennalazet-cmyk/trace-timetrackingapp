@@ -1,11 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export async function redirectToCheckout() {
+export async function redirectToCheckout(interval: "monthly" | "yearly" = "monthly") {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error("Not authenticated");
 
   const { data, error } = await supabase.functions.invoke("create-checkout-session", {
     headers: { Authorization: `Bearer ${session.access_token}` },
+    body: { interval },
   });
 
   if (error) throw error;

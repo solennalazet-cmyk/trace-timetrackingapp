@@ -10,6 +10,15 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
+async function getBillingInterval(subscriptionId: string): Promise<string | null> {
+  try {
+    const sub = await stripe.subscriptions.retrieve(subscriptionId);
+    return sub.items?.data?.[0]?.price?.recurring?.interval ?? null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200 });
@@ -24,7 +33,6 @@ Deno.serve(async (req) => {
     if (webhookSecret) {
       event = stripe.webhooks.constructEvent(body, signature!, webhookSecret);
     } else {
-      // Fallback: parse without verification (dev only)
       event = JSON.parse(body);
       console.warn("STRIPE_WEBHOOK_SECRET not set — skipping signature verification");
     }
@@ -45,7 +53,8 @@ Deno.serve(async (req) => {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.supabase_user_id;
-        if (userId) {
+        if (userId && session.subscription) {
+          const billingInterval = await getBillingInterval(session.subscription as string);
           await supabase
             .from("profiles")
             .update({
@@ -53,6 +62,7 @@ Deno.serve(async (req) => {
               subscription_status: "active",
               stripe_subscription_id: session.subscription as string,
               stripe_customer_id: session.customer as string,
+              billing_interval: billingInterval,
             })
             .eq("id", userId);
         }
@@ -68,6 +78,7 @@ Deno.serve(async (req) => {
           .single();
         if (profile) {
           const plan = sub.status === "active" ? "pro" : "free";
+          const billingInterval = sub.items?.data?.[0]?.price?.recurring?.interval ?? null;
           await supabase
             .from("profiles")
             .update({
@@ -76,6 +87,7 @@ Deno.serve(async (req) => {
               current_period_end: new Date(
                 sub.current_period_end * 1000
               ).toISOString(),
+              billing_interval: billingInterval,
             })
             .eq("id", profile.id);
         }

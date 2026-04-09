@@ -312,16 +312,15 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
               {renderSubscription()}
             </div>
 
-            {/* Danger Zone */}
+            {/* Delete account */}
             <div className="border-t border-border pt-4">
-              <h3 className="text-sm font-semibold text-destructive mb-1">Delete Account</h3>
-              <p className="text-xs text-muted-foreground mb-3">Permanently delete your account and all data. This cannot be undone.</p>
               <button
-                className="text-sm text-destructive/70 hover:text-destructive underline"
+                className="text-xs text-destructive/50 hover:text-destructive/80 underline"
                 onClick={() => { setDeleteConfirm(""); setDeleteOpen(true); }}
               >
                 Delete my account
               </button>
+              <p className="text-[11px] text-muted-foreground mt-1">Permanently delete your account and all data.</p>
             </div>
           </div>
         </DialogContent>

@@ -840,6 +840,7 @@ const ReportsPage = () => {
                     <MiniDonut data={avgData} centerLabel={formatHHMM(Math.round(totalMins / (displayEntries.length || 1)))} centerSub="avg" />
                     <span className="text-xs text-muted-foreground mt-1">Avg Session</span>
                   </div>
+                  <PeakHoursChart entries={displayEntries} />
                 </div>
                 {/* Shared legend */}
                 <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-2">

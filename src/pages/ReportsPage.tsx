@@ -52,6 +52,99 @@ const getClientColor = (clientId: string): string =>
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
+// ── Peak Hours Radial Heatmap (custom SVG) ──
+const PEAK_HUE_BASE = 175; // teal/cyan family
+
+const PeakHoursChart = ({ entries, size = 120 }: { entries: { start_time?: string | null; duration_minutes: number }[]; size?: number }) => {
+  const withStart = entries.filter((e) => e.start_time);
+  if (withStart.length < 3) {
+    return (
+      <div className="shrink-0 flex flex-col items-center">
+        <div className="flex items-center justify-center rounded-full border border-dashed border-border" style={{ width: size, height: size }}>
+          <span className="text-[10px] text-muted-foreground text-center px-3 leading-tight">Track more sessions<br />to see patterns</span>
+        </div>
+        <span className="text-xs text-muted-foreground mt-1">Peak Hours</span>
+      </div>
+    );
+  }
+
+  // Bucket by hour
+  const buckets = new Array(24).fill(0);
+  withStart.forEach((e) => {
+    try {
+      const hour = new Date(e.start_time!).getHours();
+      buckets[hour] += e.duration_minutes;
+    } catch {}
+  });
+
+  const maxVal = Math.max(...buckets, 1);
+  const peakHour = buckets.indexOf(maxVal);
+
+  const cx = size / 2;
+  const cy = size * 0.55; // shift center down so half-circle fills top
+  const minR = size * 0.18;
+  const maxR = size * 0.46;
+
+  // Half-circle: 180° to 0° (top half), 24 slices of 7.5° each
+  const sliceAngle = 180 / 24;
+
+  const arcs = buckets.map((val, i) => {
+    const ratio = val / maxVal;
+    const outerR = minR + ratio * (maxR - minR);
+    // Angles: start from 180° (left), go clockwise
+    const startDeg = 180 - i * sliceAngle;
+    const endDeg = startDeg - sliceAngle;
+
+    const startRad = (startDeg * Math.PI) / 180;
+    const endRad = (endDeg * Math.PI) / 180;
+
+    const x1Outer = cx + outerR * Math.cos(startRad);
+    const y1Outer = cy - outerR * Math.sin(startRad);
+    const x2Outer = cx + outerR * Math.cos(endRad);
+    const y2Outer = cy - outerR * Math.sin(endRad);
+
+    const x1Inner = cx + minR * Math.cos(startRad);
+    const y1Inner = cy - minR * Math.sin(startRad);
+    const x2Inner = cx + minR * Math.cos(endRad);
+    const y2Inner = cy - minR * Math.sin(endRad);
+
+    const largeArc = sliceAngle > 180 ? 1 : 0;
+
+    const d = [
+      `M ${x1Inner} ${y1Inner}`,
+      `L ${x1Outer} ${y1Outer}`,
+      `A ${outerR} ${outerR} 0 ${largeArc} 0 ${x2Outer} ${y2Outer}`,
+      `L ${x2Inner} ${y2Inner}`,
+      `A ${minR} ${minR} 0 ${largeArc} 1 ${x1Inner} ${y1Inner}`,
+      "Z",
+    ].join(" ");
+
+    // Color: teal/cyan, darker saturation for higher values
+    const lightness = val === 0 ? 92 : 75 - ratio * 35; // 75 → 40 for active
+    const saturation = val === 0 ? 10 : 50 + ratio * 30;
+    const fill = `hsl(${PEAK_HUE_BASE} ${saturation}% ${lightness}%)`;
+
+    return <path key={i} d={d} fill={fill} stroke="hsl(var(--background))" strokeWidth={0.8} />;
+  });
+
+  const peakLabel = `${peakHour}h`;
+
+  return (
+    <div className="shrink-0 flex flex-col items-center">
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          {arcs}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ paddingTop: size * 0.08 }}>
+          <span className="text-sm font-bold font-mono text-foreground">{peakLabel}</span>
+          <span className="text-[11px] text-muted-foreground">peak hour</span>
+        </div>
+      </div>
+      <span className="text-xs text-muted-foreground mt-1">Peak Hours</span>
+    </div>
+  );
+};
+
 const formatHHMM = (mins: number) => {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
@@ -747,6 +840,7 @@ const ReportsPage = () => {
                     <MiniDonut data={avgData} centerLabel={formatHHMM(Math.round(totalMins / (displayEntries.length || 1)))} centerSub="avg" />
                     <span className="text-xs text-muted-foreground mt-1">Avg Session</span>
                   </div>
+                  <PeakHoursChart entries={displayEntries} />
                 </div>
                 {/* Shared legend */}
                 <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-2">

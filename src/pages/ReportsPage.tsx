@@ -343,13 +343,13 @@ const ReportsPage = () => {
       const row: any = {
         date: day,
         label: new Date(day + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }),
-        _total: dayEntries.reduce((s, e) => s + e.duration_minutes / 60, 0),
+        _total: dayEntries.reduce((s, e) => s + rd(e.duration_minutes) / 60, 0),
       };
       chartClientIds.forEach((cid) => {
-        row[cid] = dayEntries.filter((e) => e.client_id === cid).reduce((s, e) => s + e.duration_minutes / 60, 0);
+        row[cid] = dayEntries.filter((e) => e.client_id === cid).reduce((s, e) => s + rd(e.duration_minutes) / 60, 0);
       });
       if (!clientFilter) {
-        const un = dayEntries.filter((e) => !e.client_id).reduce((s, e) => s + e.duration_minutes / 60, 0);
+        const un = dayEntries.filter((e) => !e.client_id).reduce((s, e) => s + rd(e.duration_minutes) / 60, 0);
         if (un > 0) row["unassigned"] = un;
       }
       return row;

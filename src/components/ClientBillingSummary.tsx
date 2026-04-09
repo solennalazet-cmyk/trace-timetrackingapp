@@ -55,6 +55,7 @@ const ClientBillingSummary = ({
   onDeleteEntry,
   activeClientFilter,
   onFilterClient,
+  rounding = DEFAULT_ROUNDING,
 }: ClientBillingSummaryProps) => {
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
 

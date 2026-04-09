@@ -895,6 +895,16 @@ const ReportsPage = () => {
                   <Progress value={revenueProgress} className="h-2 rounded-full" />
                 </div>
               )}
+              {/* Boost trigger */}
+              {isPro && (
+                <button
+                  onClick={() => setBoostOpen(true)}
+                  className="flex items-center gap-2 mt-2 px-3 py-2 rounded-xl border border-border hover:bg-accent/50 transition-colors w-full"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+                  <span className="text-sm text-muted-foreground">Want a Boost?</span>
+                </button>
+              )}
             </div>
           )}
 

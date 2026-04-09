@@ -26,6 +26,7 @@ interface ClientBillingSummaryProps {
   onDeleteEntry?: (entryId: string) => void;
   activeClientFilter?: string;
   onFilterClient?: (clientId: string | null) => void;
+  rounding?: RoundingSettings;
 }
 
 interface ClientSummary {

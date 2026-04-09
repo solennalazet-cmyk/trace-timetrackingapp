@@ -330,7 +330,7 @@ const ReportsPage = () => {
       }
     });
     return data;
-  }, [displayEntries, clientIds, clients]);
+  }, [displayEntries, clientIds, clients, rounding]);
 
   const totalTurnoverValue = turnoverDonutData.reduce((s, d) => s + d.value, 0);
 

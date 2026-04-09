@@ -1042,6 +1042,15 @@ const ReportsPage = () => {
         }}
         onCountChange={() => {}}
       />
+      <BoostOverlay
+        open={boostOpen}
+        onOpenChange={setBoostOpen}
+        hourProgress={hourProgress}
+        revenueProgress={revenueProgress}
+        onStartSession={() => {
+          navigate("/?boost=1");
+        }}
+      />
     </div>
   );
 };

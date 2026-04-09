@@ -238,7 +238,7 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
           {isInRefundWindow && (
             <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground">
               You're within your 30-day refund window.{" "}
-              <a href={`mailto:${supportEmail}`} className="text-primary underline">
+              <a href={`mailto:${supportEmail}`} className="text-foreground font-medium underline">
                 Contact us
               </a>{" "}
               to request a refund.

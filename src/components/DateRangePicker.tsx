@@ -96,7 +96,7 @@ export default function DateRangePicker({ from, to, onChange, weekStartsOn = 1 }
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <div className="px-4 pt-3 pb-1">
-          <p className="text-xs font-medium text-primary">
+          <p className="text-xs font-medium text-foreground">
             {step === "from"
               ? "📅 Pick a start date"
               : "📅 Now pick an end date"}

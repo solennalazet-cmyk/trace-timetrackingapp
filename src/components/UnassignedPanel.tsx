@@ -54,6 +54,12 @@ const formatHHMM = (mins: number) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
+const formatTimeOfDay = (isoStr: string | null) => {
+  if (!isoStr) return "";
+  const d = new Date(isoStr);
+  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+};
+
 const formatEntryDate = (dateStr: string | null) => {
   if (!dateStr) return "";
   const d = new Date(dateStr + "T00:00:00");
@@ -287,7 +293,11 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
                     {entryTypeIcon(entry.entry_type)}
                     <div>
                       <p className="font-mono text-sm font-semibold">{formatHHMM(entry.duration_minutes)}</p>
-                      <p className="text-xs text-muted-foreground">{formatEntryDate(entry.entry_date)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatEntryDate(entry.entry_date)}
+                        {entry.start_time && ` · ${formatTimeOfDay(entry.start_time)}`}
+                        {entry.end_time && ` → ${formatTimeOfDay(entry.end_time)}`}
+                      </p>
                     </div>
                   </div>
                   {entry.notes && (

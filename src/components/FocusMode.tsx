@@ -9,6 +9,7 @@ import { playTimerSound } from "@/lib/timer-sounds";
 
 interface FocusModeProps {
   onComplete: (data: { durationMinutes: number; breakMinutes: number; startedAt: string | null }) => void;
+  autoStartMinutes?: number;
 }
 
 const PRESETS = [
@@ -20,7 +21,7 @@ const PRESETS = [
 
 const BTN = "rounded-[28px] h-14 text-[16px] font-bold";
 
-const FocusMode = ({ onComplete }: FocusModeProps) => {
+const FocusMode = ({ onComplete, autoStartMinutes }: FocusModeProps) => {
   const {
     status,
     totalSeconds,

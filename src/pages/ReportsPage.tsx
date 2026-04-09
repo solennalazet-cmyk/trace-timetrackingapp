@@ -846,6 +846,24 @@ const ReportsPage = () => {
                     <span className="text-xs text-muted-foreground mt-1">Avg Session</span>
                   </div>
                   <PeakHoursChart entries={displayEntries} />
+                  {/* Boost mini-metric */}
+                  {(() => {
+                    const boostMins = displayEntries.filter(e => e.entry_type === "boost").reduce((s, e) => s + rd(e.duration_minutes), 0);
+                    if (boostMins === 0) return null;
+                    const boostCount = displayEntries.filter(e => e.entry_type === "boost").length;
+                    return (
+                      <div className="shrink-0 flex flex-col items-center">
+                        <div className="flex items-center justify-center rounded-full border-2 border-amber-400/40" style={{ width: 120, height: 120, background: "linear-gradient(135deg, hsl(45 90% 96%), hsl(38 80% 92%))" }}>
+                          <div className="flex flex-col items-center">
+                            <Sparkles className="w-5 h-5 text-amber-500 mb-1" />
+                            <span className="text-sm font-bold font-mono text-foreground">{formatHHMM(boostMins)}</span>
+                            <span className="text-[11px] text-muted-foreground">{boostCount} boost{boostCount !== 1 ? "s" : ""}</span>
+                          </div>
+                        </div>
+                        <span className="text-xs text-muted-foreground mt-1">Growth</span>
+                      </div>
+                    );
+                  })()}
                 </div>
                 {/* Shared legend */}
                 <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-2">

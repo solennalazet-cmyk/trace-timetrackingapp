@@ -310,7 +310,7 @@ const ReportsPage = () => {
     });
     if (map["unassigned"]) data.push({ name: "Unassigned", initials: "NA", value: map["unassigned"], fill: "hsl(240 5% 75%)" });
     return data;
-  }, [displayEntries, clientIds, clients, clientFilter, projects, tasks]);
+  }, [displayEntries, clientIds, clients, clientFilter, projects, tasks, rounding]);
 
   // Turnover donut: per-client billable value (always by client, even when filtered)
   const turnoverDonutData = useMemo(() => {

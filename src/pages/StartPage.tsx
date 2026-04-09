@@ -133,13 +133,35 @@ const StartPage = () => {
   }, [user]);
 
   // Called when timer stops — opens the assignment modal
-  const handleSessionEnd = (
+  const handleSessionEnd = async (
     data: { durationMinutes: number; breakMinutes: number; startedAt: string | null },
     entryType: string = "timer"
   ) => {
     if (data.durationMinutes <= 0) {
       data.durationMinutes = 1;
     }
+
+    // Boost sessions: auto-save with Growth project and show congrats
+    if (isBoost && boostProjectId && user) {
+      const now = new Date();
+      await supabase.from("time_entries").insert({
+        user_id: user.id,
+        duration_minutes: data.durationMinutes,
+        break_minutes: data.breakMinutes,
+        entry_type: "boost",
+        entry_date: toLocalDateKey(now),
+        project_id: boostProjectId,
+        billable: false,
+        start_time: data.startedAt || null,
+        end_time: data.startedAt ? now.toISOString() : null,
+      });
+      toast.success(getCongratsMessage());
+      // Clear boost param
+      setSearchParams({});
+      fetchSummary();
+      return;
+    }
+
     setEditingEntry(null);
     setPendingSession({ ...data, entryType });
     setAssignModalOpen(true);

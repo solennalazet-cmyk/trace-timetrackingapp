@@ -596,7 +596,7 @@ const ReportsPage = () => {
           {clientFilter && (
             <button
               onClick={() => setClientFilter("")}
-              className="shrink-0 px-2 py-1.5 text-xs text-primary hover:underline"
+              className="shrink-0 px-2 py-1.5 text-xs text-foreground font-medium hover:underline"
             >
               <X className="w-3 h-3" />
             </button>
@@ -609,7 +609,7 @@ const ReportsPage = () => {
         {isFree && (
           <div className="sticky top-20 z-10 flex justify-center pointer-events-auto mb-4">
             <div className="bg-card border border-border rounded-2xl p-6 text-center shadow-lg max-w-[300px]">
-              <Crown className="w-8 h-8 text-primary mx-auto mb-3" />
+              <Crown className="w-8 h-8 text-foreground mx-auto mb-3" />
               <h3 className="font-semibold text-foreground">Premium Feature</h3>
               <p className="text-sm text-muted-foreground mt-1">Unlock detailed reports, billing insights, and CSV / PDF export.</p>
               <Button className="w-full mt-4 bg-primary text-primary-foreground rounded-[28px] h-12 font-bold" onClick={() => setPaywallOpen(true)}>Upgrade to Pro</Button>
@@ -987,7 +987,7 @@ const ReportsPage = () => {
                     </div>
                     {inv.status === "sent" && (
                       <div className="flex gap-1 ml-2">
-                        <button className="text-xs text-primary hover:underline" onClick={() => handleMarkPaid(inv.id)}>Paid</button>
+                        <button className="text-xs text-foreground font-medium hover:underline" onClick={() => handleMarkPaid(inv.id)}>Paid</button>
                         <button className="text-xs text-destructive hover:underline" onClick={() => handleVoidInvoice(inv.id)}>Void</button>
                       </div>
                     )}

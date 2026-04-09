@@ -232,7 +232,7 @@ const BillingDialog = ({ open, onOpenChange, onComplete }: BillingDialogProps) =
                 onClick={handleGeneratePDF}
                 disabled={generating}
               >
-                <FileText className="w-6 h-6 mx-auto text-primary" />
+                <FileText className="w-6 h-6 mx-auto text-foreground" />
                 <p className="text-sm font-medium">Export as PDF</p>
                 <p className="text-xs text-muted-foreground">Available now</p>
               </button>

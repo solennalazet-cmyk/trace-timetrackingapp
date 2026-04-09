@@ -46,7 +46,7 @@ const PaywallModal = ({
         <div className="px-6 pt-6 pb-6 text-center">
           <div className="flex justify-center mb-4">
             <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-              <Crown className="w-6 h-6 text-primary" />
+              <Crown className="w-6 h-6 text-foreground" />
             </div>
           </div>
           <h2 className="text-lg font-semibold text-foreground">{headline}</h2>

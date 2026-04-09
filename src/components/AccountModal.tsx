@@ -199,7 +199,7 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <p className="text-sm font-medium">Plan: Trace Pro (Cancelling)</p>
-              <Crown className="w-4 h-4 text-primary" />
+              <Crown className="w-4 h-4 text-foreground" />
             </div>
             <p className="text-xs text-muted-foreground">Access continues until {periodEnd}.</p>
             {renderPlanToggle()}

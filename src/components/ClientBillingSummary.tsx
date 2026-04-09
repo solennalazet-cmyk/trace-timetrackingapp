@@ -66,7 +66,7 @@ const ClientBillingSummary = ({
 
     allEntries.forEach((e) => {
       if (!e.client_id) {
-        unassignedMins += e.duration_minutes;
+        unassignedMins += roundDuration(e.duration_minutes, rounding);
         unassignedEntries.push(e);
         return;
       }
@@ -84,13 +84,15 @@ const ClientBillingSummary = ({
         };
       }
       const c = clientMap[e.client_id];
-      c.totalMins += e.duration_minutes;
+      const rdMins = roundDuration(e.duration_minutes, rounding);
+      const rdVal = roundedBillableValue(e.duration_minutes, e.rate_amount ?? null, e.rate_unit ?? null, e.billable ?? false, rounding);
+      c.totalMins += rdMins;
       c.entries.push(e);
       if (e.billable) {
-        c.billableMins += e.duration_minutes;
-        c.billableValue += e.billable_value || 0;
+        c.billableMins += rdMins;
+        c.billableValue += rdVal;
         if (e.billing_status === "unbilled") {
-          c.outstanding += e.billable_value || 0;
+          c.outstanding += rdVal;
         }
       }
     });

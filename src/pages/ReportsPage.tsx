@@ -269,10 +269,10 @@ const ReportsPage = () => {
 
       displayEntries.forEach((e) => {
         const pKey = e.project_id ?? "no-project";
-        projectMins[pKey] = (projectMins[pKey] || 0) + e.duration_minutes;
+        projectMins[pKey] = (projectMins[pKey] || 0) + rd(e.duration_minutes);
         if (e.project_id && !seenProjects.has(e.project_id)) { seenProjects.add(e.project_id); projectCount++; }
         const tKey = e.task_id ?? "no-task";
-        taskMins[tKey] = (taskMins[tKey] || 0) + e.duration_minutes;
+        taskMins[tKey] = (taskMins[tKey] || 0) + rd(e.duration_minutes);
       });
 
       if (projectCount <= 1) {

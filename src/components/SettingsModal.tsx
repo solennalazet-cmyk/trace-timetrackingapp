@@ -185,7 +185,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
 
-        <div className="px-6 pb-6 space-y-1 min-w-0 overflow-hidden">
+        <div className="px-5 pb-4 space-y-1 min-w-0 overflow-x-hidden">
           {/* ── Focus Timer Presets ── */}
           <SettingsSection
             title="Focus Timer Presets"
@@ -290,8 +290,8 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
             title="Week starts on"
             description="Affects reports and date range calculations."
           >
-            <div className="overflow-x-auto -mx-6 px-6">
-              <div className="flex gap-2 pb-1 w-max">
+            <div>
+              <div className="flex flex-wrap gap-2">
                 {([
                   { value: 1, label: "Mon" },
                   { value: 2, label: "Tue" },
@@ -304,7 +304,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                   <button
                     key={opt.value}
                     onClick={() => persist({ ...settings, week_start_day: opt.value })}
-                    className={`shrink-0 px-3 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                    className={`px-3 py-2 rounded-xl text-sm font-medium border transition-colors ${
                       settings.week_start_day === opt.value
                         ? "border-primary bg-primary/20 text-foreground"
                         : "border-border text-muted-foreground hover:bg-muted/30"
@@ -577,6 +577,23 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
               Integrations with tools like Toggl, Notion, Google Calendar, and more are coming soon.
             </p>
           </div>
+        </div>
+
+        {/* ── Footer buttons ── */}
+        <div className="sticky bottom-0 flex gap-3 bg-background px-5 py-4 border-t border-border pb-[calc(env(safe-area-inset-bottom,0px)+16px)]">
+          <Button
+            variant="outline"
+            className="flex-1 h-12 rounded-[28px] font-bold"
+            onClick={() => persist(DEFAULTS)}
+          >
+            Reset
+          </Button>
+          <Button
+            className="flex-1 h-12 rounded-[28px] font-bold"
+            onClick={() => onOpenChange(false)}
+          >
+            Apply
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

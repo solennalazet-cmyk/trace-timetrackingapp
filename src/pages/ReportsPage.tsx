@@ -23,6 +23,9 @@ import UnassignedPanel from "@/components/UnassignedPanel";
 import TrashView from "@/components/TrashView";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
+import { useNavigate } from "react-router-dom";
+import BoostOverlay from "@/components/BoostOverlay";
+import { Sparkles } from "lucide-react";
 
 // Sunrise palette – harmonises with the brand gradient (golden → rose → violet → blue)
 const SUNRISE_PALETTE = [
@@ -286,7 +289,7 @@ const ReportsPage = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     if (user) {
-      const entrySelect = "id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, billable_value, client_id, project_id, task_id, billing_status, client:clients(id, name), project:projects(id, name), task:tasks(id, name)";
+      const entrySelect = "id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, billable_value, client_id, project_id, task_id, billing_status, start_time, client:clients(id, name), project:projects(id, name), task:tasks(id, name)";
       const [{ data: re }, { data: c }, { data: p }, { data: t }, { data: inv }] = await Promise.all([
         supabase.from("time_entries").select(entrySelect)
           .eq("user_id", user.id).gte("entry_date", rangeStart).lte("entry_date", rangeEnd).is("deleted_at", null).order("entry_date", { ascending: false }),

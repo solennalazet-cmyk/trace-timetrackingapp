@@ -65,7 +65,18 @@ const FocusMode = ({ onComplete, autoStartMinutes }: FocusModeProps) => {
     loadSound();
   }, [user]);
 
-  // Request notification permission when starting a focus session
+  // Auto-start for boost sessions
+  const autoStartedRef = useRef(false);
+  useEffect(() => {
+    if (autoStartMinutes && !autoStartedRef.current && status === "idle") {
+      autoStartedRef.current = true;
+      setPreset(autoStartMinutes);
+      // Small delay to let preset apply
+      setTimeout(() => start(), 50);
+    }
+  }, [autoStartMinutes, status, setPreset, start]);
+
+
   useEffect(() => {
     if (status === "running" && "Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();

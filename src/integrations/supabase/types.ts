@@ -252,6 +252,7 @@ export type Database = {
           created_at: string | null
           deleted_at: string | null
           duration_minutes: number
+          end_time: string | null
           entry_date: string | null
           entry_type: string | null
           id: string
@@ -261,6 +262,7 @@ export type Database = {
           rate_amount: number | null
           rate_currency: string | null
           rate_unit: string | null
+          start_time: string | null
           tags: string[] | null
           task_id: string | null
           user_id: string
@@ -274,6 +276,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           duration_minutes: number
+          end_time?: string | null
           entry_date?: string | null
           entry_type?: string | null
           id?: string
@@ -283,6 +286,7 @@ export type Database = {
           rate_amount?: number | null
           rate_currency?: string | null
           rate_unit?: string | null
+          start_time?: string | null
           tags?: string[] | null
           task_id?: string | null
           user_id: string
@@ -296,6 +300,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           duration_minutes?: number
+          end_time?: string | null
           entry_date?: string | null
           entry_type?: string | null
           id?: string
@@ -305,6 +310,7 @@ export type Database = {
           rate_amount?: number | null
           rate_currency?: string | null
           rate_unit?: string | null
+          start_time?: string | null
           tags?: string[] | null
           task_id?: string | null
           user_id?: string

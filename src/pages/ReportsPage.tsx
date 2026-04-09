@@ -282,6 +282,8 @@ const ReportsPage = () => {
   const [showTrash, setShowTrash] = useState(false);
   const [activeTimeIdx, setActiveTimeIdx] = useState<number | undefined>(undefined);
   const [activeTurnIdx, setActiveTurnIdx] = useState<number | undefined>(undefined);
+  const [boostOpen, setBoostOpen] = useState(false);
+  const navigate = useNavigate();
 
   const rangeStart = toLocalDateKey(dateFrom);
   const rangeEnd = toLocalDateKey(dateTo);

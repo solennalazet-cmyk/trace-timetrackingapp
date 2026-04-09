@@ -1,56 +1,34 @@
 
 
-# Reports Page — Phase 1 Fixes
+## Peak Productivity Hours — 24-Hour Radial Heatmap
 
-## 1. Header background with transparency
-**File:** `src/components/Header.tsx`
-- Add `backdrop-blur-md bg-background/70` to the `<header>` element so it's readable over content.
+### Concept
+A half-circle (180°) divided into 24 equal slices representing each hour of the day (0–23). Each slice's radial length varies based on how many minutes the user worked during that hour — taller = more productive. Think of it as a polar bar chart, not a pie chart.
 
-## 2. Font sizes — accessibility pass
-**File:** `src/pages/ReportsPage.tsx` and `src/components/ClientBillingSummary.tsx`
-- Client filter chips: `text-[11px]` → `text-xs`
-- Donut center total: `text-xl` → `text-2xl`; sub-label `text-[10px]` → `text-xs`
-- Section headers (`"By Entry Type"`, `"Clients"`, `"Goals"`, `"Daily Breakdown"`): `text-xs` → `text-sm`
-- Goal progress labels: `text-xs` → `text-sm`
-- Client card name: `text-sm` → `text-base`
-- Client card metrics (Total, Billable): `text-lg` → `text-xl`; sub-labels `text-[10px]` → `text-xs`
-- Avg/day: `text-sm` → `text-base`
-- Session list items: `text-xs` → `text-sm`
-- Legend items: `text-[11px]` / `text-[10px]` → `text-xs`
-- Stacked bar tick font: `10` → `11`
+### Visual design
+- **Shape**: Half-circle (startAngle=180, endAngle=0), same 120×120 size as existing mini-donuts
+- **24 segments**: Each 7.5° wide, one per hour
+- **Height encoding**: Each bar's outer radius scales from a minimum (e.g. 30%) to 100% based on minutes worked in that hour relative to the peak hour
+- **Distinct palette**: A cool-toned gradient (e.g. teal → cyan → mint) that's clearly separate from the warm Sunrise Palette used for clients. Hours with zero activity use a very faint base color
+- **Center label**: The peak hour displayed as "14h" or "2 PM"
+- **Sub-label**: "Peak Hour"
+- **Below chart**: Label "Peak Hours"
+- **Fallback**: When < 3 entries have `start_time`, show a muted placeholder: "Track more to see patterns"
 
-## 3. Date range — respect weekStartDay from settings
-**File:** `src/pages/ReportsPage.tsx`
+### Data logic
+1. Filter entries with non-null `start_time`
+2. For each entry, extract the hour from `start_time` and assign `duration_minutes` to that hour bucket (if an entry spans multiple hours, just use the start hour for simplicity)
+3. Build a 24-element array, sum minutes per hour
+4. Normalize: each hour's outer radius = `minRadius + (value / maxValue) * (maxRadius - minRadius)`
+5. Render using Recharts `RadialBarChart` or a custom `Pie` with variable outer radii per cell
 
-The initial `useState` on lines 115-120 hardcodes `weekStartsOn: 1` before settings load. The `useEffect` on line 122 then recalculates, but `datesInitialized` gets set to `true` immediately on first render because `defaultRange` and `weekStartDay` already have their default values.
+### Implementation
+Since Recharts `Pie` doesn't support per-slice outer radius natively, I'll use a **custom SVG** approach — 24 arc paths drawn with calculated radii inside a 120×120 container. This gives full control over the polar bar chart look. The palette will use HSL with hue ranging from 170–200 (teal/cyan family) and lightness varying by value.
 
-Fix: initialize `datesInitialized` as `false` and add a `settingsLoaded` flag. Only run the date initialization effect once settings have actually been fetched from the database. This ensures that for "weekly" range, `startOfWeek` uses the correct `weekStartDay` value from user settings.
-
-## 4. Dual side-by-side donut charts with client initials in segments
-**File:** `src/pages/ReportsPage.tsx`
-
-Replace the single nested donut (lines 410-473) with two side-by-side donuts:
-
-- **Left donut — "Time"**: Outer ring segments proportional to each client's duration. Center shows total `HH:MM`. Size ~150px wide.
-- **Right donut — "Turnover"**: Outer ring segments proportional to each client's billable value (€). Center shows total `€XXX`. Size ~150px wide.
-
-**Client initials inside segments**: Use Recharts' `<Label>` or a custom `renderLabel` function on each `<Pie>`. For each segment, compute the midpoint angle and place a `<text>` element with the first two letters of the client name (e.g., "AC" for "Acme Corp"). Only render initials if the segment arc is wide enough (e.g., >15° or >5% of total) to avoid clutter.
-
-Remove the color legend underneath — the initials inside the segments serve as the legend. Keep the billable/non-billable summary line below the donuts as a simple text stat (not colored dots).
-
-**Turnover donut data**: New `useMemo` that groups by `client_id` and sums `billable_value` instead of `duration_minutes`. Non-billable clients (zero turnover) won't appear in the turnover donut.
-
-## 5. Client cards — colored background
-**File:** `src/components/ClientBillingSummary.tsx`
-
-Replace the current `bg-card` white background with each client's color at low opacity. Change line 157:
-```
-className={`rounded-2xl border bg-card ...`}
-```
-to use an inline `style` with the client color at ~15% opacity as the background, keeping text readable. The colored dot indicator can be removed since the card itself is now colored.
-
-## Files modified
-- `src/components/Header.tsx` — backdrop blur + semi-transparent bg
-- `src/pages/ReportsPage.tsx` — font sizes, date init fix, dual donuts with initials
-- `src/components/ClientBillingSummary.tsx` — font sizes, colored card backgrounds
+### Technical changes
+**File: `src/pages/ReportsPage.tsx`**
+- Add `PeakHoursChart` component with custom SVG arcs
+- Compute hourly buckets from `displayEntries` with `start_time`
+- Place as third item in the mini-donut horizontal scroll row
+- Define a teal/cyan color scale separate from the Sunrise Palette
 

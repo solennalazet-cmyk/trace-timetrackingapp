@@ -9,6 +9,7 @@ import { playTimerSound } from "@/lib/timer-sounds";
 
 interface FocusModeProps {
   onComplete: (data: { durationMinutes: number; breakMinutes: number; startedAt: string | null }) => void;
+  autoStartMinutes?: number;
 }
 
 const PRESETS = [
@@ -20,7 +21,7 @@ const PRESETS = [
 
 const BTN = "rounded-[28px] h-14 text-[16px] font-bold";
 
-const FocusMode = ({ onComplete }: FocusModeProps) => {
+const FocusMode = ({ onComplete, autoStartMinutes }: FocusModeProps) => {
   const {
     status,
     totalSeconds,
@@ -64,7 +65,18 @@ const FocusMode = ({ onComplete }: FocusModeProps) => {
     loadSound();
   }, [user]);
 
-  // Request notification permission when starting a focus session
+  // Auto-start for boost sessions
+  const autoStartedRef = useRef(false);
+  useEffect(() => {
+    if (autoStartMinutes && !autoStartedRef.current && status === "idle") {
+      autoStartedRef.current = true;
+      setPreset(autoStartMinutes);
+      // Small delay to let preset apply
+      setTimeout(() => start(), 50);
+    }
+  }, [autoStartMinutes, status, setPreset, start]);
+
+
   useEffect(() => {
     if (status === "running" && "Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();

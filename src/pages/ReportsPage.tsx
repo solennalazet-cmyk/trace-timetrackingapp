@@ -23,6 +23,9 @@ import UnassignedPanel from "@/components/UnassignedPanel";
 import TrashView from "@/components/TrashView";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
+import { useNavigate } from "react-router-dom";
+import BoostOverlay from "@/components/BoostOverlay";
+import { Sparkles } from "lucide-react";
 
 // Sunrise palette – harmonises with the brand gradient (golden → rose → violet → blue)
 const SUNRISE_PALETTE = [
@@ -279,6 +282,8 @@ const ReportsPage = () => {
   const [showTrash, setShowTrash] = useState(false);
   const [activeTimeIdx, setActiveTimeIdx] = useState<number | undefined>(undefined);
   const [activeTurnIdx, setActiveTurnIdx] = useState<number | undefined>(undefined);
+  const [boostOpen, setBoostOpen] = useState(false);
+  const navigate = useNavigate();
 
   const rangeStart = toLocalDateKey(dateFrom);
   const rangeEnd = toLocalDateKey(dateTo);
@@ -286,7 +291,7 @@ const ReportsPage = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     if (user) {
-      const entrySelect = "id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, billable_value, client_id, project_id, task_id, billing_status, client:clients(id, name), project:projects(id, name), task:tasks(id, name)";
+      const entrySelect = "id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, billable_value, client_id, project_id, task_id, billing_status, start_time, client:clients(id, name), project:projects(id, name), task:tasks(id, name)";
       const [{ data: re }, { data: c }, { data: p }, { data: t }, { data: inv }] = await Promise.all([
         supabase.from("time_entries").select(entrySelect)
           .eq("user_id", user.id).gte("entry_date", rangeStart).lte("entry_date", rangeEnd).is("deleted_at", null).order("entry_date", { ascending: false }),
@@ -773,6 +778,7 @@ const ReportsPage = () => {
               shift: "hsl(270 58% 58%)",      // violet
               focus: "hsl(340 72% 55%)",      // rose
               call: "hsl(22 88% 55%)",        // burnt orange
+              boost: "hsl(45 90% 52%)",       // gold
             };
             const ENTRY_TYPE_LABELS: Record<string, string> = {
               stopwatch: "Stopwatch",
@@ -780,6 +786,7 @@ const ReportsPage = () => {
               shift: "Shift",
               focus: "Focus",
               call: "Call Log",
+              boost: "Boost",
             };
             const ENTRY_TYPE_ICONS: Record<string, React.ReactNode> = {
               stopwatch: <Timer className="w-3 h-3" />,
@@ -787,6 +794,7 @@ const ReportsPage = () => {
               shift: <Clock className="w-3 h-3" />,
               focus: <Phone className="w-3 h-3" />,
               call: <Phone className="w-3 h-3" />,
+              boost: <Sparkles className="w-3 h-3" />,
             };
 
             // Aggregate by entry type
@@ -841,6 +849,24 @@ const ReportsPage = () => {
                     <span className="text-xs text-muted-foreground mt-1">Avg Session</span>
                   </div>
                   <PeakHoursChart entries={displayEntries} />
+                  {/* Boost mini-metric */}
+                  {(() => {
+                    const boostMins = displayEntries.filter(e => e.entry_type === "boost").reduce((s, e) => s + rd(e.duration_minutes), 0);
+                    if (boostMins === 0) return null;
+                    const boostCount = displayEntries.filter(e => e.entry_type === "boost").length;
+                    return (
+                      <div className="shrink-0 flex flex-col items-center">
+                        <div className="flex items-center justify-center rounded-full border-2 border-amber-400/40" style={{ width: 120, height: 120, background: "linear-gradient(135deg, hsl(45 90% 96%), hsl(38 80% 92%))" }}>
+                          <div className="flex flex-col items-center">
+                            <Sparkles className="w-5 h-5 text-amber-500 mb-1" />
+                            <span className="text-sm font-bold font-mono text-foreground">{formatHHMM(boostMins)}</span>
+                            <span className="text-[11px] text-muted-foreground">{boostCount} boost{boostCount !== 1 ? "s" : ""}</span>
+                          </div>
+                        </div>
+                        <span className="text-xs text-muted-foreground mt-1">Growth</span>
+                      </div>
+                    );
+                  })()}
                 </div>
                 {/* Shared legend */}
                 <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-2">
@@ -889,6 +915,16 @@ const ReportsPage = () => {
                   </div>
                   <Progress value={revenueProgress} className="h-2 rounded-full" />
                 </div>
+              )}
+              {/* Boost trigger */}
+              {isPro && (
+                <button
+                  onClick={() => setBoostOpen(true)}
+                  className="flex items-center gap-2 mt-2 px-3 py-2 rounded-xl border border-border hover:bg-accent/50 transition-colors w-full"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+                  <span className="text-sm text-muted-foreground">Want a Boost?</span>
+                </button>
               )}
             </div>
           )}
@@ -1008,6 +1044,15 @@ const ReportsPage = () => {
           setAssignOpen(true);
         }}
         onCountChange={() => {}}
+      />
+      <BoostOverlay
+        open={boostOpen}
+        onOpenChange={setBoostOpen}
+        hourProgress={hourProgress}
+        revenueProgress={revenueProgress}
+        onStartSession={() => {
+          navigate("/?boost=1");
+        }}
       />
     </div>
   );

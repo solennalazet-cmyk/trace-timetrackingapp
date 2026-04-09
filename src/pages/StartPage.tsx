@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import StopwatchMode from "@/components/StopwatchMode";
 import FocusMode from "@/components/FocusMode";
 import ShiftMode from "@/components/ShiftMode";
@@ -17,6 +17,7 @@ import { toLocalDateKey } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { saveAnonymousEntry, getAnonymousEntries } from "@/lib/anonymous-store";
 import { toast } from "sonner";
+import { getCongratsMessage } from "@/lib/boost-challenges";
 
 type Mode = "stopwatch" | "focus" | "shift";
 
@@ -24,11 +25,16 @@ const StartPage = () => {
   const [mode, setMode] = useState<Mode>("stopwatch");
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [todayCount, setTodayCount] = useState(0);
   const [todayMinutes, setTodayMinutes] = useState(0);
   const [unassignedCount, setUnassignedCount] = useState(0);
   const [showSummary, setShowSummary] = useState(true);
+
+  // Boost mode
+  const isBoost = searchParams.get("boost") === "1";
+  const [boostProjectId, setBoostProjectId] = useState<string | null>(null);
 
   // Assignment modal state
   const [assignModalOpen, setAssignModalOpen] = useState(false);
@@ -42,6 +48,35 @@ const StartPage = () => {
   // Unassigned panel
   const [unassignedOpen, setUnassignedOpen] = useState(false);
   const [todaySheetOpen, setTodaySheetOpen] = useState(false);
+
+  // Handle boost mode: switch to Focus and create Growth project
+  useEffect(() => {
+    if (!isBoost) return;
+    setMode("focus");
+
+    const ensureGrowthProject = async () => {
+      if (!user) return;
+      // Check if Growth project exists
+      const { data: existing } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("name", "Growth")
+        .maybeSingle();
+      if (existing) {
+        setBoostProjectId(existing.id);
+      } else {
+        const { data: created } = await supabase
+          .from("projects")
+          .insert({ user_id: user.id, name: "Growth" })
+          .select("id")
+          .single();
+        if (created) setBoostProjectId(created.id);
+      }
+    };
+    ensureGrowthProject();
+  }, [isBoost, user]);
+
 
   const fetchSummary = async () => {
     const today = toLocalDateKey(new Date());
@@ -98,13 +133,35 @@ const StartPage = () => {
   }, [user]);
 
   // Called when timer stops — opens the assignment modal
-  const handleSessionEnd = (
+  const handleSessionEnd = async (
     data: { durationMinutes: number; breakMinutes: number; startedAt: string | null },
     entryType: string = "timer"
   ) => {
     if (data.durationMinutes <= 0) {
       data.durationMinutes = 1;
     }
+
+    // Boost sessions: auto-save with Growth project and show congrats
+    if (isBoost && boostProjectId && user) {
+      const now = new Date();
+      await supabase.from("time_entries").insert({
+        user_id: user.id,
+        duration_minutes: data.durationMinutes,
+        break_minutes: data.breakMinutes,
+        entry_type: "boost",
+        entry_date: toLocalDateKey(now),
+        project_id: boostProjectId,
+        billable: false,
+        start_time: data.startedAt || null,
+        end_time: data.startedAt ? now.toISOString() : null,
+      });
+      toast.success(getCongratsMessage());
+      // Clear boost param
+      setSearchParams({});
+      fetchSummary();
+      return;
+    }
+
     setEditingEntry(null);
     setPendingSession({ ...data, entryType });
     setAssignModalOpen(true);
@@ -242,7 +299,7 @@ const StartPage = () => {
 
       {/* Timer area */}
       {mode === "stopwatch" && <StopwatchMode onStop={(d) => handleSessionEnd(d, "timer")} />}
-      {mode === "focus" && <FocusMode onComplete={(d) => handleSessionEnd(d, "timer")} />}
+      {mode === "focus" && <FocusMode onComplete={(d) => handleSessionEnd(d, isBoost ? "boost" : "timer")} autoStartMinutes={isBoost ? 15 : undefined} />}
       {mode === "shift" && <ShiftMode onClockOut={(d) => handleSessionEnd(d, "shift")} />}
 
       {/* Welcome banner (first visit only) */}

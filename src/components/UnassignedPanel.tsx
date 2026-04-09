@@ -242,6 +242,11 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
               <p className="text-sm text-muted-foreground">
                 {formatEntryDate(selectedEntry.entry_date)}
               </p>
+              {(selectedEntry.start_time || selectedEntry.end_time) && (
+                <p className="text-sm text-muted-foreground">
+                  {formatTimeOfDay(selectedEntry.start_time)}{selectedEntry.start_time && selectedEntry.end_time ? " → " : ""}{formatTimeOfDay(selectedEntry.end_time)}
+                </p>
+              )}
               <p className="font-mono text-2xl font-bold">
                 {formatHHMM(selectedEntry.duration_minutes)}
               </p>

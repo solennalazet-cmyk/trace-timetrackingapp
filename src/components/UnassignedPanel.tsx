@@ -28,6 +28,8 @@ interface UnassignedEntry {
   client_id: string | null;
   project_id: string | null;
   task_id: string | null;
+  start_time: string | null;
+  end_time: string | null;
 }
 
 interface UnassignedPanelProps {
@@ -50,6 +52,12 @@ const formatHHMM = (mins: number) => {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+const formatTimeOfDay = (isoStr: string | null) => {
+  if (!isoStr) return "";
+  const d = new Date(isoStr);
+  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 };
 
 const formatEntryDate = (dateStr: string | null) => {
@@ -144,7 +152,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
     if (user) {
       const { data } = await supabase
         .from("time_entries")
-        .select("id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, client_id, project_id, task_id")
+        .select("id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, client_id, project_id, task_id, start_time, end_time")
         .eq("user_id", user.id)
         .is("client_id", null)
         .is("project_id", null)
@@ -234,6 +242,11 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
               <p className="text-sm text-muted-foreground">
                 {formatEntryDate(selectedEntry.entry_date)}
               </p>
+              {(selectedEntry.start_time || selectedEntry.end_time) && (
+                <p className="text-sm text-muted-foreground">
+                  {formatTimeOfDay(selectedEntry.start_time)}{selectedEntry.start_time && selectedEntry.end_time ? " → " : ""}{formatTimeOfDay(selectedEntry.end_time)}
+                </p>
+              )}
               <p className="font-mono text-2xl font-bold">
                 {formatHHMM(selectedEntry.duration_minutes)}
               </p>
@@ -285,7 +298,11 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
                     {entryTypeIcon(entry.entry_type)}
                     <div>
                       <p className="font-mono text-sm font-semibold">{formatHHMM(entry.duration_minutes)}</p>
-                      <p className="text-xs text-muted-foreground">{formatEntryDate(entry.entry_date)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatEntryDate(entry.entry_date)}
+                        {entry.start_time && ` · ${formatTimeOfDay(entry.start_time)}`}
+                        {entry.end_time && ` → ${formatTimeOfDay(entry.end_time)}`}
+                      </p>
                     </div>
                   </div>
                   {entry.notes && (

@@ -26,6 +26,8 @@ interface TodayEntry {
   client_id: string | null;
   project_id: string | null;
   task_id: string | null;
+  start_time: string | null;
+  end_time: string | null;
   client_name?: string;
   project_name?: string;
 }
@@ -51,6 +53,12 @@ const formatHHMM = (mins: number) => {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+const formatTimeOfDay = (isoStr: string | null) => {
+  if (!isoStr) return "";
+  const d = new Date(isoStr);
+  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 };
 
 const SwipeableRow = ({
@@ -142,7 +150,7 @@ const TodayEntriesSheet = ({ open, onOpenChange, onEntryTap }: TodayEntriesSheet
       if (user) {
         const { data } = await supabase
           .from("time_entries")
-          .select("id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, client_id, project_id, task_id, client:clients(id, name), project:projects(id, name)")
+          .select("id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, client_id, project_id, task_id, start_time, end_time, client:clients(id, name), project:projects(id, name)")
           .eq("user_id", user.id)
           .eq("entry_date", today)
           .is("deleted_at", null)
@@ -209,6 +217,10 @@ const TodayEntriesSheet = ({ open, onOpenChange, onEntryTap }: TodayEntriesSheet
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground pl-6">
+                    {entry.start_time && (
+                      <span>{formatTimeOfDay(entry.start_time)}{entry.end_time ? ` → ${formatTimeOfDay(entry.end_time)}` : ""}</span>
+                    )}
+                    {entry.start_time && entry.project_name && <span>·</span>}
                     {entry.project_name && <span>{entry.project_name}</span>}
                     {entry.project_name && entry.billable && entry.rate_amount && <span>·</span>}
                     {entry.billable && entry.rate_amount && (

@@ -6,7 +6,7 @@ import {
   ChevronDown, ChevronUp, Timer, PenLine, Clock, Phone,
   Crown, Download, Trash2, X,
 } from "lucide-react";
-import { startOfWeek, startOfMonth } from "date-fns";
+import { startOfWeek } from "date-fns";
 import DateRangePicker from "@/components/DateRangePicker";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -58,6 +58,15 @@ const formatHHMM = (mins: number) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
+const LS_KEY = "trace_user_settings";
+
+const getCurrentWeekRange = (weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6, now = new Date()) => {
+  const from = startOfWeek(now, { weekStartsOn });
+  const to = new Date(from);
+  to.setDate(to.getDate() + 6);
+  return { from, to };
+};
+
 const getDaysInRange = (startStr: string, endStr: string): string[] => {
   const days: string[] = [];
   const [sY, sM, sD] = startStr.split("-").map(Number);
@@ -97,7 +106,6 @@ const ReportsPage = () => {
   const [dailyHourTarget, setDailyHourTarget] = useState(0);
   const [revenueTarget, setRevenueTarget] = useState(0);
   const [weekStartDay, setWeekStartDay] = useState(1);
-  const [defaultRange, setDefaultRange] = useState("monthly");
   const [rounding, setRounding] = useState<RoundingSettings>(DEFAULT_ROUNDING);
 
   // Settings are loaded inside the date initialization effect below
@@ -110,16 +118,34 @@ const ReportsPage = () => {
 
   // Mark settings as loaded after fetch
   useEffect(() => {
-    if (!user) { setSettingsLoaded(true); return; }
+    if (!user) {
+      try {
+        const raw = localStorage.getItem(LS_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          setDailyHourTarget(parsed.daily_hour_target ?? 0);
+          setRevenueTarget(parsed.revenue_target ?? 0);
+          setWeekStartDay(parsed.week_start_day ?? 1);
+          setRounding({
+            round_duration: parsed.round_duration ?? "none",
+            round_duration_to: parsed.round_duration_to ?? 15,
+            round_amount: parsed.round_amount ?? "none",
+            round_amount_to: parsed.round_amount_to ?? 0.01,
+          });
+        }
+      } catch {}
+      setSettingsLoaded(true);
+      return;
+    }
+
     supabase.from("user_settings")
-      .select("daily_hour_target, revenue_target, week_start_day, default_report_range, round_duration, round_duration_to, round_amount, round_amount_to")
+      .select("daily_hour_target, revenue_target, week_start_day, round_duration, round_duration_to, round_amount, round_amount_to")
       .eq("user_id", user.id).single()
       .then(({ data }) => {
         if (data) {
           setDailyHourTarget((data as any).daily_hour_target ?? 0);
           setRevenueTarget((data as any).revenue_target ?? 0);
           setWeekStartDay((data as any).week_start_day ?? 1);
-          setDefaultRange((data as any).default_report_range ?? "monthly");
           setRounding({
             round_duration: (data as any).round_duration ?? "none",
             round_duration_to: (data as any).round_duration_to ?? 15,
@@ -133,25 +159,11 @@ const ReportsPage = () => {
 
   useEffect(() => {
     if (datesInitialized || !settingsLoaded) return;
-    const now = new Date();
-    let from: Date;
-    let to: Date = now;
-
-    const wsd = weekStartDay as 0 | 1 | 2 | 3 | 4 | 5 | 6;
-    if (defaultRange === "monthly") {
-      from = startOfMonth(now);
-    } else if (defaultRange === "biweekly") {
-      from = new Date(now.getTime() - 13 * 86400000);
-    } else {
-      from = startOfWeek(now, { weekStartsOn: wsd });
-      const endOfWk = new Date(from);
-      endOfWk.setDate(endOfWk.getDate() + 6);
-      to = endOfWk;
-    }
+    const { from, to } = getCurrentWeekRange(weekStartDay as 0 | 1 | 2 | 3 | 4 | 5 | 6);
     setDateFrom(from);
     setDateTo(to);
     setDatesInitialized(true);
-  }, [defaultRange, weekStartDay, datesInitialized, settingsLoaded]);
+  }, [weekStartDay, datesInitialized, settingsLoaded]);
 
   const [rangeEntries, setRangeEntries] = useState<TimeEntry[]>([]);
   const [clients, setClients] = useState<Record<string, string>>({});

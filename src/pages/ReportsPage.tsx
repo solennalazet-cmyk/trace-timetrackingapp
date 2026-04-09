@@ -778,6 +778,7 @@ const ReportsPage = () => {
               shift: "hsl(270 58% 58%)",      // violet
               focus: "hsl(340 72% 55%)",      // rose
               call: "hsl(22 88% 55%)",        // burnt orange
+              boost: "hsl(45 90% 52%)",       // gold
             };
             const ENTRY_TYPE_LABELS: Record<string, string> = {
               stopwatch: "Stopwatch",
@@ -785,6 +786,7 @@ const ReportsPage = () => {
               shift: "Shift",
               focus: "Focus",
               call: "Call Log",
+              boost: "Boost",
             };
             const ENTRY_TYPE_ICONS: Record<string, React.ReactNode> = {
               stopwatch: <Timer className="w-3 h-3" />,
@@ -792,6 +794,7 @@ const ReportsPage = () => {
               shift: <Clock className="w-3 h-3" />,
               focus: <Phone className="w-3 h-3" />,
               call: <Phone className="w-3 h-3" />,
+              boost: <Sparkles className="w-3 h-3" />,
             };
 
             // Aggregate by entry type

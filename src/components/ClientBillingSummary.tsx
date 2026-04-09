@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { ChevronDown, ChevronUp, ArrowRight, Trash2, X } from "lucide-react";
 import { type TimeEntry } from "@/components/EntryDetailSheet";
+import { type RoundingSettings, DEFAULT_ROUNDING, roundDuration, roundedBillableValue } from "@/lib/rounding";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 

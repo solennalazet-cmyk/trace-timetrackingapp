@@ -51,7 +51,7 @@ const DEFAULTS: Settings = {
   daily_hour_target: 0,
   revenue_target: 0,
   idle_reminder_minutes: 0,
-  default_report_range: "monthly",
+  default_report_range: "weekly",
 };
 
 const formatPreset = (mins: number) => {
@@ -77,7 +77,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     if (user) {
       const { data } = await supabase
         .from("user_settings")
-        .select("timer_presets, pause_mode, timer_sound, theme, show_logged_today, round_duration, round_duration_to, round_amount, round_amount_to")
+        .select("timer_presets, pause_mode, timer_sound, theme, show_logged_today, round_duration, round_duration_to, round_amount, round_amount_to, week_start_day, time_format, default_billable, daily_hour_target, revenue_target, idle_reminder_minutes, default_report_range")
         .eq("user_id", user.id)
         .single();
       if (data) {

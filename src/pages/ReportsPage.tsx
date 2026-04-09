@@ -688,8 +688,8 @@ const ReportsPage = () => {
             displayEntries.forEach((e) => {
               const t = e.entry_type ?? "stopwatch";
               if (!byType[t]) byType[t] = { mins: 0, value: 0, count: 0 };
-              byType[t].mins += e.duration_minutes;
-              byType[t].value += e.billable_value || 0;
+              byType[t].mins += rd(e.duration_minutes);
+              byType[t].value += rv(e);
               byType[t].count += 1;
             });
 

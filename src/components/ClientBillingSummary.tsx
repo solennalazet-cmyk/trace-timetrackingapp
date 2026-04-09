@@ -246,7 +246,7 @@ const ClientBillingSummary = ({
                           <span className="font-mono text-muted-foreground">
                             {sym}{entry.billable_value.toFixed(2)}
                             {entry.billing_status === "unbilled" && (
-                              <span className="ml-1 text-primary font-medium">unbilled</span>
+                              <span className="ml-1 text-foreground font-medium">unbilled</span>
                             )}
                           </span>
                         ) : (

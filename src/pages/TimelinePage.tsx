@@ -425,7 +425,7 @@ const TimelinePage = () => {
               </select>
             )}
             {hasFilters && (
-              <button onClick={clearFilters} className="text-xs text-primary hover:underline">Clear all</button>
+              <button onClick={clearFilters} className="text-xs text-foreground font-medium hover:underline">Clear all</button>
             )}
           </div>
 
@@ -433,7 +433,7 @@ const TimelinePage = () => {
           {filteredEntries.length === 0 && (
             <div className="text-center py-8">
               <p className="text-sm text-muted-foreground">No entries match your search.</p>
-              <button onClick={clearFilters} className="text-xs text-primary hover:underline mt-1">Clear filters</button>
+              <button onClick={clearFilters} className="text-xs text-foreground font-medium hover:underline mt-1">Clear filters</button>
             </div>
           )}
 

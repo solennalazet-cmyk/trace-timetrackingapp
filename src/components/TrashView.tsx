@@ -96,7 +96,7 @@ const TrashView = ({ onBack, onCountChange }: TrashViewProps) => {
   return (
     <div className="mb-6">
       <div className="flex items-center gap-2 mb-1">
-        <button onClick={onBack} className="text-sm text-primary hover:underline">← Back</button>
+        <button onClick={onBack} className="text-sm text-foreground font-medium hover:underline">← Back</button>
       </div>
       <h3 className="text-sm font-semibold text-foreground mb-0.5">
         Trash ({entries.length} {entries.length === 1 ? "entry" : "entries"})

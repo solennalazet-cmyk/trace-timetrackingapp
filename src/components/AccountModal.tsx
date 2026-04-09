@@ -199,7 +199,7 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <p className="text-sm font-medium">Plan: Trace Pro (Cancelling)</p>
-              <Crown className="w-4 h-4 text-primary" />
+              <Crown className="w-4 h-4 text-foreground" />
             </div>
             <p className="text-xs text-muted-foreground">Access continues until {periodEnd}.</p>
             {renderPlanToggle()}
@@ -238,7 +238,7 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
           {isInRefundWindow && (
             <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground">
               You're within your 30-day refund window.{" "}
-              <a href={`mailto:${supportEmail}`} className="text-primary underline">
+              <a href={`mailto:${supportEmail}`} className="text-foreground font-medium underline">
                 Contact us
               </a>{" "}
               to request a refund.

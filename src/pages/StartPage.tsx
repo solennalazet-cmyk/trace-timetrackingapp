@@ -299,7 +299,7 @@ const StartPage = () => {
 
       {/* Timer area */}
       {mode === "stopwatch" && <StopwatchMode onStop={(d) => handleSessionEnd(d, "timer")} />}
-      {mode === "focus" && <FocusMode onComplete={(d) => handleSessionEnd(d, "timer")} />}
+      {mode === "focus" && <FocusMode onComplete={(d) => handleSessionEnd(d, isBoost ? "boost" : "timer")} autoStartMinutes={isBoost ? 15 : undefined} />}
       {mode === "shift" && <ShiftMode onClockOut={(d) => handleSessionEnd(d, "shift")} />}
 
       {/* Welcome banner (first visit only) */}

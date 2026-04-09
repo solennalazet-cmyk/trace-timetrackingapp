@@ -223,11 +223,15 @@ const ReportsPage = () => {
     return rangeEntries.filter((e) => e.client_id === clientFilter);
   }, [rangeEntries, clientFilter]);
 
-  // Core metrics
-  const totalMins = displayEntries.reduce((s, e) => s + e.duration_minutes, 0);
-  const billableMins = displayEntries.filter((e) => e.billable).reduce((s, e) => s + e.duration_minutes, 0);
+  // Helper: rounded duration/value per entry
+  const rd = (mins: number) => roundDuration(mins, rounding);
+  const rv = (e: TimeEntry) => roundedBillableValue(e.duration_minutes, e.rate_amount ?? null, e.rate_unit ?? null, e.billable ?? false, rounding);
+
+  // Core metrics (with rounding applied)
+  const totalMins = displayEntries.reduce((s, e) => s + rd(e.duration_minutes), 0);
+  const billableMins = displayEntries.filter((e) => e.billable).reduce((s, e) => s + rd(e.duration_minutes), 0);
   const nonBillableMins = totalMins - billableMins;
-  const billableValue = displayEntries.reduce((s, e) => s + (e.billable_value || 0), 0);
+  const billableValue = displayEntries.reduce((s, e) => s + rv(e), 0);
 
   // Client IDs
   const clientIds = useMemo(() => [...new Set(rangeEntries.map((e) => e.client_id).filter(Boolean))] as string[], [rangeEntries]);

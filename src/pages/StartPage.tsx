@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import StopwatchMode from "@/components/StopwatchMode";
 import FocusMode from "@/components/FocusMode";
 import ShiftMode from "@/components/ShiftMode";

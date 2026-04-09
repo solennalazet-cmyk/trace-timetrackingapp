@@ -716,7 +716,7 @@ const ReportsPage = () => {
             const totalTurnover = turnoverData.reduce((s, d) => s + d.value, 0);
 
             const MiniDonut = ({ data, centerLabel, centerSub, size = 120 }: { data: { name: string; value: number; fill: string }[]; centerLabel: string; centerSub: string; size?: number }) => (
-              <div className="relative shrink-0" style={{ width: size, height: size }}>
+              <div className="relative shrink-0 [&_svg]:outline-none [&_svg]:border-none [&_svg_*]:outline-none" style={{ width: size, height: size }}>
                 <ResponsiveContainer width={size} height={size}>
                   <PieChart>
                     <Pie data={data} innerRadius={size * 0.32} outerRadius={size * 0.46} dataKey="value" stroke="hsl(var(--background))" strokeWidth={2} paddingAngle={1}>

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { toLocalDateKey } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { type RoundingSettings, DEFAULT_ROUNDING, roundDuration, roundAmount, roundedBillableValue } from "@/lib/rounding";
 import { getAnonymousEntries } from "@/lib/anonymous-store";
 import EntryDetailSheet, { type TimeEntry } from "@/components/EntryDetailSheet";
 import AssignmentModal, { type SessionData, type AssignmentResult, type ExistingEntry } from "@/components/AssignmentModal";
@@ -97,6 +98,7 @@ const ReportsPage = () => {
   const [revenueTarget, setRevenueTarget] = useState(0);
   const [weekStartDay, setWeekStartDay] = useState(1);
   const [defaultRange, setDefaultRange] = useState("monthly");
+  const [rounding, setRounding] = useState<RoundingSettings>(DEFAULT_ROUNDING);
 
   // Settings are loaded inside the date initialization effect below
 
@@ -110,7 +112,7 @@ const ReportsPage = () => {
   useEffect(() => {
     if (!user) { setSettingsLoaded(true); return; }
     supabase.from("user_settings")
-      .select("daily_hour_target, revenue_target, week_start_day, default_report_range")
+      .select("daily_hour_target, revenue_target, week_start_day, default_report_range, round_duration, round_duration_to, round_amount, round_amount_to")
       .eq("user_id", user.id).single()
       .then(({ data }) => {
         if (data) {
@@ -118,6 +120,12 @@ const ReportsPage = () => {
           setRevenueTarget((data as any).revenue_target ?? 0);
           setWeekStartDay((data as any).week_start_day ?? 1);
           setDefaultRange((data as any).default_report_range ?? "monthly");
+          setRounding({
+            round_duration: (data as any).round_duration ?? "none",
+            round_duration_to: (data as any).round_duration_to ?? 15,
+            round_amount: (data as any).round_amount ?? "none",
+            round_amount_to: (data as any).round_amount_to ?? 0.01,
+          });
         }
         setSettingsLoaded(true);
       });
@@ -215,11 +223,15 @@ const ReportsPage = () => {
     return rangeEntries.filter((e) => e.client_id === clientFilter);
   }, [rangeEntries, clientFilter]);
 
-  // Core metrics
-  const totalMins = displayEntries.reduce((s, e) => s + e.duration_minutes, 0);
-  const billableMins = displayEntries.filter((e) => e.billable).reduce((s, e) => s + e.duration_minutes, 0);
+  // Helper: rounded duration/value per entry
+  const rd = (mins: number) => roundDuration(mins, rounding);
+  const rv = (e: TimeEntry) => roundedBillableValue(e.duration_minutes, e.rate_amount ?? null, e.rate_unit ?? null, e.billable ?? false, rounding);
+
+  // Core metrics (with rounding applied)
+  const totalMins = displayEntries.reduce((s, e) => s + rd(e.duration_minutes), 0);
+  const billableMins = displayEntries.filter((e) => e.billable).reduce((s, e) => s + rd(e.duration_minutes), 0);
   const nonBillableMins = totalMins - billableMins;
-  const billableValue = displayEntries.reduce((s, e) => s + (e.billable_value || 0), 0);
+  const billableValue = displayEntries.reduce((s, e) => s + rv(e), 0);
 
   // Client IDs
   const clientIds = useMemo(() => [...new Set(rangeEntries.map((e) => e.client_id).filter(Boolean))] as string[], [rangeEntries]);
@@ -257,10 +269,10 @@ const ReportsPage = () => {
 
       displayEntries.forEach((e) => {
         const pKey = e.project_id ?? "no-project";
-        projectMins[pKey] = (projectMins[pKey] || 0) + e.duration_minutes;
+        projectMins[pKey] = (projectMins[pKey] || 0) + rd(e.duration_minutes);
         if (e.project_id && !seenProjects.has(e.project_id)) { seenProjects.add(e.project_id); projectCount++; }
         const tKey = e.task_id ?? "no-task";
-        taskMins[tKey] = (taskMins[tKey] || 0) + e.duration_minutes;
+        taskMins[tKey] = (taskMins[tKey] || 0) + rd(e.duration_minutes);
       });
 
       if (projectCount <= 1) {
@@ -287,7 +299,7 @@ const ReportsPage = () => {
     const map: Record<string, number> = {};
     displayEntries.forEach((e) => {
       const key = e.client_id ?? "unassigned";
-      map[key] = (map[key] || 0) + e.duration_minutes;
+      map[key] = (map[key] || 0) + rd(e.duration_minutes);
     });
     clientIds.forEach((id) => {
       if (map[id]) {
@@ -298,15 +310,17 @@ const ReportsPage = () => {
     });
     if (map["unassigned"]) data.push({ name: "Unassigned", initials: "NA", value: map["unassigned"], fill: "hsl(240 5% 75%)" });
     return data;
-  }, [displayEntries, clientIds, clients, clientFilter, projects, tasks]);
+  }, [displayEntries, clientIds, clients, clientFilter, projects, tasks, rounding]);
 
   // Turnover donut: per-client billable value (always by client, even when filtered)
   const turnoverDonutData = useMemo(() => {
     const data: { name: string; initials: string; value: number; fill: string }[] = [];
     const map: Record<string, number> = {};
     displayEntries.forEach((e) => {
-      if (!e.client_id || !e.billable_value) return;
-      map[e.client_id] = (map[e.client_id] || 0) + e.billable_value;
+      if (!e.client_id) return;
+      const val = rv(e);
+      if (!val) return;
+      map[e.client_id] = (map[e.client_id] || 0) + val;
     });
     clientIds.forEach((id) => {
       if (map[id]) {
@@ -316,7 +330,7 @@ const ReportsPage = () => {
       }
     });
     return data;
-  }, [displayEntries, clientIds, clients]);
+  }, [displayEntries, clientIds, clients, rounding]);
 
   const totalTurnoverValue = turnoverDonutData.reduce((s, d) => s + d.value, 0);
 
@@ -329,13 +343,13 @@ const ReportsPage = () => {
       const row: any = {
         date: day,
         label: new Date(day + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }),
-        _total: dayEntries.reduce((s, e) => s + e.duration_minutes / 60, 0),
+        _total: dayEntries.reduce((s, e) => s + rd(e.duration_minutes) / 60, 0),
       };
       chartClientIds.forEach((cid) => {
-        row[cid] = dayEntries.filter((e) => e.client_id === cid).reduce((s, e) => s + e.duration_minutes / 60, 0);
+        row[cid] = dayEntries.filter((e) => e.client_id === cid).reduce((s, e) => s + rd(e.duration_minutes) / 60, 0);
       });
       if (!clientFilter) {
-        const un = dayEntries.filter((e) => !e.client_id).reduce((s, e) => s + e.duration_minutes / 60, 0);
+        const un = dayEntries.filter((e) => !e.client_id).reduce((s, e) => s + rd(e.duration_minutes) / 60, 0);
         if (un > 0) row["unassigned"] = un;
       }
       return row;
@@ -628,6 +642,7 @@ const ReportsPage = () => {
                 onEditEntry={handleEdit}
                 activeClientFilter={clientFilter}
                 onFilterClient={(id) => setClientFilter(id ?? "")}
+                rounding={rounding}
                 onDeleteEntry={async (entryId) => {
                   if (user) {
                     await supabase.from("time_entries").update({ deleted_at: new Date().toISOString() }).eq("id", entryId);
@@ -674,8 +689,8 @@ const ReportsPage = () => {
             displayEntries.forEach((e) => {
               const t = e.entry_type ?? "stopwatch";
               if (!byType[t]) byType[t] = { mins: 0, value: 0, count: 0 };
-              byType[t].mins += e.duration_minutes;
-              byType[t].value += e.billable_value || 0;
+              byType[t].mins += rd(e.duration_minutes);
+              byType[t].value += rv(e);
               byType[t].count += 1;
             });
 

@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { ChevronDown, ChevronUp, ArrowRight, Trash2, X } from "lucide-react";
 import { type TimeEntry } from "@/components/EntryDetailSheet";
+import { type RoundingSettings, DEFAULT_ROUNDING, roundDuration, roundedBillableValue } from "@/lib/rounding";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
@@ -25,6 +26,7 @@ interface ClientBillingSummaryProps {
   onDeleteEntry?: (entryId: string) => void;
   activeClientFilter?: string;
   onFilterClient?: (clientId: string | null) => void;
+  rounding?: RoundingSettings;
 }
 
 interface ClientSummary {
@@ -53,6 +55,7 @@ const ClientBillingSummary = ({
   onDeleteEntry,
   activeClientFilter,
   onFilterClient,
+  rounding = DEFAULT_ROUNDING,
 }: ClientBillingSummaryProps) => {
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
 
@@ -63,7 +66,7 @@ const ClientBillingSummary = ({
 
     allEntries.forEach((e) => {
       if (!e.client_id) {
-        unassignedMins += e.duration_minutes;
+        unassignedMins += roundDuration(e.duration_minutes, rounding);
         unassignedEntries.push(e);
         return;
       }
@@ -81,13 +84,15 @@ const ClientBillingSummary = ({
         };
       }
       const c = clientMap[e.client_id];
-      c.totalMins += e.duration_minutes;
+      const rdMins = roundDuration(e.duration_minutes, rounding);
+      const rdVal = roundedBillableValue(e.duration_minutes, e.rate_amount ?? null, e.rate_unit ?? null, e.billable ?? false, rounding);
+      c.totalMins += rdMins;
       c.entries.push(e);
       if (e.billable) {
-        c.billableMins += e.duration_minutes;
-        c.billableValue += e.billable_value || 0;
+        c.billableMins += rdMins;
+        c.billableValue += rdVal;
         if (e.billing_status === "unbilled") {
-          c.outstanding += e.billable_value || 0;
+          c.outstanding += rdVal;
         }
       }
     });

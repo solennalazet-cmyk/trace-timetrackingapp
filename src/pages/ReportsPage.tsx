@@ -317,8 +317,10 @@ const ReportsPage = () => {
     const data: { name: string; initials: string; value: number; fill: string }[] = [];
     const map: Record<string, number> = {};
     displayEntries.forEach((e) => {
-      if (!e.client_id || !e.billable_value) return;
-      map[e.client_id] = (map[e.client_id] || 0) + e.billable_value;
+      if (!e.client_id) return;
+      const val = rv(e);
+      if (!val) return;
+      map[e.client_id] = (map[e.client_id] || 0) + val;
     });
     clientIds.forEach((id) => {
       if (map[id]) {

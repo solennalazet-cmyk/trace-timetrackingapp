@@ -38,6 +38,8 @@ export interface TimeEntry {
   client_id: string | null;
   project_id: string | null;
   task_id: string | null;
+  start_time: string | null;
+  end_time: string | null;
   client_name?: string;
   project_name?: string;
   task_name?: string;

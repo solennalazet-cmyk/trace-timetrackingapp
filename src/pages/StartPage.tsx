@@ -112,11 +112,12 @@ const StartPage = () => {
 
   // Save entry with assignment data
   const saveEntry = async (session: SessionData, assignment: AssignmentResult | null) => {
+    const now = new Date();
     const entry: any = {
       duration_minutes: session.durationMinutes,
       break_minutes: session.breakMinutes,
       entry_type: session.entryType,
-      entry_date: toLocalDateKey(new Date()),
+      entry_date: toLocalDateKey(now),
       billable: assignment?.billable ?? true,
       billing_status: "unbilled",
       client_id: assignment?.clientId || null,
@@ -128,6 +129,8 @@ const StartPage = () => {
       rate_currency: assignment?.rateCurrency || null,
       rate_unit: assignment?.rateAmount ? (assignment?.rateUnit || "hour") : null,
       billable_value: assignment?.billableValue || null,
+      start_time: session.startedAt || null,
+      end_time: session.startedAt ? now.toISOString() : null,
     };
 
     if (user) {

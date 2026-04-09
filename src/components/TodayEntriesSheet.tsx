@@ -26,6 +26,8 @@ interface TodayEntry {
   client_id: string | null;
   project_id: string | null;
   task_id: string | null;
+  start_time: string | null;
+  end_time: string | null;
   client_name?: string;
   project_name?: string;
 }
@@ -142,7 +144,7 @@ const TodayEntriesSheet = ({ open, onOpenChange, onEntryTap }: TodayEntriesSheet
       if (user) {
         const { data } = await supabase
           .from("time_entries")
-          .select("id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, client_id, project_id, task_id, client:clients(id, name), project:projects(id, name)")
+          .select("id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, client_id, project_id, task_id, start_time, end_time, client:clients(id, name), project:projects(id, name)")
           .eq("user_id", user.id)
           .eq("entry_date", today)
           .is("deleted_at", null)

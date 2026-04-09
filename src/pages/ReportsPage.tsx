@@ -299,7 +299,7 @@ const ReportsPage = () => {
     const map: Record<string, number> = {};
     displayEntries.forEach((e) => {
       const key = e.client_id ?? "unassigned";
-      map[key] = (map[key] || 0) + e.duration_minutes;
+      map[key] = (map[key] || 0) + rd(e.duration_minutes);
     });
     clientIds.forEach((id) => {
       if (map[id]) {

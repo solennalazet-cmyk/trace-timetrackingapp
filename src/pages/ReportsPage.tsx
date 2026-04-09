@@ -98,6 +98,7 @@ const ReportsPage = () => {
   const [revenueTarget, setRevenueTarget] = useState(0);
   const [weekStartDay, setWeekStartDay] = useState(1);
   const [defaultRange, setDefaultRange] = useState("monthly");
+  const [rounding, setRounding] = useState<RoundingSettings>(DEFAULT_ROUNDING);
 
   // Settings are loaded inside the date initialization effect below
 
@@ -111,7 +112,7 @@ const ReportsPage = () => {
   useEffect(() => {
     if (!user) { setSettingsLoaded(true); return; }
     supabase.from("user_settings")
-      .select("daily_hour_target, revenue_target, week_start_day, default_report_range")
+      .select("daily_hour_target, revenue_target, week_start_day, default_report_range, round_duration, round_duration_to, round_amount, round_amount_to")
       .eq("user_id", user.id).single()
       .then(({ data }) => {
         if (data) {
@@ -119,6 +120,12 @@ const ReportsPage = () => {
           setRevenueTarget((data as any).revenue_target ?? 0);
           setWeekStartDay((data as any).week_start_day ?? 1);
           setDefaultRange((data as any).default_report_range ?? "monthly");
+          setRounding({
+            round_duration: (data as any).round_duration ?? "none",
+            round_duration_to: (data as any).round_duration_to ?? 15,
+            round_amount: (data as any).round_amount ?? "none",
+            round_amount_to: (data as any).round_amount_to ?? 0.01,
+          });
         }
         setSettingsLoaded(true);
       });

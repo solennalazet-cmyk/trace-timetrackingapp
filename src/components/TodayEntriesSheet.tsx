@@ -55,6 +55,12 @@ const formatHHMM = (mins: number) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
+const formatTimeOfDay = (isoStr: string | null) => {
+  if (!isoStr) return "";
+  const d = new Date(isoStr);
+  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+};
+
 const SwipeableRow = ({
   children,
   onSwipeLeft,
@@ -211,6 +217,10 @@ const TodayEntriesSheet = ({ open, onOpenChange, onEntryTap }: TodayEntriesSheet
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground pl-6">
+                    {entry.start_time && (
+                      <span>{formatTimeOfDay(entry.start_time)}{entry.end_time ? ` → ${formatTimeOfDay(entry.end_time)}` : ""}</span>
+                    )}
+                    {entry.start_time && entry.project_name && <span>·</span>}
                     {entry.project_name && <span>{entry.project_name}</span>}
                     {entry.project_name && entry.billable && entry.rate_amount && <span>·</span>}
                     {entry.billable && entry.rate_amount && (

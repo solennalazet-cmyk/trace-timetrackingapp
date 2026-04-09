@@ -28,6 +28,8 @@ interface UnassignedEntry {
   client_id: string | null;
   project_id: string | null;
   task_id: string | null;
+  start_time: string | null;
+  end_time: string | null;
 }
 
 interface UnassignedPanelProps {
@@ -144,7 +146,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
     if (user) {
       const { data } = await supabase
         .from("time_entries")
-        .select("id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, client_id, project_id, task_id")
+        .select("id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, client_id, project_id, task_id, start_time, end_time")
         .eq("user_id", user.id)
         .is("client_id", null)
         .is("project_id", null)

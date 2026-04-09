@@ -564,7 +564,7 @@ const ReportsPage = () => {
               <div className="mb-6">
                 <div className="flex justify-center gap-4">
                   {/* Time donut */}
-                  <div className="relative" style={{ width: 175, height: 175 }}>
+                  <div className="relative [&_svg]:outline-none [&_svg]:border-none [&_svg_*]:outline-none" style={{ width: 175, height: 175 }}>
                     <ResponsiveContainer width={175} height={175}>
                       <PieChart>
                         <Pie
@@ -594,7 +594,7 @@ const ReportsPage = () => {
 
                   {/* Turnover donut */}
                   {turnoverDonutData.length > 0 && (
-                    <div className="relative" style={{ width: 175, height: 175 }}>
+                    <div className="relative [&_svg]:outline-none [&_svg]:border-none [&_svg_*]:outline-none" style={{ width: 175, height: 175 }}>
                       <ResponsiveContainer width={175} height={175}>
                         <PieChart>
                           <Pie
@@ -716,7 +716,7 @@ const ReportsPage = () => {
             const totalTurnover = turnoverData.reduce((s, d) => s + d.value, 0);
 
             const MiniDonut = ({ data, centerLabel, centerSub, size = 120 }: { data: { name: string; value: number; fill: string }[]; centerLabel: string; centerSub: string; size?: number }) => (
-              <div className="relative shrink-0" style={{ width: size, height: size }}>
+              <div className="relative shrink-0 [&_svg]:outline-none [&_svg]:border-none [&_svg_*]:outline-none" style={{ width: size, height: size }}>
                 <ResponsiveContainer width={size} height={size}>
                   <PieChart>
                     <Pie data={data} innerRadius={size * 0.32} outerRadius={size * 0.46} dataKey="value" stroke="hsl(var(--background))" strokeWidth={2} paddingAngle={1}>
@@ -743,12 +743,6 @@ const ReportsPage = () => {
                     <MiniDonut data={hoursData} centerLabel={formatHHMM(totalMins)} centerSub="hours" />
                     <span className="text-xs text-muted-foreground mt-1">Hours</span>
                   </div>
-                  {turnoverData.length > 0 && (
-                    <div className="shrink-0 flex flex-col items-center">
-                      <MiniDonut data={turnoverData} centerLabel={`€${totalTurnover.toFixed(0)}`} centerSub="turnover" />
-                      <span className="text-xs text-muted-foreground mt-1">Turnover</span>
-                    </div>
-                  )}
                   <div className="shrink-0 flex flex-col items-center">
                     <MiniDonut data={avgData} centerLabel={formatHHMM(Math.round(totalMins / (displayEntries.length || 1)))} centerSub="avg" />
                     <span className="text-xs text-muted-foreground mt-1">Avg Session</span>

@@ -85,6 +85,12 @@ const formatFullDate = (dateStr: string | null) => {
   return d.toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 };
 
+const formatTimeOfDay = (isoStr: string | null) => {
+  if (!isoStr) return "";
+  const d = new Date(isoStr);
+  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+};
+
 const EntryDetailSheet = ({ entry, open, onOpenChange, onEdit, onDeleted }: EntryDetailSheetProps) => {
   const { user } = useAuth();
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -118,6 +124,11 @@ const EntryDetailSheet = ({ entry, open, onOpenChange, onEdit, onDeleted }: Entr
           <div className="mt-4 space-y-3">
             <div className="p-3 rounded-lg bg-muted/50 space-y-2">
               <p className="text-sm text-muted-foreground">{formatFullDate(entry.entry_date)}</p>
+              {(entry.start_time || entry.end_time) && (
+                <p className="text-sm text-muted-foreground">
+                  {formatTimeOfDay(entry.start_time)}{entry.start_time && entry.end_time ? " → " : ""}{formatTimeOfDay(entry.end_time)}
+                </p>
+              )}
               <p className="font-mono text-2xl font-bold">{formatHHMM(entry.duration_minutes)}</p>
               {(entry.break_minutes ?? 0) > 0 && (
                 <p className="text-sm text-muted-foreground">{entry.break_minutes}m break</p>

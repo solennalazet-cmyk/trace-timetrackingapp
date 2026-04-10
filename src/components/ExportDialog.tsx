@@ -274,7 +274,7 @@ const ExportDialog = ({
       doc.setPage(p);
       doc.setFontSize(7);
       doc.setTextColor(160);
-      doc.text("Generated with Trace", pageW / 2, pageH - 8, { align: "center" });
+      doc.text("Generated with Trace  ·  trace.lla-studio.com", pageW / 2, pageH - 8, { align: "center" });
       doc.text(`Page ${p} of ${totalPages}`, pageW - margin, pageH - 8, { align: "right" });
     }
 

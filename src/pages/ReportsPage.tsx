@@ -26,6 +26,7 @@ import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
 import BoostOverlay from "@/components/BoostOverlay";
 import { Sparkles } from "lucide-react";
+import ExportDialog from "@/components/ExportDialog";
 
 // Sunrise palette – harmonises with the brand gradient (golden → rose → violet → blue)
 const SUNRISE_PALETTE = [
@@ -283,6 +284,7 @@ const ReportsPage = () => {
   const [activeTimeIdx, setActiveTimeIdx] = useState<number | undefined>(undefined);
   const [activeTurnIdx, setActiveTurnIdx] = useState<number | undefined>(undefined);
   const [boostOpen, setBoostOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const navigate = useNavigate();
 
   const rangeStart = toLocalDateKey(dateFrom);
@@ -998,12 +1000,9 @@ const ReportsPage = () => {
           )}
 
           {/* Export */}
-          <div className="flex gap-2 mb-6">
-            <Button variant="outline" className="flex-1 gap-1 rounded-xl" onClick={handleExportCSV}>
-              <Download className="w-4 h-4" /> Export CSV
-            </Button>
-            <Button variant="outline" className="flex-1 gap-1 rounded-xl" onClick={() => toast.info("PDF export coming soon.")}>
-              <Download className="w-4 h-4" /> Export PDF
+          <div className="mb-6">
+            <Button variant="outline" className="w-full gap-2 rounded-xl h-11" onClick={() => setExportOpen(true)}>
+              <Download className="w-4 h-4" /> Export
             </Button>
           </div>
 
@@ -1053,6 +1052,20 @@ const ReportsPage = () => {
         onStartSession={() => {
           navigate("/?boost=1");
         }}
+      />
+      <ExportDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        weekStartsOn={weekStartDay as 0 | 1 | 2 | 3 | 4 | 5 | 6}
+        entries={rangeEntries}
+        clients={clients}
+        projects={projects}
+        tasks={tasks}
+        clientFilter={clientFilter}
+        clientIds={clientIds}
+        rounding={rounding}
       />
     </div>
   );

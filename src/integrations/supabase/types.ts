@@ -136,38 +136,50 @@ export type Database = {
       profiles: {
         Row: {
           billing_interval: string | null
+          business_address: string | null
+          business_name: string | null
           created_at: string | null
           current_period_end: string | null
           full_name: string | null
           id: string
           plan: string | null
+          show_business_on_export: boolean | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           subscription_status: string | null
+          tax_id: string | null
           trial_started_at: string | null
         }
         Insert: {
           billing_interval?: string | null
+          business_address?: string | null
+          business_name?: string | null
           created_at?: string | null
           current_period_end?: string | null
           full_name?: string | null
           id: string
           plan?: string | null
+          show_business_on_export?: boolean | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_status?: string | null
+          tax_id?: string | null
           trial_started_at?: string | null
         }
         Update: {
           billing_interval?: string | null
+          business_address?: string | null
+          business_name?: string | null
           created_at?: string | null
           current_period_end?: string | null
           full_name?: string | null
           id?: string
           plan?: string | null
+          show_business_on_export?: boolean | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_status?: string | null
+          tax_id?: string | null
           trial_started_at?: string | null
         }
         Relationships: []

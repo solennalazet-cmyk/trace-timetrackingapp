@@ -10,6 +10,10 @@ interface Profile {
   subscription_status: string | null;
   created_at: string | null;
   current_period_end: string | null;
+  business_name: string | null;
+  business_address: string | null;
+  tax_id: string | null;
+  show_business_on_export: boolean | null;
 }
 
 interface AuthContextType {
@@ -40,10 +44,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
       .from("profiles")
-      .select("id, full_name, plan, trial_started_at, subscription_status, created_at, current_period_end")
+      .select("id, full_name, plan, trial_started_at, subscription_status, created_at, current_period_end, business_name, business_address, tax_id, show_business_on_export")
       .eq("id", userId)
       .single();
-    setProfile(data);
+    setProfile(data as Profile | null);
   };
 
   const refreshProfile = async () => {

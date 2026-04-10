@@ -148,6 +148,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     } else {
       document.documentElement.classList.remove("dark");
     }
+    window.dispatchEvent(new Event("trace-settings-changed"));
   }, [user]);
 
   const persistOrPaywall = useCallback((updated: Settings) => {

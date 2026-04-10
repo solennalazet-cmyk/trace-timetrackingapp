@@ -215,6 +215,14 @@ const ReportsPage = () => {
   const [dateTo, setDateTo] = useState<Date>(new Date());
 
   // Mark settings as loaded after fetch
+  const [settingsVer, setSettingsVer] = useState(0);
+
+  useEffect(() => {
+    const handler = () => setSettingsVer((v) => v + 1);
+    window.addEventListener("trace-settings-changed", handler);
+    return () => window.removeEventListener("trace-settings-changed", handler);
+  }, []);
+
   useEffect(() => {
     if (!user) {
       try {
@@ -237,7 +245,7 @@ const ReportsPage = () => {
     }
 
     supabase.from("user_settings")
-      .select("daily_hour_target, revenue_target, week_start_day, round_duration, round_duration_to, round_amount, round_amount_to")
+      .select("daily_hour_target, revenue_target, week_start_day, round_duration, round_duration_to, round_amount, round_amount_to, default_report_range")
       .eq("user_id", user.id).single()
       .then(({ data }) => {
         if (data) {
@@ -253,7 +261,7 @@ const ReportsPage = () => {
         }
         setSettingsLoaded(true);
       });
-  }, [user]);
+  }, [user, settingsVer]);
 
   useEffect(() => {
     if (datesInitialized || !settingsLoaded) return;

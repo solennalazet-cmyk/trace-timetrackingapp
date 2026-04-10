@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Crown, AlertTriangle, ExternalLink } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -32,6 +33,13 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [upgradeInterval, setUpgradeInterval] = useState<"monthly" | "yearly">("monthly");
+
+  // Business details editing
+  const [editingBusiness, setEditingBusiness] = useState(false);
+  const [bizName, setBizName] = useState("");
+  const [bizAddress, setBizAddress] = useState("");
+  const [bizTaxId, setBizTaxId] = useState("");
+  const [bizShowOnExport, setBizShowOnExport] = useState(true);
 
   // Obfuscated support email — assembled at runtime to prevent scraping
   const supportEmail = useMemo(() => "connect" + "@" + "lla-studio" + ".com", []);
@@ -304,6 +312,65 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
                   <span className="text-sm text-foreground">{memberSince}</span>
                 </div>
               </div>
+            </div>
+
+            {/* Business Details */}
+            <div>
+              <h3 className="text-sm font-semibold text-foreground mb-2">Business Details</h3>
+              <p className="text-[11px] text-muted-foreground mb-3">Shown on PDF exports.</p>
+              {editingBusiness ? (
+                <div className="space-y-2">
+                  <Input
+                    className="h-8 text-sm rounded-xl"
+                    placeholder="Business / company name"
+                    value={bizName}
+                    onChange={(e) => setBizName(e.target.value)}
+                  />
+                  <textarea
+                    className="w-full text-sm rounded-xl border border-input bg-background px-3 py-2 min-h-[56px] resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                    placeholder="Address (multi-line)"
+                    value={bizAddress}
+                    onChange={(e) => setBizAddress(e.target.value)}
+                  />
+                  <Input
+                    className="h-8 text-sm rounded-xl"
+                    placeholder="Tax / Fiscal ID (e.g. NIF, VAT)"
+                    value={bizTaxId}
+                    onChange={(e) => setBizTaxId(e.target.value)}
+                  />
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-xs text-muted-foreground">Show on exports</span>
+                    <Switch checked={bizShowOnExport} onCheckedChange={setBizShowOnExport} />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditingBusiness(false)}>Cancel</Button>
+                    <Button size="sm" className="h-7 text-xs" onClick={async () => {
+                      await supabase.from("profiles").update({
+                        business_name: bizName.trim() || null,
+                        business_address: bizAddress.trim() || null,
+                        tax_id: bizTaxId.trim() || null,
+                        show_business_on_export: bizShowOnExport,
+                      }).eq("id", user.id);
+                      toast.success("Business details saved.");
+                      setEditingBusiness(false);
+                      refreshProfile();
+                    }}>Save</Button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  className="text-sm text-muted-foreground hover:text-foreground hover:underline"
+                  onClick={() => {
+                    setBizName(profile.business_name ?? "");
+                    setBizAddress(profile.business_address ?? "");
+                    setBizTaxId(profile.tax_id ?? "");
+                    setBizShowOnExport(profile.show_business_on_export !== false);
+                    setEditingBusiness(true);
+                  }}
+                >
+                  {profile.business_name ? `${profile.business_name} · Edit` : "Add business details"}
+                </button>
+              )}
             </div>
 
             {/* Subscription */}

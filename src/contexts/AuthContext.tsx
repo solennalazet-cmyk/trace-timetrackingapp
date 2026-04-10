@@ -10,6 +10,10 @@ interface Profile {
   subscription_status: string | null;
   created_at: string | null;
   current_period_end: string | null;
+  business_name: string | null;
+  business_address: string | null;
+  tax_id: string | null;
+  show_business_on_export: boolean | null;
 }
 
 interface AuthContextType {

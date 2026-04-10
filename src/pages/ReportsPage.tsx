@@ -1053,6 +1053,20 @@ const ReportsPage = () => {
           navigate("/?boost=1");
         }}
       />
+      <ExportDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        weekStartsOn={weekStartDay as 0 | 1 | 2 | 3 | 4 | 5 | 6}
+        entries={rangeEntries}
+        clients={clients}
+        projects={projects}
+        tasks={tasks}
+        clientFilter={clientFilter}
+        clientIds={clientIds}
+        rounding={rounding}
+      />
     </div>
   );
 };

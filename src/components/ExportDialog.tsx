@@ -121,7 +121,17 @@ const ExportDialog = ({
       (e.tags ?? []).join(";"),
       e.entry_type ?? "",
     ].join(","));
-    const blob = new Blob([headers + "\n" + rows.join("\n")], { type: "text/csv" });
+    let csv = headers + "\n" + rows.join("\n");
+    if (hasRounding) {
+      const rawTotalMins = filteredEntries.reduce((s, e) => s + e.duration_minutes, 0);
+      const rawTotalValue = filteredEntries.reduce((s, e) => s + rawValue(e), 0);
+      const roundedTotalMins = filteredEntries.reduce((s, e) => s + rd(e.duration_minutes), 0);
+      const roundedTotalValue = filteredEntries.reduce((s, e) => s + rv(e), 0);
+      csv += `\n\nRounding: ${describeRounding()}`;
+      csv += `\nActual total,,,,,${formatDuration(rawTotalMins)},,,${rawTotalValue.toFixed(2)}`;
+      csv += `\nRounded total,,,,,${formatDuration(roundedTotalMins)},,,${roundedTotalValue.toFixed(2)}`;
+    }
+    const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;

@@ -26,6 +26,7 @@ import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
 import BoostOverlay from "@/components/BoostOverlay";
 import { Sparkles } from "lucide-react";
+import { markBoostCompleted } from "@/lib/boost-challenges";
 import ExportDialog from "@/components/ExportDialog";
 
 // Sunrise palette – harmonises with the brand gradient (golden → rose → violet → blue)
@@ -893,7 +894,19 @@ const ReportsPage = () => {
           {/* ── 4. Goal Progress Bars ── */}
           {(proratedHourTarget > 0 || proratedRevenueTarget > 0) && (
             <div className="mb-6 space-y-3">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Goals</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Goals</h3>
+                {/* Boost badge */}
+                {isPro && (
+                  <button
+                    onClick={() => setBoostOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 transition-colors text-xs font-semibold"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                    Boost
+                  </button>
+                )}
+              </div>
               {proratedHourTarget > 0 && (
                 <div>
                   <div className="flex items-baseline justify-between mb-1">
@@ -917,16 +930,6 @@ const ReportsPage = () => {
                   </div>
                   <Progress value={revenueProgress} className="h-2 rounded-full" />
                 </div>
-              )}
-              {/* Boost trigger */}
-              {isPro && (
-                <button
-                  onClick={() => setBoostOpen(true)}
-                  className="flex items-center gap-2 mt-2 px-3 py-2 rounded-xl border border-border hover:bg-accent/50 transition-colors w-full"
-                >
-                  <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
-                  <span className="text-sm text-muted-foreground">Want a Boost?</span>
-                </button>
               )}
             </div>
           )}
@@ -1050,6 +1053,7 @@ const ReportsPage = () => {
         hourProgress={hourProgress}
         revenueProgress={revenueProgress}
         onStartSession={() => {
+          markBoostCompleted();
           navigate("/?boost=1");
         }}
       />

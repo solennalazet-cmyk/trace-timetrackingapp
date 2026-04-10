@@ -1,34 +1,39 @@
 
 
-## Peak Productivity Hours — 24-Hour Radial Heatmap
+## Settings Modal Reorganization
 
-### Concept
-A half-circle (180°) divided into 24 equal slices representing each hour of the day (0–23). Each slice's radial length varies based on how many minutes the user worked during that hour — taller = more productive. Think of it as a polar bar chart, not a pie chart.
+### Google Sign-on
+The `redirect_uri_mismatch` error is a preview-environment issue. Test on the published URL (trace-timetrackingapp.lovable.app or custom domain). No code changes needed.
 
-### Visual design
-- **Shape**: Half-circle (startAngle=180, endAngle=0), same 120×120 size as existing mini-donuts
-- **24 segments**: Each 7.5° wide, one per hour
-- **Height encoding**: Each bar's outer radius scales from a minimum (e.g. 30%) to 100% based on minutes worked in that hour relative to the peak hour
-- **Distinct palette**: A cool-toned gradient (e.g. teal → cyan → mint) that's clearly separate from the warm Sunrise Palette used for clients. Hours with zero activity use a very faint base color
-- **Center label**: The peak hour displayed as "14h" or "2 PM"
-- **Sub-label**: "Peak Hour"
-- **Below chart**: Label "Peak Hours"
-- **Fallback**: When < 3 entries have `start_time`, show a muted placeholder: "Track more to see patterns"
+### Settings reorder + Pro gating
 
-### Data logic
-1. Filter entries with non-null `start_time`
-2. For each entry, extract the hour from `start_time` and assign `duration_minutes` to that hour bucket (if an entry spans multiple hours, just use the start hour for simplicity)
-3. Build a 24-element array, sum minutes per hour
-4. Normalize: each hour's outer radius = `minRadius + (value / maxValue) * (maxRadius - minRadius)`
-5. Render using Recharts `RadialBarChart` or a custom `Pie` with variable outer radii per cell
+**New section order:**
+1. **Targets** (Daily hour + Revenue) — PRO card
+2. **Week starts on**
+3. **Show activity on Start page** (toggle)
+4. **Default report range**
+5. **Time format**
+6. **Break Tracking** (pause mode)
+7. **New entries are billable** (toggle)
+8. **Rounding** — PRO card
+9. **Appearance**
+10. **Idle reminder**
+11. **Timer Completion Sound**
+12. **Focus Timer Presets**
+13. **Integrations** (remove Toggl/Notion mentions)
 
-### Implementation
-Since Recharts `Pie` doesn't support per-slice outer radius natively, I'll use a **custom SVG** approach — 24 arc paths drawn with calculated radii inside a 120×120 container. This gives full control over the polar bar chart look. The palette will use HSL with hue ranging from 170–200 (teal/cyan family) and lightness varying by value.
+### Pro feature visual treatment
+- Targets and Rounding sections wrapped in a subtle card with a distinct background (`bg-muted/40` light, `bg-muted/20` dark) and rounded corners
+- Each card header shows the section title + `ProBadge` inline (visible for all users, including Pro)
+- Free users: inputs are interactive but on submit trigger `PaywallModal`; a soft description line like *"Set daily goals to track your progress in Reports"* for Targets, *"Fine-tune how durations and amounts are displayed"* for Rounding
+- No accordion or collapsible — everything visible, no extra tap needed
 
 ### Technical changes
-**File: `src/pages/ReportsPage.tsx`**
-- Add `PeakHoursChart` component with custom SVG arcs
-- Compute hourly buckets from `displayEntries` with `start_time`
-- Place as third item in the mini-donut horizontal scroll row
-- Define a teal/cyan color scale separate from the Sunrise Palette
+**Single file: `src/components/SettingsModal.tsx`**
+- Import `ProBadge`, `PaywallModal`, `useAuth` (already imported)
+- Derive `isPro` from `profile` via `useAuth`
+- Reorder JSX sections per the list above
+- Create a `ProSection` wrapper component: renders a card with `bg-muted/40 rounded-2xl p-4` containing the title + ProBadge + description + children; for free users, intercepts `persist` calls on those fields to open PaywallModal instead
+- Update Integrations text to: *"Google Calendar and more coming soon."*
+- Add `PaywallModal` state (`paywallOpen`) with trigger from Pro-gated sections
 

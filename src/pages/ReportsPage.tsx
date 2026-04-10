@@ -26,6 +26,7 @@ import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
 import BoostOverlay from "@/components/BoostOverlay";
 import { Sparkles } from "lucide-react";
+import ExportDialog from "@/components/ExportDialog";
 
 // Sunrise palette – harmonises with the brand gradient (golden → rose → violet → blue)
 const SUNRISE_PALETTE = [

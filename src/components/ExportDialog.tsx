@@ -191,12 +191,26 @@ const ExportDialog = ({
 
     // ── Summary ──
     const totalMins = filteredEntries.reduce((s, e) => s + rd(e.duration_minutes), 0);
+    const rawTotalMins = filteredEntries.reduce((s, e) => s + e.duration_minutes, 0);
     const totalValue = filteredEntries.reduce((s, e) => s + rv(e), 0);
+    const rawTotalValue = filteredEntries.reduce((s, e) => s + rawValue(e), 0);
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(80);
-    doc.text(`Total: ${formatDuration(totalMins)}  ·  ${filteredEntries.length} entries  ·  Billable value: €${totalValue.toFixed(2)}`, margin, y);
-    y += 4;
+
+    if (hasRounding) {
+      const rawH = (rawTotalMins / 60).toFixed(2);
+      const roundedH = (totalMins / 60).toFixed(2);
+      doc.text(`Total: ${roundedH} hours (${rawH} actual)  ·  ${filteredEntries.length} entries  ·  Billable: €${totalValue.toFixed(2)} (€${rawTotalValue.toFixed(2)} actual)`, margin, y);
+      y += 4;
+      doc.setFontSize(7.5);
+      doc.setTextColor(120);
+      doc.text(`Rounding applied: ${describeRounding()}`, margin, y);
+      y += 4;
+    } else {
+      doc.text(`Total: ${formatDuration(totalMins)}  ·  ${filteredEntries.length} entries  ·  Billable value: €${totalValue.toFixed(2)}`, margin, y);
+      y += 4;
+    }
 
     // Separator
     doc.setDrawColor(200);

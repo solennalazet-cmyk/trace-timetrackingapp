@@ -73,7 +73,21 @@ const ExportDialog = ({
   }, [entries, rangeStart, rangeEnd, selectedClient]);
 
   const rd = (mins: number) => roundDuration(mins, rounding);
+  const rawValue = (e: TimeEntry) => roundedBillableValue(e.duration_minutes, e.rate_amount ?? null, e.rate_unit ?? null, e.billable ?? false, { ...rounding, round_duration: "none", round_amount: "none" });
   const rv = (e: TimeEntry) => roundedBillableValue(e.duration_minutes, e.rate_amount ?? null, e.rate_unit ?? null, e.billable ?? false, rounding);
+
+  const hasRounding = rounding.round_duration !== "none" || rounding.round_amount !== "none";
+
+  const describeRounding = (): string => {
+    const parts: string[] = [];
+    if (rounding.round_duration !== "none") {
+      parts.push(`durations rounded ${rounding.round_duration} to ${rounding.round_duration_to} min`);
+    }
+    if (rounding.round_amount !== "none") {
+      parts.push(`amounts rounded ${rounding.round_amount === "nearest" ? "to the nearest" : rounding.round_amount} ${rounding.round_amount_to < 1 ? rounding.round_amount_to.toString() : "€" + rounding.round_amount_to}`);
+    }
+    return parts.join(", ");
+  };
 
   const formatDuration = (mins: number) => {
     const h = Math.floor(mins / 60);

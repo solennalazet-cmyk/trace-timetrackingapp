@@ -73,7 +73,21 @@ const ExportDialog = ({
   }, [entries, rangeStart, rangeEnd, selectedClient]);
 
   const rd = (mins: number) => roundDuration(mins, rounding);
+  const rawValue = (e: TimeEntry) => roundedBillableValue(e.duration_minutes, e.rate_amount ?? null, e.rate_unit ?? null, e.billable ?? false, { ...rounding, round_duration: "none", round_amount: "none" });
   const rv = (e: TimeEntry) => roundedBillableValue(e.duration_minutes, e.rate_amount ?? null, e.rate_unit ?? null, e.billable ?? false, rounding);
+
+  const hasRounding = rounding.round_duration !== "none" || rounding.round_amount !== "none";
+
+  const describeRounding = (): string => {
+    const parts: string[] = [];
+    if (rounding.round_duration !== "none") {
+      parts.push(`durations rounded ${rounding.round_duration} to ${rounding.round_duration_to} min`);
+    }
+    if (rounding.round_amount !== "none") {
+      parts.push(`amounts rounded ${rounding.round_amount === "nearest" ? "to the nearest" : rounding.round_amount} ${rounding.round_amount_to < 1 ? rounding.round_amount_to.toString() : "€" + rounding.round_amount_to}`);
+    }
+    return parts.join(", ");
+  };
 
   const formatDuration = (mins: number) => {
     const h = Math.floor(mins / 60);
@@ -107,7 +121,17 @@ const ExportDialog = ({
       (e.tags ?? []).join(";"),
       e.entry_type ?? "",
     ].join(","));
-    const blob = new Blob([headers + "\n" + rows.join("\n")], { type: "text/csv" });
+    let csv = headers + "\n" + rows.join("\n");
+    if (hasRounding) {
+      const rawTotalMins = filteredEntries.reduce((s, e) => s + e.duration_minutes, 0);
+      const rawTotalValue = filteredEntries.reduce((s, e) => s + rawValue(e), 0);
+      const roundedTotalMins = filteredEntries.reduce((s, e) => s + rd(e.duration_minutes), 0);
+      const roundedTotalValue = filteredEntries.reduce((s, e) => s + rv(e), 0);
+      csv += `\n\nRounding: ${describeRounding()}`;
+      csv += `\nActual total,,,,,${formatDuration(rawTotalMins)},,,${rawTotalValue.toFixed(2)}`;
+      csv += `\nRounded total,,,,,${formatDuration(roundedTotalMins)},,,${roundedTotalValue.toFixed(2)}`;
+    }
+    const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -177,12 +201,26 @@ const ExportDialog = ({
 
     // ── Summary ──
     const totalMins = filteredEntries.reduce((s, e) => s + rd(e.duration_minutes), 0);
+    const rawTotalMins = filteredEntries.reduce((s, e) => s + e.duration_minutes, 0);
     const totalValue = filteredEntries.reduce((s, e) => s + rv(e), 0);
+    const rawTotalValue = filteredEntries.reduce((s, e) => s + rawValue(e), 0);
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(80);
-    doc.text(`Total: ${formatDuration(totalMins)}  ·  ${filteredEntries.length} entries  ·  Billable value: €${totalValue.toFixed(2)}`, margin, y);
-    y += 4;
+
+    if (hasRounding) {
+      const rawH = (rawTotalMins / 60).toFixed(2);
+      const roundedH = (totalMins / 60).toFixed(2);
+      doc.text(`Total: ${roundedH} hours (${rawH} actual)  ·  ${filteredEntries.length} entries  ·  Billable: €${totalValue.toFixed(2)} (€${rawTotalValue.toFixed(2)} actual)`, margin, y);
+      y += 4;
+      doc.setFontSize(7.5);
+      doc.setTextColor(120);
+      doc.text(`Rounding applied: ${describeRounding()}`, margin, y);
+      y += 4;
+    } else {
+      doc.text(`Total: ${formatDuration(totalMins)}  ·  ${filteredEntries.length} entries  ·  Billable value: €${totalValue.toFixed(2)}`, margin, y);
+      y += 4;
+    }
 
     // Separator
     doc.setDrawColor(200);

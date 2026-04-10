@@ -148,10 +148,22 @@ const ExportDialog = ({
     const margin = 16;
     let y = margin;
 
+    // ── Trace logo (top-right) ──
+    const rightX = pageW - margin;
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(180, 140, 40);
+    doc.text("trace", rightX, margin + 2, { align: "right" });
+    doc.setFontSize(6.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(140);
+    doc.text("trace.lla-studio.com", rightX, margin + 6, { align: "right" });
+
     // ── User details (top-left) ──
     if (showBusiness && profile) {
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
+      doc.setTextColor(40, 40, 40);
       const bizName = profile.business_name || profile.full_name || "";
       if (bizName) {
         doc.text(bizName, margin, y);
@@ -177,18 +189,20 @@ const ExportDialog = ({
       }
     }
 
-    // ── Client details (top-right) ──
+    y = Math.max(y, margin + 20) + 6;
+
+    // ── Client details (below user, left-aligned) ──
     const clientName = selectedClient !== "all" ? (clients[selectedClient] ?? "") : "";
     if (clientName) {
-      const rightX = pageW - margin;
-      const clientY = margin;
-      doc.setFontSize(11);
+      doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
+      doc.setTextColor(80);
+      doc.text("To:", margin, y);
+      doc.setFontSize(11);
       doc.setTextColor(40);
-      doc.text(clientName, rightX, clientY, { align: "right" });
+      doc.text(clientName, margin + 8, y);
+      y += 8;
     }
-
-    y = Math.max(y, margin + 20) + 6;
 
     // ── Object / title line ──
     doc.setFontSize(11);
@@ -260,7 +274,7 @@ const ExportDialog = ({
       doc.setPage(p);
       doc.setFontSize(7);
       doc.setTextColor(160);
-      doc.text("Generated with Trace", pageW / 2, pageH - 8, { align: "center" });
+      doc.text("Generated with Trace  ·  trace.lla-studio.com", pageW / 2, pageH - 8, { align: "center" });
       doc.text(`Page ${p} of ${totalPages}`, pageW - margin, pageH - 8, { align: "right" });
     }
 

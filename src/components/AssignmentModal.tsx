@@ -340,8 +340,6 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     if (saving) return;
     setSaving(true);
     try {
-      const billableValue = calcBillableValue();
-
       if (billable && rateAmount && clientId && user) {
         const amount = parseFloat(rateAmount);
         const selectedClient = clientsFull.find((c) => c.id === clientId);
@@ -350,19 +348,42 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
         }
       }
 
-      onSave(session, {
+      const baseAssignment = {
         clientId: clientId || null,
         projectId: projectId || null,
-        taskId: taskId || null,
-        taskName,
         notes,
         tags,
         billable,
         rateAmount: rateAmount ? parseFloat(rateAmount) : null,
         rateCurrency,
         rateUnit,
-        billableValue,
-      });
+      };
+
+      // Multi-task: create one entry per task with split durations
+      if (taskList.length > 0 && onSaveMulti) {
+        const assignments: AssignmentResult[] = taskList.map((item) => {
+          const dur = item.durationMinutes;
+          const bv = billable && rateAmount && rateUnit === "hour"
+            ? (dur / 60) * parseFloat(rateAmount)
+            : baseAssignment.rateAmount;
+          return {
+            ...baseAssignment,
+            taskId: item.taskId,
+            taskName: item.taskName,
+            billableValue: bv,
+            _durationMinutes: dur,
+          } as AssignmentResult & { _durationMinutes: number };
+        });
+        onSaveMulti(session, assignments);
+      } else {
+        const billableValue = calcBillableValue();
+        onSave(session, {
+          ...baseAssignment,
+          taskId: taskId || null,
+          taskName,
+          billableValue,
+        });
+      }
     } catch (error) {
       console.error("Save failed:", error);
       toast.error("Something went wrong. Your session is safe — try again.");

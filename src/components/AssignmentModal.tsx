@@ -435,7 +435,14 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip, onDelet
           })()}
         </div>
 
-        <div ref={scrollAreaRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-4">
+        <div
+          ref={scrollAreaRef}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-4"
+          style={{
+            WebkitOverflowScrolling: "touch",
+            touchAction: "pan-y",
+          }}
+        >
           <div className="space-y-3 text-foreground">
             <div>
               <Label className="text-foreground">Client</Label>

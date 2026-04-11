@@ -246,12 +246,12 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[400px] rounded-2xl p-0 flex flex-col max-h-[85vh]">
+      <DialogContent position="centered" className="max-w-[400px] w-[calc(100vw-2rem)] rounded-2xl p-0 flex flex-col max-h-[min(calc(100dvh-2rem),56rem)] overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-0">
           <DialogTitle>Manual Entry</DialogTitle>
         </DialogHeader>
 
-        <div ref={scrollAreaRef} className="px-6 space-y-3 overflow-y-auto flex-1 min-h-0 pt-4" style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
+        <div ref={scrollAreaRef} className="px-6 space-y-3 overflow-y-auto flex-1 min-h-0 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] overscroll-contain" style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y", overscrollBehavior: "contain" }}>
           {/* Date */}
           <div>
             <Label>Date</Label>

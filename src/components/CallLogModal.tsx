@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -51,6 +51,7 @@ const RATE_UNITS = [
 
 const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
   const { user } = useAuth();
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const [pickerHours, setPickerHours] = useState(0);
   const [pickerMinutes, setPickerMinutes] = useState(15);
@@ -203,12 +204,12 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[400px] rounded-2xl p-0">
+      <DialogContent position="centered" className="max-w-[400px] w-[calc(100vw-2rem)] rounded-2xl p-0 flex max-h-[min(calc(100dvh-2rem),56rem)] flex-col overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-0">
           <DialogTitle>Log Call</DialogTitle>
         </DialogHeader>
 
-        <div className="px-6 space-y-3 pt-4">
+        <div ref={scrollAreaRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]" style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y", overscrollBehavior: "contain" }}>
           {/* Scroll picker */}
           <ScrollPicker
             hours={pickerHours}
@@ -219,7 +220,7 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
           />
 
           {/* Client */}
-          <div><Label>Client</Label><CreatableCombobox items={clients} value={clientId} displayValue={clientName} placeholder="Select client"
+          <div><Label>Client</Label><CreatableCombobox items={clients} value={clientId} displayValue={clientName} placeholder="Select client" scrollContainerRef={scrollAreaRef}
             onSelect={(id, name) => { setClientId(id); setClientName(name); setProjectId(""); setProjectName(""); }}
             onCreate={async (name) => { const c = await handleCreateClient(name); if (c) { setClientId(c.id); setClientName(c.name); } return c; }}
           /></div>
@@ -235,13 +236,13 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
           )}
 
           {/* Project */}
-          <div><Label>Project</Label><CreatableCombobox items={filteredProjects} value={projectId} displayValue={projectName} placeholder="Select project (optional)"
+          <div><Label>Project</Label><CreatableCombobox items={filteredProjects} value={projectId} displayValue={projectName} placeholder="Select project (optional)" scrollContainerRef={scrollAreaRef}
             onSelect={(id, name) => { setProjectId(id); setProjectName(name); }}
             onCreate={async (name) => { const c = await handleCreateProject(name); if (c) { setProjectId(c.id); setProjectName(c.name); } return c; }}
           /></div>
 
           {/* Task */}
-          <div><Label>Task</Label><CreatableCombobox items={tasks} value={taskId} displayValue={taskName} placeholder="Task (optional)"
+          <div><Label>Task</Label><CreatableCombobox items={tasks} value={taskId} displayValue={taskName} placeholder="Task (optional)" scrollContainerRef={scrollAreaRef}
             onSelect={(_id, name) => { setTaskId(_id); setTaskName(name); }}
             onCreate={async (name) => { const c = await handleCreateTask(name); if (c) { setTaskId(c.id); setTaskName(c.name); } return c; }}
           /></div>

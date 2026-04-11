@@ -208,6 +208,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
       setRateAmount("");
       setRateCurrency("EUR");
       setRateUnit("hour");
+      setTaskList([]);
     }
 
     loadData();
@@ -544,24 +545,77 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
             <div>
               <Label className="text-foreground">Task</Label>
-              <CreatableCombobox
-                items={tasks}
-                value={taskId}
-                displayValue={taskName}
-                placeholder="What were you working on?"
-                onSelect={(id, name) => {
-                  setTaskId(id);
-                  setTaskName(name);
-                }}
-                onCreate={async (name) => {
-                  const created = await handleCreateTask(name);
-                  if (created) {
-                    setTaskId(created.id);
-                    setTaskName(created.name);
-                  }
-                  return created;
-                }}
-              />
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <CreatableCombobox
+                    items={tasks}
+                    value={taskId}
+                    displayValue={taskName}
+                    placeholder="What were you working on?"
+                    onSelect={(id, name) => {
+                      setTaskId(id);
+                      setTaskName(name);
+                    }}
+                    onCreate={async (name) => {
+                      const created = await handleCreateTask(name);
+                      if (created) {
+                        setTaskId(created.id);
+                        setTaskName(created.name);
+                      }
+                      return created;
+                    }}
+                  />
+                </div>
+                {!existingEntry && taskId && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-10 w-10 shrink-0"
+                    onClick={() => {
+                      if (!taskId || !session) return;
+                      const remaining = session.durationMinutes - taskList.reduce((s, t) => s + t.durationMinutes, 0);
+                      if (remaining <= 0) {
+                        toast.error("No remaining time to allocate.");
+                        return;
+                      }
+                      setTaskList((prev) => [...prev, { taskId, taskName, durationMinutes: remaining }]);
+                      setTaskId("");
+                      setTaskName("");
+                    }}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+
+              {/* Multi-task list */}
+              {taskList.length > 0 && (
+                <div className="mt-2 space-y-1.5">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Tasks in this session</p>
+                  {taskList.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2">
+                      <span className="text-sm text-foreground flex-1 truncate">{item.taskName}</span>
+                      <Input
+                        type="number"
+                        className="w-16 h-7 text-xs text-center"
+                        value={item.durationMinutes}
+                        onChange={(e) => {
+                          const val = Math.max(1, parseInt(e.target.value) || 1);
+                          setTaskList((prev) => prev.map((t, i) => i === idx ? { ...t, durationMinutes: val } : t));
+                        }}
+                      />
+                      <span className="text-[10px] text-muted-foreground">min</span>
+                      <button
+                        onClick={() => setTaskList((prev) => prev.filter((_, i) => i !== idx))}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div>

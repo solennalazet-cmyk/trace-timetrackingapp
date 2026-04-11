@@ -364,7 +364,7 @@ const StartPage = () => {
         {modes.map((m) => (
           <button
             key={m.key}
-            onClick={() => setMode(m.key)}
+            onClick={() => handleModeSwitch(m.key)}
             className="px-5 py-2 text-sm font-medium transition-colors"
             style={{
               borderRadius: 20,

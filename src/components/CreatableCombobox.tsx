@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, type TouchEvent as ReactTouchEvent } from "react";
 import { Check, ChevronDown, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +33,8 @@ const CreatableCombobox = ({
   const [pendingName, setPendingName] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const touchMovedRef = useRef(false);
 
   const filtered = items.filter((item) =>
     item.name.toLowerCase().includes(search.toLowerCase())
@@ -53,7 +55,7 @@ const CreatableCombobox = ({
   useEffect(() => {
     if (!open) return;
 
-    const handler = (e: MouseEvent | TouchEvent) => {
+    const handler = (e: Event) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         closeDropdown();
       }
@@ -94,6 +96,29 @@ const CreatableCombobox = ({
     onSelect(item.id, item.name);
     setSearch("");
     setOpen(false);
+  };
+
+  const handleTouchStart = (event: ReactTouchEvent<HTMLButtonElement>) => {
+    touchStartYRef.current = event.touches[0]?.clientY ?? null;
+    touchMovedRef.current = false;
+  };
+
+  const handleTouchMove = (event: ReactTouchEvent<HTMLButtonElement>) => {
+    const startY = touchStartYRef.current;
+    const currentY = event.touches[0]?.clientY;
+
+    if (startY == null || currentY == null) return;
+    if (Math.abs(currentY - startY) > 8) {
+      touchMovedRef.current = true;
+    }
+  };
+
+  const runIfNotScrolling = (callback: () => void) => {
+    if (touchMovedRef.current) {
+      return;
+    }
+
+    callback();
   };
 
   const handleCreate = async () => {
@@ -147,7 +172,10 @@ const CreatableCombobox = ({
       </div>
 
       {open && (
-        <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md max-h-48 overflow-y-auto">
+        <div
+          className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto overscroll-contain rounded-md border bg-popover text-popover-foreground shadow-md"
+          style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+        >
           {filtered.length === 0 && !showAddOption && (
             <div className="py-3 text-center text-sm text-muted-foreground">
               {items.length === 0 ? "Type to add new" : "No results"}
@@ -159,10 +187,9 @@ const CreatableCombobox = ({
               key={item.id}
               type="button"
               className="relative flex w-full items-center rounded-sm px-3 py-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground cursor-pointer"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                handleSelect(item);
-              }}
+              onClick={() => runIfNotScrolling(() => handleSelect(item))}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
             >
               {value === item.id && (
                 <Check className="h-4 w-4 mr-2 shrink-0" />
@@ -175,10 +202,9 @@ const CreatableCombobox = ({
             <button
               type="button"
               className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground cursor-pointer text-timer-display font-medium"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                handleCreate();
-              }}
+              onClick={() => runIfNotScrolling(handleCreate)}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
             >
               <Plus className="h-4 w-4 shrink-0" />
               Add &lsquo;{search.trim()}&rsquo;

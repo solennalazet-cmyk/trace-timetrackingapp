@@ -475,13 +475,23 @@ const ReportsPage = () => {
   const handleEditSave = async (_s: SessionData, a: AssignmentResult) => {
     if (!editEntry || !user) return;
     try {
+      const shouldResetBilling =
+        editEntry.client_id !== a.clientId ||
+        editEntry.project_id !== a.projectId ||
+        editEntry.task_id !== a.taskId ||
+        (editEntry.billable ?? true) !== a.billable ||
+        editEntry.rate_amount !== a.rateAmount ||
+        (editEntry.rate_currency ?? "EUR") !== a.rateCurrency ||
+        (editEntry.rate_unit ?? null) !== (a.rateAmount != null ? a.rateUnit : null);
+
       await supabase.from("time_entries").update({
         client_id: a.clientId, project_id: a.projectId,
         task_id: a.taskId,
         notes: a.notes || null, tags: a.tags.length ? a.tags : null,
         billable: a.billable, rate_amount: a.rateAmount,
-        rate_currency: a.rateCurrency, rate_unit: a.rateAmount ? a.rateUnit : null,
+        rate_currency: a.rateCurrency, rate_unit: a.rateAmount != null ? a.rateUnit : null,
         billable_value: a.billableValue,
+        ...(shouldResetBilling ? { billing_status: "unbilled", invoice_id: null } : {}),
       }).eq("id", editEntry.id);
       toast.success("Entry updated.");
       setAssignOpen(false); setEditEntry(null); loadData();

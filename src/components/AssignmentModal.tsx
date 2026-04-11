@@ -33,7 +33,7 @@ import {
   saveAnonymousTask,
 } from "@/lib/anonymous-store";
 import { toast } from "sonner";
-import { resolveRate } from "@/lib/resolve-rate";
+import { useAutoResolvedRate } from "@/hooks/useAutoResolvedRate";
 import { Plus, X } from "lucide-react";
 
 export interface SessionData {
@@ -230,58 +230,37 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     }
   }, [clientsFull, allProjectsFull, tasks, existingEntry, clientId, projectId, taskId]);
 
-  useEffect(() => {
-    const initialSelection = initialSelectionRef.current;
-    const isInitialEditSelection = !!existingEntry && clientId === initialSelection.clientId && projectId === initialSelection.projectId;
+  const initialSelection = initialSelectionRef.current;
+  const isInitialEditSelection = !!existingEntry && clientId === initialSelection.clientId && projectId === initialSelection.projectId;
 
-    if (isInitialEditSelection) return;
-
-    // When both client and project are cleared, reset rate
-    if (!clientId && !projectId) {
-      setRateAmount("");
-      setRateCurrency("EUR");
-      return;
-    }
-
-    // Clear the previous rate immediately to avoid showing stale data
+  const resetResolvedRate = useCallback(() => {
     setRateAmount("");
+    setRateCurrency("EUR");
+  }, []);
 
-    if (!user) {
-      const selectedProject = allProjectsFull.find((p) => p.id === projectId);
-      const selectedClient = clientsFull.find((c) => c.id === clientId);
+  const applyResolvedRate = useCallback((rate: { amount: string; currency: string }) => {
+    setRateAmount(rate.amount);
+    setRateCurrency(rate.currency);
+  }, []);
 
-      if (selectedProject?.rate != null) {
-        setRateAmount(String(selectedProject.rate));
-        setRateCurrency(selectedProject.currency ?? selectedClient?.currency ?? "EUR");
-        return;
-      }
-
-      if (selectedClient?.default_rate != null) {
-        setRateAmount(String(selectedClient.default_rate));
-        setRateCurrency(selectedClient.currency ?? "EUR");
-      }
-      return;
-    }
-
-    let cancelled = false;
-    resolveRate(clientId || null, projectId || null, user.id).then((rate) => {
-      if (cancelled) return;
-      if (rate.amount != null) {
-        setRateAmount(String(rate.amount));
-        setRateCurrency(rate.currency);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [clientId, projectId, user, existingEntry, allProjectsFull, clientsFull]);
+  useAutoResolvedRate({
+    enabled: open,
+    clientId,
+    projectId,
+    userId: user?.id,
+    clients: clientsFull,
+    projects: allProjectsFull,
+    skip: isInitialEditSelection,
+    onReset: resetResolvedRate,
+    onResolved: applyResolvedRate,
+  });
 
   if (!session) return null;
 
   const calcBillableValue = (): number | null => {
-    const amount = parseFloat(rateAmount);
-    if (!billable || !amount) return null;
+    const parsedAmount = rateAmount.trim() === "" ? null : Number(rateAmount);
+    const amount = parsedAmount != null && Number.isFinite(parsedAmount) ? parsedAmount : null;
+    if (!billable || amount == null) return null;
     if (rateUnit === "hour") return (session.durationMinutes / 60) * amount;
     if (rateUnit === "project") return amount;
     if (rateUnit === "word") return amount;
@@ -351,13 +330,16 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     if (saving) return;
     setSaving(true);
     try {
+      const parsedRate = rateAmount.trim() === "" ? null : Number(rateAmount);
+      const normalizedRate = parsedRate != null && Number.isFinite(parsedRate) ? parsedRate : null;
+
       const baseAssignment = {
         clientId: clientId || null,
         projectId: projectId || null,
         notes,
         tags,
         billable,
-        rateAmount: rateAmount ? parseFloat(rateAmount) : null,
+        rateAmount: normalizedRate,
         rateCurrency,
         rateUnit,
       };
@@ -366,9 +348,11 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
       if (taskList.length > 0 && onSaveMulti) {
         const assignments: AssignmentResult[] = taskList.map((item) => {
           const dur = item.durationMinutes;
-          const bv = billable && rateAmount && rateUnit === "hour"
-            ? (dur / 60) * parseFloat(rateAmount)
-            : baseAssignment.rateAmount;
+          const bv = !billable || baseAssignment.rateAmount == null
+            ? null
+            : baseAssignment.rateUnit === "hour"
+              ? (dur / 60) * baseAssignment.rateAmount
+              : baseAssignment.rateAmount;
           return {
             ...baseAssignment,
             taskId: item.taskId,
@@ -492,6 +476,9 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                   setClientName(name);
                   setProjectId("");
                   setProjectName("");
+                  setTaskId("");
+                  setTaskName("");
+                  setTaskList([]);
                 }}
                 onCreate={async (name) => {
                   const created = await handleCreateClient(name);
@@ -500,6 +487,9 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                     setClientName(created.name);
                     setProjectId("");
                     setProjectName("");
+                    setTaskId("");
+                    setTaskName("");
+                    setTaskList([]);
                   }
                   return created;
                 }}
@@ -558,12 +548,18 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                 onSelect={(id, name) => {
                   setProjectId(id);
                   setProjectName(name);
+                  setTaskId("");
+                  setTaskName("");
+                  setTaskList([]);
                 }}
                 onCreate={async (name) => {
                   const created = await handleCreateProject(name);
                   if (created) {
                     setProjectId(created.id);
                     setProjectName(created.name);
+                    setTaskId("");
+                    setTaskName("");
+                    setTaskList([]);
                   }
                   return created;
                 }}

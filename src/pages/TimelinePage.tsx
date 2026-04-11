@@ -190,13 +190,23 @@ const TimelinePage = () => {
   const handleEditSave = async (_session: SessionData, assignment: AssignmentResult) => {
     if (!editEntry || !user) return;
     try {
+      const shouldResetBilling =
+        editEntry.client_id !== assignment.clientId ||
+        editEntry.project_id !== assignment.projectId ||
+        editEntry.task_id !== assignment.taskId ||
+        (editEntry.billable ?? true) !== assignment.billable ||
+        editEntry.rate_amount !== assignment.rateAmount ||
+        (editEntry.rate_currency ?? "EUR") !== assignment.rateCurrency ||
+        (editEntry.rate_unit ?? null) !== (assignment.rateAmount != null ? assignment.rateUnit : null);
+
       await supabase.from("time_entries").update({
         client_id: assignment.clientId, project_id: assignment.projectId,
         task_id: assignment.taskId,
         notes: assignment.notes || null, tags: assignment.tags.length ? assignment.tags : null,
         billable: assignment.billable, rate_amount: assignment.rateAmount,
-        rate_currency: assignment.rateCurrency, rate_unit: assignment.rateAmount ? assignment.rateUnit : null,
+        rate_currency: assignment.rateCurrency, rate_unit: assignment.rateAmount != null ? assignment.rateUnit : null,
         billable_value: assignment.billableValue,
+        ...(shouldResetBilling ? { billing_status: "unbilled", invoice_id: null } : {}),
       }).eq("id", editEntry.id);
       toast.success("Entry updated.");
       setAssignOpen(false); setEditEntry(null); setEditSession(null);

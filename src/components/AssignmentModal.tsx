@@ -471,10 +471,11 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
         <div
           ref={scrollAreaRef}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-4"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-[max(1rem,env(safe-area-inset-bottom))]"
           style={{
             WebkitOverflowScrolling: "touch",
             touchAction: "pan-y",
+            overscrollBehavior: "contain",
           }}
         >
           <div className="space-y-3 text-foreground">

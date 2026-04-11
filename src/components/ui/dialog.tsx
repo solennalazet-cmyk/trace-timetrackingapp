@@ -12,6 +12,40 @@ const DialogPortal = DialogPrimitive.Portal;
 
 const DialogClose = DialogPrimitive.Close;
 
+const useVisualViewportStyle = (enabled: boolean) => {
+  const [viewportStyle, setViewportStyle] = React.useState<React.CSSProperties>({});
+
+  React.useEffect(() => {
+    if (!enabled || typeof window === "undefined" || !window.visualViewport) {
+      setViewportStyle({});
+      return;
+    }
+
+    const visualViewport = window.visualViewport;
+
+    const updateViewportStyle = () => {
+      setViewportStyle({
+        maxHeight: `calc(${visualViewport.height}px - 1rem)`,
+        top: `${visualViewport.offsetTop + visualViewport.height / 2}px`,
+      });
+    };
+
+    updateViewportStyle();
+
+    visualViewport.addEventListener("resize", updateViewportStyle);
+    visualViewport.addEventListener("scroll", updateViewportStyle);
+    window.addEventListener("orientationchange", updateViewportStyle);
+
+    return () => {
+      visualViewport.removeEventListener("resize", updateViewportStyle);
+      visualViewport.removeEventListener("scroll", updateViewportStyle);
+      window.removeEventListener("orientationchange", updateViewportStyle);
+    };
+  }, [enabled]);
+
+  return viewportStyle;
+};
+
 const DialogOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
@@ -34,29 +68,33 @@ interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof Dialo
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, position = "sheet", ...props }, ref) => (
-  <DialogPortal>
-    <DialogOverlay />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        position === "centered"
-          ? "fixed left-1/2 top-1/2 z-50 grid w-[calc(100vw-1rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 max-h-[calc(100dvh-1rem)] overflow-hidden overflow-x-hidden overscroll-contain"
-          : "fixed left-[50%] top-auto bottom-0 z-50 grid w-[calc(100vw)] max-w-lg translate-x-[-50%] translate-y-0 gap-4 border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom rounded-t-2xl sm:top-[50%] sm:bottom-auto sm:translate-y-[-50%] sm:rounded-lg sm:data-[state=closed]:slide-out-to-top-[48%] sm:data-[state=open]:slide-in-from-top-[48%] max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain box-border",
-        "pb-[calc(env(safe-area-inset-bottom,0px)+16px)]",
-        className,
-      )}
-      style={{ WebkitOverflowScrolling: "touch" }}
-      {...props}
-    >
-      {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-accent data-[state=open]:text-muted-foreground hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Close</span>
-      </DialogPrimitive.Close>
-    </DialogPrimitive.Content>
-  </DialogPortal>
-));
+>(({ className, children, position = "sheet", style, ...props }, ref) => {
+  const viewportStyle = useVisualViewportStyle(position === "centered");
+
+  return (
+    <DialogPortal>
+      <DialogOverlay />
+      <DialogPrimitive.Content
+        ref={ref}
+        className={cn(
+          position === "centered"
+            ? "fixed left-1/2 top-1/2 z-50 grid w-[calc(100vw-1rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 max-h-[calc(100dvh-1rem)] overflow-hidden overflow-x-hidden overscroll-contain"
+            : "fixed left-[50%] top-auto bottom-0 z-50 grid w-[calc(100vw)] max-w-lg translate-x-[-50%] translate-y-0 gap-4 border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom rounded-t-2xl sm:top-[50%] sm:bottom-auto sm:translate-y-[-50%] sm:rounded-lg sm:data-[state=closed]:slide-out-to-top-[48%] sm:data-[state=open]:slide-in-from-top-[48%] max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain box-border",
+          "pb-[calc(env(safe-area-inset-bottom,0px)+16px)]",
+          className,
+        )}
+        style={{ WebkitOverflowScrolling: "touch", ...viewportStyle, ...style }}
+        {...props}
+      >
+        {children}
+        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-accent data-[state=open]:text-muted-foreground hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </DialogPrimitive.Close>
+      </DialogPrimitive.Content>
+    </DialogPortal>
+  );
+});
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (

@@ -74,11 +74,18 @@ export interface ExistingEntry {
   entry_date: string | null;
 }
 
+interface TaskItem {
+  taskId: string;
+  taskName: string;
+  durationMinutes: number;
+}
+
 interface AssignmentModalProps {
   open: boolean;
   session: SessionData | null;
   existingEntry?: ExistingEntry | null;
   onSave: (session: SessionData, assignment: AssignmentResult) => void;
+  onSaveMulti?: (session: SessionData, assignments: AssignmentResult[]) => void;
   onSkip: (session: SessionData) => void;
   onDelete?: (entryId: string) => void;
 }

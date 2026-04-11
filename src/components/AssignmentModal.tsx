@@ -132,6 +132,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
   const [tasks, setTasks] = useState<ComboboxItem[]>([]);
   const [allTags, setAllTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [taskList, setTaskList] = useState<TaskItem[]>([]);
 
   const initialSelectionRef = useRef({ clientId: "", projectId: "" });
   const scrollAreaRef = useRef<HTMLDivElement>(null);

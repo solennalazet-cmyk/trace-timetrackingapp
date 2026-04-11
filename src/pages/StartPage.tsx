@@ -458,6 +458,14 @@ const StartPage = () => {
           setAssignModalOpen(true);
         }}
       />
+
+      {/* Session Conflict Dialog */}
+      <SessionConflictDialog
+        open={conflictOpen}
+        activeMode={conflictActiveMode}
+        targetMode={conflictTargetMode}
+        onAction={handleConflictAction}
+      />
     </div>
   );
 };

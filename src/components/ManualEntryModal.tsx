@@ -122,6 +122,16 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
 
   // Rate resolution
   useEffect(() => {
+    // When both are cleared, reset rate
+    if (!clientId && !projectId) {
+      setRateAmount("");
+      setRateCurrency("EUR");
+      return;
+    }
+
+    // Clear stale rate immediately
+    setRateAmount("");
+
     if (!user) {
       const sp = allProjectsFull.find((p) => p.id === projectId);
       const sc = clientsFull.find((c) => c.id === clientId);
@@ -130,10 +140,13 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
       return;
     }
     if (!clientId && !projectId) return;
+    let cancelled = false;
     resolveRate(clientId || null, projectId || null, user.id).then((r) => {
+      if (cancelled) return;
       if (r.amount != null) { setRateAmount(String(r.amount)); setRateCurrency(r.currency); }
     });
-  }, [clientId, projectId, user]);
+    return () => { cancelled = true; };
+  }, [clientId, projectId, user, allProjectsFull, clientsFull]);
 
   const totalMinutes = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
   const canSave = totalMinutes > 0;

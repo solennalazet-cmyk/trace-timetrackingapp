@@ -10,7 +10,7 @@ import { startOfWeek } from "date-fns";
 import DateRangePicker from "@/components/DateRangePicker";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { toLocalDateKey } from "@/lib/utils";
+import { toLocalDateKey, getClientColor, SUNRISE_PALETTE } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { type RoundingSettings, DEFAULT_ROUNDING, roundDuration, roundAmount, roundedBillableValue } from "@/lib/rounding";
 import { getAnonymousEntries } from "@/lib/anonymous-store";
@@ -28,32 +28,6 @@ import BoostOverlay from "@/components/BoostOverlay";
 import { Sparkles } from "lucide-react";
 import { markBoostCompleted } from "@/lib/boost-challenges";
 import ExportDialog from "@/components/ExportDialog";
-
-// Sunrise palette – harmonises with the brand gradient (golden → rose → violet → blue)
-const SUNRISE_PALETTE = [
-  "hsl(38 92% 55%)",   // warm amber
-  "hsl(22 88% 55%)",   // burnt orange
-  "hsl(340 72% 55%)",  // rose
-  "hsl(310 60% 52%)",  // magenta
-  "hsl(270 58% 58%)",  // violet
-  "hsl(220 75% 58%)",  // blue
-  "hsl(190 70% 48%)",  // teal
-  "hsl(355 68% 52%)",  // coral
-  "hsl(50 85% 52%)",   // gold
-  "hsl(285 55% 52%)",  // purple
-];
-
-// Deterministic color for a client ID – stays the same across sessions
-const hashStringToIndex = (str: string, max: number): number => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
-  }
-  return Math.abs(hash) % max;
-};
-
-const getClientColor = (clientId: string): string =>
-  SUNRISE_PALETTE[hashStringToIndex(clientId, SUNRISE_PALETTE.length)];
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 

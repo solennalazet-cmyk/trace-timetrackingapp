@@ -12,6 +12,7 @@ import CallLogModal from "@/components/CallLogModal";
 import UnassignedPanel from "@/components/UnassignedPanel";
 import TodayEntriesSheet from "@/components/TodayEntriesSheet";
 import WelcomeBanner from "@/components/WelcomeBanner";
+import SessionConflictDialog from "@/components/SessionConflictDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { toLocalDateKey } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +21,25 @@ import { toast } from "sonner";
 import { getCongratsMessage } from "@/lib/boost-challenges";
 
 type Mode = "stopwatch" | "focus" | "shift";
+
+const LS_KEYS: Record<string, string> = {
+  stopwatch: "trace_active_stopwatch",
+  shift: "trace_active_shift",
+  focus: "trace_active_focus",
+};
+
+function getActiveMode(): Mode | null {
+  for (const [mode, key] of Object.entries(LS_KEYS)) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.startedAt) return mode as Mode;
+      }
+    } catch {}
+  }
+  return null;
+}
 
 const StartPage = () => {
   const [mode, setMode] = useState<Mode>("stopwatch");

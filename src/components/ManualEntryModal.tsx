@@ -59,6 +59,7 @@ const RATE_UNITS = [
 const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps) => {
   const { user } = useAuth();
   const hoursRef = useRef<HTMLInputElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const [date, setDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -250,7 +251,7 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
           <DialogTitle>Manual Entry</DialogTitle>
         </DialogHeader>
 
-        <div className="px-6 space-y-3 overflow-y-auto flex-1 min-h-0 pt-4">
+        <div ref={scrollAreaRef} className="px-6 space-y-3 overflow-y-auto flex-1 min-h-0 pt-4" style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
           {/* Date */}
           <div>
             <Label>Date</Label>
@@ -315,7 +316,7 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
           {/* Client */}
           <div>
             <Label>Client</Label>
-            <CreatableCombobox items={clients} value={clientId} displayValue={clientName} placeholder="Select client (optional)"
+            <CreatableCombobox items={clients} value={clientId} displayValue={clientName} placeholder="Select client (optional)" scrollContainerRef={scrollAreaRef}
               onSelect={(id, name) => { setClientId(id); setClientName(name); setProjectId(""); setProjectName(""); }}
               onCreate={async (name) => { const c = await handleCreateClient(name); if (c) { setClientId(c.id); setClientName(c.name); setProjectId(""); setProjectName(""); } return c; }}
             />
@@ -332,13 +333,13 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
           )}
 
           {/* Project */}
-          <div><Label>Project</Label><CreatableCombobox items={filteredProjects} value={projectId} displayValue={projectName} placeholder="Select project (optional)"
+          <div><Label>Project</Label><CreatableCombobox items={filteredProjects} value={projectId} displayValue={projectName} placeholder="Select project (optional)" scrollContainerRef={scrollAreaRef}
             onSelect={(id, name) => { setProjectId(id); setProjectName(name); }}
             onCreate={async (name) => { const c = await handleCreateProject(name); if (c) { setProjectId(c.id); setProjectName(c.name); } return c; }}
           /></div>
 
           {/* Task */}
-          <div><Label>Task</Label><CreatableCombobox items={tasks} value={taskId} displayValue={taskName} placeholder="What were you working on?"
+          <div><Label>Task</Label><CreatableCombobox items={tasks} value={taskId} displayValue={taskName} placeholder="What were you working on?" scrollContainerRef={scrollAreaRef}
             onSelect={(_id, name) => { setTaskId(_id); setTaskName(name); }}
             onCreate={async (name) => { const c = await handleCreateTask(name); if (c) { setTaskId(c.id); setTaskName(c.name); } return c; }}
           /></div>

@@ -38,7 +38,7 @@ import {
   saveAnonymousEntry,
 } from "@/lib/anonymous-store";
 import { toast } from "sonner";
-import { resolveRate } from "@/lib/resolve-rate";
+import { useAutoResolvedRate } from "@/hooks/useAutoResolvedRate";
 
 interface ManualEntryModalProps {
   open: boolean;
@@ -121,33 +121,26 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
     loadData();
   }, [open, loadData]);
 
-  // Rate resolution
-  useEffect(() => {
-    // When both are cleared, reset rate
-    if (!clientId && !projectId) {
-      setRateAmount("");
-      setRateCurrency("EUR");
-      return;
-    }
-
-    // Clear stale rate immediately
+  const resetResolvedRate = useCallback(() => {
     setRateAmount("");
+    setRateCurrency("EUR");
+  }, []);
 
-    if (!user) {
-      const sp = allProjectsFull.find((p) => p.id === projectId);
-      const sc = clientsFull.find((c) => c.id === clientId);
-      if (sp?.rate) { setRateAmount(String(sp.rate)); setRateCurrency(sp.currency ?? sc?.currency ?? "EUR"); }
-      else if (sc?.default_rate) { setRateAmount(String(sc.default_rate)); setRateCurrency(sc.currency ?? "EUR"); }
-      return;
-    }
-    if (!clientId && !projectId) return;
-    let cancelled = false;
-    resolveRate(clientId || null, projectId || null, user.id).then((r) => {
-      if (cancelled) return;
-      if (r.amount != null) { setRateAmount(String(r.amount)); setRateCurrency(r.currency); }
-    });
-    return () => { cancelled = true; };
-  }, [clientId, projectId, user, allProjectsFull, clientsFull]);
+  const applyResolvedRate = useCallback((rate: { amount: string; currency: string }) => {
+    setRateAmount(rate.amount);
+    setRateCurrency(rate.currency);
+  }, []);
+
+  useAutoResolvedRate({
+    enabled: open,
+    clientId,
+    projectId,
+    userId: user?.id,
+    clients: clientsFull,
+    projects: allProjectsFull,
+    onReset: resetResolvedRate,
+    onResolved: applyResolvedRate,
+  });
 
   const totalMinutes = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
   const canSave = totalMinutes > 0;
@@ -202,9 +195,10 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
     if (!canSave || saving) return;
     setSaving(true);
     try {
-      const rateNum = rateAmount ? parseFloat(rateAmount) : null;
+      const parsedRate = rateAmount.trim() === "" ? null : Number(rateAmount);
+      const rateNum = parsedRate != null && Number.isFinite(parsedRate) ? parsedRate : null;
       let billableValue: number | null = null;
-      if (billable && rateNum) {
+      if (billable && rateNum != null) {
         if (rateUnit === "hour") billableValue = (totalMinutes / 60) * rateNum;
         else if (rateUnit === "project") billableValue = rateNum;
         else billableValue = rateNum;
@@ -223,7 +217,7 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
         tags: tags.length ? tags : null,
         rate_amount: rateNum,
         rate_currency: rateCurrency,
-        rate_unit: rateNum ? rateUnit : null,
+        rate_unit: rateNum != null ? rateUnit : null,
         billable_value: billableValue,
       };
 
@@ -317,8 +311,8 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
           <div>
             <Label>Client</Label>
             <CreatableCombobox items={clients} value={clientId} displayValue={clientName} placeholder="Select client (optional)" scrollContainerRef={scrollAreaRef}
-              onSelect={(id, name) => { setClientId(id); setClientName(name); setProjectId(""); setProjectName(""); }}
-              onCreate={async (name) => { const c = await handleCreateClient(name); if (c) { setClientId(c.id); setClientName(c.name); setProjectId(""); setProjectName(""); } return c; }}
+              onSelect={(id, name) => { setClientId(id); setClientName(name); setProjectId(""); setProjectName(""); setTaskId(""); setTaskName(""); }}
+              onCreate={async (name) => { const c = await handleCreateClient(name); if (c) { setClientId(c.id); setClientName(c.name); setProjectId(""); setProjectName(""); setTaskId(""); setTaskName(""); } return c; }}
             />
           </div>
 
@@ -334,8 +328,8 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
 
           {/* Project */}
           <div><Label>Project</Label><CreatableCombobox items={filteredProjects} value={projectId} displayValue={projectName} placeholder="Select project (optional)" scrollContainerRef={scrollAreaRef}
-            onSelect={(id, name) => { setProjectId(id); setProjectName(name); }}
-            onCreate={async (name) => { const c = await handleCreateProject(name); if (c) { setProjectId(c.id); setProjectName(c.name); } return c; }}
+            onSelect={(id, name) => { setProjectId(id); setProjectName(name); setTaskId(""); setTaskName(""); }}
+            onCreate={async (name) => { const c = await handleCreateProject(name); if (c) { setProjectId(c.id); setProjectName(c.name); setTaskId(""); setTaskName(""); } return c; }}
           /></div>
 
           {/* Task */}

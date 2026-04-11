@@ -24,8 +24,9 @@ export async function resolveRate(
       .from("projects")
       .select("rate, currency")
       .eq("id", projectId)
-      .single();
-    if (project?.rate) {
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (project?.rate != null) {
       return { amount: project.rate, currency: project.currency ?? "EUR" };
     }
   }
@@ -42,7 +43,7 @@ export async function resolveRate(
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (last?.rate_amount) {
+    if (last?.rate_amount != null) {
       return { amount: last.rate_amount, currency: last.rate_currency ?? "EUR" };
     }
   }
@@ -53,8 +54,9 @@ export async function resolveRate(
       .from("clients")
       .select("default_rate, currency")
       .eq("id", clientId)
-      .single();
-    if (client?.default_rate) {
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (client?.default_rate != null) {
       return { amount: client.default_rate, currency: client.currency ?? "EUR" };
     }
   }
@@ -71,7 +73,7 @@ export async function resolveRate(
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (last?.rate_amount) {
+    if (last?.rate_amount != null) {
       return { amount: last.rate_amount, currency: last.rate_currency ?? "EUR" };
     }
   }

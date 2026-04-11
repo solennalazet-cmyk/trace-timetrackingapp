@@ -31,7 +31,7 @@ import {
   saveAnonymousEntry,
 } from "@/lib/anonymous-store";
 import { toast } from "sonner";
-import { resolveRate } from "@/lib/resolve-rate";
+import { useAutoResolvedRate } from "@/hooks/useAutoResolvedRate";
 
 interface CallLogModalProps {
   open: boolean;
@@ -104,20 +104,26 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
     loadData();
   }, [open, loadData]);
 
-  // Rate resolution
-  useEffect(() => {
-    if (!user) {
-      const sp = allProjectsFull.find((p) => p.id === projectId);
-      const sc = clientsFull.find((c) => c.id === clientId);
-      if (sp?.rate) { setRateAmount(String(sp.rate)); setRateCurrency(sp.currency ?? sc?.currency ?? "EUR"); }
-      else if (sc?.default_rate) { setRateAmount(String(sc.default_rate)); setRateCurrency(sc.currency ?? "EUR"); }
-      return;
-    }
-    if (!clientId && !projectId) return;
-    resolveRate(clientId || null, projectId || null, user.id).then((r) => {
-      if (r.amount != null) { setRateAmount(String(r.amount)); setRateCurrency(r.currency); }
-    });
-  }, [clientId, projectId, user]);
+  const resetResolvedRate = useCallback(() => {
+    setRateAmount("");
+    setRateCurrency("EUR");
+  }, []);
+
+  const applyResolvedRate = useCallback((rate: { amount: string; currency: string }) => {
+    setRateAmount(rate.amount);
+    setRateCurrency(rate.currency);
+  }, []);
+
+  useAutoResolvedRate({
+    enabled: open,
+    clientId,
+    projectId,
+    userId: user?.id,
+    clients: clientsFull,
+    projects: allProjectsFull,
+    onReset: resetResolvedRate,
+    onResolved: applyResolvedRate,
+  });
 
   // Compute total duration in minutes from picker
   const durationMinutes = pickerHours * 60 + pickerMinutes;
@@ -168,9 +174,10 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
     if (durationMinutes <= 0 || saving) return;
     setSaving(true);
     try {
-      const rateNum = rateAmount ? parseFloat(rateAmount) : null;
+      const parsedRate = rateAmount.trim() === "" ? null : Number(rateAmount);
+      const rateNum = parsedRate != null && Number.isFinite(parsedRate) ? parsedRate : null;
       let billableValue: number | null = null;
-      if (billable && rateNum) {
+      if (billable && rateNum != null) {
         if (rateUnit === "hour") billableValue = (durationMinutes / 60) * rateNum;
         else billableValue = rateNum;
       }
@@ -182,7 +189,7 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
         client_id: clientId || null, project_id: projectId || null,
         notes: notes || null, tags: null,
         rate_amount: rateNum, rate_currency: rateCurrency,
-        rate_unit: rateNum ? rateUnit : null, billable_value: billableValue,
+        rate_unit: rateNum != null ? rateUnit : null, billable_value: billableValue,
       };
 
       if (user) {
@@ -221,8 +228,8 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
 
           {/* Client */}
           <div><Label>Client</Label><CreatableCombobox items={clients} value={clientId} displayValue={clientName} placeholder="Select client" scrollContainerRef={scrollAreaRef}
-            onSelect={(id, name) => { setClientId(id); setClientName(name); setProjectId(""); setProjectName(""); }}
-            onCreate={async (name) => { const c = await handleCreateClient(name); if (c) { setClientId(c.id); setClientName(c.name); } return c; }}
+            onSelect={(id, name) => { setClientId(id); setClientName(name); setProjectId(""); setProjectName(""); setTaskId(""); setTaskName(""); }}
+            onCreate={async (name) => { const c = await handleCreateClient(name); if (c) { setClientId(c.id); setClientName(c.name); setProjectId(""); setProjectName(""); setTaskId(""); setTaskName(""); } return c; }}
           /></div>
 
           {/* Billable */}
@@ -237,8 +244,8 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
 
           {/* Project */}
           <div><Label>Project</Label><CreatableCombobox items={filteredProjects} value={projectId} displayValue={projectName} placeholder="Select project (optional)" scrollContainerRef={scrollAreaRef}
-            onSelect={(id, name) => { setProjectId(id); setProjectName(name); }}
-            onCreate={async (name) => { const c = await handleCreateProject(name); if (c) { setProjectId(c.id); setProjectName(c.name); } return c; }}
+            onSelect={(id, name) => { setProjectId(id); setProjectName(name); setTaskId(""); setTaskName(""); }}
+            onCreate={async (name) => { const c = await handleCreateProject(name); if (c) { setProjectId(c.id); setProjectName(c.name); setTaskId(""); setTaskName(""); } return c; }}
           /></div>
 
           {/* Task */}

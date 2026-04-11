@@ -20,7 +20,7 @@ interface SessionConflictDialogProps {
 const MODE_LABELS: Record<string, string> = {
   stopwatch: "Stopwatch",
   focus: "Focus",
-  shift: "Shift",
+  shift: "Clock In",
 };
 
 const SessionConflictDialog = ({

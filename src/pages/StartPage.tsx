@@ -347,7 +347,7 @@ const StartPage = () => {
   const modes: { key: Mode; label: string }[] = [
     { key: "stopwatch", label: "Stopwatch" },
     { key: "focus", label: "Focus" },
-    { key: "shift", label: "Shift" },
+    { key: "shift", label: "Clock In" },
   ];
 
   return (

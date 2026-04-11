@@ -69,6 +69,66 @@ const StartPage = () => {
   const [unassignedOpen, setUnassignedOpen] = useState(false);
   const [todaySheetOpen, setTodaySheetOpen] = useState(false);
 
+  // Session conflict dialog
+  const [conflictOpen, setConflictOpen] = useState(false);
+  const [conflictActiveMode, setConflictActiveMode] = useState<Mode>("stopwatch");
+  const [conflictTargetMode, setConflictTargetMode] = useState<Mode>("stopwatch");
+
+  const handleModeSwitch = (target: Mode) => {
+    if (target === mode) return;
+    const active = getActiveMode();
+    if (active && active !== target) {
+      setConflictActiveMode(active);
+      setConflictTargetMode(target);
+      setConflictOpen(true);
+      return;
+    }
+    setMode(target);
+  };
+
+  const handleConflictAction = (action: "clock-out" | "discard" | "cancel") => {
+    setConflictOpen(false);
+    if (action === "cancel") return;
+
+    // Clear the active session from localStorage
+    const key = LS_KEYS[conflictActiveMode];
+    if (action === "clock-out") {
+      // Read current state, compute duration, and trigger save
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const startMs = new Date(parsed.startedAt).getTime();
+          const pausedMs = parsed.totalPausedMs || 0;
+          const elapsed = parsed.pausedAt
+            ? new Date(parsed.pausedAt).getTime() - startMs - pausedMs
+            : Date.now() - startMs - pausedMs;
+          const durationMinutes = Math.max(1, Math.round(elapsed / 60000));
+          const breakMinutes = Math.round(pausedMs / 60000);
+          localStorage.removeItem(key);
+          // Open assignment modal for this session
+          const entryType = conflictActiveMode === "shift" ? "shift" : "timer";
+          setEditingEntry(null);
+          setPendingSession({ durationMinutes, breakMinutes, startedAt: parsed.startedAt, entryType });
+          setAssignModalOpen(true);
+        }
+      } catch {
+        localStorage.removeItem(key);
+      }
+    } else {
+      // Discard: just remove the session
+      localStorage.removeItem(key);
+      toast("Session discarded.");
+    }
+
+    // Clean up Supabase active session if authenticated
+    if (user) {
+      supabase.from("active_sessions").delete().eq("user_id", user.id).then();
+    }
+
+    setMode(conflictTargetMode);
+  };
+
   // Handle boost mode: switch to Focus and create Growth project
   useEffect(() => {
     if (!isBoost) return;

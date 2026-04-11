@@ -28,6 +28,7 @@ const CircularTimer = ({
   dimmed = false,
   filled = false,
   fillColor,
+  showHandle = false,
   children,
 }: CircularTimerProps) => {
   const offset = CIRCUMFERENCE - progress * CIRCUMFERENCE;
@@ -73,6 +74,23 @@ const CircularTimer = ({
             style={{ transition: "stroke-dashoffset 0.5s ease" }}
           />
         )}
+        {/* Drag handle */}
+        {showHandle && progress > 0 && !filled && (() => {
+          const angle = progress * 2 * Math.PI - Math.PI / 2;
+          const hx = SIZE / 2 + RADIUS * Math.cos(angle);
+          const hy = SIZE / 2 + RADIUS * Math.sin(angle);
+          return (
+            <circle
+              cx={hx}
+              cy={hy}
+              r={7}
+              fill="white"
+              stroke={arcColor}
+              strokeWidth={2}
+              style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.25))" }}
+            />
+          );
+        })()}
       </svg>
       {/* Centre content */}
       <div className="relative z-10 flex flex-col items-center justify-center">

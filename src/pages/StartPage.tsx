@@ -12,6 +12,7 @@ import CallLogModal from "@/components/CallLogModal";
 import UnassignedPanel from "@/components/UnassignedPanel";
 import TodayEntriesSheet from "@/components/TodayEntriesSheet";
 import WelcomeBanner from "@/components/WelcomeBanner";
+import SessionConflictDialog from "@/components/SessionConflictDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { toLocalDateKey } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +21,25 @@ import { toast } from "sonner";
 import { getCongratsMessage } from "@/lib/boost-challenges";
 
 type Mode = "stopwatch" | "focus" | "shift";
+
+const LS_KEYS: Record<string, string> = {
+  stopwatch: "trace_active_stopwatch",
+  shift: "trace_active_shift",
+  focus: "trace_active_focus",
+};
+
+function getActiveMode(): Mode | null {
+  for (const [mode, key] of Object.entries(LS_KEYS)) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.startedAt) return mode as Mode;
+      }
+    } catch {}
+  }
+  return null;
+}
 
 const StartPage = () => {
   const [mode, setMode] = useState<Mode>("stopwatch");
@@ -48,6 +68,66 @@ const StartPage = () => {
   // Unassigned panel
   const [unassignedOpen, setUnassignedOpen] = useState(false);
   const [todaySheetOpen, setTodaySheetOpen] = useState(false);
+
+  // Session conflict dialog
+  const [conflictOpen, setConflictOpen] = useState(false);
+  const [conflictActiveMode, setConflictActiveMode] = useState<Mode>("stopwatch");
+  const [conflictTargetMode, setConflictTargetMode] = useState<Mode>("stopwatch");
+
+  const handleModeSwitch = (target: Mode) => {
+    if (target === mode) return;
+    const active = getActiveMode();
+    if (active && active !== target) {
+      setConflictActiveMode(active);
+      setConflictTargetMode(target);
+      setConflictOpen(true);
+      return;
+    }
+    setMode(target);
+  };
+
+  const handleConflictAction = (action: "clock-out" | "discard" | "cancel") => {
+    setConflictOpen(false);
+    if (action === "cancel") return;
+
+    // Clear the active session from localStorage
+    const key = LS_KEYS[conflictActiveMode];
+    if (action === "clock-out") {
+      // Read current state, compute duration, and trigger save
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const startMs = new Date(parsed.startedAt).getTime();
+          const pausedMs = parsed.totalPausedMs || 0;
+          const elapsed = parsed.pausedAt
+            ? new Date(parsed.pausedAt).getTime() - startMs - pausedMs
+            : Date.now() - startMs - pausedMs;
+          const durationMinutes = Math.max(1, Math.round(elapsed / 60000));
+          const breakMinutes = Math.round(pausedMs / 60000);
+          localStorage.removeItem(key);
+          // Open assignment modal for this session
+          const entryType = conflictActiveMode === "shift" ? "shift" : "timer";
+          setEditingEntry(null);
+          setPendingSession({ durationMinutes, breakMinutes, startedAt: parsed.startedAt, entryType });
+          setAssignModalOpen(true);
+        }
+      } catch {
+        localStorage.removeItem(key);
+      }
+    } else {
+      // Discard: just remove the session
+      localStorage.removeItem(key);
+      toast("Session discarded.");
+    }
+
+    // Clean up Supabase active session if authenticated
+    if (user) {
+      supabase.from("active_sessions").delete().eq("user_id", user.id).then();
+    }
+
+    setMode(conflictTargetMode);
+  };
 
   // Handle boost mode: switch to Focus and create Growth project
   useEffect(() => {
@@ -284,7 +364,7 @@ const StartPage = () => {
         {modes.map((m) => (
           <button
             key={m.key}
-            onClick={() => setMode(m.key)}
+            onClick={() => handleModeSwitch(m.key)}
             className="px-5 py-2 text-sm font-medium transition-colors"
             style={{
               borderRadius: 20,
@@ -333,7 +413,6 @@ const StartPage = () => {
         onDelete={async (entryId) => {
           await supabase.from("time_entries").update({ deleted_at: new Date().toISOString() }).eq("id", entryId);
           toast("Entry deleted.");
-          toast("Entry deleted.");
           setAssignModalOpen(false);
           setEditingEntry(null);
           fetchSummary();
@@ -377,6 +456,14 @@ const StartPage = () => {
           });
           setAssignModalOpen(true);
         }}
+      />
+
+      {/* Session Conflict Dialog */}
+      <SessionConflictDialog
+        open={conflictOpen}
+        activeMode={conflictActiveMode}
+        targetMode={conflictTargetMode}
+        onAction={handleConflictAction}
       />
     </div>
   );

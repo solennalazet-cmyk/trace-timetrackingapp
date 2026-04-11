@@ -900,47 +900,74 @@ const ReportsPage = () => {
           )}
 
           {/* ── 4. Goal Progress Bars ── */}
-          {(proratedHourTarget > 0 || proratedRevenueTarget > 0) && (
-            <div className="mb-6 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Goals</h3>
-                {/* Boost badge */}
-                {isPro && (
-                  <button
-                    onClick={() => setBoostOpen(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 transition-colors text-xs font-semibold"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-                    Boost
-                  </button>
+          {(() => {
+            const hasGoals = proratedHourTarget > 0 || proratedRevenueTarget > 0;
+            const showBlurred = isFree && !hasGoals;
+            if (!hasGoals && !showBlurred) return null;
+            return (
+              <div className="mb-6 space-y-3 relative">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Goals</h3>
+                  {isPro && (
+                    <button
+                      onClick={() => setBoostOpen(true)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 transition-colors text-xs font-semibold"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                      Boost
+                    </button>
+                  )}
+                </div>
+                {hasGoals && !isFree ? (
+                  <>
+                    {proratedHourTarget > 0 && (
+                      <div>
+                        <div className="flex items-baseline justify-between mb-1">
+                          <span className="text-sm text-foreground font-medium">Hours</span>
+                          <span className="text-sm text-muted-foreground font-mono">
+                            {(totalMins / 60).toFixed(1)} / {proratedHourTarget.toFixed(1)}h
+                            <span className="ml-1.5 text-foreground font-semibold">{Math.round(hourProgress)}%</span>
+                          </span>
+                        </div>
+                        <Progress value={hourProgress} className="h-2 rounded-full" />
+                      </div>
+                    )}
+                    {proratedRevenueTarget > 0 && (
+                      <div>
+                        <div className="flex items-baseline justify-between mb-1">
+                          <span className="text-sm text-foreground font-medium">Revenue</span>
+                          <span className="text-sm text-muted-foreground font-mono">
+                            €{billableValue.toFixed(0)} / €{proratedRevenueTarget.toFixed(0)}
+                            <span className="ml-1.5 text-foreground font-semibold">{Math.round(revenueProgress)}%</span>
+                          </span>
+                        </div>
+                        <Progress value={revenueProgress} className="h-2 rounded-full" />
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="relative">
+                    <div className="blur-[6px] opacity-40 pointer-events-none select-none space-y-3">
+                      <div>
+                        <div className="flex items-baseline justify-between mb-1">
+                          <span className="text-sm text-foreground font-medium">Hours</span>
+                          <span className="text-sm text-muted-foreground font-mono">0.0 / 8.0h <span className="ml-1.5 text-foreground font-semibold">0%</span></span>
+                        </div>
+                        <Progress value={0} className="h-2 rounded-full" />
+                      </div>
+                      <div>
+                        <div className="flex items-baseline justify-between mb-1">
+                          <span className="text-sm text-foreground font-medium">Revenue</span>
+                          <span className="text-sm text-muted-foreground font-mono">€0 / €3,000 <span className="ml-1.5 text-foreground font-semibold">0%</span></span>
+                        </div>
+                        <Progress value={0} className="h-2 rounded-full" />
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
-              {proratedHourTarget > 0 && (
-                <div>
-                  <div className="flex items-baseline justify-between mb-1">
-                    <span className="text-sm text-foreground font-medium">Hours</span>
-                    <span className="text-sm text-muted-foreground font-mono">
-                      {(totalMins / 60).toFixed(1)} / {proratedHourTarget.toFixed(1)}h
-                      <span className="ml-1.5 text-foreground font-semibold">{Math.round(hourProgress)}%</span>
-                    </span>
-                  </div>
-                  <Progress value={hourProgress} className="h-2 rounded-full" />
-                </div>
-              )}
-              {proratedRevenueTarget > 0 && (
-                <div>
-                  <div className="flex items-baseline justify-between mb-1">
-                    <span className="text-sm text-foreground font-medium">Revenue</span>
-                    <span className="text-sm text-muted-foreground font-mono">
-                      €{billableValue.toFixed(0)} / €{proratedRevenueTarget.toFixed(0)}
-                      <span className="ml-1.5 text-foreground font-semibold">{Math.round(revenueProgress)}%</span>
-                    </span>
-                  </div>
-                  <Progress value={revenueProgress} className="h-2 rounded-full" />
-                </div>
-              )}
-            </div>
-          )}
+            );
+          })()}
 
 
 

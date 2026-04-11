@@ -638,13 +638,24 @@ function SettingsSection({ title, description, children }: { title: string; desc
 
 function ProSection({ title, description, isPro, children }: { title: string; description?: string; isPro: boolean; children: React.ReactNode }) {
   return (
-    <div className="my-2 rounded-2xl bg-muted/40 p-4 space-y-3">
+    <div className="my-2 rounded-2xl bg-muted/40 p-4 space-y-3 relative">
       <div className="flex items-center gap-2">
         <p className="text-sm font-semibold">{title}</p>
         <ProBadge />
       </div>
       {description && <p className="text-xs text-muted-foreground">{description}</p>}
-      {children}
+      <div className={isPro ? "" : "pointer-events-none select-none"}>
+        <div className={isPro ? "" : "opacity-30 blur-[1px]"}>
+          {children}
+        </div>
+      </div>
+      {!isPro && (
+        <div className="absolute inset-0 flex items-center justify-center rounded-2xl">
+          <span className="text-xs font-semibold text-muted-foreground bg-background/80 px-3 py-1.5 rounded-full shadow-sm border border-border">
+            {title} is a Pro feature
+          </span>
+        </div>
+      )}
     </div>
   );
 }

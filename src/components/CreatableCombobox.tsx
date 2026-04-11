@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, type TouchEvent } from "react";
+import { useState, useRef, useEffect, useCallback, type TouchEvent as ReactTouchEvent } from "react";
 import { Check, ChevronDown, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -55,7 +55,7 @@ const CreatableCombobox = ({
   useEffect(() => {
     if (!open) return;
 
-    const handler = (e: MouseEvent | TouchEvent) => {
+    const handler = (e: Event) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         closeDropdown();
       }
@@ -98,12 +98,12 @@ const CreatableCombobox = ({
     setOpen(false);
   };
 
-  const handleTouchStart = (event: TouchEvent<HTMLButtonElement>) => {
+  const handleTouchStart = (event: ReactTouchEvent<HTMLButtonElement>) => {
     touchStartYRef.current = event.touches[0]?.clientY ?? null;
     touchMovedRef.current = false;
   };
 
-  const handleTouchMove = (event: TouchEvent<HTMLButtonElement>) => {
+  const handleTouchMove = (event: ReactTouchEvent<HTMLButtonElement>) => {
     const startY = touchStartYRef.current;
     const currentY = event.touches[0]?.clientY;
 

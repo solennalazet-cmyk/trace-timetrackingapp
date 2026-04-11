@@ -34,6 +34,7 @@ import {
 } from "@/lib/anonymous-store";
 import { toast } from "sonner";
 import { resolveRate } from "@/lib/resolve-rate";
+import { Plus, X } from "lucide-react";
 
 export interface SessionData {
   durationMinutes: number;
@@ -73,11 +74,18 @@ export interface ExistingEntry {
   entry_date: string | null;
 }
 
+interface TaskItem {
+  taskId: string;
+  taskName: string;
+  durationMinutes: number;
+}
+
 interface AssignmentModalProps {
   open: boolean;
   session: SessionData | null;
   existingEntry?: ExistingEntry | null;
   onSave: (session: SessionData, assignment: AssignmentResult) => void;
+  onSaveMulti?: (session: SessionData, assignments: AssignmentResult[]) => void;
   onSkip: (session: SessionData) => void;
   onDelete?: (entryId: string) => void;
 }
@@ -104,7 +112,7 @@ const RATE_UNITS = [
   { value: "project", label: "Per project" },
 ];
 
-const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip, onDelete }: AssignmentModalProps) => {
+const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, onSkip, onDelete }: AssignmentModalProps) => {
   const { user } = useAuth();
   const [clientId, setClientId] = useState("");
   const [clientName, setClientName] = useState("");
@@ -124,6 +132,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip, onDelet
   const [tasks, setTasks] = useState<ComboboxItem[]>([]);
   const [allTags, setAllTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [taskList, setTaskList] = useState<TaskItem[]>([]);
 
   const initialSelectionRef = useRef({ clientId: "", projectId: "" });
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -199,6 +208,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip, onDelet
       setRateAmount("");
       setRateCurrency("EUR");
       setRateUnit("hour");
+      setTaskList([]);
     }
 
     loadData();
@@ -330,8 +340,6 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip, onDelet
     if (saving) return;
     setSaving(true);
     try {
-      const billableValue = calcBillableValue();
-
       if (billable && rateAmount && clientId && user) {
         const amount = parseFloat(rateAmount);
         const selectedClient = clientsFull.find((c) => c.id === clientId);
@@ -340,19 +348,42 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip, onDelet
         }
       }
 
-      onSave(session, {
+      const baseAssignment = {
         clientId: clientId || null,
         projectId: projectId || null,
-        taskId: taskId || null,
-        taskName,
         notes,
         tags,
         billable,
         rateAmount: rateAmount ? parseFloat(rateAmount) : null,
         rateCurrency,
         rateUnit,
-        billableValue,
-      });
+      };
+
+      // Multi-task: create one entry per task with split durations
+      if (taskList.length > 0 && onSaveMulti) {
+        const assignments: AssignmentResult[] = taskList.map((item) => {
+          const dur = item.durationMinutes;
+          const bv = billable && rateAmount && rateUnit === "hour"
+            ? (dur / 60) * parseFloat(rateAmount)
+            : baseAssignment.rateAmount;
+          return {
+            ...baseAssignment,
+            taskId: item.taskId,
+            taskName: item.taskName,
+            billableValue: bv,
+            _durationMinutes: dur,
+          } as AssignmentResult & { _durationMinutes: number };
+        });
+        onSaveMulti(session, assignments);
+      } else {
+        const billableValue = calcBillableValue();
+        onSave(session, {
+          ...baseAssignment,
+          taskId: taskId || null,
+          taskName,
+          billableValue,
+        });
+      }
     } catch (error) {
       console.error("Save failed:", error);
       toast.error("Something went wrong. Your session is safe — try again.");
@@ -435,7 +466,14 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip, onDelet
           })()}
         </div>
 
-        <div ref={scrollAreaRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-4">
+        <div
+          ref={scrollAreaRef}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-4"
+          style={{
+            WebkitOverflowScrolling: "touch",
+            touchAction: "pan-y",
+          }}
+        >
           <div className="space-y-3 text-foreground">
             <div>
               <Label className="text-foreground">Client</Label>
@@ -528,24 +566,77 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSkip, onDelet
 
             <div>
               <Label className="text-foreground">Task</Label>
-              <CreatableCombobox
-                items={tasks}
-                value={taskId}
-                displayValue={taskName}
-                placeholder="What were you working on?"
-                onSelect={(id, name) => {
-                  setTaskId(id);
-                  setTaskName(name);
-                }}
-                onCreate={async (name) => {
-                  const created = await handleCreateTask(name);
-                  if (created) {
-                    setTaskId(created.id);
-                    setTaskName(created.name);
-                  }
-                  return created;
-                }}
-              />
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <CreatableCombobox
+                    items={tasks}
+                    value={taskId}
+                    displayValue={taskName}
+                    placeholder="What were you working on?"
+                    onSelect={(id, name) => {
+                      setTaskId(id);
+                      setTaskName(name);
+                    }}
+                    onCreate={async (name) => {
+                      const created = await handleCreateTask(name);
+                      if (created) {
+                        setTaskId(created.id);
+                        setTaskName(created.name);
+                      }
+                      return created;
+                    }}
+                  />
+                </div>
+                {!existingEntry && taskId && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-10 w-10 shrink-0"
+                    onClick={() => {
+                      if (!taskId || !session) return;
+                      const remaining = session.durationMinutes - taskList.reduce((s, t) => s + t.durationMinutes, 0);
+                      if (remaining <= 0) {
+                        toast.error("No remaining time to allocate.");
+                        return;
+                      }
+                      setTaskList((prev) => [...prev, { taskId, taskName, durationMinutes: remaining }]);
+                      setTaskId("");
+                      setTaskName("");
+                    }}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+
+              {/* Multi-task list */}
+              {taskList.length > 0 && (
+                <div className="mt-2 space-y-1.5">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Tasks in this session</p>
+                  {taskList.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2">
+                      <span className="text-sm text-foreground flex-1 truncate">{item.taskName}</span>
+                      <Input
+                        type="number"
+                        className="w-16 h-7 text-xs text-center"
+                        value={item.durationMinutes}
+                        onChange={(e) => {
+                          const val = Math.max(1, parseInt(e.target.value) || 1);
+                          setTaskList((prev) => prev.map((t, i) => i === idx ? { ...t, durationMinutes: val } : t));
+                        }}
+                      />
+                      <span className="text-[10px] text-muted-foreground">min</span>
+                      <button
+                        onClick={() => setTaskList((prev) => prev.filter((_, i) => i !== idx))}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div>

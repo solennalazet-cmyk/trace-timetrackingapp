@@ -169,6 +169,7 @@ const FocusMode = ({ onComplete, autoStartMinutes }: FocusModeProps) => {
           arcColor="hsl(53, 98%, 77%)"
           pulsing={status === "running"}
           dimmed={status === "paused"}
+          showHandle={status === "idle"}
         >
           <svg ref={svgRef} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
           <span className="font-mono text-4xl font-bold text-timer-display">

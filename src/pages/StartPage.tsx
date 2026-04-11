@@ -316,6 +316,23 @@ const StartPage = () => {
     }
   };
 
+  const handleAssignSaveMulti = async (session: SessionData, assignments: AssignmentResult[]) => {
+    try {
+      for (const assignment of assignments) {
+        const dur = (assignment as any)._durationMinutes ?? session.durationMinutes;
+        await saveEntry({ ...session, durationMinutes: dur }, assignment);
+      }
+      toast.success(`${assignments.length} tasks saved.`);
+      setAssignModalOpen(false);
+      setPendingSession(null);
+      setEditingEntry(null);
+      fetchSummary();
+    } catch (error) {
+      console.error("Save failed:", error);
+      toast.error("Something went wrong. Your session is safe — try again.");
+    }
+  };
+
   const handleAssignSkip = async (session: SessionData) => {
     try {
       if (!editingEntry) {
@@ -409,6 +426,7 @@ const StartPage = () => {
         session={pendingSession}
         existingEntry={editingEntry}
         onSave={handleAssignSave}
+        onSaveMulti={handleAssignSaveMulti}
         onSkip={handleAssignSkip}
         onDelete={async (entryId) => {
           await supabase.from("time_entries").update({ deleted_at: new Date().toISOString() }).eq("id", entryId);

@@ -1,42 +1,17 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend,
-} from "recharts";
-import { BarChart3, List, Search, Timer, PenLine, Clock, Phone, ChevronRight, Flame, X } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { CheckSquare, Flame, Crown, Clock, Timer, PenLine, Phone, ChevronRight } from "lucide-react";
+import { startOfWeek, format, differenceInDays } from "date-fns";
+import DateRangePicker from "@/components/DateRangePicker";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { toLocalDateKey } from "@/lib/utils";
+import { toLocalDateKey, getClientColor } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { getAnonymousEntries } from "@/lib/anonymous-store";
 import EntryDetailSheet, { type TimeEntry } from "@/components/EntryDetailSheet";
 import AssignmentModal, { type SessionData, type AssignmentResult, type ExistingEntry } from "@/components/AssignmentModal";
+import PaywallModal from "@/components/PaywallModal";
 import { toast } from "sonner";
-
-type ViewMode = "chart" | "list";
-type DateRange = "today" | "7days" | "30days" | "month";
-type EntryTypeFilter = "all" | "timer" | "manual" | "shift" | "call";
-type BillableFilter = "all" | "billable" | "non-billable";
-
-const RANGES: { key: DateRange; label: string }[] = [
-  { key: "today", label: "Today" },
-  { key: "7days", label: "7 days" },
-  { key: "30days", label: "30 days" },
-  { key: "month", label: "This month" },
-];
-
-const SUNRISE_PALETTE = [
-  "hsl(38 92% 55%)", "hsl(22 88% 55%)", "hsl(340 72% 55%)", "hsl(310 60% 52%)",
-  "hsl(270 58% 58%)", "hsl(220 75% 58%)", "hsl(190 70% 48%)", "hsl(355 68% 52%)",
-  "hsl(50 85% 52%)", "hsl(285 55% 52%)",
-];
-const hashStringToIndex = (str: string, max: number): number => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
-  return Math.abs(hash) % max;
-};
-const getClientColor = (id: string) => SUNRISE_PALETTE[hashStringToIndex(id, SUNRISE_PALETTE.length)];
 
 const formatHHMM = (mins: number) => {
   const h = Math.floor(mins / 60);
@@ -44,30 +19,7 @@ const formatHHMM = (mins: number) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
-const getDateRangeStart = (range: DateRange): string => {
-  const now = new Date();
-  let d: Date;
-  switch (range) {
-    case "today": d = new Date(now.getFullYear(), now.getMonth(), now.getDate()); break;
-    case "7days": d = new Date(now.getTime() - 6 * 86400000); break;
-    case "30days": d = new Date(now.getTime() - 29 * 86400000); break;
-    case "month": d = new Date(now.getFullYear(), now.getMonth(), 1); break;
-  }
-  return toLocalDateKey(d);
-};
-
-const getDaysInRange = (startStr: string): string[] => {
-  const days: string[] = [];
-  const start = new Date(startStr + "T00:00:00");
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  let d = new Date(start);
-  while (d <= today) {
-    days.push(toLocalDateKey(d));
-    d.setDate(d.getDate() + 1);
-  }
-  return days;
-};
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const getDateLabel = (dateStr: string): string => {
   const d = new Date(dateStr + "T00:00:00");
@@ -78,31 +30,19 @@ const getDateLabel = (dateStr: string): string => {
   return d.toLocaleDateString("en-GB", { weekday: "long", month: "long", day: "numeric" });
 };
 
-const entryTypeIcon = (type: string | null) => {
-  switch (type) {
-    case "manual": return <PenLine className="w-4 h-4 text-muted-foreground" />;
-    case "shift": return <Clock className="w-4 h-4 text-muted-foreground" />;
-    case "call": return <Phone className="w-4 h-4 text-muted-foreground" />;
-    default: return <Timer className="w-4 h-4 text-muted-foreground" />;
-  }
-};
-
 const TimelinePage = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
-  const [view, setView] = useState<ViewMode>("chart");
-  const [range, setRange] = useState<DateRange>("30days");
+  const isPro = profile?.plan === "pro" || profile?.plan === "trial";
+
+  // Date range - default last 7 days
+  const [from, setFrom] = useState(() => new Date(Date.now() - 6 * 86400000));
+  const [to, setTo] = useState(() => new Date());
+
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [clients, setClients] = useState<Record<string, string>>({});
-  const [projects, setProjects] = useState<Record<string, string>>({});
-  const [tasks, setTasksMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-
-  // List view filters
-  const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<EntryTypeFilter>("all");
-  const [billableFilter, setBillableFilter] = useState<BillableFilter>("all");
-  const [clientFilter, setClientFilter] = useState<string>("");
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
   // Detail / edit
   const [selectedEntry, setSelectedEntry] = useState<TimeEntry | null>(null);
@@ -111,33 +51,38 @@ const TimelinePage = () => {
   const [editSession, setEditSession] = useState<SessionData | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
 
-  const rangeStart = getDateRangeStart(range);
+  const rangeStart = toLocalDateKey(from);
+  const rangeEnd = toLocalDateKey(to);
+
+  const handleRangeChange = (f: Date, t: Date) => {
+    if (!isPro) {
+      const days = differenceInDays(t, f);
+      if (days > 7) {
+        setPaywallOpen(true);
+        return;
+      }
+    }
+    setFrom(f);
+    setTo(t);
+  };
 
   const loadData = useCallback(async () => {
     setLoading(true);
     if (user) {
-      const [{ data: e }, { data: c }, { data: p }, { data: t }] = await Promise.all([
+      const [{ data: e }, { data: c }] = await Promise.all([
         supabase.from("time_entries")
-          .select("id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, billable_value, client_id, project_id, task_id, client:clients(id, name), project:projects(id, name), task:tasks(id, name)")
+          .select("id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, billable_value, client_id, project_id, task_id, start_time, end_time, client:clients(id, name), project:projects(id, name), task:tasks(id, name)")
           .eq("user_id", user.id)
           .gte("entry_date", rangeStart)
+          .lte("entry_date", rangeEnd)
           .is("deleted_at", null)
           .order("entry_date", { ascending: false }),
         supabase.from("clients").select("id, name").eq("user_id", user.id),
-        supabase.from("projects").select("id, name").eq("user_id", user.id),
-        supabase.from("tasks").select("id, name").eq("user_id", user.id),
       ]);
 
       const clientMap: Record<string, string> = {};
       c?.forEach((x) => { clientMap[x.id] = x.name; });
-      const projectMap: Record<string, string> = {};
-      p?.forEach((x) => { projectMap[x.id] = x.name; });
-      const taskMap: Record<string, string> = {};
-      t?.forEach((x) => { taskMap[x.id] = x.name; });
-
       setClients(clientMap);
-      setProjects(projectMap);
-      setTasksMap(taskMap);
 
       setEntries((e ?? []).map((entry: any) => ({
         ...entry,
@@ -147,80 +92,49 @@ const TimelinePage = () => {
       })) as TimeEntry[]);
     } else {
       const all = getAnonymousEntries();
-      const filtered = all.filter((e: any) => (e.entry_date ?? "") >= rangeStart);
+      const filtered = all.filter((e: any) => {
+        const d = e.entry_date ?? "";
+        return d >= rangeStart && d <= rangeEnd;
+      });
       setEntries(filtered.map((e: any, i: number) => ({
         ...e, id: e.id ?? `anon-${i}`,
         client_name: undefined, project_name: undefined, task_name: undefined,
       })));
-      setClients({}); setProjects({}); setTasksMap({});
+      setClients({});
     }
     setLoading(false);
-  }, [user, rangeStart]);
+  }, [user, rangeStart, rangeEnd]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Streak calculation
-  const streak = useMemo(() => {
+  // Hero stats
+  const stats = useMemo(() => {
+    const taskCount = entries.length;
+    const totalMinutes = entries.reduce((s, e) => s + e.duration_minutes, 0);
+
+    // Streak: consecutive days with entries ending today
     const dateSet = new Set(entries.map((e) => e.entry_date).filter(Boolean));
-    let count = 0;
+    let streak = 0;
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const d = new Date(today);
     while (true) {
-      const ds = toLocalDateKey(d);
-      if (dateSet.has(ds)) { count++; d.setDate(d.getDate() - 1); }
+      if (dateSet.has(toLocalDateKey(d))) { streak++; d.setDate(d.getDate() - 1); }
       else break;
     }
-    return count;
+
+    return { taskCount, totalMinutes, streak };
   }, [entries]);
 
-  // Chart data
-  const chartData = useMemo(() => {
-    const days = getDaysInRange(rangeStart);
-    const clientIds = [...new Set(entries.map((e) => e.client_id).filter(Boolean))] as string[];
-    const colorMap: Record<string, string> = {};
-    clientIds.forEach((id) => { colorMap[id] = getClientColor(id); });
-    colorMap["unassigned"] = "hsl(240 5% 75%)";
-
-    return days.map((day) => {
-      const dayEntries = entries.filter((e) => e.entry_date === day);
-      const row: any = { date: day, label: new Date(day + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" }) };
-      clientIds.forEach((cid) => {
-        row[cid] = dayEntries.filter((e) => e.client_id === cid).reduce((s, e) => s + e.duration_minutes / 60, 0);
-      });
-      const unassigned = dayEntries.filter((e) => !e.client_id).reduce((s, e) => s + e.duration_minutes / 60, 0);
-      if (unassigned > 0) row["unassigned"] = unassigned;
-      return row;
-    });
-  }, [entries, rangeStart]);
-
-  const clientIds = [...new Set(entries.map((e) => e.client_id).filter(Boolean))] as string[];
-  const hasUnassigned = entries.some((e) => !e.client_id);
-
-  // List view filtering
-  const filteredEntries = useMemo(() => {
-    let result = entries;
-    if (typeFilter !== "all") result = result.filter((e) => e.entry_type === typeFilter);
-    if (billableFilter === "billable") result = result.filter((e) => e.billable);
-    if (billableFilter === "non-billable") result = result.filter((e) => !e.billable);
-    if (clientFilter) result = result.filter((e) => e.client_id === clientFilter);
-    if (search) {
-      const q = search.toLowerCase();
-      result = result.filter((e) =>
-        (e.client_name ?? "").toLowerCase().includes(q) ||
-        (e.project_name ?? "").toLowerCase().includes(q) ||
-        (e.task_name ?? "").toLowerCase().includes(q) ||
-        (e.notes ?? "").toLowerCase().includes(q) ||
-        (e.tags ?? []).some((t) => t.toLowerCase().includes(q))
-      );
-    }
-    return result;
-  }, [entries, typeFilter, billableFilter, clientFilter, search]);
+  // Client colors for legend
+  const clientIds = useMemo(() =>
+    [...new Set(entries.map((e) => e.client_id).filter(Boolean))] as string[]
+  , [entries]);
 
   // Group by date
   const groupedEntries = useMemo(() => {
     const groups: { date: string; label: string; entries: TimeEntry[] }[] = [];
     const dateMap = new Map<string, TimeEntry[]>();
-    filteredEntries.forEach((e) => {
+    entries.forEach((e) => {
       const d = e.entry_date ?? "unknown";
       if (!dateMap.has(d)) dateMap.set(d, []);
       dateMap.get(d)!.push(e);
@@ -230,9 +144,37 @@ const TimelinePage = () => {
       groups.push({ date: d, label: getDateLabel(d), entries: dateMap.get(d)! });
     });
     return groups;
-  }, [filteredEntries]);
+  }, [entries]);
 
-  const hasFilters = typeFilter !== "all" || billableFilter !== "all" || clientFilter !== "" || search !== "";
+  // Insights (Pro only)
+  const insights = useMemo(() => {
+    if (entries.length === 0) return null;
+
+    // Most productive day of week by task count
+    const dayCount: Record<number, number> = {};
+    entries.forEach((e) => {
+      if (!e.entry_date) return;
+      const dow = new Date(e.entry_date + "T00:00:00").getDay();
+      dayCount[dow] = (dayCount[dow] || 0) + 1;
+    });
+    let bestDay = 0, bestCount = 0;
+    Object.entries(dayCount).forEach(([d, c]) => {
+      if (c > bestCount) { bestDay = parseInt(d); bestCount = c; }
+    });
+
+    // Average session duration
+    const avgDuration = Math.round(entries.reduce((s, e) => s + e.duration_minutes, 0) / entries.length);
+
+    // Longest session
+    const longestSession = Math.max(...entries.map((e) => e.duration_minutes));
+
+    return {
+      mostProductiveDay: WEEKDAYS[bestDay],
+      mostProductiveDayCount: bestCount,
+      avgDuration,
+      longestSession,
+    };
+  }, [entries]);
 
   const handleEdit = (entry: TimeEntry) => {
     setEditEntry(entry as ExistingEntry);
@@ -268,20 +210,15 @@ const TimelinePage = () => {
     setEntries((prev) => prev.filter((e) => e.id !== id));
   };
 
-  const clearFilters = () => {
-    setSearch(""); setTypeFilter("all"); setBillableFilter("all"); setClientFilter("");
-  };
-
   if (loading) {
     return <div className="flex items-center justify-center min-h-[60vh] text-muted-foreground text-sm">Loading…</div>;
   }
 
-  // Empty states
-  if (entries.length === 0 && !hasFilters) {
+  if (entries.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 px-4">
-        <Clock className="w-12 h-12 text-muted-foreground opacity-30" />
-        <p className="text-muted-foreground text-sm text-center">Your timeline will appear here.<br />Start the timer to log your first session.</p>
+        <CheckSquare className="w-12 h-12 text-muted-foreground opacity-30" />
+        <p className="text-muted-foreground text-sm text-center">Your completed tasks will appear here.<br />Start the timer to log your first session.</p>
         <Button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-12 px-6 font-bold" onClick={() => navigate("/")}>
           Start tracking →
         </Button>
@@ -291,181 +228,116 @@ const TimelinePage = () => {
 
   return (
     <div className="pb-24 px-4">
-      {/* Header row: range + view toggle */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex gap-1 overflow-x-auto">
-          {RANGES.map((r) => (
-            <button
-              key={r.key}
-              onClick={() => setRange(r.key)}
-              className="px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-colors"
-              style={{
-                background: range === r.key ? "hsl(var(--primary))" : "transparent",
-                color: range === r.key ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
-                border: range === r.key ? "none" : "1px solid hsl(var(--border))",
-              }}
-            >
-              {r.label}
-            </button>
+      {/* Date range picker */}
+      <div className="mb-4">
+        <DateRangePicker from={from} to={to} onChange={handleRangeChange} />
+      </div>
+
+      {/* Client color legend */}
+      {clientIds.length > 0 && (
+        <div className="flex flex-wrap gap-3 mb-4">
+          {clientIds.map((cid) => (
+            <div key={cid} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <div className="w-2.5 h-2.5 rounded-full" style={{ background: getClientColor(cid) }} />
+              {clients[cid] ?? "Unknown"}
+            </div>
           ))}
         </div>
-        <div className="flex gap-1 ml-2">
-          <button onClick={() => setView("chart")} className="p-2 rounded-lg" style={{ color: view === "chart" ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))" }}>
-            <BarChart3 className="w-5 h-5" />
-          </button>
-          <button onClick={() => setView("list")} className="p-2 rounded-lg" style={{ color: view === "list" ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))" }}>
-            <List className="w-5 h-5" />
-          </button>
+      )}
+
+      {/* Hero stats */}
+      <div className="grid grid-cols-3 gap-3 mb-5">
+        <div className="rounded-xl bg-muted/50 px-3 py-3 text-center">
+          <p className="font-mono text-xl font-bold text-foreground">{stats.taskCount}</p>
+          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Tasks done</p>
+        </div>
+        <div className="rounded-xl bg-muted/50 px-3 py-3 text-center">
+          <p className="font-mono text-xl font-bold text-foreground">{formatHHMM(stats.totalMinutes)}</p>
+          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Total time</p>
+        </div>
+        <div className="rounded-xl bg-muted/50 px-3 py-3 text-center">
+          <div className="flex items-center justify-center gap-1">
+            <Flame className="w-4 h-4 text-orange-500" />
+            <p className="font-mono text-xl font-bold text-foreground">{stats.streak}</p>
+          </div>
+          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Day streak</p>
         </div>
       </div>
 
-      {/* CHART VIEW */}
-      {view === "chart" && (
-        <>
-          {/* Streak */}
-          {streak > 0 && (
-            <div className="flex items-center gap-1.5 mb-3 text-sm font-medium text-foreground">
-              <Flame className="w-4 h-4 text-orange-500" />
-              {streak}-day streak
-            </div>
-          )}
-
-          <div className="w-full overflow-x-auto mb-4" style={{ minHeight: 220 }}>
-            <div style={{ minWidth: Math.max(chartData.length * 32, 300) }}>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={chartData} barCategoryGap="20%">
-                  <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={30} tickFormatter={(v) => `${v}h`} />
-                  <Tooltip
-                    contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))" }}
-                    formatter={(value: number, name: string) => [`${value.toFixed(1)}h`, name === "unassigned" ? "Unassigned" : (clients[name] ?? name)]}
-                    labelFormatter={(label) => label}
-                  />
-                  {clientIds.map((cid, i) => (
-                    <Bar key={cid} dataKey={cid} stackId="a" fill={getClientColor(cid)} radius={i === clientIds.length - 1 && !hasUnassigned ? [3, 3, 0, 0] : undefined} name={clients[cid] ?? cid} />
-                  ))}
-                  {hasUnassigned && (
-                    <Bar dataKey="unassigned" stackId="a" fill="hsl(240 5% 75%)" radius={[3, 3, 0, 0]} name="Unassigned" />
+      {/* Task list grouped by day */}
+      {groupedEntries.map((group) => (
+        <div key={group.date} className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{group.label}</p>
+            <p className="text-[10px] text-muted-foreground">{group.entries.length} task{group.entries.length !== 1 ? "s" : ""}</p>
+          </div>
+          <div className="space-y-1">
+            {group.entries.map((entry) => (
+              <button
+                key={entry.id}
+                className="flex items-center w-full text-left px-3 py-3 rounded-lg hover:bg-muted/50 transition-colors gap-3"
+                onClick={() => { setSelectedEntry(entry); setDetailOpen(true); }}
+              >
+                <CheckSquare className="w-4 h-4 text-primary shrink-0" />
+                {entry.client_id && (
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: getClientColor(entry.client_id) }} />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {entry.task_name
+                      ? entry.task_name
+                      : entry.project_name
+                        ? entry.project_name
+                        : entry.client_name
+                          ? entry.client_name
+                          : <span className="text-muted-foreground">Unassigned</span>}
+                  </p>
+                  {entry.task_name && entry.project_name && (
+                    <p className="text-xs text-muted-foreground truncate">{entry.project_name}</p>
                   )}
-                </BarChart>
-              </ResponsiveContainer>
+                </div>
+                <span className="font-mono text-sm font-semibold text-foreground shrink-0">{formatHHMM(entry.duration_minutes)}</span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {/* Insights section */}
+      {insights && (
+        <div className="relative mt-6 mb-4">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Insights</h3>
+          <div className={isPro ? "" : "pointer-events-none select-none"}>
+            <div className={isPro ? "" : "opacity-30 blur-[2px]"}>
+              <div className="grid grid-cols-1 gap-2">
+                <div className="rounded-xl bg-muted/50 px-4 py-3 flex items-center justify-between">
+                  <span className="text-sm text-foreground">Most productive day</span>
+                  <span className="font-semibold text-foreground">{insights.mostProductiveDay} <span className="text-xs text-muted-foreground">({insights.mostProductiveDayCount} tasks)</span></span>
+                </div>
+                <div className="rounded-xl bg-muted/50 px-4 py-3 flex items-center justify-between">
+                  <span className="text-sm text-foreground">Avg. session</span>
+                  <span className="font-mono font-semibold text-foreground">{formatHHMM(insights.avgDuration)}</span>
+                </div>
+                <div className="rounded-xl bg-muted/50 px-4 py-3 flex items-center justify-between">
+                  <span className="text-sm text-foreground">Longest session</span>
+                  <span className="font-mono font-semibold text-foreground">{formatHHMM(insights.longestSession)}</span>
+                </div>
+              </div>
             </div>
           </div>
-
-          {/* Legend */}
-          <div className="flex flex-wrap gap-3 mb-4">
-            {clientIds.map((cid, i) => (
-              <div key={cid} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ background: getClientColor(cid) }} />
-                {clients[cid] ?? "Unknown"}
-              </div>
-            ))}
-            {hasUnassigned && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ background: "hsl(240 5% 75%)" }} />
-                Unassigned
-              </div>
-            )}
-          </div>
-        </>
-      )}
-
-      {/* LIST VIEW */}
-      {view === "list" && (
-        <>
-          {/* Search */}
-          <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input className="pl-9" placeholder="Search entries..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
-
-          {/* Filter chips */}
-          <div className="flex gap-2 flex-wrap mb-3">
-            {(["all", "timer", "manual", "shift", "call"] as EntryTypeFilter[]).map((t) => (
+          {!isPro && (
+            <div className="absolute inset-0 flex items-center justify-center rounded-2xl mt-6">
               <button
-                key={t}
-                onClick={() => setTypeFilter(t)}
-                className="px-3 py-1 text-xs font-medium rounded-full transition-colors"
-                style={{
-                  background: typeFilter === t ? "hsl(var(--primary))" : "transparent",
-                  color: typeFilter === t ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
-                  border: typeFilter === t ? "none" : "1px solid hsl(var(--border))",
-                }}
+                onClick={() => setPaywallOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-semibold shadow-lg"
               >
-                {t === "all" ? "All" : t.charAt(0).toUpperCase() + t.slice(1)}
+                <Crown className="w-4 h-4" />
+                Unlock Insights
               </button>
-            ))}
-          </div>
-
-          <div className="flex gap-2 flex-wrap mb-3">
-            {(["all", "billable", "non-billable"] as BillableFilter[]).map((b) => (
-              <button
-                key={b}
-                onClick={() => setBillableFilter(b)}
-                className="px-3 py-1 text-xs font-medium rounded-full transition-colors"
-                style={{
-                  background: billableFilter === b ? "hsl(var(--primary))" : "transparent",
-                  color: billableFilter === b ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
-                  border: billableFilter === b ? "none" : "1px solid hsl(var(--border))",
-                }}
-              >
-                {b === "all" ? "All" : b === "billable" ? "Billable" : "Non-billable"}
-              </button>
-            ))}
-            {Object.keys(clients).length > 0 && (
-              <select
-                value={clientFilter}
-                onChange={(e) => setClientFilter(e.target.value)}
-                className="px-3 py-1 text-xs font-medium rounded-full border border-border bg-transparent text-muted-foreground"
-              >
-                <option value="">All clients</option>
-                {Object.entries(clients).map(([id, name]) => (
-                  <option key={id} value={id}>{name}</option>
-                ))}
-              </select>
-            )}
-            {hasFilters && (
-              <button onClick={clearFilters} className="text-xs text-foreground font-medium hover:underline">Clear all</button>
-            )}
-          </div>
-
-          {/* Entries grouped by date */}
-          {filteredEntries.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-sm text-muted-foreground">No entries match your search.</p>
-              <button onClick={clearFilters} className="text-xs text-foreground font-medium hover:underline mt-1">Clear filters</button>
             </div>
           )}
-
-          {groupedEntries.map((group) => (
-            <div key={group.date} className="mb-4">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{group.label}</p>
-              <div className="space-y-1">
-                {group.entries.map((entry) => (
-                  <button
-                    key={entry.id}
-                    className="flex items-center w-full text-left px-3 py-3 rounded-lg hover:bg-muted/50 transition-colors gap-3"
-                    onClick={() => { setSelectedEntry(entry); setDetailOpen(true); }}
-                  >
-                    {entryTypeIcon(entry.entry_type)}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">
-                        {entry.client_name ? `${entry.client_name}${entry.project_name ? ` — ${entry.project_name}` : ""}` : <span className="text-muted-foreground">Unassigned</span>}
-                      </p>
-                      {entry.task_name && <p className="text-xs text-muted-foreground truncate">{entry.task_name}</p>}
-                      {entry.notes && <p className="text-xs text-muted-foreground truncate">{entry.notes}</p>}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-mono text-sm font-semibold">{formatHHMM(entry.duration_minutes)}</span>
-                      <span className={`w-2 h-2 rounded-full ${entry.billable ? "bg-primary" : "bg-muted-foreground/30"}`} />
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </>
+        </div>
       )}
 
       {/* Entry Detail Sheet */}
@@ -493,6 +365,8 @@ const TimelinePage = () => {
           loadData();
         }}
       />
+
+      <PaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} />
     </div>
   );
 };

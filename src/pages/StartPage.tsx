@@ -426,6 +426,7 @@ const StartPage = () => {
         session={pendingSession}
         existingEntry={editingEntry}
         onSave={handleAssignSave}
+        onSaveMulti={handleAssignSaveMulti}
         onSkip={handleAssignSkip}
         onDelete={async (entryId) => {
           await supabase.from("time_entries").update({ deleted_at: new Date().toISOString() }).eq("id", entryId);

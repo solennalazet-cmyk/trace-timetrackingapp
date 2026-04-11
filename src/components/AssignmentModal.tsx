@@ -485,6 +485,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                 value={clientId}
                 displayValue={clientName}
                 placeholder="Select client (optional)"
+                scrollContainerRef={scrollAreaRef}
                 onSelect={(id, name) => {
                   setClientId(id);
                   setClientName(name);
@@ -552,6 +553,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                 value={projectId}
                 displayValue={projectName}
                 placeholder="Select project (optional)"
+                scrollContainerRef={scrollAreaRef}
                 onSelect={(id, name) => {
                   setProjectId(id);
                   setProjectName(name);
@@ -576,6 +578,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                     value={taskId}
                     displayValue={taskName}
                     placeholder="What were you working on?"
+                    scrollContainerRef={scrollAreaRef}
                     onSelect={(id, name) => {
                       setTaskId(id);
                       setTaskName(name);

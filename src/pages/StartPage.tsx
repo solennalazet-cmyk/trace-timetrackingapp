@@ -250,6 +250,8 @@ const StartPage = () => {
   // Save entry with assignment data
   const saveEntry = async (session: SessionData, assignment: AssignmentResult | null) => {
     const now = new Date();
+    const hasRate = assignment?.rateAmount != null;
+    const hasBillableValue = assignment?.billableValue != null;
     const entry: any = {
       duration_minutes: session.durationMinutes,
       break_minutes: session.breakMinutes,
@@ -262,10 +264,10 @@ const StartPage = () => {
       task_id: assignment?.taskId || null,
       notes: assignment?.notes || null,
       tags: assignment?.tags?.length ? assignment.tags : null,
-      rate_amount: assignment?.rateAmount || null,
+      rate_amount: hasRate ? assignment?.rateAmount : null,
       rate_currency: assignment?.rateCurrency || null,
-      rate_unit: assignment?.rateAmount ? (assignment?.rateUnit || "hour") : null,
-      billable_value: assignment?.billableValue || null,
+      rate_unit: hasRate ? (assignment?.rateUnit || "hour") : null,
+      billable_value: hasBillableValue ? assignment?.billableValue : null,
       start_time: session.startedAt || null,
       end_time: session.startedAt ? now.toISOString() : null,
     };
@@ -280,6 +282,15 @@ const StartPage = () => {
 
   const updateEntry = async (entryId: string, assignment: AssignmentResult) => {
     if (user) {
+      const shouldResetBilling =
+        editingEntry?.client_id !== assignment.clientId ||
+        editingEntry?.project_id !== assignment.projectId ||
+        editingEntry?.task_id !== assignment.taskId ||
+        (editingEntry?.billable ?? true) !== assignment.billable ||
+        editingEntry?.rate_amount !== assignment.rateAmount ||
+        (editingEntry?.rate_currency ?? "EUR") !== assignment.rateCurrency ||
+        (editingEntry?.rate_unit ?? null) !== (assignment.rateAmount != null ? assignment.rateUnit : null);
+
       const { error } = await supabase.from("time_entries").update({
         client_id: assignment.clientId,
         project_id: assignment.projectId,
@@ -289,8 +300,9 @@ const StartPage = () => {
         billable: assignment.billable,
         rate_amount: assignment.rateAmount,
         rate_currency: assignment.rateCurrency,
-        rate_unit: assignment.rateAmount ? assignment.rateUnit : null,
+        rate_unit: assignment.rateAmount != null ? assignment.rateUnit : null,
         billable_value: assignment.billableValue,
+        ...(shouldResetBilling ? { billing_status: "unbilled", invoice_id: null } : {}),
       }).eq("id", entryId);
       if (error) throw error;
     }

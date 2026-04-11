@@ -11,6 +11,8 @@ interface CircularTimerProps {
   filled?: boolean;
   /** Fill color for shift */
   fillColor?: string;
+  /** Show a draggable handle at the end of the arc */
+  showHandle?: boolean;
   children: React.ReactNode;
 }
 

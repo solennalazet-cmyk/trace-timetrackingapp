@@ -235,7 +235,16 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     const isInitialEditSelection = !!existingEntry && clientId === initialSelection.clientId && projectId === initialSelection.projectId;
 
     if (isInitialEditSelection) return;
-    if (!clientId && !projectId) return;
+
+    // When both client and project are cleared, reset rate
+    if (!clientId && !projectId) {
+      setRateAmount("");
+      setRateCurrency("EUR");
+      return;
+    }
+
+    // Clear the previous rate immediately to avoid showing stale data
+    setRateAmount("");
 
     if (!user) {
       const selectedProject = allProjectsFull.find((p) => p.id === projectId);
@@ -256,9 +265,11 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
     let cancelled = false;
     resolveRate(clientId || null, projectId || null, user.id).then((rate) => {
-      if (cancelled || rate.amount == null) return;
-      setRateAmount(String(rate.amount));
-      setRateCurrency(rate.currency);
+      if (cancelled) return;
+      if (rate.amount != null) {
+        setRateAmount(String(rate.amount));
+        setRateCurrency(rate.currency);
+      }
     });
 
     return () => {
@@ -340,14 +351,6 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     if (saving) return;
     setSaving(true);
     try {
-      if (billable && rateAmount && clientId && user) {
-        const amount = parseFloat(rateAmount);
-        const selectedClient = clientsFull.find((c) => c.id === clientId);
-        if (selectedClient && selectedClient.default_rate !== amount) {
-          await supabase.from("clients").update({ default_rate: amount, currency: rateCurrency }).eq("id", clientId);
-        }
-      }
-
       const baseAssignment = {
         clientId: clientId || null,
         projectId: projectId || null,
@@ -482,6 +485,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                 value={clientId}
                 displayValue={clientName}
                 placeholder="Select client (optional)"
+                scrollContainerRef={scrollAreaRef}
                 onSelect={(id, name) => {
                   setClientId(id);
                   setClientName(name);
@@ -549,6 +553,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                 value={projectId}
                 displayValue={projectName}
                 placeholder="Select project (optional)"
+                scrollContainerRef={scrollAreaRef}
                 onSelect={(id, name) => {
                   setProjectId(id);
                   setProjectName(name);
@@ -573,6 +578,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                     value={taskId}
                     displayValue={taskName}
                     placeholder="What were you working on?"
+                    scrollContainerRef={scrollAreaRef}
                     onSelect={(id, name) => {
                       setTaskId(id);
                       setTaskName(name);

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Check, ChevronDown, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +14,8 @@ interface CreatableComboboxProps {
   placeholder: string;
   onSelect: (id: string, name: string) => void;
   onCreate: (name: string) => Promise<ComboboxItem | null>;
+  /** Optional ref to a scrollable ancestor — dropdown closes on scroll */
+  scrollContainerRef?: React.RefObject<HTMLElement>;
 }
 
 const CreatableCombobox = ({
@@ -23,6 +25,7 @@ const CreatableCombobox = ({
   placeholder,
   onSelect,
   onCreate,
+  scrollContainerRef,
 }: CreatableComboboxProps) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -41,21 +44,39 @@ const CreatableCombobox = ({
 
   const showAddOption = search.trim().length > 0 && !exactMatch;
 
-  // Close on outside click
+  const closeDropdown = useCallback(() => {
+    setOpen(false);
+    setSearch("");
+  }, []);
+
+  // Close on outside click / touch
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    if (!open) return;
+
+    const handler = (e: MouseEvent | TouchEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        if (!search.trim() && value) {
-          setSearch("");
-        }
+        closeDropdown();
       }
     };
-    if (open) {
-      document.addEventListener("mousedown", handler);
-      return () => document.removeEventListener("mousedown", handler);
-    }
-  }, [open, value, search]);
+
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("touchstart", handler, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("touchstart", handler);
+    };
+  }, [open, closeDropdown]);
+
+  // Close dropdown when parent scroll container scrolls
+  useEffect(() => {
+    if (!open) return;
+    const el = scrollContainerRef?.current;
+    if (!el) return;
+
+    const onScroll = () => closeDropdown();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [open, scrollContainerRef, closeDropdown]);
 
   // Clear pendingName once parent displayValue catches up
   useEffect(() => {
@@ -80,7 +101,6 @@ const CreatableCombobox = ({
     const name = search.trim();
     if (!name) return;
     setCreating(true);
-    // Show the typed name immediately while async creation runs
     setPendingName(name);
     setSearch("");
     setOpen(false);
@@ -89,13 +109,11 @@ const CreatableCombobox = ({
     if (created) {
       onSelect(created.id, created.name);
     } else {
-      // Creation failed — clear pending
       setPendingName("");
     }
     setCreating(false);
   };
 
-  // Show: search text when open, otherwise pendingName (during creation) or confirmed displayValue
   const inputDisplay = open ? search : (pendingName || displayValue);
 
   return (

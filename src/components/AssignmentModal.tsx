@@ -34,6 +34,36 @@ import {
 } from "@/lib/anonymous-store";
 import { toast } from "sonner";
 import { resolveRate } from "@/lib/resolve-rate";
+import { Plus, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import CreatableCombobox, { ComboboxItem } from "@/components/CreatableCombobox";
+import TagsInput from "@/components/TagsInput";
+import { formatDuration } from "@/hooks/useTimer";
+import { toLocalDateKey } from "@/lib/utils";
+import { format } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  getAnonymousClients,
+  saveAnonymousClient,
+  getAnonymousProjects,
+  saveAnonymousProject,
+  getAnonymousTasks,
+  saveAnonymousTask,
+} from "@/lib/anonymous-store";
+import { toast } from "sonner";
+import { resolveRate } from "@/lib/resolve-rate";
 
 export interface SessionData {
   durationMinutes: number;

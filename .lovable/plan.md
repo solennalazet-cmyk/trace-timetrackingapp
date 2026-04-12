@@ -1,87 +1,93 @@
 
-
-## Plan: "Done" Tab, Assignment UX Improvements, Focus Mode Handle, and Scroll Fix
-
-This plan covers all items from your message. The tab will be called **Done**, free users see a limited 7-day list (insights are Pro-locked).
+## Trace – Master Plan
 
 ---
 
-### 1. Rename Timeline to "Done" tab
+### 1. Tab Navigation
 
-**File: `src/components/BottomNav.tsx`**
-- Change label from "Timeline" to "Done"
-- Change icon from `Clock` to `CheckSquare` (lucide)
-- Route stays `/timeline`
-
----
-
-### 2. Rewrite TimelinePage as achievements view
-
-**File: `src/pages/TimelinePage.tsx`** (full rewrite)
-
-- **Date range picker**: Reuse the existing `DateRangePicker` component (same as Reports page), fully customizable with quick presets
-- **Client color legend** at top: colored dots + client names, using the existing `getClientColor` hash function (already deterministic per client ID — same colors everywhere)
-- **Hero stats**: Tasks completed (count of distinct task entries), Total time tracked, Streak (consecutive days)
-- **Task list grouped by day**: Each row shows a filled checkbox icon, task/project name, client color dot, and duration. Sorted newest first
-- **Insights section** (Pro-locked for free users with blur overlay):
-  - Most productive day = day of week with most completed tasks (ticked boxes count, not time)
-  - Average session duration
-  - Longest single session
-- **Free plan gating**: Free users see only the last 7 days of tasks; insights section is blurred with a Pro upgrade prompt. Date range picker is restricted to 7 days max
+- **Done tab** (formerly Timeline): `src/pages/TimelinePage.tsx`
+  - Route: `/timeline`, icon: `CheckSquare`, label: "Done"
+  - Date range picker, client color legend, hero stats, task list grouped by day
+  - Insights section (Pro-locked with blur overlay for free users)
+  - Free plan: 7-day limit on tasks + restricted date range picker
 
 ---
 
-### 3. Client color-coding consistency
+### 2. Client Color-Coding
 
-The `getClientColor(id)` function already exists in `TimelinePage.tsx`. It will be:
-- Extracted to `src/lib/utils.ts` so it can be shared across the app (Reports charts, Done tab, future views)
-- The same deterministic hash ensures identical colors per client everywhere
-
----
-
-### 4. Add multiple tasks in the Assignment Modal
-
-**File: `src/components/AssignmentModal.tsx`**
-
-Currently users assign one task per entry. To support multiple tasks within a single session:
-- Add a "task list" section: after selecting a task, a small "+" button appends it to a visible list of tasks for this session
-- Each task in the list shows: task name, optional duration split (editable), and a remove button
-- The save action creates one `time_entry` per task, splitting the total duration proportionally or as manually adjusted
-- The Task combobox resets after adding, ready for the next task
-- This allows users who don't stop the timer between tasks to log multiple tasks in one go
+- `getClientColor(id)` extracted to `src/lib/utils.ts`
+- Deterministic hash → consistent colors across Reports, Done tab, etc.
 
 ---
 
-### 5. Fix vertical scrolling in Assignment Modal on mobile
+### 3. Multi-Task Assignment
 
-**File: `src/components/AssignmentModal.tsx`**
-
-The scroll container uses `overflow-y-auto overscroll-contain` but active input fields on mobile cause the viewport to shift. Fix:
-- Add `touch-action: pan-y` to the scroll container
-- Add `-webkit-overflow-scrolling: touch` for iOS momentum scrolling
-- Wrap each form field group with adequate padding/margin so tapping outside a field doesn't accidentally hit another field
-- Ensure the dialog doesn't resize when the virtual keyboard opens by using `dvh` units and `visualViewport` API to adjust the container height
+- **File: `src/components/AssignmentModal.tsx`**
+- "+" button appends tasks to a list with editable duration splits
+- Save creates one `time_entry` per task, splitting total duration
+- Task combobox resets after each addition
 
 ---
 
-### 6. Focus mode drag handle
+### 4. Mobile Modal Scrolling & Touch Handling
 
-**Files: `src/components/CircularTimer.tsx`, `src/components/FocusMode.tsx`**
+- **Dialog (`src/components/ui/dialog.tsx`)**:
+  - `useVisualViewportStyle` hook dynamically repositions centered dialogs when the mobile keyboard opens using `window.visualViewport` API
+  - `maxHeight` and `top` are recalculated on viewport resize/scroll events
+  - All modals use `overscroll-contain`, `-webkit-overflow-scrolling: touch`, `touch-action: pan-y`
 
-Add a visible circular handle on the timer ring to indicate drag-to-set capability:
-- In `CircularTimer`, accept an optional `showHandle` prop
-- When `showHandle` is true, render a small filled circle (12px diameter, white fill with a subtle shadow) at the end of the progress arc
-- Position is calculated from the current progress angle using basic trig
-- The handle appears only in Focus mode's idle state, disappears once the timer starts
-- `FocusMode` passes `showHandle={status === "idle"}` to `CircularTimer`
+- **CreatableCombobox (`src/components/CreatableCombobox.tsx`)**:
+  - Touch gesture tracking (`touchStartYRef`, `touchMovedRef`) differentiates scroll from tap
+  - `runIfNotScrolling()` wrapper prevents accidental item selection during swipe
+  - Dropdown uses `overscroll-contain` + `touch-action: pan-y` to prevent parent/browser scroll
+  - Accepts `scrollContainerRef` prop — dropdown auto-closes when parent scrolls
+
+- **All editing modals** (`AssignmentModal`, `ManualEntryModal`, `CallLogModal`):
+  - Use `position="centered"` on DialogContent
+  - Split layout: fixed header + scrollable body (`overflow-y-auto overscroll-contain`) + sticky footer
+  - `onPointerDownOutside` / `onInteractOutside` disabled to prevent accidental dismissal
+  - `dvh` units for max height; safe-area padding for bottom buttons
 
 ---
 
-### Technical Details
+### 5. Rate Resolution & Billing Integrity
 
-- `getClientColor` and `SUNRISE_PALETTE` move to `src/lib/utils.ts` for reuse
-- TimelinePage queries: same `time_entries` with client/project/task joins pattern, filtered by date range and `deleted_at IS NULL`
-- Multi-task assignment creates multiple `time_entry` rows in a single transaction
-- No database schema changes needed
-- Tasks table already has `project_id` for scoping; new tasks created in the modal will link to the selected project
+- **Rate cascade** (`src/lib/resolve-rate.ts`):
+  1. Project rate (from `projects` table)
+  2. Most recent entry rate for this project
+  3. Client default rate (from `clients` table)
+  4. Most recent entry rate for this client
+  5. Fallback: `{ amount: null, currency: "EUR" }`
 
+- **`useAutoResolvedRate` hook** (`src/hooks/useAutoResolvedRate.ts`):
+  - Request key pattern prevents stale async responses from overwriting current state
+  - `skip` flag avoids re-resolving when editing an existing entry with unchanged client/project
+  - `onReset` clears rate fields immediately; `onResolved` applies the resolved rate
+  - For anonymous users: synchronous lookup from local `clients`/`projects` arrays
+
+- **Dependent field clearing** (all modals):
+  - Changing Client → clears Project, Task, TaskList, and triggers rate re-resolve
+  - Changing Project → clears Task, TaskList, and triggers rate re-resolve
+
+- **Billing status protection** (save handlers in `StartPage`, `TimelinePage`, `ReportsPage`):
+  - If any billing-critical field changes (Client, Project, Task, Rate, Billable), `billing_status` resets to `"unbilled"` and `invoice_id` is cleared
+  - Manual rate edits within an entry do NOT update the client's global default
+
+---
+
+### 6. Focus Mode Drag Handle
+
+- **Files: `CircularTimer.tsx`, `FocusMode.tsx`**
+- 12px white circle with shadow at end of progress arc
+- Visible only when `status === "idle"`, disappears on start
+
+---
+
+### 7. Technical Notes
+
+- `SUNRISE_PALETTE` + `getClientColor` live in `src/lib/utils.ts`
+- Tasks scoped by `project_id` in `tasks` table
+- Multi-task assignment creates multiple rows in single transaction
+- No custom backend schema changes needed for these features
+- Supabase types auto-generated — never edit `src/integrations/supabase/types.ts`
+- `.env` and `client.ts` are auto-managed — never edit manually

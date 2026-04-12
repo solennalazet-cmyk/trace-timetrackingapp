@@ -12,6 +12,13 @@ export const SUNRISE_PALETTE = [
   "hsl(50 85% 52%)", "hsl(285 55% 52%)",
 ];
 
+/** Stormy Skies palette – cool blue-grey tones */
+export const STORMY_SKIES_PALETTE = [
+  "hsl(212 18% 70%)", "hsl(214 18% 58%)", "hsl(220 24% 42%)", "hsl(214 14% 48%)",
+  "hsl(208 16% 82%)", "hsl(223 24% 28%)", "hsl(216 18% 64%)", "hsl(210 12% 52%)",
+  "hsl(220 30% 20%)", "hsl(214 20% 76%)",
+];
+
 const hashStringToIndex = (str: string, max: number): number => {
   let hash = 0;
   for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
@@ -19,8 +26,11 @@ const hashStringToIndex = (str: string, max: number): number => {
 };
 
 /** Deterministic color for a client ID – stays the same across sessions */
-export const getClientColor = (id: string) =>
-  SUNRISE_PALETTE[hashStringToIndex(id, SUNRISE_PALETTE.length)];
+export const getClientColor = (id: string) => {
+  const isStormy = document.documentElement.classList.contains("theme-stormy");
+  const palette = isStormy ? STORMY_SKIES_PALETTE : SUNRISE_PALETTE;
+  return palette[hashStringToIndex(id, palette.length)];
+};
 
 /** Convert a Date to a local YYYY-MM-DD string (timezone-safe). */
 export function toLocalDateKey(date: Date): string {

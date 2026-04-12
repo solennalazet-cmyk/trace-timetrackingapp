@@ -180,29 +180,35 @@
   animation: gradient-shift 20s ease-in-out infinite;
 }
 
-/* Stormy Skies gradient */
+/* Stormy Skies gradient — deep, layered, atmospheric */
 .theme-stormy .gradient-bg {
   background:
-    radial-gradient(ellipse at 18% 18%, hsla(210, 34%, 84%, 0.42) 0%, transparent 52%),
-    radial-gradient(ellipse at 82% 10%, hsla(223, 34%, 34%, 0.34) 0%, transparent 48%),
-    radial-gradient(ellipse at 62% 78%, hsla(216, 20%, 56%, 0.28) 0%, transparent 50%),
-    radial-gradient(ellipse at 10% 74%, hsla(50, 95%, 70%, 0.16) 0%, transparent 46%),
-    radial-gradient(ellipse at 88% 60%, hsla(228, 30%, 20%, 0.30) 0%, transparent 52%),
-    radial-gradient(ellipse at 42% 42%, hsla(220, 18%, 90%, 0.22) 0%, transparent 54%),
-    radial-gradient(ellipse at 70% 28%, hsla(235, 22%, 58%, 0.18) 0%, transparent 48%);
+    radial-gradient(ellipse at 15% 12%, hsla(210, 34%, 82%, 0.44) 0%, transparent 48%),
+    radial-gradient(ellipse at 85% 8%, hsla(224, 38%, 28%, 0.38) 0%, transparent 46%),
+    radial-gradient(ellipse at 58% 82%, hsla(218, 24%, 50%, 0.32) 0%, transparent 50%),
+    radial-gradient(ellipse at 8% 68%, hsla(230, 28%, 36%, 0.26) 0%, transparent 48%),
+    radial-gradient(ellipse at 92% 55%, hsla(226, 32%, 18%, 0.34) 0%, transparent 52%),
+    radial-gradient(ellipse at 40% 38%, hsla(215, 20%, 88%, 0.24) 0%, transparent 54%),
+    radial-gradient(ellipse at 72% 24%, hsla(236, 24%, 52%, 0.22) 0%, transparent 46%),
+    radial-gradient(ellipse at 28% 56%, hsla(222, 30%, 42%, 0.20) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, hsla(220, 18%, 70%, 0.16) 0%, transparent 60%),
+    radial-gradient(ellipse at 65% 65%, hsla(48, 90%, 68%, 0.10) 0%, transparent 42%);
   background-size: 200% 200%;
   animation: gradient-shift 20s ease-in-out infinite;
 }
 
 .theme-stormy.dark .gradient-bg {
   background:
-    radial-gradient(ellipse at 18% 18%, hsla(210, 34%, 54%, 0.32) 0%, transparent 52%),
-    radial-gradient(ellipse at 82% 10%, hsla(223, 34%, 22%, 0.30) 0%, transparent 48%),
-    radial-gradient(ellipse at 62% 78%, hsla(216, 20%, 36%, 0.24) 0%, transparent 50%),
-    radial-gradient(ellipse at 10% 74%, hsla(50, 95%, 50%, 0.10) 0%, transparent 46%),
-    radial-gradient(ellipse at 88% 60%, hsla(228, 30%, 12%, 0.28) 0%, transparent 52%),
-    radial-gradient(ellipse at 42% 42%, hsla(220, 18%, 60%, 0.16) 0%, transparent 54%),
-    radial-gradient(ellipse at 70% 28%, hsla(235, 22%, 38%, 0.14) 0%, transparent 48%);
+    radial-gradient(ellipse at 15% 12%, hsla(210, 34%, 48%, 0.36) 0%, transparent 48%),
+    radial-gradient(ellipse at 85% 8%, hsla(224, 38%, 18%, 0.38) 0%, transparent 46%),
+    radial-gradient(ellipse at 58% 82%, hsla(218, 24%, 30%, 0.30) 0%, transparent 50%),
+    radial-gradient(ellipse at 8% 68%, hsla(230, 28%, 22%, 0.28) 0%, transparent 48%),
+    radial-gradient(ellipse at 92% 55%, hsla(226, 32%, 10%, 0.36) 0%, transparent 52%),
+    radial-gradient(ellipse at 40% 38%, hsla(215, 20%, 54%, 0.18) 0%, transparent 54%),
+    radial-gradient(ellipse at 72% 24%, hsla(236, 24%, 34%, 0.20) 0%, transparent 46%),
+    radial-gradient(ellipse at 28% 56%, hsla(222, 30%, 26%, 0.22) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, hsla(220, 18%, 44%, 0.14) 0%, transparent 60%),
+    radial-gradient(ellipse at 65% 65%, hsla(48, 90%, 44%, 0.06) 0%, transparent 42%);
   background-size: 200% 200%;
   animation: gradient-shift 20s ease-in-out infinite;
 }

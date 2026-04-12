@@ -76,6 +76,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
   const [editValue, setEditValue] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [colorTheme, setColorTheme] = useState<ColorTheme>(getStoredColorTheme());
 
   const isPro = profile?.plan === "pro" || profile?.plan === "trial";
 
@@ -116,7 +117,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
   }, [user]);
 
   useEffect(() => {
-    if (open) { setLoaded(false); loadSettings(); }
+    if (open) { setLoaded(false); loadSettings(); setColorTheme(getStoredColorTheme()); }
   }, [open, loadSettings]);
 
   const persist = useCallback(async (updated: Settings) => {

@@ -133,8 +133,8 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
   const [allTags, setAllTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [taskList, setTaskList] = useState<TaskItem[]>([]);
+  const [hasUserChangedSelection, setHasUserChangedSelection] = useState(false);
 
-  const initialSelectionRef = useRef({ clientId: "", projectId: "" });
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const clients: ComboboxItem[] = clientsFull.map((c) => ({ id: c.id, name: c.name }));
@@ -177,16 +177,8 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     if (!open) return;
 
     if (existingEntry) {
-      const nextClientId = existingEntry.client_id ?? "";
-      const nextProjectId = existingEntry.project_id ?? "";
-
-      initialSelectionRef.current = {
-        clientId: nextClientId,
-        projectId: nextProjectId,
-      };
-
-      setClientId(nextClientId);
-      setProjectId(nextProjectId);
+      setClientId(existingEntry.client_id ?? "");
+      setProjectId(existingEntry.project_id ?? "");
       setTaskId(existingEntry.task_id ?? "");
       setNotes(existingEntry.notes ?? "");
       setTags(existingEntry.tags ?? []);
@@ -195,7 +187,6 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
       setRateCurrency(existingEntry.rate_currency ?? "EUR");
       setRateUnit(existingEntry.rate_unit ?? "hour");
     } else {
-      initialSelectionRef.current = { clientId: "", projectId: "" };
       setClientId("");
       setClientName("");
       setProjectId("");
@@ -210,6 +201,8 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
       setRateUnit("hour");
       setTaskList([]);
     }
+
+    setHasUserChangedSelection(false);
 
     loadData();
     requestAnimationFrame(() => scrollAreaRef.current?.scrollTo({ top: 0, behavior: "auto" }));
@@ -230,18 +223,60 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     }
   }, [clientsFull, allProjectsFull, tasks, existingEntry, clientId, projectId, taskId]);
 
-  const initialSelection = initialSelectionRef.current;
-  const isInitialEditSelection = !!existingEntry && clientId === initialSelection.clientId && projectId === initialSelection.projectId;
+  const isInitialEditSkipActive = !!existingEntry && !hasUserChangedSelection;
 
-  const resetResolvedRate = useCallback(() => {
+  const clearResolvedRate = useCallback((reason: string) => {
+    console.log("[AssignmentModal] rate cleared", {
+      reason,
+      selectedClientId: clientId || null,
+      selectedProjectId: projectId || null,
+    });
     setRateAmount("");
     setRateCurrency("EUR");
-  }, []);
+  }, [clientId, projectId]);
+
+  const resetResolvedRate = useCallback(() => {
+    clearResolvedRate("auto-resolution-reset");
+  }, [clearResolvedRate]);
 
   const applyResolvedRate = useCallback((rate: { amount: string; currency: string }) => {
     setRateAmount(rate.amount);
     setRateCurrency(rate.currency);
   }, []);
+
+  const handleClientSelection = useCallback((id: string, name: string) => {
+    console.log("[AssignmentModal] client changed", {
+      selectedClientId: id || null,
+      selectedProjectId: null,
+      initialEditSkipActive: false,
+    });
+
+    setHasUserChangedSelection(true);
+    clearResolvedRate("client-change");
+    setProjectId("");
+    setProjectName("");
+    setTaskId("");
+    setTaskName("");
+    setTaskList([]);
+    setClientId(id);
+    setClientName(name);
+  }, [clearResolvedRate]);
+
+  const handleProjectSelection = useCallback((id: string, name: string) => {
+    console.log("[AssignmentModal] project changed", {
+      selectedClientId: clientId || null,
+      selectedProjectId: id || null,
+      initialEditSkipActive: false,
+    });
+
+    setHasUserChangedSelection(true);
+    clearResolvedRate("project-change");
+    setTaskId("");
+    setTaskName("");
+    setTaskList([]);
+    setProjectId(id);
+    setProjectName(name);
+  }, [clearResolvedRate, clientId]);
 
   useAutoResolvedRate({
     enabled: open,
@@ -250,9 +285,11 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     userId: user?.id,
     clients: clientsFull,
     projects: allProjectsFull,
-    skip: isInitialEditSelection,
+    skip: isInitialEditSkipActive,
     onReset: resetResolvedRate,
     onResolved: applyResolvedRate,
+    debug: true,
+    debugLabel: "AssignmentModal rate resolution",
   });
 
   if (!session) return null;
@@ -472,24 +509,12 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                 placeholder="Select client (optional)"
                 scrollContainerRef={scrollAreaRef}
                 onSelect={(id, name) => {
-                  setClientId(id);
-                  setClientName(name);
-                  setProjectId("");
-                  setProjectName("");
-                  setTaskId("");
-                  setTaskName("");
-                  setTaskList([]);
+                  handleClientSelection(id, name);
                 }}
                 onCreate={async (name) => {
                   const created = await handleCreateClient(name);
                   if (created) {
-                    setClientId(created.id);
-                    setClientName(created.name);
-                    setProjectId("");
-                    setProjectName("");
-                    setTaskId("");
-                    setTaskName("");
-                    setTaskList([]);
+                    handleClientSelection(created.id, created.name);
                   }
                   return created;
                 }}
@@ -546,20 +571,12 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                 placeholder="Select project (optional)"
                 scrollContainerRef={scrollAreaRef}
                 onSelect={(id, name) => {
-                  setProjectId(id);
-                  setProjectName(name);
-                  setTaskId("");
-                  setTaskName("");
-                  setTaskList([]);
+                  handleProjectSelection(id, name);
                 }}
                 onCreate={async (name) => {
                   const created = await handleCreateProject(name);
                   if (created) {
-                    setProjectId(created.id);
-                    setProjectName(created.name);
-                    setTaskId("");
-                    setTaskName("");
-                    setTaskList([]);
+                    handleProjectSelection(created.id, created.name);
                   }
                   return created;
                 }}

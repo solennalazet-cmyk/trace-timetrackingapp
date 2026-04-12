@@ -3,22 +3,21 @@ import { supabase } from "@/integrations/supabase/client";
 interface RateResult {
   amount: number | null;
   currency: string;
+  source: "project" | "client" | "null";
 }
 
 /**
- * Resolves the billable rate using the priority cascade:
- * 1. Project rate (from projects table)
- * 2. Most recent entry rate for this project
- * 3. Client default rate (from clients table)
- * 4. Most recent entry rate for this client
- * 5. No rate found — returns null amount
+ * Resolves the billable rate using the safe priority cascade:
+ * 1. Selected project explicit rate
+ * 2. Selected client default rate
+ * 3. No rate found — returns null amount
  */
 export async function resolveRate(
   clientId: string | null,
   projectId: string | null,
   userId: string
 ): Promise<RateResult> {
-  // 1. Project rate
+  // 1. Selected project explicit rate
   if (projectId) {
     const { data: project } = await supabase
       .from("projects")
@@ -26,29 +25,13 @@ export async function resolveRate(
       .eq("id", projectId)
       .eq("user_id", userId)
       .maybeSingle();
+
     if (project?.rate != null) {
-      return { amount: project.rate, currency: project.currency ?? "EUR" };
+      return { amount: project.rate, currency: project.currency ?? "EUR", source: "project" };
     }
   }
 
-  // 2. Most recent entry rate for this project
-  if (projectId) {
-    const { data: last } = await supabase
-      .from("time_entries")
-      .select("rate_amount, rate_currency")
-      .eq("project_id", projectId)
-      .eq("user_id", userId)
-      .not("rate_amount", "is", null)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (last?.rate_amount != null) {
-      return { amount: last.rate_amount, currency: last.rate_currency ?? "EUR" };
-    }
-  }
-
-  // 3. Client default rate
+  // 2. Selected client default rate
   if (clientId) {
     const { data: client } = await supabase
       .from("clients")
@@ -56,28 +39,12 @@ export async function resolveRate(
       .eq("id", clientId)
       .eq("user_id", userId)
       .maybeSingle();
+
     if (client?.default_rate != null) {
-      return { amount: client.default_rate, currency: client.currency ?? "EUR" };
+      return { amount: client.default_rate, currency: client.currency ?? "EUR", source: "client" };
     }
   }
 
-  // 4. Most recent entry rate for this client
-  if (clientId) {
-    const { data: last } = await supabase
-      .from("time_entries")
-      .select("rate_amount, rate_currency")
-      .eq("client_id", clientId)
-      .eq("user_id", userId)
-      .not("rate_amount", "is", null)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (last?.rate_amount != null) {
-      return { amount: last.rate_amount, currency: last.rate_currency ?? "EUR" };
-    }
-  }
-
-  // 5. No rate found
-  return { amount: null, currency: "EUR" };
+  // 3. No rate found
+  return { amount: null, currency: "EUR", source: "null" };
 }

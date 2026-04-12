@@ -120,6 +120,7 @@
     --popover-foreground: 226 30% 16%;
     --nav-bg: 224 26% 25%;
     --timer-display: 226 34% 18%;
+    --timer-ring: 220 14% 78%;
 
     --sidebar-background: 220 20% 95%;
     --sidebar-foreground: 220 20% 26%;
@@ -153,6 +154,8 @@
     --card-foreground: 220 18% 94%;
     --popover: 222 18% 12%;
     --popover-foreground: 220 18% 94%;
+    --timer-display: 220 18% 94%;
+    --timer-ring: 222 14% 30%;
   }
 }
 

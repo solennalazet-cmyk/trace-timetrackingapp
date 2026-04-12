@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CircleUser, Info, LogIn, LogOut, Settings, MessageSquare, Sparkles, User, CreditCard } from "lucide-react";
+import { getStoredColorTheme } from "@/hooks/useColorTheme";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +40,7 @@ const HeaderMenu = () => {
 
   const planBadge = () => {
     if (!profile) return null;
+    const isStormy = getStoredColorTheme() === "stormy";
     switch (profile.plan) {
       case "trial":
       case "free":
@@ -48,8 +50,10 @@ const HeaderMenu = () => {
           <span
             className="text-[10px] font-bold px-1.5 py-0.5 rounded"
             style={{
-              background: "linear-gradient(135deg, hsl(43, 96%, 56%), hsl(53, 98%, 77%))",
-              color: "hsl(217, 33%, 17%)",
+              background: isStormy
+                ? "linear-gradient(135deg, hsl(214, 18%, 46%), hsl(212, 22%, 80%))"
+                : "linear-gradient(135deg, hsl(43, 96%, 56%), hsl(53, 98%, 77%))",
+              color: isStormy ? "hsl(214, 38%, 15%)" : "hsl(217, 33%, 17%)",
             }}
           >
             PRO ✦

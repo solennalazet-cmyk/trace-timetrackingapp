@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Timer, BarChart3, CheckSquare, Briefcase } from "lucide-react";
+import { getStoredColorTheme } from "@/hooks/useColorTheme";
 
 const tabs = [
   { path: "/", label: "Start", icon: Timer },
@@ -8,19 +9,35 @@ const tabs = [
   { path: "/clients", label: "Projects", icon: Briefcase },
 ];
 
+const THEME_STYLES = {
+  sunrise: {
+    bg: "rgba(83, 45, 84, 0.88)",
+    active: "hsl(53, 98%, 77%)",
+    inactive: "rgba(255, 255, 255, 0.6)",
+    border: "rgba(255, 255, 255, 0.15)",
+  },
+  stormy: {
+    bg: "rgba(43, 55, 74, 0.88)",
+    active: "hsl(213, 24%, 74%)",
+    inactive: "rgba(255, 255, 255, 0.62)",
+    border: "rgba(255, 255, 255, 0.12)",
+  },
+};
+
 const BottomNav = () => {
   const location = useLocation();
+  const colors = THEME_STYLES[getStoredColorTheme()];
 
   return (
     <nav
       className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] z-50"
       style={{
-        backgroundColor: "rgba(83, 45, 84, 0.88)",
+        backgroundColor: colors.bg,
         backdropFilter: "blur(16px)",
         WebkitBackdropFilter: "blur(16px)",
         borderTopLeftRadius: 10,
         borderTopRightRadius: 10,
-        borderTop: "1px solid rgba(255, 255, 255, 0.15)",
+        borderTop: `1px solid ${colors.border}`,
         paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
@@ -33,9 +50,7 @@ const BottomNav = () => {
               to={path}
               className="flex flex-col items-center gap-1 px-3 py-2 transition-colors"
               style={{
-                color: isActive
-                  ? "hsl(53, 98%, 77%)"
-                  : "rgba(255, 255, 255, 0.6)",
+                color: isActive ? colors.active : colors.inactive,
               }}
               aria-label={label}
             >

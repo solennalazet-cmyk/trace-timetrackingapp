@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import ProBadge from "@/components/ProBadge";
 import PaywallModal from "@/components/PaywallModal";
+import { type ColorTheme, applyColorTheme, getStoredColorTheme } from "@/hooks/useColorTheme";
 
 const LS_KEY = "trace_user_settings";
 
@@ -75,6 +76,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
   const [editValue, setEditValue] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [colorTheme, setColorTheme] = useState<ColorTheme>(getStoredColorTheme());
 
   const isPro = profile?.plan === "pro" || profile?.plan === "trial";
 
@@ -115,7 +117,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
   }, [user]);
 
   useEffect(() => {
-    if (open) { setLoaded(false); loadSettings(); }
+    if (open) { setLoaded(false); loadSettings(); setColorTheme(getStoredColorTheme()); }
   }, [open, loadSettings]);
 
   const persist = useCallback(async (updated: Settings) => {
@@ -469,20 +471,54 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
 
           {/* ── 9. Appearance ── */}
           <SettingsSection title="Appearance">
-            <div className="flex gap-2">
-              {(["light", "dark"] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => persist({ ...settings, theme: t })}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                    settings.theme === t
-                      ? "border-primary bg-primary/20 text-foreground"
-                      : "border-border text-muted-foreground hover:bg-muted/30"
-                  }`}
-                >
-                  {t === "light" ? "Light" : "Dark"}
-                </button>
-              ))}
+            <div className="space-y-4">
+              <div>
+                <Label className="text-xs text-muted-foreground mb-2 block">Mode</Label>
+                <div className="flex gap-2">
+                  {(["light", "dark"] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => persist({ ...settings, theme: t })}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                        settings.theme === t
+                          ? "border-primary bg-primary/20 text-foreground"
+                          : "border-border text-muted-foreground hover:bg-muted/30"
+                      }`}
+                    >
+                      {t === "light" ? "Light" : "Dark"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-2 block">Color theme</Label>
+                <div className="flex gap-2">
+                  {([
+                    { value: "sunrise" as ColorTheme, label: "Sunrise", preview: "linear-gradient(135deg, hsl(330, 81%, 60%), hsl(43, 96%, 56%))" },
+                    { value: "stormy" as ColorTheme, label: "Stormy Skies", preview: "linear-gradient(135deg, hsl(220, 26%, 34%), hsl(212, 30%, 78%))" },
+                  ]).map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => {
+                        setColorTheme(opt.value);
+                        applyColorTheme(opt.value);
+                        window.dispatchEvent(new Event("trace-settings-changed"));
+                      }}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors flex items-center justify-center gap-2 ${
+                        colorTheme === opt.value
+                          ? "border-primary bg-primary/20 text-foreground"
+                          : "border-border text-muted-foreground hover:bg-muted/30"
+                      }`}
+                    >
+                      <span
+                        className="w-4 h-4 rounded-full shrink-0"
+                        style={{ background: opt.preview }}
+                      />
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </SettingsSection>
 

@@ -17,10 +17,10 @@ const THEME_STYLES = {
     border: "rgba(255, 255, 255, 0.15)",
   },
   stormy: {
-    bg: "rgba(43, 55, 74, 0.88)",
-    active: "hsl(213, 24%, 74%)",
-    inactive: "rgba(255, 255, 255, 0.62)",
-    border: "rgba(255, 255, 255, 0.12)",
+    bg: "rgba(52, 63, 86, 0.88)",
+    active: "hsl(53, 98%, 77%)",
+    inactive: "rgba(255, 255, 255, 0.68)",
+    border: "rgba(255, 255, 255, 0.14)",
   },
 };
 

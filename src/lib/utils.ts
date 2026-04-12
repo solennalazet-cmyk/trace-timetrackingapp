@@ -25,11 +25,10 @@ const hashStringToIndex = (str: string, max: number): number => {
   return Math.abs(hash) % max;
 };
 
-/** Deterministic color for a client ID – stays the same across sessions */
+/** Deterministic color for a client ID – always uses the colorful Sunrise palette
+ *  regardless of UI theme, so charts/chips stay vibrant. */
 export const getClientColor = (id: string) => {
-  const isStormy = document.documentElement.classList.contains("theme-stormy");
-  const palette = isStormy ? STORMY_SKIES_PALETTE : SUNRISE_PALETTE;
-  return palette[hashStringToIndex(id, palette.length)];
+  return SUNRISE_PALETTE[hashStringToIndex(id, SUNRISE_PALETTE.length)];
 };
 
 /** Convert a Date to a local YYYY-MM-DD string (timezone-safe). */

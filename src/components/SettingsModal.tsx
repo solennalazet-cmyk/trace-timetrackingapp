@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import ProBadge from "@/components/ProBadge";
 import PaywallModal from "@/components/PaywallModal";
+import { type ColorTheme, applyColorTheme, getStoredColorTheme } from "@/hooks/useColorTheme";
 
 const LS_KEY = "trace_user_settings";
 

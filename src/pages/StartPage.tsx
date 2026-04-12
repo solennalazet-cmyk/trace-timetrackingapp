@@ -398,7 +398,7 @@ const StartPage = () => {
             style={{
               borderRadius: 20,
               background: mode === m.key ? "hsl(var(--primary))" : "transparent",
-              color: mode === m.key ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
+              color: mode === m.key ? "hsl(var(--primary-foreground))" : "hsl(var(--foreground))",
             }}
           >
             {m.label}

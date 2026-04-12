@@ -56,7 +56,7 @@ const CircularTimer = ({
           cy={SIZE / 2}
           r={RADIUS}
           fill={filled ? fillColor || "hsl(330, 81%, 60%)" : "transparent"}
-          stroke="hsl(240, 5%, 85%)"
+          stroke="hsl(var(--timer-ring))"
           strokeWidth={STROKE}
         />
         {/* Progress arc */}

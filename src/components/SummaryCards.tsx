@@ -10,8 +10,8 @@ interface SummaryCardsProps {
 }
 
 const cardStyle: React.CSSProperties = {
-  background: "rgba(255, 255, 255, 0.75)",
-  border: "1px solid rgba(255, 255, 255, 0.6)",
+  background: "hsl(var(--card) / 0.85)",
+  border: "1px solid hsl(var(--border))",
   borderRadius: 12,
   boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
   padding: "12px 16px",

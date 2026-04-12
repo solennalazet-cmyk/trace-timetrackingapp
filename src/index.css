@@ -53,6 +53,7 @@
 
     --nav-bg: 300 30% 25%;
     --timer-display: 300 34% 18%;
+    --timer-ring: 240 5% 85%;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -86,6 +87,10 @@
     --card-foreground: 0 0% 95%;
     --popover: 240 10% 10%;
     --popover-foreground: 0 0% 95%;
+
+    --nav-bg: 270 20% 14%;
+    --timer-display: 0 0% 95%;
+    --timer-ring: 240 5% 30%;
   }
 
   /* ── Stormy Skies color theme ── */
@@ -115,6 +120,7 @@
     --popover-foreground: 226 30% 16%;
     --nav-bg: 224 26% 25%;
     --timer-display: 226 34% 18%;
+    --timer-ring: 220 14% 78%;
 
     --sidebar-background: 220 20% 95%;
     --sidebar-foreground: 220 20% 26%;
@@ -148,6 +154,8 @@
     --card-foreground: 220 18% 94%;
     --popover: 222 18% 12%;
     --popover-foreground: 220 18% 94%;
+    --timer-display: 220 18% 94%;
+    --timer-ring: 222 14% 30%;
   }
 }
 

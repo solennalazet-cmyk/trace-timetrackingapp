@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckSquare, Flame, Crown, Clock, Timer, PenLine, Phone, ChevronRight } from "lucide-react";
-import { startOfWeek, format, differenceInDays } from "date-fns";
+import { CheckSquare, Square, Flame, Crown, ChevronDown } from "lucide-react";
+import { differenceInDays } from "date-fns";
 import DateRangePicker from "@/components/DateRangePicker";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +12,7 @@ import EntryDetailSheet, { type TimeEntry } from "@/components/EntryDetailSheet"
 import AssignmentModal, { type SessionData, type AssignmentResult, type ExistingEntry } from "@/components/AssignmentModal";
 import PaywallModal from "@/components/PaywallModal";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 const formatHHMM = (mins: number) => {
   const h = Math.floor(mins / 60);
@@ -21,13 +22,47 @@ const formatHHMM = (mins: number) => {
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-const getDateLabel = (dateStr: string): string => {
-  const d = new Date(dateStr + "T00:00:00");
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-  if (d.getTime() === today.getTime()) return "Today";
-  if (d.getTime() === yesterday.getTime()) return "Yesterday";
-  return d.toLocaleDateString("en-GB", { weekday: "long", month: "long", day: "numeric" });
+/* ---------- Task group type ---------- */
+interface TaskGroup {
+  key: string;
+  taskName: string;
+  projectName: string | null;
+  clientId: string | null;
+  totalMinutes: number;
+  sessions: TimeEntry[];
+}
+
+/* ---------- Ink-fill checkbox ---------- */
+const InkCheckbox = ({ checked, onToggle }: { checked: boolean; onToggle: () => void }) => {
+  const [justFilled, setJustFilled] = useState(false);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!checked) {
+      setJustFilled(true);
+      setTimeout(() => setJustFilled(false), 450);
+    }
+    onToggle();
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      className="shrink-0 flex items-center justify-center w-5 h-5 rounded-[4px] border border-primary/40 transition-colors duration-200 focus:outline-none"
+      style={{
+        backgroundColor: checked ? "hsl(var(--primary))" : "transparent",
+      }}
+    >
+      {checked && (
+        <CheckSquare
+          className={cn(
+            "w-4 h-4 text-primary-foreground",
+            justFilled && "ink-fill-animate"
+          )}
+        />
+      )}
+    </button>
+  );
 };
 
 const TimelinePage = () => {
@@ -35,14 +70,14 @@ const TimelinePage = () => {
   const navigate = useNavigate();
   const isPro = profile?.plan === "pro" || profile?.plan === "trial";
 
-  // Date range - default last 7 days
   const [from, setFrom] = useState(() => new Date(Date.now() - 6 * 86400000));
   const [to, setTo] = useState(() => new Date());
-
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [clients, setClients] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [expandedTask, setExpandedTask] = useState<string | null>(null);
+  const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set());
 
   // Detail / edit
   const [selectedEntry, setSelectedEntry] = useState<TimeEntry | null>(null);
@@ -57,13 +92,9 @@ const TimelinePage = () => {
   const handleRangeChange = (f: Date, t: Date) => {
     if (!isPro) {
       const days = differenceInDays(t, f);
-      if (days > 7) {
-        setPaywallOpen(true);
-        return;
-      }
+      if (days > 7) { setPaywallOpen(true); return; }
     }
-    setFrom(f);
-    setTo(t);
+    setFrom(f); setTo(t);
   };
 
   const loadData = useCallback(async () => {
@@ -76,7 +107,7 @@ const TimelinePage = () => {
           .gte("entry_date", rangeStart)
           .lte("entry_date", rangeEnd)
           .is("deleted_at", null)
-          .order("entry_date", { ascending: false }),
+          .order("start_time", { ascending: true }),
         supabase.from("clients").select("id, name").eq("user_id", user.id),
       ]);
 
@@ -107,12 +138,38 @@ const TimelinePage = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  /* ---------- Group entries by task ---------- */
+  const taskGroups = useMemo(() => {
+    const map = new Map<string, TaskGroup>();
+
+    entries.forEach((e) => {
+      // Group key: task_id if exists, else project_id, else "unassigned"
+      const key = e.task_id ?? e.project_id ?? "unassigned";
+      const label = e.task_name ?? e.project_name ?? e.client_name ?? "Unassigned";
+
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          taskName: label,
+          projectName: e.task_name ? (e.project_name ?? null) : null,
+          clientId: e.client_id ?? null,
+          totalMinutes: 0,
+          sessions: [],
+        });
+      }
+      const group = map.get(key)!;
+      group.totalMinutes += e.duration_minutes;
+      group.sessions.push(e);
+    });
+
+    // Sort by total duration descending
+    return [...map.values()].sort((a, b) => b.totalMinutes - a.totalMinutes);
+  }, [entries]);
+
   // Hero stats
   const stats = useMemo(() => {
-    const taskCount = entries.length;
+    const taskCount = taskGroups.length;
     const totalMinutes = entries.reduce((s, e) => s + e.duration_minutes, 0);
-
-    // Streak: consecutive days with entries ending today
     const dateSet = new Set(entries.map((e) => e.entry_date).filter(Boolean));
     let streak = 0;
     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -121,36 +178,16 @@ const TimelinePage = () => {
       if (dateSet.has(toLocalDateKey(d))) { streak++; d.setDate(d.getDate() - 1); }
       else break;
     }
-
     return { taskCount, totalMinutes, streak };
-  }, [entries]);
+  }, [entries, taskGroups]);
 
-  // Client colors for legend
   const clientIds = useMemo(() =>
     [...new Set(entries.map((e) => e.client_id).filter(Boolean))] as string[]
   , [entries]);
 
-  // Group by date
-  const groupedEntries = useMemo(() => {
-    const groups: { date: string; label: string; entries: TimeEntry[] }[] = [];
-    const dateMap = new Map<string, TimeEntry[]>();
-    entries.forEach((e) => {
-      const d = e.entry_date ?? "unknown";
-      if (!dateMap.has(d)) dateMap.set(d, []);
-      dateMap.get(d)!.push(e);
-    });
-    const sortedDates = [...dateMap.keys()].sort((a, b) => b.localeCompare(a));
-    sortedDates.forEach((d) => {
-      groups.push({ date: d, label: getDateLabel(d), entries: dateMap.get(d)! });
-    });
-    return groups;
-  }, [entries]);
-
   // Insights (Pro only)
   const insights = useMemo(() => {
     if (entries.length === 0) return null;
-
-    // Most productive day of week by task count
     const dayCount: Record<number, number> = {};
     entries.forEach((e) => {
       if (!e.entry_date) return;
@@ -161,19 +198,9 @@ const TimelinePage = () => {
     Object.entries(dayCount).forEach(([d, c]) => {
       if (c > bestCount) { bestDay = parseInt(d); bestCount = c; }
     });
-
-    // Average session duration
     const avgDuration = Math.round(entries.reduce((s, e) => s + e.duration_minutes, 0) / entries.length);
-
-    // Longest session
     const longestSession = Math.max(...entries.map((e) => e.duration_minutes));
-
-    return {
-      mostProductiveDay: WEEKDAYS[bestDay],
-      mostProductiveDayCount: bestCount,
-      avgDuration,
-      longestSession,
-    };
+    return { mostProductiveDay: WEEKDAYS[bestDay], mostProductiveDayCount: bestCount, avgDuration, longestSession };
   }, [entries]);
 
   const handleEdit = (entry: TimeEntry) => {
@@ -220,6 +247,15 @@ const TimelinePage = () => {
     setEntries((prev) => prev.filter((e) => e.id !== id));
   };
 
+  const toggleTaskComplete = (key: string) => {
+    setCompletedTasks((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-[60vh] text-muted-foreground text-sm">Loading…</div>;
   }
@@ -259,7 +295,7 @@ const TimelinePage = () => {
       <div className="grid grid-cols-3 gap-3 mb-5">
         <div className="rounded-xl bg-muted/50 px-3 py-3 text-center">
           <p className="font-mono text-xl font-bold text-foreground">{stats.taskCount}</p>
-          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Tasks done</p>
+          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Tasks</p>
         </div>
         <div className="rounded-xl bg-muted/50 px-3 py-3 text-center">
           <p className="font-mono text-xl font-bold text-foreground">{formatHHMM(stats.totalMinutes)}</p>
@@ -274,45 +310,88 @@ const TimelinePage = () => {
         </div>
       </div>
 
-      {/* Task list grouped by day */}
-      {groupedEntries.map((group) => (
-        <div key={group.date} className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{group.label}</p>
-            <p className="text-[10px] text-muted-foreground">{group.entries.length} task{group.entries.length !== 1 ? "s" : ""}</p>
-          </div>
-          <div className="space-y-1">
-            {group.entries.map((entry) => (
+      {/* Task cards — grouped by task, accordion */}
+      <div className="space-y-3">
+        {taskGroups.map((group) => {
+          const isExpanded = expandedTask === group.key;
+          const isComplete = completedTasks.has(group.key);
+
+          return (
+            <div
+              key={group.key}
+              className="rounded-xl bg-card border border-border shadow-sm overflow-hidden"
+            >
+              {/* Card header — always visible */}
               <button
-                key={entry.id}
-                className="flex items-center w-full text-left px-3 py-3 rounded-lg hover:bg-muted/50 transition-colors gap-3"
-                onClick={() => { setSelectedEntry(entry); setDetailOpen(true); }}
+                className="flex items-center w-full text-left px-4 py-4 gap-3"
+                onClick={() => setExpandedTask(isExpanded ? null : group.key)}
               >
-                <CheckSquare className="w-4 h-4 text-primary shrink-0" />
-                {entry.client_id && (
-                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: getClientColor(entry.client_id) }} />
+                <InkCheckbox
+                  checked={isComplete}
+                  onToggle={() => toggleTaskComplete(group.key)}
+                />
+
+                {group.clientId && (
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: getClientColor(group.clientId) }} />
                 )}
+
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {entry.task_name
-                      ? entry.task_name
-                      : entry.project_name
-                        ? entry.project_name
-                        : entry.client_name
-                          ? entry.client_name
-                          : <span className="text-muted-foreground">Unassigned</span>}
+                  <p className={cn(
+                    "text-sm font-medium truncate transition-colors",
+                    isComplete ? "line-through text-muted-foreground" : "text-foreground"
+                  )}>
+                    {group.taskName}
                   </p>
-                  {entry.task_name && entry.project_name && (
-                    <p className="text-xs text-muted-foreground truncate">{entry.project_name}</p>
+                  {group.projectName && (
+                    <p className="text-xs text-muted-foreground/70 truncate">{group.projectName}</p>
                   )}
                 </div>
-                <span className="font-mono text-sm font-semibold text-foreground shrink-0">{formatHHMM(entry.duration_minutes)}</span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="text-right">
+                    <p className="font-mono text-sm font-bold text-foreground">{formatHHMM(group.totalMinutes)}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {group.sessions.length} session{group.sessions.length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  <ChevronDown className={cn(
+                    "w-4 h-4 text-muted-foreground transition-transform duration-200",
+                    isExpanded && "rotate-180"
+                  )} />
+                </div>
               </button>
-            ))}
-          </div>
-        </div>
-      ))}
+
+              {/* Expanded sessions */}
+              {isExpanded && (
+                <div className="border-t border-border/50 px-4 pb-3 pt-2">
+                  <div className="space-y-1 ml-8">
+                    {group.sessions.map((session) => {
+                      const timeRange = session.start_time && session.end_time
+                        ? `${new Date(session.start_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} → ${new Date(session.end_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                        : session.entry_date ?? "";
+
+                      return (
+                        <button
+                          key={session.id}
+                          className="flex items-center w-full text-left py-2 px-2 rounded-md hover:bg-muted/40 transition-colors gap-3"
+                          onClick={() => { setSelectedEntry(session); setDetailOpen(true); }}
+                        >
+                          <span className="text-xs text-muted-foreground/60 min-w-[100px]">
+                            {timeRange}
+                          </span>
+                          <span className="font-mono text-xs text-muted-foreground font-medium">
+                            {formatHHMM(session.duration_minutes)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
 
       {/* Insights section */}
       {insights && (

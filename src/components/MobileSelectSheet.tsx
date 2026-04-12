@@ -75,7 +75,7 @@ const MobileSelectSheet = ({
   }, [isCreating, onCreate, search, onSelect, onOpenChange]);
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
+    <Drawer open={open} onOpenChange={onOpenChange} shouldScaleBackground={false}>
       <DrawerContent className="max-h-[85dvh] flex flex-col">
         <DrawerHeader className="pb-2">
           <DrawerTitle>{title}</DrawerTitle>

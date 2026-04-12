@@ -9,24 +9,39 @@ const tabs = [
   { path: "/clients", label: "Projects", icon: Briefcase },
 ];
 
-const THEME_STYLES = {
-  sunrise: {
+const getThemeStyles = () => {
+  const theme = getStoredColorTheme();
+  const isDark = document.documentElement.classList.contains("dark");
+
+  if (isDark) {
+    return {
+      bg: theme === "stormy" ? "rgba(30, 38, 54, 0.92)" : "rgba(24, 18, 36, 0.92)",
+      active: "hsl(43, 96%, 56%)",
+      inactive: "rgba(255, 255, 255, 0.55)",
+      border: "rgba(255, 255, 255, 0.1)",
+    };
+  }
+
+  if (theme === "stormy") {
+    return {
+      bg: "rgba(52, 63, 86, 0.88)",
+      active: "hsl(53, 98%, 77%)",
+      inactive: "rgba(255, 255, 255, 0.68)",
+      border: "rgba(255, 255, 255, 0.14)",
+    };
+  }
+
+  return {
     bg: "rgba(83, 45, 84, 0.88)",
     active: "hsl(53, 98%, 77%)",
     inactive: "rgba(255, 255, 255, 0.6)",
     border: "rgba(255, 255, 255, 0.15)",
-  },
-  stormy: {
-    bg: "rgba(52, 63, 86, 0.88)",
-    active: "hsl(53, 98%, 77%)",
-    inactive: "rgba(255, 255, 255, 0.68)",
-    border: "rgba(255, 255, 255, 0.14)",
-  },
+  };
 };
 
 const BottomNav = () => {
   const location = useLocation();
-  const colors = THEME_STYLES[getStoredColorTheme()];
+  const colors = getThemeStyles();
 
   return (
     <nav

@@ -11,8 +11,49 @@ import TimelinePage from "./pages/TimelinePage";
 import ClientsPage from "./pages/ClientsPage";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import { useEffect } from "react";
+import { applyColorTheme, getStoredColorTheme } from "./hooks/useColorTheme";
 
 const queryClient = new QueryClient();
+
+/** Restore persisted light/dark mode + color theme on startup */
+function useRestoreTheme() {
+  useEffect(() => {
+    // Restore color theme (sunrise/stormy)
+    applyColorTheme(getStoredColorTheme());
+
+    // Restore light/dark mode
+    try {
+      const raw = localStorage.getItem("trace_user_settings");
+      if (raw) {
+        const settings = JSON.parse(raw);
+        if (settings.theme === "dark") {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+        }
+      }
+    } catch {}
+  }, []);
+}
+
+const AppInner = () => {
+  useRestoreTheme();
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<StartPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/timeline" element={<TimelinePage />} />
+          <Route path="/clients" element={<ClientsPage />} />
+        </Route>
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -22,31 +63,20 @@ const App = () => (
         position="bottom-center"
         toastOptions={{
           style: {
-            background: "#3D1F3F",
-            color: "hsl(0, 0%, 95%)",
+            background: "hsl(var(--card))",
+            color: "hsl(var(--card-foreground))",
             borderRadius: "12px",
             padding: "12px 20px",
             fontFamily: "'Plus Jakarta Sans', sans-serif",
             fontWeight: 500,
             fontSize: "14px",
-            border: "none",
+            border: "1px solid hsl(var(--border))",
           },
           duration: 3000,
         }}
       />
       <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route element={<AppLayout />}>
-              <Route path="/" element={<StartPage />} />
-              <Route path="/reports" element={<ReportsPage />} />
-              <Route path="/timeline" element={<TimelinePage />} />
-              <Route path="/clients" element={<ClientsPage />} />
-            </Route>
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <AppInner />
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

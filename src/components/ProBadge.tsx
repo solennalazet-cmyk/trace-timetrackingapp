@@ -6,8 +6,8 @@ const BADGE_STYLES = {
     color: "hsl(217, 33%, 17%)",
   },
   stormy: {
-    background: "linear-gradient(135deg, hsl(214, 18%, 46%), hsl(212, 22%, 80%))",
-    color: "hsl(214, 38%, 15%)",
+    background: "linear-gradient(135deg, hsl(43, 96%, 56%), hsl(53, 98%, 77%))",
+    color: "hsl(222, 34%, 16%)",
   },
 };
 

@@ -50,10 +50,8 @@ const HeaderMenu = () => {
           <span
             className="text-[10px] font-bold px-1.5 py-0.5 rounded"
             style={{
-              background: isStormy
-                ? "linear-gradient(135deg, hsl(214, 18%, 46%), hsl(212, 22%, 80%))"
-                : "linear-gradient(135deg, hsl(43, 96%, 56%), hsl(53, 98%, 77%))",
-              color: isStormy ? "hsl(214, 38%, 15%)" : "hsl(217, 33%, 17%)",
+              background: "linear-gradient(135deg, hsl(43, 96%, 56%), hsl(53, 98%, 77%))",
+              color: isStormy ? "hsl(222, 34%, 16%)" : "hsl(217, 33%, 17%)",
             }}
           >
             PRO ✦

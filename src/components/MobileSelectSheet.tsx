@@ -38,8 +38,10 @@ const MobileSelectSheet = ({
   useEffect(() => {
     if (open) {
       setSearch("");
-      // Focus search input after animation
-      setTimeout(() => inputRef.current?.focus(), 300);
+      // Delay focus until well after the drawer animation completes (~400ms)
+      // to avoid a keyboard-triggered layout shift mid-animation
+      const id = setTimeout(() => inputRef.current?.focus(), 500);
+      return () => clearTimeout(id);
     }
   }, [open]);
 

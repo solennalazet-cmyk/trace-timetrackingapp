@@ -112,7 +112,7 @@ const MobileSelectSheet = ({
           {showAddOption && (
             <button
               type="button"
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-primary active:bg-accent"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-primary-text active:bg-accent"
               onClick={handleCreate}
               disabled={isCreating}
             >
@@ -132,7 +132,7 @@ const MobileSelectSheet = ({
               onClick={() => handleSelect(item)}
             >
               <div className="w-5 h-5 flex items-center justify-center shrink-0">
-                {value === item.id && <Check className="h-4 w-4 text-primary" />}
+                {value === item.id && <Check className="h-4 w-4 text-primary-text" />}
               </div>
               <span className="truncate">{item.name}</span>
             </button>

@@ -157,6 +157,29 @@
   animation: gradient-shift 20s ease-in-out infinite;
 }
 
+/* Stormy Skies gradient */
+.theme-stormy .gradient-bg {
+  background:
+    radial-gradient(ellipse at 18% 18%, hsla(212, 30%, 78%, 0.34) 0%, transparent 52%),
+    radial-gradient(ellipse at 82% 10%, hsla(220, 26%, 34%, 0.30) 0%, transparent 48%),
+    radial-gradient(ellipse at 60% 78%, hsla(214, 22%, 52%, 0.26) 0%, transparent 50%),
+    radial-gradient(ellipse at 12% 74%, hsla(210, 18%, 90%, 0.24) 0%, transparent 50%),
+    radial-gradient(ellipse at 90% 58%, hsla(220, 30%, 18%, 0.28) 0%, transparent 52%);
+  background-size: 200% 200%;
+  animation: gradient-shift 20s ease-in-out infinite;
+}
+
+.theme-stormy.dark .gradient-bg {
+  background:
+    radial-gradient(ellipse at 18% 18%, hsla(212, 30%, 50%, 0.24) 0%, transparent 52%),
+    radial-gradient(ellipse at 82% 10%, hsla(220, 26%, 22%, 0.28) 0%, transparent 48%),
+    radial-gradient(ellipse at 60% 78%, hsla(214, 22%, 35%, 0.22) 0%, transparent 50%),
+    radial-gradient(ellipse at 12% 74%, hsla(210, 18%, 60%, 0.18) 0%, transparent 50%),
+    radial-gradient(ellipse at 90% 58%, hsla(220, 30%, 12%, 0.24) 0%, transparent 52%);
+  background-size: 200% 200%;
+  animation: gradient-shift 20s ease-in-out infinite;
+}
+
 @keyframes gradient-shift {
   0%, 100% { background-position: 0% 0%; }
   33%       { background-position: 100% 50%; }

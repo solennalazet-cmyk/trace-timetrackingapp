@@ -27,7 +27,7 @@ import {
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import CreatableCombobox, { ComboboxItem } from "@/components/CreatableCombobox";
+import AdaptiveCombobox, { ComboboxItem } from "@/components/AdaptiveCombobox";
 import TagsInput from "@/components/TagsInput";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -310,7 +310,7 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
           {/* Client */}
           <div>
             <Label>Client</Label>
-            <CreatableCombobox items={clients} value={clientId} displayValue={clientName} placeholder="Select client (optional)" scrollContainerRef={scrollAreaRef}
+            <AdaptiveCombobox items={clients} value={clientId} displayValue={clientName} placeholder="Select client (optional)" label="Client" scrollContainerRef={scrollAreaRef}
               onSelect={(id, name) => { setClientId(id); setClientName(name); setProjectId(""); setProjectName(""); setTaskId(""); setTaskName(""); }}
               onCreate={async (name) => { const c = await handleCreateClient(name); if (c) { setClientId(c.id); setClientName(c.name); setProjectId(""); setProjectName(""); setTaskId(""); setTaskName(""); } return c; }}
             />
@@ -327,13 +327,13 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
           )}
 
           {/* Project */}
-          <div><Label>Project</Label><CreatableCombobox items={filteredProjects} value={projectId} displayValue={projectName} placeholder="Select project (optional)" scrollContainerRef={scrollAreaRef}
+          <div><Label>Project</Label><AdaptiveCombobox items={filteredProjects} value={projectId} displayValue={projectName} placeholder="Select project (optional)" label="Project" scrollContainerRef={scrollAreaRef}
             onSelect={(id, name) => { setProjectId(id); setProjectName(name); setTaskId(""); setTaskName(""); }}
             onCreate={async (name) => { const c = await handleCreateProject(name); if (c) { setProjectId(c.id); setProjectName(c.name); setTaskId(""); setTaskName(""); } return c; }}
           /></div>
 
           {/* Task */}
-          <div><Label>Task</Label><CreatableCombobox items={tasks} value={taskId} displayValue={taskName} placeholder="What were you working on?" scrollContainerRef={scrollAreaRef}
+          <div><Label>Task</Label><AdaptiveCombobox items={tasks} value={taskId} displayValue={taskName} placeholder="What were you working on?" label="Task" scrollContainerRef={scrollAreaRef}
             onSelect={(_id, name) => { setTaskId(_id); setTaskName(name); }}
             onCreate={async (name) => { const c = await handleCreateTask(name); if (c) { setTaskId(c.id); setTaskName(c.name); } return c; }}
           /></div>

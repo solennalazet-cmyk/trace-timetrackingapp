@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import CreatableCombobox, { ComboboxItem } from "@/components/CreatableCombobox";
+import AdaptiveCombobox, { ComboboxItem } from "@/components/AdaptiveCombobox";
 import TagsInput from "@/components/TagsInput";
 import { formatDuration } from "@/hooks/useTimer";
 import { toLocalDateKey } from "@/lib/utils";
@@ -502,11 +502,12 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
           <div className="space-y-3 text-foreground">
             <div>
               <Label className="text-foreground">Client</Label>
-              <CreatableCombobox
+              <AdaptiveCombobox
                 items={clients}
                 value={clientId}
                 displayValue={clientName}
                 placeholder="Select client (optional)"
+                label="Client"
                 scrollContainerRef={scrollAreaRef}
                 onSelect={(id, name) => {
                   handleClientSelection(id, name);
@@ -564,11 +565,12 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
             <div>
               <Label className="text-foreground">Project</Label>
-              <CreatableCombobox
+              <AdaptiveCombobox
                 items={filteredProjects}
                 value={projectId}
                 displayValue={projectName}
                 placeholder="Select project (optional)"
+                label="Project"
                 scrollContainerRef={scrollAreaRef}
                 onSelect={(id, name) => {
                   handleProjectSelection(id, name);
@@ -587,11 +589,12 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
               <Label className="text-foreground">Task</Label>
               <div className="flex gap-2">
                 <div className="flex-1">
-                  <CreatableCombobox
+                  <AdaptiveCombobox
                     items={tasks}
                     value={taskId}
                     displayValue={taskName}
                     placeholder="What were you working on?"
+                    label="Task"
                     scrollContainerRef={scrollAreaRef}
                     onSelect={(id, name) => {
                       setTaskId(id);

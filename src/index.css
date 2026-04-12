@@ -2,6 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Ink fill checkbox animation */
+@keyframes ink-fill {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes ink-glow {
+  0% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4); }
+  100% { box-shadow: 0 0 0 6px hsl(var(--primary) / 0); }
+}
+.ink-fill-animate {
+  animation: ink-fill 280ms ease-in-out, ink-glow 400ms ease-out;
+}
+
 @layer base {
   :root {
     --background: 240 7% 97%;

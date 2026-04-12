@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckSquare, Square, Flame, Crown, ChevronDown } from "lucide-react";
-import { differenceInDays } from "date-fns";
+import { CheckSquare, Flame, Crown, ChevronDown } from "lucide-react";
+import { differenceInDays, format, isToday, isYesterday, parseISO } from "date-fns";
 import DateRangePicker from "@/components/DateRangePicker";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,12 +17,18 @@ import { cn } from "@/lib/utils";
 const formatHHMM = (mins: number) => {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
+  return h > 0 ? `${h}h ${String(m).padStart(2, "0")}m` : `${m}m`;
+};
+
+const formatHHMMmono = (mins: number) => {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-/* ---------- Task group type ---------- */
+/* ---------- Types ---------- */
 interface TaskGroup {
   key: string;
   taskName: string;
@@ -31,6 +37,21 @@ interface TaskGroup {
   totalMinutes: number;
   sessions: TimeEntry[];
 }
+
+interface DaySection {
+  dateKey: string;
+  label: string;
+  totalMinutes: number;
+  taskGroups: TaskGroup[];
+}
+
+/* ---------- Day label helper ---------- */
+const getDayLabel = (dateKey: string): string => {
+  const d = parseISO(dateKey);
+  if (isToday(d)) return "Today";
+  if (isYesterday(d)) return "Yesterday";
+  return format(d, "EEEE, MMM d");
+};
 
 /* ---------- Ink-fill checkbox ---------- */
 const InkCheckbox = ({ checked, onToggle }: { checked: boolean; onToggle: () => void }) => {
@@ -138,37 +159,61 @@ const TimelinePage = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  /* ---------- Group entries by task ---------- */
-  const taskGroups = useMemo(() => {
-    const map = new Map<string, TaskGroup>();
-
+  /* ---------- Group entries by day, then by task within each day ---------- */
+  const daySections = useMemo((): DaySection[] => {
+    // Group by date first
+    const byDate = new Map<string, TimeEntry[]>();
     entries.forEach((e) => {
-      // Group key: task_id if exists, else project_id, else "unassigned"
-      const key = e.task_id ?? e.project_id ?? "unassigned";
-      const label = e.task_name ?? e.project_name ?? e.client_name ?? "Unassigned";
-
-      if (!map.has(key)) {
-        map.set(key, {
-          key,
-          taskName: label,
-          projectName: e.task_name ? (e.project_name ?? null) : null,
-          clientId: e.client_id ?? null,
-          totalMinutes: 0,
-          sessions: [],
-        });
-      }
-      const group = map.get(key)!;
-      group.totalMinutes += e.duration_minutes;
-      group.sessions.push(e);
+      const dk = e.entry_date ?? "unknown";
+      if (!byDate.has(dk)) byDate.set(dk, []);
+      byDate.get(dk)!.push(e);
     });
 
-    // Sort by total duration descending
-    return [...map.values()].sort((a, b) => b.totalMinutes - a.totalMinutes);
+    // Sort dates descending (most recent first)
+    const sortedDates = [...byDate.keys()].sort((a, b) => b.localeCompare(a));
+
+    return sortedDates.map((dateKey) => {
+      const dayEntries = byDate.get(dateKey)!;
+      const totalMinutes = dayEntries.reduce((s, e) => s + e.duration_minutes, 0);
+
+      // Group by task within this day
+      const taskMap = new Map<string, TaskGroup>();
+      dayEntries.forEach((e) => {
+        const key = e.task_id ?? e.project_id ?? "unassigned";
+        const label = e.task_name ?? e.project_name ?? e.client_name ?? "Unassigned";
+
+        if (!taskMap.has(key)) {
+          taskMap.set(key, {
+            key,
+            taskName: label,
+            projectName: e.task_name ? (e.project_name ?? null) : null,
+            clientId: e.client_id ?? null,
+            totalMinutes: 0,
+            sessions: [],
+          });
+        }
+        const group = taskMap.get(key)!;
+        group.totalMinutes += e.duration_minutes;
+        group.sessions.push(e);
+      });
+
+      // Sort tasks by total duration descending within this day
+      const taskGroups = [...taskMap.values()].sort((a, b) => b.totalMinutes - a.totalMinutes);
+
+      return {
+        dateKey,
+        label: getDayLabel(dateKey),
+        totalMinutes,
+        taskGroups,
+      };
+    });
   }, [entries]);
 
   // Hero stats
   const stats = useMemo(() => {
-    const taskCount = taskGroups.length;
+    const allTaskKeys = new Set<string>();
+    daySections.forEach((ds) => ds.taskGroups.forEach((g) => allTaskKeys.add(g.key)));
+    const taskCount = allTaskKeys.size;
     const totalMinutes = entries.reduce((s, e) => s + e.duration_minutes, 0);
     const dateSet = new Set(entries.map((e) => e.entry_date).filter(Boolean));
     let streak = 0;
@@ -179,7 +224,7 @@ const TimelinePage = () => {
       else break;
     }
     return { taskCount, totalMinutes, streak };
-  }, [entries, taskGroups]);
+  }, [entries, daySections]);
 
   const clientIds = useMemo(() =>
     [...new Set(entries.map((e) => e.client_id).filter(Boolean))] as string[]
@@ -247,11 +292,12 @@ const TimelinePage = () => {
     setEntries((prev) => prev.filter((e) => e.id !== id));
   };
 
-  const toggleTaskComplete = (key: string) => {
+  const toggleTaskComplete = (dayKey: string, taskKey: string) => {
+    const compositeKey = `${dayKey}::${taskKey}`;
     setCompletedTasks((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      if (next.has(compositeKey)) next.delete(compositeKey);
+      else next.add(compositeKey);
       return next;
     });
   };
@@ -273,161 +319,180 @@ const TimelinePage = () => {
   }
 
   return (
-    <div className="pb-24 px-4">
-      {/* Date range picker */}
-      <div className="mb-4">
-        <DateRangePicker from={from} to={to} onChange={handleRangeChange} />
+    <div className="pb-24">
+      {/* Sticky top controls */}
+      <div className="sticky top-0 z-30 px-4 pt-2 pb-3 bg-background/80 backdrop-blur-md">
+        <div className="mb-2">
+          <DateRangePicker from={from} to={to} onChange={handleRangeChange} />
+        </div>
+
+        {clientIds.length > 0 && (
+          <div className="flex flex-wrap gap-3">
+            {clientIds.map((cid) => (
+              <div key={cid} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ background: getClientColor(cid) }} />
+                {clients[cid] ?? "Unknown"}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Client color legend */}
-      {clientIds.length > 0 && (
-        <div className="flex flex-wrap gap-3 mb-4">
-          {clientIds.map((cid) => (
-            <div key={cid} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ background: getClientColor(cid) }} />
-              {clients[cid] ?? "Unknown"}
+      <div className="px-4">
+        {/* Hero stats */}
+        <div className="grid grid-cols-3 gap-3 mb-5">
+          <div className="rounded-xl bg-muted/50 px-3 py-3 text-center">
+            <p className="font-mono text-xl font-bold text-foreground">{stats.taskCount}</p>
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Tasks</p>
+          </div>
+          <div className="rounded-xl bg-muted/50 px-3 py-3 text-center">
+            <p className="font-mono text-xl font-bold text-foreground">{formatHHMMmono(stats.totalMinutes)}</p>
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Total time</p>
+          </div>
+          <div className="rounded-xl bg-muted/50 px-3 py-3 text-center">
+            <div className="flex items-center justify-center gap-1">
+              <Flame className="w-4 h-4 text-orange-500" />
+              <p className="font-mono text-xl font-bold text-foreground">{stats.streak}</p>
             </div>
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Day streak</p>
+          </div>
+        </div>
+
+        {/* Day sections */}
+        <div className="space-y-6">
+          {daySections.map((day) => (
+            <section key={day.dateKey}>
+              {/* Day header */}
+              <div className="mb-2">
+                <h2 className="text-sm font-semibold text-foreground">{day.label}</h2>
+                <p className="text-xs text-muted-foreground">
+                  {day.taskGroups.length} task{day.taskGroups.length !== 1 ? "s" : ""} · {formatHHMM(day.totalMinutes)}
+                </p>
+              </div>
+
+              {/* Task cards for this day */}
+              <div className="space-y-3">
+                {day.taskGroups.map((group) => {
+                  const compositeKey = `${day.dateKey}::${group.key}`;
+                  const isExpanded = expandedTask === compositeKey;
+                  const isComplete = completedTasks.has(compositeKey);
+
+                  return (
+                    <div
+                      key={compositeKey}
+                      className="rounded-xl bg-card border border-border shadow-sm overflow-hidden"
+                    >
+                      {/* Card header */}
+                      <button
+                        className="flex items-center w-full text-left px-4 py-4 gap-3"
+                        onClick={() => setExpandedTask(isExpanded ? null : compositeKey)}
+                      >
+                        <InkCheckbox
+                          checked={isComplete}
+                          onToggle={() => toggleTaskComplete(day.dateKey, group.key)}
+                        />
+
+                        {group.clientId && (
+                          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: getClientColor(group.clientId) }} />
+                        )}
+
+                        <div className="flex-1 min-w-0">
+                          <p className={cn(
+                            "text-sm font-medium truncate transition-colors",
+                            isComplete ? "line-through text-muted-foreground" : "text-foreground"
+                          )}>
+                            {group.taskName}
+                          </p>
+                          {group.projectName && (
+                            <p className="text-xs text-muted-foreground/70 truncate">{group.projectName}</p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <div className="text-right">
+                            <p className="font-mono text-sm font-bold text-foreground">{formatHHMM(group.totalMinutes)}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {group.sessions.length} session{group.sessions.length !== 1 ? "s" : ""}
+                            </p>
+                          </div>
+                          <ChevronDown className={cn(
+                            "w-4 h-4 text-muted-foreground transition-transform duration-200",
+                            isExpanded && "rotate-180"
+                          )} />
+                        </div>
+                      </button>
+
+                      {/* Expanded sessions */}
+                      {isExpanded && (
+                        <div className="border-t border-border/50 px-4 pb-3 pt-2">
+                          <div className="space-y-1 ml-8">
+                            {group.sessions.map((session) => {
+                              const timeRange = session.start_time && session.end_time
+                                ? `${new Date(session.start_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} → ${new Date(session.end_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                                : session.entry_date ?? "";
+
+                              return (
+                                <button
+                                  key={session.id}
+                                  className="flex items-center w-full text-left py-2 px-2 rounded-md hover:bg-muted/40 transition-colors gap-3"
+                                  onClick={() => { setSelectedEntry(session); setDetailOpen(true); }}
+                                >
+                                  <span className="text-xs text-muted-foreground/60 min-w-[100px]">
+                                    {timeRange}
+                                  </span>
+                                  <span className="font-mono text-xs text-muted-foreground font-medium">
+                                    {formatHHMM(session.duration_minutes)}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
           ))}
         </div>
-      )}
 
-      {/* Hero stats */}
-      <div className="grid grid-cols-3 gap-3 mb-5">
-        <div className="rounded-xl bg-muted/50 px-3 py-3 text-center">
-          <p className="font-mono text-xl font-bold text-foreground">{stats.taskCount}</p>
-          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Tasks</p>
-        </div>
-        <div className="rounded-xl bg-muted/50 px-3 py-3 text-center">
-          <p className="font-mono text-xl font-bold text-foreground">{formatHHMM(stats.totalMinutes)}</p>
-          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Total time</p>
-        </div>
-        <div className="rounded-xl bg-muted/50 px-3 py-3 text-center">
-          <div className="flex items-center justify-center gap-1">
-            <Flame className="w-4 h-4 text-orange-500" />
-            <p className="font-mono text-xl font-bold text-foreground">{stats.streak}</p>
-          </div>
-          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Day streak</p>
-        </div>
-      </div>
-
-      {/* Task cards — grouped by task, accordion */}
-      <div className="space-y-3">
-        {taskGroups.map((group) => {
-          const isExpanded = expandedTask === group.key;
-          const isComplete = completedTasks.has(group.key);
-
-          return (
-            <div
-              key={group.key}
-              className="rounded-xl bg-card border border-border shadow-sm overflow-hidden"
-            >
-              {/* Card header — always visible */}
-              <button
-                className="flex items-center w-full text-left px-4 py-4 gap-3"
-                onClick={() => setExpandedTask(isExpanded ? null : group.key)}
-              >
-                <InkCheckbox
-                  checked={isComplete}
-                  onToggle={() => toggleTaskComplete(group.key)}
-                />
-
-                {group.clientId && (
-                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: getClientColor(group.clientId) }} />
-                )}
-
-                <div className="flex-1 min-w-0">
-                  <p className={cn(
-                    "text-sm font-medium truncate transition-colors",
-                    isComplete ? "line-through text-muted-foreground" : "text-foreground"
-                  )}>
-                    {group.taskName}
-                  </p>
-                  {group.projectName && (
-                    <p className="text-xs text-muted-foreground/70 truncate">{group.projectName}</p>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <div className="text-right">
-                    <p className="font-mono text-sm font-bold text-foreground">{formatHHMM(group.totalMinutes)}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {group.sessions.length} session{group.sessions.length !== 1 ? "s" : ""}
-                    </p>
+        {/* Insights section */}
+        {insights && (
+          <div className="relative mt-6 mb-4">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Insights</h3>
+            <div className={isPro ? "" : "pointer-events-none select-none"}>
+              <div className={isPro ? "" : "opacity-30 blur-[2px]"}>
+                <div className="grid grid-cols-1 gap-2">
+                  <div className="rounded-xl bg-muted/50 px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm text-foreground">Most productive day</span>
+                    <span className="font-semibold text-foreground">{insights.mostProductiveDay} <span className="text-xs text-muted-foreground">({insights.mostProductiveDayCount} tasks)</span></span>
                   </div>
-                  <ChevronDown className={cn(
-                    "w-4 h-4 text-muted-foreground transition-transform duration-200",
-                    isExpanded && "rotate-180"
-                  )} />
-                </div>
-              </button>
-
-              {/* Expanded sessions */}
-              {isExpanded && (
-                <div className="border-t border-border/50 px-4 pb-3 pt-2">
-                  <div className="space-y-1 ml-8">
-                    {group.sessions.map((session) => {
-                      const timeRange = session.start_time && session.end_time
-                        ? `${new Date(session.start_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} → ${new Date(session.end_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
-                        : session.entry_date ?? "";
-
-                      return (
-                        <button
-                          key={session.id}
-                          className="flex items-center w-full text-left py-2 px-2 rounded-md hover:bg-muted/40 transition-colors gap-3"
-                          onClick={() => { setSelectedEntry(session); setDetailOpen(true); }}
-                        >
-                          <span className="text-xs text-muted-foreground/60 min-w-[100px]">
-                            {timeRange}
-                          </span>
-                          <span className="font-mono text-xs text-muted-foreground font-medium">
-                            {formatHHMM(session.duration_minutes)}
-                          </span>
-                        </button>
-                      );
-                    })}
+                  <div className="rounded-xl bg-muted/50 px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm text-foreground">Avg. session</span>
+                    <span className="font-mono font-semibold text-foreground">{formatHHMMmono(insights.avgDuration)}</span>
                   </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Insights section */}
-      {insights && (
-        <div className="relative mt-6 mb-4">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Insights</h3>
-          <div className={isPro ? "" : "pointer-events-none select-none"}>
-            <div className={isPro ? "" : "opacity-30 blur-[2px]"}>
-              <div className="grid grid-cols-1 gap-2">
-                <div className="rounded-xl bg-muted/50 px-4 py-3 flex items-center justify-between">
-                  <span className="text-sm text-foreground">Most productive day</span>
-                  <span className="font-semibold text-foreground">{insights.mostProductiveDay} <span className="text-xs text-muted-foreground">({insights.mostProductiveDayCount} tasks)</span></span>
-                </div>
-                <div className="rounded-xl bg-muted/50 px-4 py-3 flex items-center justify-between">
-                  <span className="text-sm text-foreground">Avg. session</span>
-                  <span className="font-mono font-semibold text-foreground">{formatHHMM(insights.avgDuration)}</span>
-                </div>
-                <div className="rounded-xl bg-muted/50 px-4 py-3 flex items-center justify-between">
-                  <span className="text-sm text-foreground">Longest session</span>
-                  <span className="font-mono font-semibold text-foreground">{formatHHMM(insights.longestSession)}</span>
+                  <div className="rounded-xl bg-muted/50 px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm text-foreground">Longest session</span>
+                    <span className="font-mono font-semibold text-foreground">{formatHHMMmono(insights.longestSession)}</span>
+                  </div>
                 </div>
               </div>
             </div>
+            {!isPro && (
+              <div className="absolute inset-0 flex items-center justify-center rounded-2xl mt-6">
+                <button
+                  onClick={() => setPaywallOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-semibold shadow-lg"
+                >
+                  <Crown className="w-4 h-4" />
+                  Unlock Insights
+                </button>
+              </div>
+            )}
           </div>
-          {!isPro && (
-            <div className="absolute inset-0 flex items-center justify-center rounded-2xl mt-6">
-              <button
-                onClick={() => setPaywallOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-semibold shadow-lg"
-              >
-                <Crown className="w-4 h-4" />
-                Unlock Insights
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Entry Detail Sheet */}
       <EntryDetailSheet

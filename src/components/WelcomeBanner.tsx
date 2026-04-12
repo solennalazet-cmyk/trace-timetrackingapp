@@ -54,8 +54,8 @@ const WelcomeBanner = ({ onDismiss }: WelcomeBannerProps) => {
       id="welcome-banner"
       className="w-full mt-4 text-center"
       style={{
-        background: "rgba(255, 255, 255, 0.75)",
-        border: "1px solid rgba(255, 255, 255, 0.6)",
+        background: "hsl(var(--card) / 0.85)",
+        border: "1px solid hsl(var(--border))",
         borderRadius: 16,
         boxShadow: "0 2px 12px rgba(0, 0, 0, 0.06)",
         padding: "20px 24px",

@@ -395,6 +395,7 @@ export type Database = {
           round_amount_to: number | null
           round_duration: string | null
           round_duration_to: number | null
+          round_scope: string | null
           show_logged_today: boolean | null
           theme: string | null
           time_format: string | null
@@ -416,6 +417,7 @@ export type Database = {
           round_amount_to?: number | null
           round_duration?: string | null
           round_duration_to?: number | null
+          round_scope?: string | null
           show_logged_today?: boolean | null
           theme?: string | null
           time_format?: string | null
@@ -437,6 +439,7 @@ export type Database = {
           round_amount_to?: number | null
           round_duration?: string | null
           round_duration_to?: number | null
+          round_scope?: string | null
           show_logged_today?: boolean | null
           theme?: string | null
           time_format?: string | null

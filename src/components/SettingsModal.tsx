@@ -29,6 +29,7 @@ interface Settings {
   round_duration_to: number;
   round_amount: string;
   round_amount_to: number;
+  round_scope: string;
   week_start_day: number;
   time_format: string;
   default_billable: boolean;
@@ -48,6 +49,7 @@ const DEFAULTS: Settings = {
   round_duration_to: 15,
   round_amount: "none",
   round_amount_to: 0.01,
+  round_scope: "session",
   week_start_day: 1,
   time_format: "24h",
   default_billable: true,

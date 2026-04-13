@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import DateRangePicker from "@/components/DateRangePicker";
 import { toLocalDateKey } from "@/lib/utils";
-import { type RoundingSettings, roundDuration, roundedBillableValue } from "@/lib/rounding";
+import { type RoundingSettings, roundDuration, roundedBillableValue, rawBillableValue, hasActiveRounding, describeRounding, aggregateWithRounding, entryDisplayValues } from "@/lib/rounding";
 import type { TimeEntry } from "@/components/EntryDetailSheet";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -72,22 +72,10 @@ const ExportDialog = ({
     });
   }, [entries, rangeStart, rangeEnd, selectedClient]);
 
-  const rd = (mins: number) => roundDuration(mins, rounding);
-  const rawValue = (e: TimeEntry) => roundedBillableValue(e.duration_minutes, e.rate_amount ?? null, e.rate_unit ?? null, e.billable ?? false, { ...rounding, round_duration: "none", round_amount: "none" });
-  const rv = (e: TimeEntry) => roundedBillableValue(e.duration_minutes, e.rate_amount ?? null, e.rate_unit ?? null, e.billable ?? false, rounding);
-
-  const hasRounding = rounding.round_duration !== "none" || rounding.round_amount !== "none";
-
-  const describeRounding = (): string => {
-    const parts: string[] = [];
-    if (rounding.round_duration !== "none") {
-      parts.push(`durations rounded ${rounding.round_duration} to ${rounding.round_duration_to} min`);
-    }
-    if (rounding.round_amount !== "none") {
-      parts.push(`amounts rounded ${rounding.round_amount === "nearest" ? "to the nearest" : rounding.round_amount} ${rounding.round_amount_to < 1 ? rounding.round_amount_to.toString() : "€" + rounding.round_amount_to}`);
-    }
-    return parts.join(", ");
-  };
+  // Scope-aware helpers
+  const ev = (e: TimeEntry) => entryDisplayValues(e, rounding);
+  const isRounding = hasActiveRounding(rounding);
+  const roundingDesc = describeRounding(rounding);
 
   const formatDuration = (mins: number) => {
     const h = Math.floor(mins / 60);
@@ -106,30 +94,30 @@ const ExportDialog = ({
   };
 
   const exportCSV = () => {
+    const { totalMinutes, totalValue } = aggregateWithRounding(filteredEntries, rounding);
     const headers = "Date,Client,Project,Task,Duration (min),Duration (hh:mm),Billable,Rate,Value,Notes,Tags,Type";
-    const rows = filteredEntries.map((e) => [
-      e.entry_date,
-      (e.client_name ?? "").replace(/,/g, " "),
-      (e.project_name ?? "").replace(/,/g, " "),
-      (e.task_name ?? "").replace(/,/g, " "),
-      rd(e.duration_minutes),
-      formatDuration(rd(e.duration_minutes)),
-      e.billable ? "Yes" : "No",
-      e.rate_amount ?? "",
-      rv(e).toFixed(2),
-      `"${(e.notes ?? "").replace(/"/g, '""')}"`,
-      (e.tags ?? []).join(";"),
-      e.entry_type ?? "",
-    ].join(","));
+    const rows = filteredEntries.map((e) => {
+      const { displayMinutes, displayValue } = ev(e);
+      return [
+        e.entry_date,
+        (e.client_name ?? "").replace(/,/g, " "),
+        (e.project_name ?? "").replace(/,/g, " "),
+        (e.task_name ?? "").replace(/,/g, " "),
+        displayMinutes,
+        formatDuration(displayMinutes),
+        e.billable ? "Yes" : "No",
+        e.rate_amount ?? "",
+        displayValue.toFixed(2),
+        `"${(e.notes ?? "").replace(/"/g, '""')}"`,
+        (e.tags ?? []).join(";"),
+        e.entry_type ?? "",
+      ].join(",");
+    });
     let csv = headers + "\n" + rows.join("\n");
-    if (hasRounding) {
-      const rawTotalMins = filteredEntries.reduce((s, e) => s + e.duration_minutes, 0);
-      const rawTotalValue = filteredEntries.reduce((s, e) => s + rawValue(e), 0);
-      const roundedTotalMins = filteredEntries.reduce((s, e) => s + rd(e.duration_minutes), 0);
-      const roundedTotalValue = filteredEntries.reduce((s, e) => s + rv(e), 0);
-      csv += `\n\nRounding: ${describeRounding()}`;
-      csv += `\nActual total,,,,,${formatDuration(rawTotalMins)},,,${rawTotalValue.toFixed(2)}`;
-      csv += `\nRounded total,,,,,${formatDuration(roundedTotalMins)},,,${roundedTotalValue.toFixed(2)}`;
+    // Add totals row
+    csv += `\n\nTotal,,,,,${formatDuration(totalMinutes)},,,${totalValue.toFixed(2)}`;
+    if (isRounding) {
+      csv += `\nRounding: ${roundingDesc}`;
     }
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -147,6 +135,9 @@ const ExportDialog = ({
     const pageH = doc.internal.pageSize.getHeight();
     const margin = 16;
     let y = margin;
+
+    // Scope-aware totals
+    const { totalMinutes: totalMins, totalValue } = aggregateWithRounding(filteredEntries, rounding);
 
     // ── Trace logo (top-right) ──
     const rightX = pageW - margin;
@@ -213,26 +204,16 @@ const ExportDialog = ({
     doc.text(`Time Report: ${fromLabel} – ${toLabel}`, margin, y);
     y += 8;
 
-    // ── Summary ──
-    const totalMins = filteredEntries.reduce((s, e) => s + rd(e.duration_minutes), 0);
-    const rawTotalMins = filteredEntries.reduce((s, e) => s + e.duration_minutes, 0);
-    const totalValue = filteredEntries.reduce((s, e) => s + rv(e), 0);
-    const rawTotalValue = filteredEntries.reduce((s, e) => s + rawValue(e), 0);
+    // ── Summary (post-rounding only) ──
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(80);
-
-    if (hasRounding) {
-      const rawH = (rawTotalMins / 60).toFixed(2);
-      const roundedH = (totalMins / 60).toFixed(2);
-      doc.text(`Total: ${roundedH} hours (${rawH} actual)  ·  ${filteredEntries.length} entries  ·  Billable: €${totalValue.toFixed(2)} (€${rawTotalValue.toFixed(2)} actual)`, margin, y);
-      y += 4;
+    doc.text(`Total: ${(totalMins / 60).toFixed(2)} hours  ·  ${filteredEntries.length} entries  ·  Billable: €${totalValue.toFixed(2)}`, margin, y);
+    y += 4;
+    if (isRounding) {
       doc.setFontSize(7.5);
       doc.setTextColor(120);
-      doc.text(`Rounding applied: ${describeRounding()}`, margin, y);
-      y += 4;
-    } else {
-      doc.text(`Total: ${formatDuration(totalMins)}  ·  ${filteredEntries.length} entries  ·  Billable value: €${totalValue.toFixed(2)}`, margin, y);
+      doc.text(`Rounding applied: ${roundingDesc}`, margin, y);
       y += 4;
     }
 
@@ -241,19 +222,22 @@ const ExportDialog = ({
     doc.line(margin, y, pageW - margin, y);
     y += 6;
 
-    // ── Table ──
+    // ── Table (shows per-entry display values) ──
     const tableHead = [["Date", "Duration", "Project", "Task", "Notes", "Billable", "Value"]];
     const tableBody = filteredEntries
       .sort((a, b) => (a.entry_date ?? "").localeCompare(b.entry_date ?? ""))
-      .map((e) => [
-        e.entry_date ? new Date(e.entry_date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "",
-        formatDuration(rd(e.duration_minutes)),
-        e.project_name ?? "",
-        e.task_name ?? "",
-        (e.notes ?? "").slice(0, 60),
-        e.billable ? "Yes" : "—",
-        rv(e) > 0 ? `€${rv(e).toFixed(2)}` : "—",
-      ]);
+      .map((e) => {
+        const { displayMinutes, displayValue } = ev(e);
+        return [
+          e.entry_date ? new Date(e.entry_date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "",
+          formatDuration(displayMinutes),
+          e.project_name ?? "",
+          e.task_name ?? "",
+          (e.notes ?? "").slice(0, 60),
+          e.billable ? "Yes" : "—",
+          displayValue > 0 ? `€${displayValue.toFixed(2)}` : "—",
+        ];
+      });
 
     autoTable(doc, {
       startY: y,

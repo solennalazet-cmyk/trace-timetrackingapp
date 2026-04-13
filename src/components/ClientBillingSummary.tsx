@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { ChevronDown, ChevronUp, ArrowRight, Trash2, X } from "lucide-react";
 import { type TimeEntry } from "@/components/EntryDetailSheet";
-import { type RoundingSettings, DEFAULT_ROUNDING, roundDuration, roundedBillableValue } from "@/lib/rounding";
+import { type RoundingSettings, DEFAULT_ROUNDING, aggregateWithRounding, entryDisplayValues } from "@/lib/rounding";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
@@ -61,16 +61,14 @@ const ClientBillingSummary = ({
 
   const { clientSummaries, unassignedSummary } = useMemo(() => {
     const clientMap: Record<string, ClientSummary> = {};
-    let unassignedMins = 0;
     const unassignedEntries: TimeEntry[] = [];
 
+    // Group entries by client
     allEntries.forEach((e) => {
       if (!e.client_id) {
-        unassignedMins += roundDuration(e.duration_minutes, rounding);
         unassignedEntries.push(e);
         return;
       }
-
       if (!clientMap[e.client_id]) {
         clientMap[e.client_id] = {
           id: e.client_id,
@@ -83,30 +81,32 @@ const ClientBillingSummary = ({
           entries: [],
         };
       }
-      const c = clientMap[e.client_id];
-      const rdMins = roundDuration(e.duration_minutes, rounding);
-      const rdVal = roundedBillableValue(e.duration_minutes, e.rate_amount ?? null, e.rate_unit ?? null, e.billable ?? false, rounding);
-      c.totalMins += rdMins;
-      c.entries.push(e);
-      if (e.billable) {
-        c.billableMins += rdMins;
-        c.billableValue += rdVal;
-        if (e.billing_status === "unbilled") {
-          c.outstanding += rdVal;
-        }
-      }
+      clientMap[e.client_id].entries.push(e);
     });
 
+    // Compute scope-aware aggregates per client
     Object.values(clientMap).forEach((c) => {
+      const { totalMinutes, totalValue } = aggregateWithRounding(c.entries, rounding);
+      c.totalMins = totalMinutes;
+      const billableEntries = c.entries.filter((e) => e.billable);
+      const { totalMinutes: bMins, totalValue: bVal } = aggregateWithRounding(billableEntries, rounding);
+      c.billableMins = bMins;
+      c.billableValue = bVal;
+      const unbilledEntries = c.entries.filter((e) => e.billable && e.billing_status === "unbilled");
+      const { totalValue: outVal } = aggregateWithRounding(unbilledEntries, rounding);
+      c.outstanding = outVal;
       c.entries.sort((a, b) => (b.entry_date ?? "").localeCompare(a.entry_date ?? ""));
     });
+
+    // Unassigned
+    const { totalMinutes: unassignedMins } = aggregateWithRounding(unassignedEntries, rounding);
     unassignedEntries.sort((a, b) => (b.entry_date ?? "").localeCompare(a.entry_date ?? ""));
 
     return {
       clientSummaries: Object.values(clientMap).sort((a, b) => b.totalMins - a.totalMins),
       unassignedSummary: { totalMins: unassignedMins, entries: unassignedEntries },
     };
-  }, [allEntries, clients]);
+  }, [allEntries, clients, rounding]);
 
   // Calculate days in range for avg/day
   const daysInRange = useMemo(() => {

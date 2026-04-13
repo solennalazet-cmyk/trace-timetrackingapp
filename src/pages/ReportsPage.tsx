@@ -1061,7 +1061,7 @@ const ReportsPage = () => {
           setEditEntry(null);
           loadData();
         }} />
-      <BillingDialog open={billingOpen} onOpenChange={setBillingOpen} onComplete={loadData} rounding={rounding} />
+      <BillingDialog open={billingOpen} onOpenChange={(v) => { setBillingOpen(v); if (!v) setBillingClientId(null); }} onComplete={loadData} rounding={rounding} preselectedClientId={billingClientId} />
       <PaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} />
       <UnassignedPanel
         open={unassignedOpen}

@@ -18,8 +18,10 @@ interface ClientBillData {
   id: string;
   name: string;
   currency: string;
-  unbilledHours: number;
-  unbilledAmount: number;
+  totalHours: number;
+  billableHours: number;
+  unbillableHours: number;
+  billableAmount: number;
   entryCount: number;
 }
 
@@ -28,11 +30,13 @@ interface BillingDialogProps {
   onOpenChange: (open: boolean) => void;
   onComplete: () => void;
   rounding?: RoundingSettings;
+  /** When set, skip client selection and scope to this client */
+  preselectedClientId?: string | null;
 }
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
-const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUNDING }: BillingDialogProps) => {
+const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUNDING, preselectedClientId }: BillingDialogProps) => {
   const { user, profile } = useAuth();
   const [step, setStep] = useState(1);
   const [clientsData, setClientsData] = useState<ClientBillData[]>([]);
@@ -43,7 +47,7 @@ const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUN
 
   useEffect(() => {
     if (!open || !user) return;
-    setStep(1); setSelectedClients(new Set());
+    setSelectedClients(new Set());
     setDateFrom(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
     setDateTo(new Date());
 
@@ -54,7 +58,7 @@ const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUN
         .select("client_id, duration_minutes, billable_value, rate_amount, rate_unit, billable")
         .eq("user_id", user.id).eq("billing_status", "unbilled").not("client_id", "is", null).is("deleted_at", null);
 
-      // Group entries by client and compute scope-aware totals
+      // Group entries by client
       const grouped: Record<string, typeof entries> = {};
       entries?.forEach((e) => {
         if (!e.client_id) return;
@@ -62,14 +66,36 @@ const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUN
         grouped[e.client_id]!.push(e);
       });
 
-      setClientsData((clients ?? []).filter((c) => grouped[c.id]).map((c) => {
+      const data = (clients ?? []).filter((c) => grouped[c.id]).map((c) => {
         const clientEntries = grouped[c.id]!;
-        const { totalMinutes, totalValue } = aggregateWithRounding(clientEntries, rounding);
+        const billableEntries = clientEntries.filter((e) => e.billable);
+        const unbillableEntries = clientEntries.filter((e) => !e.billable);
+
+        // Total time = all entries
+        const { totalMinutes: totalMins } = aggregateWithRounding(clientEntries, rounding);
+        // Billable amount = only billable entries
+        const { totalMinutes: billableMins, totalValue: billableVal } = aggregateWithRounding(billableEntries, rounding);
+        const { totalMinutes: unbillableMins } = aggregateWithRounding(unbillableEntries, rounding);
+
         return {
           id: c.id, name: c.name, currency: c.currency ?? "EUR",
-          unbilledHours: totalMinutes / 60, unbilledAmount: totalValue, entryCount: clientEntries.length,
+          totalHours: totalMins / 60,
+          billableHours: billableMins / 60,
+          unbillableHours: unbillableMins / 60,
+          billableAmount: billableVal,
+          entryCount: billableEntries.length,
         };
-      }));
+      });
+
+      setClientsData(data);
+
+      // If preselected, auto-select and skip to step 2
+      if (preselectedClientId && data.some((c) => c.id === preselectedClientId)) {
+        setSelectedClients(new Set([preselectedClientId]));
+        setStep(2);
+      } else {
+        setStep(1);
+      }
     })();
   }, [open, user]);
 
@@ -82,8 +108,8 @@ const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUN
   };
 
   const selected = clientsData.filter((c) => selectedClients.has(c.id));
-  const totalAmount = selected.reduce((s, c) => s + c.unbilledAmount, 0);
-  const totalHours = selected.reduce((s, c) => s + c.unbilledHours, 0);
+  const totalAmount = selected.reduce((s, c) => s + c.billableAmount, 0);
+  const totalBillableHours = selected.reduce((s, c) => s + c.billableHours, 0);
   const totalEntries = selected.reduce((s, c) => s + c.entryCount, 0);
   const sym = selected.length > 0 ? CURRENCY_SYMBOLS[selected[0].currency] ?? "€" : "€";
 
@@ -95,17 +121,18 @@ const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUN
       const toStr = format(dateTo, "yyyy-MM-dd");
 
       for (const client of selected) {
-        // Get entries
+        // Get only BILLABLE unbilled entries
         const { data: entries } = await supabase.from("time_entries")
           .select("id, entry_date, duration_minutes, billable_value, notes, rate_amount, rate_unit, billable")
           .eq("user_id", user.id).eq("client_id", client.id)
           .eq("billing_status", "unbilled")
+          .eq("billable", true)
           .is("deleted_at", null)
           .gte("entry_date", fromStr).lte("entry_date", toStr);
 
         if (!entries || entries.length === 0) continue;
 
-        // Scope-aware totals
+        // Scope-aware totals (all entries here are billable)
         const { totalMinutes: totalMins, totalValue: total } = aggregateWithRounding(entries, rounding);
 
         // Create invoice record
@@ -156,14 +183,16 @@ const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUN
     setGenerating(false);
   };
 
+  const isPreselected = !!preselectedClientId;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[420px] rounded-2xl max-h-[85vh] overflow-y-auto p-0">
         <DialogHeader className="px-6 pt-6 pb-0">
-          <DialogTitle>Bill Clients</DialogTitle>
+          <DialogTitle>{isPreselected && selected.length === 1 ? `Bill ${selected[0].name}` : "Bill Clients"}</DialogTitle>
         </DialogHeader>
 
-        {step === 1 && (
+        {step === 1 && !isPreselected && (
           <div className="px-6 pb-6 pt-4 space-y-3">
             <p className="text-sm text-muted-foreground">Select clients to bill</p>
             {clientsData.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">No unbilled entries.</p>}
@@ -172,7 +201,10 @@ const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUN
                 <Checkbox checked={selectedClients.has(c.id)} onCheckedChange={() => toggleClient(c.id)} />
                 <div className="flex-1">
                   <p className="text-sm font-medium">{c.name}</p>
-                  <p className="text-xs text-muted-foreground">{c.unbilledHours.toFixed(1)}h unbilled · {CURRENCY_SYMBOLS[c.currency] ?? "€"}{c.unbilledAmount.toFixed(2)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {c.billableHours.toFixed(1)}h billable · {CURRENCY_SYMBOLS[c.currency] ?? "€"}{c.billableAmount.toFixed(2)}
+                    {c.unbillableHours > 0.01 && ` · ${c.unbillableHours.toFixed(1)}h unbillable`}
+                  </p>
                 </div>
               </label>
             ))}
@@ -204,7 +236,9 @@ const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUN
               </Popover>
             </div>
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1 rounded-[28px] h-12 font-bold" onClick={() => setStep(1)}><ArrowLeft className="w-4 h-4 mr-1" /> Back</Button>
+              {!isPreselected && (
+                <Button variant="outline" className="flex-1 rounded-[28px] h-12 font-bold" onClick={() => setStep(1)}><ArrowLeft className="w-4 h-4 mr-1" /> Back</Button>
+              )}
               <Button className="flex-1 bg-primary text-primary-foreground rounded-[28px] h-12 font-bold" onClick={() => setStep(3)}>Review <ArrowRight className="w-4 h-4 ml-1" /></Button>
             </div>
           </div>
@@ -215,7 +249,7 @@ const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUN
             <div className="p-3 rounded-xl bg-muted/50 space-y-1">
               {selected.map((c) => <p key={c.id} className="text-sm font-medium">{c.name}</p>)}
               <p className="text-xs text-muted-foreground">Period: {format(dateFrom, "d MMM")} – {format(dateTo, "d MMM yyyy")}</p>
-              <p className="text-xs text-muted-foreground">Entries: {totalEntries} sessions · {totalHours.toFixed(1)}h</p>
+              <p className="text-xs text-muted-foreground">Billable entries: {totalEntries} sessions · {totalBillableHours.toFixed(1)}h</p>
               <p className="font-mono text-lg font-bold">{sym}{totalAmount.toFixed(2)}</p>
             </div>
             <div className="flex gap-3">

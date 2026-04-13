@@ -86,7 +86,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     if (user) {
       const { data } = await supabase
         .from("user_settings")
-        .select("timer_presets, pause_mode, timer_sound, theme, show_logged_today, round_duration, round_duration_to, round_amount, round_amount_to, week_start_day, time_format, default_billable, daily_hour_target, revenue_target, idle_reminder_minutes, default_report_range")
+        .select("timer_presets, pause_mode, timer_sound, theme, show_logged_today, round_duration, round_duration_to, round_amount, round_amount_to, round_scope, week_start_day, time_format, default_billable, daily_hour_target, revenue_target, idle_reminder_minutes, default_report_range")
         .eq("user_id", user.id)
         .single();
       if (data) {
@@ -100,6 +100,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
           round_duration_to: (data as any).round_duration_to ?? DEFAULTS.round_duration_to,
           round_amount: (data as any).round_amount ?? DEFAULTS.round_amount,
           round_amount_to: (data as any).round_amount_to ?? DEFAULTS.round_amount_to,
+          round_scope: (data as any).round_scope ?? DEFAULTS.round_scope,
           week_start_day: (data as any).week_start_day ?? DEFAULTS.week_start_day,
           time_format: (data as any).time_format ?? DEFAULTS.time_format,
           default_billable: (data as any).default_billable ?? DEFAULTS.default_billable,
@@ -136,6 +137,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
         round_duration_to: updated.round_duration_to,
         round_amount: updated.round_amount,
         round_amount_to: updated.round_amount_to,
+        round_scope: updated.round_scope,
         week_start_day: updated.week_start_day,
         time_format: updated.time_format,
         default_billable: updated.default_billable,

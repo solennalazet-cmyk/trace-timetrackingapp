@@ -379,13 +379,7 @@ const ClientsPage = () => {
                                 {rateDisplay}
                                 {ps ? ` · ${ps.hours.toFixed(1)}h` : ""}
                                 {ps && ps.value > 0 ? ` · ${sym(project.currency ?? client.currency)}${ps.value.toFixed(0)}` : ""}
-                                {ps ? ` · ${pct}%` : ""}
                               </p>
-                              {ps && (
-                                <div className="w-full h-1 rounded-full bg-muted mt-2 overflow-hidden">
-                                  <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
-                                </div>
-                              )}
                             </div>
                           );
                         })}

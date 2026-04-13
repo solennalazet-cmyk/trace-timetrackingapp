@@ -11,13 +11,21 @@ interface TimerState {
   totalPausedMs: number;
 }
 
+export interface StopResult {
+  durationMinutes: number;
+  breakMinutes: number;
+  startedAt: string | null;
+  success: boolean;
+  error?: string;
+}
+
 const LS_KEYS: Record<string, string> = {
   stopwatch: "trace_active_stopwatch",
   shift: "trace_active_shift",
 };
 
-// Module-level set to track recently-stopped modes across component remounts
-const recentlyStopped = new Set<string>();
+const RECENTLY_STOPPED_KEY = "trace_recently_stopped";
+const RECENTLY_STOPPED_TTL = 10_000; // 10 seconds
 
 function readLS(key: string): TimerState | null {
   try {
@@ -36,11 +44,37 @@ function clearLS(key: string) {
   localStorage.removeItem(key);
 }
 
+/** Persist a "recently stopped" marker for the given mode with a TTL */
+function markRecentlyStopped(mode: string) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(RECENTLY_STOPPED_KEY) || "{}");
+    existing[mode] = Date.now() + RECENTLY_STOPPED_TTL;
+    localStorage.setItem(RECENTLY_STOPPED_KEY, JSON.stringify(existing));
+    console.log(`[useTimer] markRecentlyStopped: ${mode}, expires in ${RECENTLY_STOPPED_TTL}ms`);
+  } catch {}
+}
+
+/** Check if a mode was recently stopped (survives reloads) */
+function isRecentlyStopped(mode: string): boolean {
+  try {
+    const existing = JSON.parse(localStorage.getItem(RECENTLY_STOPPED_KEY) || "{}");
+    const expiry = existing[mode];
+    if (expiry && Date.now() < expiry) {
+      return true;
+    }
+    // Clean up expired entries
+    if (expiry) {
+      delete existing[mode];
+      localStorage.setItem(RECENTLY_STOPPED_KEY, JSON.stringify(existing));
+    }
+  } catch {}
+  return false;
+}
+
 export function useTimer(mode: TimerMode) {
   const { user } = useAuth();
   const lsKey = LS_KEYS[mode] || LS_KEYS.stopwatch;
 
-  // Initialize from localStorage synchronously
   const initial = readLS(lsKey);
   const [timerState, setTimerState] = useState<TimerState>(
     initial ?? { startedAt: null, pausedAt: null, totalPausedMs: 0 }
@@ -48,6 +82,7 @@ export function useTimer(mode: TimerMode) {
   const [elapsedMs, setElapsedMs] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const elapsedRef = useRef(0);
+  const stoppingRef = useRef(false);
 
   const status: TimerStatus = !timerState.startedAt
     ? "idle"
@@ -55,12 +90,10 @@ export function useTimer(mode: TimerMode) {
     ? "paused"
     : "running";
 
-  // Keep ref in sync
   useEffect(() => {
     elapsedRef.current = elapsedMs;
   }, [elapsedMs]);
 
-  // Compute elapsed
   const computeElapsed = useCallback(() => {
     if (!timerState.startedAt) return 0;
     if (timerState.pausedAt) {
@@ -70,11 +103,7 @@ export function useTimer(mode: TimerMode) {
         timerState.totalPausedMs
       );
     }
-    return (
-      Date.now() -
-      new Date(timerState.startedAt).getTime() -
-      timerState.totalPausedMs
-    );
+    return Date.now() - new Date(timerState.startedAt).getTime() - timerState.totalPausedMs;
   }, [timerState]);
 
   // Tick
@@ -98,8 +127,17 @@ export function useTimer(mode: TimerMode) {
 
   // Sync with Supabase on load for authenticated users
   useEffect(() => {
-    if (!user || mode === "focus" || recentlyStopped.has(mode)) return;
+    if (!user || mode === "focus") return;
+    if (isRecentlyStopped(mode)) {
+      console.log(`[useTimer] sync skipped: ${mode} was recently stopped`);
+      return;
+    }
+    if (stoppingRef.current) {
+      console.log(`[useTimer] sync skipped: stop in progress for ${mode}`);
+      return;
+    }
     const syncFromSupabase = async () => {
+      console.log(`[useTimer] sync restore triggered for ${mode}`);
       const { data } = await supabase
         .from("active_sessions")
         .select("*")
@@ -108,12 +146,17 @@ export function useTimer(mode: TimerMode) {
       if (data) {
         const sessionType = mode === "shift" ? "shift" : "stopwatch";
         if (data.session_type === sessionType) {
+          // Double-check recentlyStopped after async call
+          if (isRecentlyStopped(mode) || stoppingRef.current) {
+            console.log(`[useTimer] sync aborted after fetch: ${mode} was recently stopped or stopping`);
+            return;
+          }
+          console.log(`[useTimer] active session restored from Supabase for ${mode}`);
           const supabaseState: TimerState = {
             startedAt: data.started_at,
             pausedAt: data.paused_at,
             totalPausedMs: data.total_paused_ms ?? 0,
           };
-          // Use earlier startedAt
           const lsState = readLS(lsKey);
           if (lsState?.startedAt) {
             const lsTime = new Date(lsState.startedAt).getTime();
@@ -134,29 +177,16 @@ export function useTimer(mode: TimerMode) {
 
   const start = useCallback(() => {
     const now = new Date().toISOString();
-    recentlyStopped.delete(mode);
-    const state: TimerState = {
-      startedAt: now,
-      pausedAt: null,
-      totalPausedMs: 0,
-    };
-    // Synchronous localStorage write FIRST
+    const state: TimerState = { startedAt: now, pausedAt: null, totalPausedMs: 0 };
     writeLS(lsKey, state);
     setTimerState(state);
 
-    // Supabase upsert for authenticated users
     if (user) {
       const sessionType = mode === "shift" ? "shift" : "stopwatch";
       supabase
         .from("active_sessions")
         .upsert(
-          {
-            user_id: user.id,
-            session_type: sessionType,
-            started_at: now,
-            paused_at: null,
-            total_paused_ms: 0,
-          },
+          { user_id: user.id, session_type: sessionType, started_at: now, paused_at: null, total_paused_ms: 0 },
           { onConflict: "user_id" }
         )
         .then();
@@ -170,24 +200,15 @@ export function useTimer(mode: TimerMode) {
     setTimerState(updated);
 
     if (user) {
-      supabase
-        .from("active_sessions")
-        .update({ paused_at: now })
-        .eq("user_id", user.id)
-        .then();
+      supabase.from("active_sessions").update({ paused_at: now }).eq("user_id", user.id).then();
     }
   }, [timerState, lsKey, user]);
 
   const resume = useCallback(() => {
     if (!timerState.pausedAt) return;
-    const pauseDuration =
-      Date.now() - new Date(timerState.pausedAt).getTime();
+    const pauseDuration = Date.now() - new Date(timerState.pausedAt).getTime();
     const newTotal = timerState.totalPausedMs + pauseDuration;
-    const updated: TimerState = {
-      ...timerState,
-      pausedAt: null,
-      totalPausedMs: newTotal,
-    };
+    const updated: TimerState = { ...timerState, pausedAt: null, totalPausedMs: newTotal };
     writeLS(lsKey, updated);
     setTimerState(updated);
 
@@ -200,30 +221,68 @@ export function useTimer(mode: TimerMode) {
     }
   }, [timerState, lsKey, user]);
 
-  const stop = useCallback(() => {
+  const stop = useCallback(async (): Promise<StopResult> => {
+    console.log(`[useTimer] stop() called for ${mode}`);
+    stoppingRef.current = true;
+
     const durationMinutes = Math.round(elapsedRef.current / 60000);
     const breakMinutes = Math.round(timerState.totalPausedMs / 60000);
     const startedAt = timerState.startedAt;
 
-    recentlyStopped.add(mode);
+    // Mark recently stopped BEFORE clearing, survives reloads
+    markRecentlyStopped(mode);
+
+    // Clear local state immediately
     clearLS(lsKey);
     setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
     setElapsedMs(0);
 
+    // Await Supabase delete for authenticated users
     if (user) {
-      supabase
-        .from("active_sessions")
-        .delete()
-        .eq("user_id", user.id)
-        .then(({ error }) => {
-          if (error) {
-            // Retry once on failure to prevent ghost sessions
-            supabase.from("active_sessions").delete().eq("user_id", user.id).then();
+      console.log(`[useTimer] active_sessions delete started for ${mode}`);
+      try {
+        const { error } = await supabase
+          .from("active_sessions")
+          .delete()
+          .eq("user_id", user.id);
+
+        if (error) {
+          console.error(`[useTimer] active_sessions delete failed for ${mode}:`, error);
+          // Retry once
+          console.log(`[useTimer] retrying active_sessions delete for ${mode}`);
+          const { error: retryError } = await supabase
+            .from("active_sessions")
+            .delete()
+            .eq("user_id", user.id);
+
+          if (retryError) {
+            console.error(`[useTimer] active_sessions delete retry also failed for ${mode}:`, retryError);
+            stoppingRef.current = false;
+            return {
+              durationMinutes,
+              breakMinutes,
+              startedAt,
+              success: false,
+              error: "Failed to clean up active session. Please try again.",
+            };
           }
-        });
+        }
+        console.log(`[useTimer] active_sessions delete succeeded for ${mode}`);
+      } catch (err) {
+        console.error(`[useTimer] active_sessions delete threw for ${mode}:`, err);
+        stoppingRef.current = false;
+        return {
+          durationMinutes,
+          breakMinutes,
+          startedAt,
+          success: false,
+          error: "Network error cleaning up session. Please try again.",
+        };
+      }
     }
 
-    return { durationMinutes, breakMinutes, startedAt };
+    stoppingRef.current = false;
+    return { durationMinutes, breakMinutes, startedAt, success: true };
   }, [timerState, lsKey, user, mode]);
 
   return {

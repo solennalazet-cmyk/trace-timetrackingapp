@@ -217,6 +217,7 @@ const StartPage = () => {
     data: { durationMinutes: number; breakMinutes: number; startedAt: string | null },
     entryType: string = "timer"
   ) => {
+    console.log(`[StartPage] handleSessionEnd called, entryType=${entryType}, duration=${data.durationMinutes}min`);
     if (data.durationMinutes <= 0) {
       data.durationMinutes = 1;
     }

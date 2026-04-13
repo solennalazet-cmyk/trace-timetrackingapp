@@ -211,6 +211,7 @@ const ReportsPage = () => {
             round_duration_to: parsed.round_duration_to ?? 15,
             round_amount: parsed.round_amount ?? "none",
             round_amount_to: parsed.round_amount_to ?? 0.01,
+            round_scope: parsed.round_scope ?? "session",
           });
         }
       } catch {}
@@ -219,7 +220,7 @@ const ReportsPage = () => {
     }
 
     supabase.from("user_settings")
-      .select("daily_hour_target, revenue_target, week_start_day, round_duration, round_duration_to, round_amount, round_amount_to, default_report_range")
+      .select("daily_hour_target, revenue_target, week_start_day, round_duration, round_duration_to, round_amount, round_amount_to, round_scope, default_report_range")
       .eq("user_id", user.id).single()
       .then(({ data }) => {
         if (data) {
@@ -231,6 +232,7 @@ const ReportsPage = () => {
             round_duration_to: (data as any).round_duration_to ?? 15,
             round_amount: (data as any).round_amount ?? "none",
             round_amount_to: (data as any).round_amount_to ?? 0.01,
+            round_scope: (data as any).round_scope ?? "session",
           });
         }
         setSettingsLoaded(true);

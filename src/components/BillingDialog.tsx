@@ -97,7 +97,7 @@ const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUN
       for (const client of selected) {
         // Get entries
         const { data: entries } = await supabase.from("time_entries")
-          .select("id, entry_date, duration_minutes, billable_value, notes, rate_amount, rate_unit")
+          .select("id, entry_date, duration_minutes, billable_value, notes, rate_amount, rate_unit, billable")
           .eq("user_id", user.id).eq("client_id", client.id)
           .eq("billing_status", "unbilled")
           .is("deleted_at", null)
@@ -105,8 +105,8 @@ const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUN
 
         if (!entries || entries.length === 0) continue;
 
-        const total = entries.reduce((s, e) => s + (e.billable_value || 0), 0);
-        const totalMins = entries.reduce((s, e) => s + (e.duration_minutes || 0), 0);
+        // Scope-aware totals
+        const { totalMinutes: totalMins, totalValue: total } = aggregateWithRounding(entries, rounding);
 
         // Create invoice record
         const { data: invoice } = await supabase.from("invoices").insert({
@@ -121,7 +121,7 @@ const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUN
           billing_status: "billed", invoice_id: invoice?.id,
         }).in("id", entryIds);
 
-        // Generate CSV-style content as downloadable text (simple PDF substitute)
+        // Generate invoice text with post-rounding values only
         const lines = [
           `INVOICE — ${client.name}`,
           `Period: ${format(dateFrom, "d MMM yyyy")} – ${format(dateTo, "d MMM yyyy")}`,
@@ -129,12 +129,14 @@ const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUN
           `Date | Duration | Rate | Amount | Notes`,
           `---------------------------------------------`,
           ...entries.map((e) => {
-            const h = Math.floor((e.duration_minutes || 0) / 60);
-            const m = (e.duration_minutes || 0) % 60;
-            return `${e.entry_date} | ${h}h${m}m | ${e.rate_amount ?? "-"}/${e.rate_unit ?? "-"} | ${sym}${(e.billable_value || 0).toFixed(2)} | ${e.notes ?? ""}`;
+            const { displayMinutes, displayValue } = entryDisplayValues(e, rounding);
+            const h = Math.floor(displayMinutes / 60);
+            const m = Math.round(displayMinutes % 60);
+            return `${e.entry_date} | ${h}h${m}m | ${e.rate_amount ?? "-"}/${e.rate_unit ?? "-"} | ${sym}${displayValue.toFixed(2)} | ${e.notes ?? ""}`;
           }),
           ``,
-          `Total: ${Math.floor(totalMins / 60)}h ${totalMins % 60}m — ${sym}${total.toFixed(2)}`,
+          `Total: ${Math.floor(totalMins / 60)}h ${Math.round(totalMins % 60)}m — ${sym}${total.toFixed(2)}`,
+          ...(hasActiveRounding(rounding) ? [`Rounding: ${describeRounding(rounding)}`] : []),
         ];
 
         const blob = new Blob([lines.join("\n")], { type: "text/plain" });

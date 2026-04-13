@@ -1061,7 +1061,7 @@ const ReportsPage = () => {
           setEditEntry(null);
           loadData();
         }} />
-      <BillingDialog open={billingOpen} onOpenChange={setBillingOpen} onComplete={loadData} />
+      <BillingDialog open={billingOpen} onOpenChange={setBillingOpen} onComplete={loadData} rounding={rounding} />
       <PaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} />
       <UnassignedPanel
         open={unassignedOpen}

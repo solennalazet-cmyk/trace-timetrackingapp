@@ -241,10 +241,10 @@ const ClientBillingSummary = ({
                         </span>
                       </div>
                       <div className="flex flex-col items-end gap-0.5">
-                        <span className="font-mono text-foreground">{formatHM(entry.duration_minutes)}</span>
-                        {entry.billable && entry.billable_value ? (
+                        <span className="font-mono text-foreground">{formatHM(entryDisplayValues(entry, rounding).displayMinutes)}</span>
+                        {entry.billable && entryDisplayValues(entry, rounding).displayValue > 0 ? (
                           <span className="font-mono text-muted-foreground">
-                            {sym}{entry.billable_value.toFixed(2)}
+                            {sym}{entryDisplayValues(entry, rounding).displayValue.toFixed(2)}
                             {entry.billing_status === "unbilled" && (
                               <span className="ml-1 text-foreground font-medium">unbilled</span>
                             )}

@@ -466,8 +466,27 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                       </SelectContent>
                     </Select>
                   )}
-                </div>
               </div>
+              {(settings.round_duration !== "none" || settings.round_amount !== "none") && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Apply rounding to</Label>
+                  <Select value={settings.round_scope} onValueChange={(v) => isPro ? persist({ ...settings, round_scope: v }) : setPaywallOpen(true)}>
+                    <SelectTrigger className="h-10 rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="session">Each session individually</SelectItem>
+                      <SelectItem value="total">Totals only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground leading-tight">
+                    {settings.round_scope === "session"
+                      ? "Each entry is rounded before summing. Standard for legal/consulting billing."
+                      : "Raw values are summed first, then the total is rounded. Fairer for project-based billing."}
+                  </p>
+                </div>
+              )}
+            </div>
             </div>
           </ProSection>
 

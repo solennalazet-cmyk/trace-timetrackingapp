@@ -372,10 +372,10 @@ const ReportsPage = () => {
 
       displayEntries.forEach((e) => {
         const pKey = e.project_id ?? "no-project";
-        projectMins[pKey] = (projectMins[pKey] || 0) + rd(e.duration_minutes);
+        projectMins[pKey] = (projectMins[pKey] || 0) + edMins(e);
         if (e.project_id && !seenProjects.has(e.project_id)) { seenProjects.add(e.project_id); projectCount++; }
         const tKey = e.task_id ?? "no-task";
-        taskMins[tKey] = (taskMins[tKey] || 0) + rd(e.duration_minutes);
+        taskMins[tKey] = (taskMins[tKey] || 0) + edMins(e);
       });
 
       if (projectCount <= 1) {
@@ -402,7 +402,7 @@ const ReportsPage = () => {
     const map: Record<string, number> = {};
     displayEntries.forEach((e) => {
       const key = e.client_id ?? "unassigned";
-      map[key] = (map[key] || 0) + rd(e.duration_minutes);
+      map[key] = (map[key] || 0) + edMins(e);
     });
     clientIds.forEach((id) => {
       if (map[id]) {
@@ -421,7 +421,7 @@ const ReportsPage = () => {
     const map: Record<string, number> = {};
     displayEntries.forEach((e) => {
       if (!e.client_id) return;
-      const val = rv(e);
+      const val = ed(e).displayValue;
       if (!val) return;
       map[e.client_id] = (map[e.client_id] || 0) + val;
     });
@@ -446,13 +446,13 @@ const ReportsPage = () => {
       const row: any = {
         date: day,
         label: new Date(day + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }),
-        _total: dayEntries.reduce((s, e) => s + rd(e.duration_minutes) / 60, 0),
+        _total: dayEntries.reduce((s, e) => s + edMins(e) / 60, 0),
       };
       chartClientIds.forEach((cid) => {
-        row[cid] = dayEntries.filter((e) => e.client_id === cid).reduce((s, e) => s + rd(e.duration_minutes) / 60, 0);
+        row[cid] = dayEntries.filter((e) => e.client_id === cid).reduce((s, e) => s + edMins(e) / 60, 0);
       });
       if (!clientFilter) {
-        const un = dayEntries.filter((e) => !e.client_id).reduce((s, e) => s + rd(e.duration_minutes) / 60, 0);
+        const un = dayEntries.filter((e) => !e.client_id).reduce((s, e) => s + edMins(e) / 60, 0);
         if (un > 0) row["unassigned"] = un;
       }
       return row;
@@ -805,8 +805,8 @@ const ReportsPage = () => {
             displayEntries.forEach((e) => {
               const t = e.entry_type ?? "stopwatch";
               if (!byType[t]) byType[t] = { mins: 0, value: 0, count: 0 };
-              byType[t].mins += rd(e.duration_minutes);
-              byType[t].value += rv(e);
+              byType[t].mins += edMins(e);
+              byType[t].value += ed(e).displayValue;
               byType[t].count += 1;
             });
 
@@ -854,7 +854,7 @@ const ReportsPage = () => {
                   <PeakHoursChart entries={displayEntries} />
                   {/* Boost mini-metric */}
                   {(() => {
-                    const boostMins = displayEntries.filter(e => e.entry_type === "boost").reduce((s, e) => s + rd(e.duration_minutes), 0);
+                    const boostMins = displayEntries.filter(e => e.entry_type === "boost").reduce((s, e) => s + edMins(e), 0);
                     if (boostMins === 0) return null;
                     const boostCount = displayEntries.filter(e => e.entry_type === "boost").length;
                     return (

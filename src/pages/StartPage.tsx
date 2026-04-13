@@ -245,6 +245,7 @@ const StartPage = () => {
 
     setEditingEntry(null);
     setPendingSession({ ...data, entryType });
+    console.log(`[StartPage] assignment modal opened for ${entryType}`);
     setAssignModalOpen(true);
   };
 
@@ -315,7 +316,21 @@ const StartPage = () => {
         await updateEntry(editingEntry.id, assignment);
         toast.success("Entry updated.");
       } else {
+        console.log(`[StartPage] time entry save started, type=${session.entryType}`);
+        // Verify no stale active session exists before saving
+        if (user) {
+          const { data: staleSession } = await supabase
+            .from("active_sessions")
+            .select("id")
+            .eq("user_id", user.id)
+            .maybeSingle();
+          if (staleSession) {
+            console.warn(`[StartPage] stale active_session found after stop! Cleaning up before save.`);
+            await supabase.from("active_sessions").delete().eq("user_id", user.id);
+          }
+        }
         await saveEntry(session, assignment);
+        console.log(`[StartPage] time entry save succeeded`);
         const label = session.entryType === "shift" ? "Shift saved." : "Entry saved.";
         toast.success(label);
       }

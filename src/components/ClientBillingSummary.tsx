@@ -184,16 +184,18 @@ const ClientBillingSummary = ({
               <div className="flex items-baseline gap-6">
                 <div>
                   <p className="text-lg font-bold font-mono text-foreground">{formatHM(c.totalMins)}</p>
-                  <p className="text-xs text-muted-foreground">Total</p>
+                  <p className="text-xs text-muted-foreground">Total worked</p>
                 </div>
                 <div>
-                  <p className="text-lg font-bold font-mono text-foreground">{sym}{c.billableValue.toFixed(0)}</p>
-                  <p className="text-xs text-muted-foreground">Billable</p>
+                  <p className="text-lg font-bold font-mono text-foreground">{formatHM(c.billableMins)}</p>
+                  <p className="text-xs text-muted-foreground">{sym}{c.billableValue.toFixed(0)} billable</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium font-mono text-muted-foreground">{formatHM(Math.round(avgPerDay))}</p>
-                  <p className="text-xs text-muted-foreground">Avg/day</p>
-                </div>
+                {c.totalMins - c.billableMins > 0 && (
+                  <div>
+                    <p className="text-sm font-medium font-mono text-muted-foreground">{formatHM(c.totalMins - c.billableMins)}</p>
+                    <p className="text-xs text-muted-foreground">Unbillable</p>
+                  </div>
+                )}
               </div>
             </button>
 

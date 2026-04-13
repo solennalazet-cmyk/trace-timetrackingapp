@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { toLocalDateKey, getClientColor, SUNRISE_PALETTE } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { type RoundingSettings, DEFAULT_ROUNDING, roundDuration, roundAmount, roundedBillableValue } from "@/lib/rounding";
+import { type RoundingSettings, DEFAULT_ROUNDING, roundDuration, roundAmount, roundedBillableValue, aggregateWithRounding, entryDisplayValues, hasActiveRounding } from "@/lib/rounding";
 import { getAnonymousEntries } from "@/lib/anonymous-store";
 import EntryDetailSheet, { type TimeEntry } from "@/components/EntryDetailSheet";
 import AssignmentModal, { type SessionData, type AssignmentResult, type ExistingEntry } from "@/components/AssignmentModal";
@@ -320,15 +320,21 @@ const ReportsPage = () => {
     return rangeEntries.filter((e) => e.client_id === clientFilter);
   }, [rangeEntries, clientFilter]);
 
-  // Helper: rounded duration/value per entry
-  const rd = (mins: number) => roundDuration(mins, rounding);
-  const rv = (e: TimeEntry) => roundedBillableValue(e.duration_minutes, e.rate_amount ?? null, e.rate_unit ?? null, e.billable ?? false, rounding);
+  // Helper: scope-aware display values per entry
+  const ed = (e: TimeEntry) => entryDisplayValues(e, rounding);
+  // For chart grouping: per-entry display minutes
+  const edMins = (e: TimeEntry) => ed(e).displayMinutes;
 
-  // Core metrics (with rounding applied)
-  const totalMins = displayEntries.reduce((s, e) => s + rd(e.duration_minutes), 0);
-  const billableMins = displayEntries.filter((e) => e.billable).reduce((s, e) => s + rd(e.duration_minutes), 0);
+  // Core metrics (scope-aware aggregation)
+  const { totalMinutes: totalMins, totalValue: billableValue } = useMemo(
+    () => aggregateWithRounding(displayEntries, rounding),
+    [displayEntries, rounding]
+  );
+  const { totalMinutes: billableMins } = useMemo(
+    () => aggregateWithRounding(displayEntries.filter((e) => e.billable), rounding),
+    [displayEntries, rounding]
+  );
   const nonBillableMins = totalMins - billableMins;
-  const billableValue = displayEntries.reduce((s, e) => s + rv(e), 0);
 
   // Client IDs
   const clientIds = useMemo(() => [...new Set(rangeEntries.map((e) => e.client_id).filter(Boolean))] as string[], [rangeEntries]);

@@ -51,22 +51,25 @@ const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUN
     (async () => {
       const { data: clients } = await supabase.from("clients").select("id, name, currency").eq("user_id", user.id);
       const { data: entries } = await supabase.from("time_entries")
-        .select("client_id, duration_minutes, billable_value")
+        .select("client_id, duration_minutes, billable_value, rate_amount, rate_unit, billable")
         .eq("user_id", user.id).eq("billing_status", "unbilled").not("client_id", "is", null).is("deleted_at", null);
 
-      const map: Record<string, { hours: number; amount: number; count: number }> = {};
+      // Group entries by client and compute scope-aware totals
+      const grouped: Record<string, typeof entries> = {};
       entries?.forEach((e) => {
         if (!e.client_id) return;
-        if (!map[e.client_id]) map[e.client_id] = { hours: 0, amount: 0, count: 0 };
-        map[e.client_id].hours += (e.duration_minutes || 0) / 60;
-        map[e.client_id].amount += (e.billable_value || 0);
-        map[e.client_id].count++;
+        if (!grouped[e.client_id]) grouped[e.client_id] = [];
+        grouped[e.client_id]!.push(e);
       });
 
-      setClientsData((clients ?? []).filter((c) => map[c.id]).map((c) => ({
-        id: c.id, name: c.name, currency: c.currency ?? "EUR",
-        unbilledHours: map[c.id].hours, unbilledAmount: map[c.id].amount, entryCount: map[c.id].count,
-      })));
+      setClientsData((clients ?? []).filter((c) => grouped[c.id]).map((c) => {
+        const clientEntries = grouped[c.id]!;
+        const { totalMinutes, totalValue } = aggregateWithRounding(clientEntries, rounding);
+        return {
+          id: c.id, name: c.name, currency: c.currency ?? "EUR",
+          unbilledHours: totalMinutes / 60, unbilledAmount: totalValue, entryCount: clientEntries.length,
+        };
+      }));
     })();
   }, [open, user]);
 

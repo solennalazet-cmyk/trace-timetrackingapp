@@ -4,13 +4,18 @@ import { DayPicker } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import { useWeekStart } from "@/contexts/WeekStartContext";
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
-function Calendar({ className, classNames, showOutsideDays = true, ...props }: CalendarProps) {
+function Calendar({ className, classNames, showOutsideDays = true, weekStartsOn, ...props }: CalendarProps & { weekStartsOn?: 0 | 1 | 2 | 3 | 4 | 5 | 6 }) {
+  const contextWeekStart = useWeekStart();
+  const effectiveWeekStart = weekStartsOn ?? contextWeekStart;
+
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
+      weekStartsOn={effectiveWeekStart}
       className={cn("p-3", className)}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",

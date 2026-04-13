@@ -2,6 +2,7 @@ import { useTimer, formatTimer } from "@/hooks/useTimer";
 import CircularTimer from "./CircularTimer";
 import { Button } from "@/components/ui/button";
 import { Pause, Play, Square } from "lucide-react";
+import { toast } from "sonner";
 
 const BTN = "rounded-[28px] h-14 text-[16px] font-bold";
 
@@ -12,8 +13,12 @@ interface StopwatchModeProps {
 const StopwatchMode = ({ onStop }: StopwatchModeProps) => {
   const { status, elapsedMs, totalPausedMs, start, pause, resume, stop } = useTimer("stopwatch");
 
-  const handleStop = () => {
-    const result = stop();
+  const handleStop = async () => {
+    const result = await stop();
+    if (!result.success) {
+      toast.error(result.error || "Failed to stop session. Please try again.");
+      return;
+    }
     onStop(result);
   };
 

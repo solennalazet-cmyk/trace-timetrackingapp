@@ -19,8 +19,12 @@ const ShiftMode = ({ onClockOut }: ShiftModeProps) => {
     toast.success("You're clocked in. Have a great work session!");
   };
 
-  const handleClockOut = () => {
-    const result = stop();
+  const handleClockOut = async () => {
+    const result = await stop();
+    if (!result.success) {
+      toast.error(result.error || "Failed to end shift. Please try again.");
+      return;
+    }
     onClockOut(result);
   };
 

@@ -27,11 +27,12 @@ interface BillingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onComplete: () => void;
+  rounding?: RoundingSettings;
 }
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
-const BillingDialog = ({ open, onOpenChange, onComplete }: BillingDialogProps) => {
+const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUNDING }: BillingDialogProps) => {
   const { user, profile } = useAuth();
   const [step, setStep] = useState(1);
   const [clientsData, setClientsData] = useState<ClientBillData[]>([]);

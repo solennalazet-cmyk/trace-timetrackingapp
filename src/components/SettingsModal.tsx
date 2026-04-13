@@ -29,6 +29,7 @@ interface Settings {
   round_duration_to: number;
   round_amount: string;
   round_amount_to: number;
+  round_scope: string;
   week_start_day: number;
   time_format: string;
   default_billable: boolean;
@@ -48,6 +49,7 @@ const DEFAULTS: Settings = {
   round_duration_to: 15,
   round_amount: "none",
   round_amount_to: 0.01,
+  round_scope: "session",
   week_start_day: 1,
   time_format: "24h",
   default_billable: true,
@@ -84,7 +86,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     if (user) {
       const { data } = await supabase
         .from("user_settings")
-        .select("timer_presets, pause_mode, timer_sound, theme, show_logged_today, round_duration, round_duration_to, round_amount, round_amount_to, week_start_day, time_format, default_billable, daily_hour_target, revenue_target, idle_reminder_minutes, default_report_range")
+        .select("timer_presets, pause_mode, timer_sound, theme, show_logged_today, round_duration, round_duration_to, round_amount, round_amount_to, round_scope, week_start_day, time_format, default_billable, daily_hour_target, revenue_target, idle_reminder_minutes, default_report_range")
         .eq("user_id", user.id)
         .single();
       if (data) {
@@ -98,6 +100,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
           round_duration_to: (data as any).round_duration_to ?? DEFAULTS.round_duration_to,
           round_amount: (data as any).round_amount ?? DEFAULTS.round_amount,
           round_amount_to: (data as any).round_amount_to ?? DEFAULTS.round_amount_to,
+          round_scope: (data as any).round_scope ?? DEFAULTS.round_scope,
           week_start_day: (data as any).week_start_day ?? DEFAULTS.week_start_day,
           time_format: (data as any).time_format ?? DEFAULTS.time_format,
           default_billable: (data as any).default_billable ?? DEFAULTS.default_billable,
@@ -134,6 +137,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
         round_duration_to: updated.round_duration_to,
         round_amount: updated.round_amount,
         round_amount_to: updated.round_amount_to,
+        round_scope: updated.round_scope,
         week_start_day: updated.week_start_day,
         time_format: updated.time_format,
         default_billable: updated.default_billable,
@@ -462,8 +466,27 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                       </SelectContent>
                     </Select>
                   )}
-                </div>
               </div>
+              {(settings.round_duration !== "none" || settings.round_amount !== "none") && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Apply rounding to</Label>
+                  <Select value={settings.round_scope} onValueChange={(v) => isPro ? persist({ ...settings, round_scope: v }) : setPaywallOpen(true)}>
+                    <SelectTrigger className="h-10 rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="session">Each session individually</SelectItem>
+                      <SelectItem value="total">Totals only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground leading-tight">
+                    {settings.round_scope === "session"
+                      ? "Each entry is rounded before summing. Standard for legal/consulting billing."
+                      : "Raw values are summed first, then the total is rounded. Fairer for project-based billing."}
+                  </p>
+                </div>
+              )}
+            </div>
             </div>
           </ProSection>
 

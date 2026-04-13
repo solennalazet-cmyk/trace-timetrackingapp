@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { toLocalDateKey, getClientColor, SUNRISE_PALETTE } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { type RoundingSettings, DEFAULT_ROUNDING, roundDuration, roundAmount, roundedBillableValue } from "@/lib/rounding";
+import { type RoundingSettings, DEFAULT_ROUNDING, roundDuration, roundAmount, roundedBillableValue, aggregateWithRounding, entryDisplayValues, hasActiveRounding } from "@/lib/rounding";
 import { getAnonymousEntries } from "@/lib/anonymous-store";
 import EntryDetailSheet, { type TimeEntry } from "@/components/EntryDetailSheet";
 import AssignmentModal, { type SessionData, type AssignmentResult, type ExistingEntry } from "@/components/AssignmentModal";
@@ -211,6 +211,7 @@ const ReportsPage = () => {
             round_duration_to: parsed.round_duration_to ?? 15,
             round_amount: parsed.round_amount ?? "none",
             round_amount_to: parsed.round_amount_to ?? 0.01,
+            round_scope: parsed.round_scope ?? "session",
           });
         }
       } catch {}
@@ -219,7 +220,7 @@ const ReportsPage = () => {
     }
 
     supabase.from("user_settings")
-      .select("daily_hour_target, revenue_target, week_start_day, round_duration, round_duration_to, round_amount, round_amount_to, default_report_range")
+      .select("daily_hour_target, revenue_target, week_start_day, round_duration, round_duration_to, round_amount, round_amount_to, round_scope, default_report_range")
       .eq("user_id", user.id).single()
       .then(({ data }) => {
         if (data) {
@@ -231,6 +232,7 @@ const ReportsPage = () => {
             round_duration_to: (data as any).round_duration_to ?? 15,
             round_amount: (data as any).round_amount ?? "none",
             round_amount_to: (data as any).round_amount_to ?? 0.01,
+            round_scope: (data as any).round_scope ?? "session",
           });
         }
         setSettingsLoaded(true);
@@ -318,15 +320,21 @@ const ReportsPage = () => {
     return rangeEntries.filter((e) => e.client_id === clientFilter);
   }, [rangeEntries, clientFilter]);
 
-  // Helper: rounded duration/value per entry
-  const rd = (mins: number) => roundDuration(mins, rounding);
-  const rv = (e: TimeEntry) => roundedBillableValue(e.duration_minutes, e.rate_amount ?? null, e.rate_unit ?? null, e.billable ?? false, rounding);
+  // Helper: scope-aware display values per entry
+  const ed = (e: TimeEntry) => entryDisplayValues(e, rounding);
+  // For chart grouping: per-entry display minutes
+  const edMins = (e: TimeEntry) => ed(e).displayMinutes;
 
-  // Core metrics (with rounding applied)
-  const totalMins = displayEntries.reduce((s, e) => s + rd(e.duration_minutes), 0);
-  const billableMins = displayEntries.filter((e) => e.billable).reduce((s, e) => s + rd(e.duration_minutes), 0);
+  // Core metrics (scope-aware aggregation)
+  const { totalMinutes: totalMins, totalValue: billableValue } = useMemo(
+    () => aggregateWithRounding(displayEntries, rounding),
+    [displayEntries, rounding]
+  );
+  const { totalMinutes: billableMins } = useMemo(
+    () => aggregateWithRounding(displayEntries.filter((e) => e.billable), rounding),
+    [displayEntries, rounding]
+  );
   const nonBillableMins = totalMins - billableMins;
-  const billableValue = displayEntries.reduce((s, e) => s + rv(e), 0);
 
   // Client IDs
   const clientIds = useMemo(() => [...new Set(rangeEntries.map((e) => e.client_id).filter(Boolean))] as string[], [rangeEntries]);
@@ -364,10 +372,10 @@ const ReportsPage = () => {
 
       displayEntries.forEach((e) => {
         const pKey = e.project_id ?? "no-project";
-        projectMins[pKey] = (projectMins[pKey] || 0) + rd(e.duration_minutes);
+        projectMins[pKey] = (projectMins[pKey] || 0) + edMins(e);
         if (e.project_id && !seenProjects.has(e.project_id)) { seenProjects.add(e.project_id); projectCount++; }
         const tKey = e.task_id ?? "no-task";
-        taskMins[tKey] = (taskMins[tKey] || 0) + rd(e.duration_minutes);
+        taskMins[tKey] = (taskMins[tKey] || 0) + edMins(e);
       });
 
       if (projectCount <= 1) {
@@ -394,7 +402,7 @@ const ReportsPage = () => {
     const map: Record<string, number> = {};
     displayEntries.forEach((e) => {
       const key = e.client_id ?? "unassigned";
-      map[key] = (map[key] || 0) + rd(e.duration_minutes);
+      map[key] = (map[key] || 0) + edMins(e);
     });
     clientIds.forEach((id) => {
       if (map[id]) {
@@ -413,7 +421,7 @@ const ReportsPage = () => {
     const map: Record<string, number> = {};
     displayEntries.forEach((e) => {
       if (!e.client_id) return;
-      const val = rv(e);
+      const val = ed(e).displayValue;
       if (!val) return;
       map[e.client_id] = (map[e.client_id] || 0) + val;
     });
@@ -438,13 +446,13 @@ const ReportsPage = () => {
       const row: any = {
         date: day,
         label: new Date(day + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }),
-        _total: dayEntries.reduce((s, e) => s + rd(e.duration_minutes) / 60, 0),
+        _total: dayEntries.reduce((s, e) => s + edMins(e) / 60, 0),
       };
       chartClientIds.forEach((cid) => {
-        row[cid] = dayEntries.filter((e) => e.client_id === cid).reduce((s, e) => s + rd(e.duration_minutes) / 60, 0);
+        row[cid] = dayEntries.filter((e) => e.client_id === cid).reduce((s, e) => s + edMins(e) / 60, 0);
       });
       if (!clientFilter) {
-        const un = dayEntries.filter((e) => !e.client_id).reduce((s, e) => s + rd(e.duration_minutes) / 60, 0);
+        const un = dayEntries.filter((e) => !e.client_id).reduce((s, e) => s + edMins(e) / 60, 0);
         if (un > 0) row["unassigned"] = un;
       }
       return row;
@@ -797,8 +805,8 @@ const ReportsPage = () => {
             displayEntries.forEach((e) => {
               const t = e.entry_type ?? "stopwatch";
               if (!byType[t]) byType[t] = { mins: 0, value: 0, count: 0 };
-              byType[t].mins += rd(e.duration_minutes);
-              byType[t].value += rv(e);
+              byType[t].mins += edMins(e);
+              byType[t].value += ed(e).displayValue;
               byType[t].count += 1;
             });
 
@@ -846,7 +854,7 @@ const ReportsPage = () => {
                   <PeakHoursChart entries={displayEntries} />
                   {/* Boost mini-metric */}
                   {(() => {
-                    const boostMins = displayEntries.filter(e => e.entry_type === "boost").reduce((s, e) => s + rd(e.duration_minutes), 0);
+                    const boostMins = displayEntries.filter(e => e.entry_type === "boost").reduce((s, e) => s + edMins(e), 0);
                     if (boostMins === 0) return null;
                     const boostCount = displayEntries.filter(e => e.entry_type === "boost").length;
                     return (
@@ -1053,7 +1061,7 @@ const ReportsPage = () => {
           setEditEntry(null);
           loadData();
         }} />
-      <BillingDialog open={billingOpen} onOpenChange={setBillingOpen} onComplete={loadData} />
+      <BillingDialog open={billingOpen} onOpenChange={setBillingOpen} onComplete={loadData} rounding={rounding} />
       <PaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} />
       <UnassignedPanel
         open={unassignedOpen}

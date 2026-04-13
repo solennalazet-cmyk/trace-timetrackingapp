@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { type RoundingSettings, DEFAULT_ROUNDING, aggregateWithRounding, entryDisplayValues, hasActiveRounding, describeRounding } from "@/lib/rounding";
 
 interface ClientBillData {
   id: string;
@@ -26,11 +27,12 @@ interface BillingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onComplete: () => void;
+  rounding?: RoundingSettings;
 }
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
-const BillingDialog = ({ open, onOpenChange, onComplete }: BillingDialogProps) => {
+const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUNDING }: BillingDialogProps) => {
   const { user, profile } = useAuth();
   const [step, setStep] = useState(1);
   const [clientsData, setClientsData] = useState<ClientBillData[]>([]);
@@ -49,22 +51,25 @@ const BillingDialog = ({ open, onOpenChange, onComplete }: BillingDialogProps) =
     (async () => {
       const { data: clients } = await supabase.from("clients").select("id, name, currency").eq("user_id", user.id);
       const { data: entries } = await supabase.from("time_entries")
-        .select("client_id, duration_minutes, billable_value")
+        .select("client_id, duration_minutes, billable_value, rate_amount, rate_unit, billable")
         .eq("user_id", user.id).eq("billing_status", "unbilled").not("client_id", "is", null).is("deleted_at", null);
 
-      const map: Record<string, { hours: number; amount: number; count: number }> = {};
+      // Group entries by client and compute scope-aware totals
+      const grouped: Record<string, typeof entries> = {};
       entries?.forEach((e) => {
         if (!e.client_id) return;
-        if (!map[e.client_id]) map[e.client_id] = { hours: 0, amount: 0, count: 0 };
-        map[e.client_id].hours += (e.duration_minutes || 0) / 60;
-        map[e.client_id].amount += (e.billable_value || 0);
-        map[e.client_id].count++;
+        if (!grouped[e.client_id]) grouped[e.client_id] = [];
+        grouped[e.client_id]!.push(e);
       });
 
-      setClientsData((clients ?? []).filter((c) => map[c.id]).map((c) => ({
-        id: c.id, name: c.name, currency: c.currency ?? "EUR",
-        unbilledHours: map[c.id].hours, unbilledAmount: map[c.id].amount, entryCount: map[c.id].count,
-      })));
+      setClientsData((clients ?? []).filter((c) => grouped[c.id]).map((c) => {
+        const clientEntries = grouped[c.id]!;
+        const { totalMinutes, totalValue } = aggregateWithRounding(clientEntries, rounding);
+        return {
+          id: c.id, name: c.name, currency: c.currency ?? "EUR",
+          unbilledHours: totalMinutes / 60, unbilledAmount: totalValue, entryCount: clientEntries.length,
+        };
+      }));
     })();
   }, [open, user]);
 
@@ -92,7 +97,7 @@ const BillingDialog = ({ open, onOpenChange, onComplete }: BillingDialogProps) =
       for (const client of selected) {
         // Get entries
         const { data: entries } = await supabase.from("time_entries")
-          .select("id, entry_date, duration_minutes, billable_value, notes, rate_amount, rate_unit")
+          .select("id, entry_date, duration_minutes, billable_value, notes, rate_amount, rate_unit, billable")
           .eq("user_id", user.id).eq("client_id", client.id)
           .eq("billing_status", "unbilled")
           .is("deleted_at", null)
@@ -100,8 +105,8 @@ const BillingDialog = ({ open, onOpenChange, onComplete }: BillingDialogProps) =
 
         if (!entries || entries.length === 0) continue;
 
-        const total = entries.reduce((s, e) => s + (e.billable_value || 0), 0);
-        const totalMins = entries.reduce((s, e) => s + (e.duration_minutes || 0), 0);
+        // Scope-aware totals
+        const { totalMinutes: totalMins, totalValue: total } = aggregateWithRounding(entries, rounding);
 
         // Create invoice record
         const { data: invoice } = await supabase.from("invoices").insert({
@@ -116,7 +121,7 @@ const BillingDialog = ({ open, onOpenChange, onComplete }: BillingDialogProps) =
           billing_status: "billed", invoice_id: invoice?.id,
         }).in("id", entryIds);
 
-        // Generate CSV-style content as downloadable text (simple PDF substitute)
+        // Generate invoice text with post-rounding values only
         const lines = [
           `INVOICE — ${client.name}`,
           `Period: ${format(dateFrom, "d MMM yyyy")} – ${format(dateTo, "d MMM yyyy")}`,
@@ -124,12 +129,14 @@ const BillingDialog = ({ open, onOpenChange, onComplete }: BillingDialogProps) =
           `Date | Duration | Rate | Amount | Notes`,
           `---------------------------------------------`,
           ...entries.map((e) => {
-            const h = Math.floor((e.duration_minutes || 0) / 60);
-            const m = (e.duration_minutes || 0) % 60;
-            return `${e.entry_date} | ${h}h${m}m | ${e.rate_amount ?? "-"}/${e.rate_unit ?? "-"} | ${sym}${(e.billable_value || 0).toFixed(2)} | ${e.notes ?? ""}`;
+            const { displayMinutes, displayValue } = entryDisplayValues(e, rounding);
+            const h = Math.floor(displayMinutes / 60);
+            const m = Math.round(displayMinutes % 60);
+            return `${e.entry_date} | ${h}h${m}m | ${e.rate_amount ?? "-"}/${e.rate_unit ?? "-"} | ${sym}${displayValue.toFixed(2)} | ${e.notes ?? ""}`;
           }),
           ``,
-          `Total: ${Math.floor(totalMins / 60)}h ${totalMins % 60}m — ${sym}${total.toFixed(2)}`,
+          `Total: ${Math.floor(totalMins / 60)}h ${Math.round(totalMins % 60)}m — ${sym}${total.toFixed(2)}`,
+          ...(hasActiveRounding(rounding) ? [`Rounding: ${describeRounding(rounding)}`] : []),
         ];
 
         const blob = new Blob([lines.join("\n")], { type: "text/plain" });

@@ -200,26 +200,18 @@ const ClientBillingSummary = ({
             {isExpanded && (
               <div className="border-t border-border">
                 {/* Actions row */}
-                <div className="flex items-center justify-between px-4 py-2.5 bg-muted/20">
-                  <button
-                    onClick={() => onFilterClient?.(activeClientFilter === c.id ? null : c.id)}
-                    className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {activeClientFilter === c.id ? "Clear filter" : "Filter charts"}
-                  </button>
-                  <div className="flex items-center gap-3">
-                    {c.outstanding > 0 && (
-                      <span className="text-[11px] text-muted-foreground">{sym}{c.outstanding.toFixed(0)} outstanding</span>
-                    )}
-                     {isPro && c.outstanding > 0 && (
-                      <button
-                        onClick={() => onBillClient(c.id)}
-                        className="text-[11px] font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-primary/15 text-foreground hover:bg-primary/25 transition-colors"
-                      >
-                        Prepare billing <ArrowRight className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
+                <div className="flex items-center justify-end px-4 py-2 bg-muted/20 gap-3">
+                  {c.outstanding > 0 && (
+                    <span className="text-[11px] text-muted-foreground">{sym}{c.outstanding.toFixed(0)} outstanding</span>
+                  )}
+                  {isPro && c.billableValue > 0 && (
+                    <button
+                      onClick={() => onBillClient(c.id)}
+                      className="text-[11px] font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-primary/15 text-foreground hover:bg-primary/25 transition-colors"
+                    >
+                      Prepare billing <ArrowRight className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
 
                 {/* Session list */}

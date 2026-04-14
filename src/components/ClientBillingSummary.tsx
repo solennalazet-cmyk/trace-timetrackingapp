@@ -180,16 +180,22 @@ const ClientBillingSummary = ({
                 }
               </div>
 
-              {/* Key metrics row */}
-              <div className="flex items-baseline gap-6">
+              {/* Key metrics */}
+              <div className="space-y-1.5">
+                {/* Row 1: Total worked */}
                 <div>
                   <p className="text-lg font-bold font-mono text-foreground">{formatHM(c.totalMins)}</p>
                   <p className="text-xs text-muted-foreground">Total worked</p>
                 </div>
-                <div>
-                  <p className="text-lg font-bold font-mono text-foreground">{formatHM(c.billableMins)}</p>
-                  <p className="text-xs text-muted-foreground">{sym}{c.billableValue.toFixed(0)} billable</p>
+                {/* Row 2: Billable + amount */}
+                <div className="flex items-baseline justify-between">
+                  <div>
+                    <p className="text-base font-semibold font-mono text-foreground">{formatHM(c.billableMins)}</p>
+                    <p className="text-xs text-muted-foreground">Billable</p>
+                  </div>
+                  <p className="text-base font-semibold font-mono text-foreground">{sym}{c.billableValue.toFixed(0)}</p>
                 </div>
+                {/* Row 3: Unbillable (only if > 0) */}
                 {c.totalMins - c.billableMins > 0 && (
                   <div>
                     <p className="text-sm font-medium font-mono text-muted-foreground">{formatHM(c.totalMins - c.billableMins)}</p>

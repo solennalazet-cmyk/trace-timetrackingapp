@@ -133,29 +133,29 @@
   }
 
   .theme-stormy.dark {
-    --background: 222 30% 9%;
-    --foreground: 220 18% 94%;
+    --background: 212 32% 8%;
+    --foreground: 210 14% 92%;
     --primary: 53 98% 77%;
-    --primary-foreground: 222 34% 14%;
+    --primary-foreground: 212 34% 12%;
     --primary-text: 53 98% 77%;
-    --secondary: 220 14% 56%;
-    --secondary-foreground: 220 18% 96%;
-    --accent: 223 18% 18%;
-    --accent-foreground: 220 18% 94%;
-    --muted: 222 14% 15%;
-    --muted-foreground: 220 10% 66%;
+    --secondary: 210 18% 54%;
+    --secondary-foreground: 210 14% 96%;
+    --accent: 212 22% 16%;
+    --accent-foreground: 210 14% 92%;
+    --muted: 212 18% 14%;
+    --muted-foreground: 210 12% 62%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 95%;
-    --border: 222 14% 22%;
-    --input: 222 14% 22%;
+    --border: 212 18% 20%;
+    --input: 212 18% 20%;
     --ring: 53 98% 77%;
 
-    --card: 222 18% 12%;
-    --card-foreground: 220 18% 94%;
-    --popover: 222 18% 12%;
-    --popover-foreground: 220 18% 94%;
-    --timer-display: 220 18% 94%;
-    --timer-ring: 222 14% 30%;
+    --card: 212 24% 11%;
+    --card-foreground: 210 14% 92%;
+    --popover: 212 24% 11%;
+    --popover-foreground: 210 14% 92%;
+    --timer-display: 210 14% 92%;
+    --timer-ring: 212 18% 28%;
   }
 }
 

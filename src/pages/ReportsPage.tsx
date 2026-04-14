@@ -263,6 +263,8 @@ const ReportsPage = () => {
   const [assignOpen, setAssignOpen] = useState(false);
   const [billingOpen, setBillingOpen] = useState(false);
   const [billingClientId, setBillingClientId] = useState<string | null>(null);
+  const [prepareBillingOpen, setPrepareBillingOpen] = useState(false);
+  const [prepareBillingClientId, setPrepareBillingClientId] = useState<string | null>(null);
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [unassignedOpen, setUnassignedOpen] = useState(false);
   const [clientFilter, setClientFilter] = useState("");

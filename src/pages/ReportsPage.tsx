@@ -17,6 +17,7 @@ import { getAnonymousEntries } from "@/lib/anonymous-store";
 import EntryDetailSheet, { type TimeEntry } from "@/components/EntryDetailSheet";
 import AssignmentModal, { type SessionData, type AssignmentResult, type ExistingEntry } from "@/components/AssignmentModal";
 import BillingDialog from "@/components/BillingDialog";
+import PrepareBillingSheet from "@/components/PrepareBillingSheet";
 import PaywallModal from "@/components/PaywallModal";
 import ClientBillingSummary from "@/components/ClientBillingSummary";
 import UnassignedPanel from "@/components/UnassignedPanel";

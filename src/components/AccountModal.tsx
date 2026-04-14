@@ -34,11 +34,13 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
   const [portalLoading, setPortalLoading] = useState(false);
   const [upgradeInterval, setUpgradeInterval] = useState<"monthly" | "yearly">("monthly");
 
-  // Business details editing
+  // Business / billing details editing
   const [editingBusiness, setEditingBusiness] = useState(false);
   const [bizName, setBizName] = useState("");
   const [bizAddress, setBizAddress] = useState("");
   const [bizTaxId, setBizTaxId] = useState("");
+  const [bizPhone, setBizPhone] = useState("");
+  const [bizPaymentLink, setBizPaymentLink] = useState("");
   const [bizShowOnExport, setBizShowOnExport] = useState(true);
 
   // Obfuscated support email — assembled at runtime to prevent scraping

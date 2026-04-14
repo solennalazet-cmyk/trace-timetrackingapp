@@ -214,12 +214,12 @@ const ClientBillingSummary = ({
                     {c.outstanding > 0 && (
                       <span className="text-[11px] text-muted-foreground">{sym}{c.outstanding.toFixed(0)} outstanding</span>
                     )}
-                    {isPro && c.outstanding > 0 && (
+                     {isPro && c.outstanding > 0 && (
                       <button
                         onClick={() => onBillClient(c.id)}
                         className="text-[11px] font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-primary/15 text-foreground hover:bg-primary/25 transition-colors"
                       >
-                        Bill client <ArrowRight className="w-3 h-3" />
+                        Prepare billing <ArrowRight className="w-3 h-3" />
                       </button>
                     )}
                   </div>

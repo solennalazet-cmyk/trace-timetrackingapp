@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
@@ -158,10 +157,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
   }, [user]);
 
   const persistOrPaywall = useCallback((updated: Settings) => {
-    if (!isPro) {
-      setPaywallOpen(true);
-      return;
-    }
+    if (!isPro) { setPaywallOpen(true); return; }
     persist(updated);
   }, [isPro, persist]);
 
@@ -179,10 +175,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
   const commitEdit = () => {
     if (editingPreset === null) return;
     const val = parseInt(editValue, 10);
-    if (isNaN(val) || val < 1 || val > 480) {
-      setEditingPreset(null);
-      return;
-    }
+    if (isNaN(val) || val < 1 || val > 480) { setEditingPreset(null); return; }
     const next = [...settings.timer_presets];
     next[editingPreset] = val;
     persist({ ...settings, timer_presets: next });
@@ -201,365 +194,352 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent position="centered" className="max-w-[420px] w-[calc(100vw-2rem)] rounded-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-0 box-border">
-        <DialogHeader className="px-5 pt-6 pb-0">
+        <DialogHeader className="px-5 pt-6 pb-2">
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
 
-        <div className="px-5 pb-4 space-y-1 min-w-0 overflow-x-hidden box-border">
+        <div className="px-5 pb-6 space-y-4 min-w-0 overflow-x-hidden box-border">
 
-          {/* ── 1. Targets (PRO) ── */}
-          <ProSection
-            title="Targets"
-            description="Set daily goals to track your progress in Reports."
-            isPro={isPro}
-          >
-            <div className="space-y-4">
-              <div>
-                <Label className="text-xs text-muted-foreground">Daily hour target</Label>
-                <div className="flex items-center gap-3 mt-1.5">
-                  <Input
-                    type="number"
-                    min={0}
-                    max={24}
-                    step={0.5}
-                    value={settings.daily_hour_target || ""}
-                    placeholder="0"
-                    onChange={(e) => {
-                      const v = parseFloat(e.target.value);
-                      persistOrPaywall({ ...settings, daily_hour_target: isNaN(v) ? 0 : Math.min(24, Math.max(0, v)) });
-                    }}
-                    className="w-20 h-10 rounded-xl text-center"
-                  />
-                  <span className="text-sm text-muted-foreground">hours / day</span>
-                </div>
+          {/* ── Card 1: Time & Calendar ── */}
+          <SettingsCard title="Time & Calendar">
+            <CardRow label="Week starts on">
+              <div className="flex flex-wrap gap-1.5">
+                {([
+                  { value: 1, label: "Mon" },
+                  { value: 2, label: "Tue" },
+                  { value: 3, label: "Wed" },
+                  { value: 4, label: "Thu" },
+                  { value: 5, label: "Fri" },
+                  { value: 6, label: "Sat" },
+                  { value: 0, label: "Sun" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => persist({ ...settings, week_start_day: opt.value })}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                      settings.week_start_day === opt.value
+                        ? "bg-primary/20 text-foreground ring-1 ring-primary/40"
+                        : "text-muted-foreground hover:bg-muted/40"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
               </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Revenue target</Label>
-                <div className="flex items-center gap-3 mt-1.5">
-                  <Input
-                    type="number"
-                    min={0}
-                    step={100}
-                    value={settings.revenue_target || ""}
-                    placeholder="0"
-                    onChange={(e) => {
-                      const v = parseFloat(e.target.value);
-                      persistOrPaywall({ ...settings, revenue_target: isNaN(v) ? 0 : Math.max(0, v) });
-                    }}
-                    className="w-24 h-10 rounded-xl text-center"
-                  />
-                  <span className="text-sm text-muted-foreground">€ / month</span>
-                </div>
+            </CardRow>
+            <CardDivider />
+            <CardRow label="Time format">
+              <div className="flex gap-2">
+                {([
+                  { value: "24h", label: "24h" },
+                  { value: "12h", label: "12h" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => persist({ ...settings, time_format: opt.value })}
+                    className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+                      settings.time_format === opt.value
+                        ? "bg-primary/20 text-foreground ring-1 ring-primary/40"
+                        : "text-muted-foreground hover:bg-muted/40"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
               </div>
+            </CardRow>
+            <CardDivider />
+            <CardRow label="Default report range">
+              <div className="flex gap-2">
+                {([
+                  { value: "weekly", label: "Weekly" },
+                  { value: "biweekly", label: "Biweekly" },
+                  { value: "monthly", label: "Monthly" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => persist({ ...settings, default_report_range: opt.value })}
+                    className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+                      settings.default_report_range === opt.value
+                        ? "bg-primary/20 text-foreground ring-1 ring-primary/40"
+                        : "text-muted-foreground hover:bg-muted/40"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </CardRow>
+          </SettingsCard>
+
+          {/* ── Card 2: Tracking Behavior ── */}
+          <SettingsCard title="Tracking Behavior">
+            <CardRow label="Break tracking" description="How paused time is handled in sessions.">
+              <RadioGroup
+                value={settings.pause_mode}
+                onValueChange={(v) => persist({ ...settings, pause_mode: v })}
+                className="space-y-2"
+              >
+                <label className="flex items-start gap-3 p-2.5 rounded-lg border border-border cursor-pointer hover:bg-muted/30 transition-colors">
+                  <RadioGroupItem value="deduct" className="mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium">Deduct breaks</p>
+                    <p className="text-[11px] text-muted-foreground">Only working time is saved.</p>
+                  </div>
+                </label>
+                <label className="flex items-start gap-3 p-2.5 rounded-lg border border-border cursor-pointer hover:bg-muted/30 transition-colors">
+                  <RadioGroupItem value="track" className="mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium">Track breaks separately</p>
+                    <p className="text-[11px] text-muted-foreground">Break patterns appear in Reports.</p>
+                  </div>
+                </label>
+              </RadioGroup>
+            </CardRow>
+            <CardDivider />
+            <div className="flex items-center justify-between gap-4 py-1">
+              <div>
+                <p className="text-xs font-medium">Show activity on Start page</p>
+                <p className="text-[11px] text-muted-foreground">Display today's entries below the timer.</p>
+              </div>
+              <Switch
+                checked={settings.show_logged_today}
+                onCheckedChange={(v) => persist({ ...settings, show_logged_today: v })}
+              />
             </div>
-          </ProSection>
-
-          <SettingsDivider />
-
-          {/* ── 2. Week starts on ── */}
-          <SettingsSection
-            title="Week starts on"
-            description="Affects reports and date range calculations."
-          >
-            <div className="flex flex-wrap gap-2">
-              {([
-                { value: 1, label: "Mon" },
-                { value: 2, label: "Tue" },
-                { value: 3, label: "Wed" },
-                { value: 4, label: "Thu" },
-                { value: 5, label: "Fri" },
-                { value: 6, label: "Sat" },
-                { value: 0, label: "Sun" },
-              ] as const).map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => persist({ ...settings, week_start_day: opt.value })}
-                  className={`px-3 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                    settings.week_start_day === opt.value
-                      ? "border-primary bg-primary/20 text-foreground"
-                      : "border-border text-muted-foreground hover:bg-muted/30"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+            <CardDivider />
+            <div className="flex items-center justify-between gap-4 py-1">
+              <div>
+                <p className="text-xs font-medium">New entries are billable</p>
+                <p className="text-[11px] text-muted-foreground">Default billing status for new entries.</p>
+              </div>
+              <Switch
+                checked={settings.default_billable}
+                onCheckedChange={(v) => persist({ ...settings, default_billable: v })}
+              />
             </div>
-          </SettingsSection>
+          </SettingsCard>
 
-          <SettingsDivider />
+          {/* ── Card 3: Appearance ── */}
+          <SettingsCard title="Appearance">
+            <CardRow label="Mode">
+              <div className="flex gap-2">
+                {(["light", "dark"] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => persist({ ...settings, theme: t })}
+                    className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+                      settings.theme === t
+                        ? "bg-primary/20 text-foreground ring-1 ring-primary/40"
+                        : "text-muted-foreground hover:bg-muted/40"
+                    }`}
+                  >
+                    {t === "light" ? "Light" : "Dark"}
+                  </button>
+                ))}
+              </div>
+            </CardRow>
+            <CardDivider />
+            <CardRow label="Color theme">
+              <div className="flex gap-2">
+                {([
+                  { value: "sunrise" as ColorTheme, label: "Sunrise", preview: "linear-gradient(135deg, hsl(330, 81%, 60%), hsl(43, 96%, 56%))" },
+                  { value: "stormy" as ColorTheme, label: "Stormy Skies", preview: "linear-gradient(135deg, hsl(220, 26%, 34%), hsl(212, 30%, 78%))" },
+                ]).map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => {
+                      setColorTheme(opt.value);
+                      applyColorTheme(opt.value);
+                      window.dispatchEvent(new Event("trace-settings-changed"));
+                    }}
+                    className={`flex-1 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-2 transition-all duration-200 ${
+                      colorTheme === opt.value
+                        ? "bg-primary/20 text-foreground ring-1 ring-primary/40"
+                        : "text-muted-foreground hover:bg-muted/40"
+                    }`}
+                  >
+                    <span className="w-3.5 h-3.5 rounded-full shrink-0" style={{ background: opt.preview }} />
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </CardRow>
+          </SettingsCard>
 
-          {/* ── 3. Show activity on Start page ── */}
-          <div className="py-4 flex items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold">Show activity on Start page</p>
-              <p className="text-xs text-muted-foreground">Display today's entries and unassigned work below the timer.</p>
-            </div>
-            <Switch
-              checked={settings.show_logged_today}
-              onCheckedChange={(v) => persist({ ...settings, show_logged_today: v })}
-            />
-          </div>
+          {/* ── Card 4: Targets (PRO) ── */}
+          <ProCard title="Targets" description="Set daily goals to track progress in Reports." isPro={isPro}>
+            <CardRow label="Daily hour target">
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={0} max={24} step={0.5}
+                  value={settings.daily_hour_target || ""}
+                  placeholder="0"
+                  onChange={(e) => {
+                    const v = parseFloat(e.target.value);
+                    persistOrPaywall({ ...settings, daily_hour_target: isNaN(v) ? 0 : Math.min(24, Math.max(0, v)) });
+                  }}
+                  className="w-16 h-8 rounded-lg text-center text-xs"
+                />
+                <span className="text-[11px] text-muted-foreground">hours / day</span>
+              </div>
+            </CardRow>
+            <CardDivider />
+            <CardRow label="Revenue target">
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={0} step={100}
+                  value={settings.revenue_target || ""}
+                  placeholder="0"
+                  onChange={(e) => {
+                    const v = parseFloat(e.target.value);
+                    persistOrPaywall({ ...settings, revenue_target: isNaN(v) ? 0 : Math.max(0, v) });
+                  }}
+                  className="w-20 h-8 rounded-lg text-center text-xs"
+                />
+                <span className="text-[11px] text-muted-foreground">€ / month</span>
+              </div>
+            </CardRow>
+          </ProCard>
 
-          <SettingsDivider />
-
-          {/* ── 4. Default report range ── */}
-          <SettingsSection
-            title="Default report range"
-            description="Initial date range when opening Reports."
-          >
-            <div className="flex flex-wrap gap-2">
-              {([
-                { value: "weekly", label: "Weekly" },
-                { value: "biweekly", label: "Biweekly" },
-                { value: "monthly", label: "Monthly" },
-              ] as const).map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => persist({ ...settings, default_report_range: opt.value })}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                    settings.default_report_range === opt.value
-                      ? "border-primary bg-primary/20 text-foreground"
-                      : "border-border text-muted-foreground hover:bg-muted/30"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </SettingsSection>
-
-          <SettingsDivider />
-
-          {/* ── 5. Time format ── */}
-          <SettingsSection
-            title="Time format"
-            description="How times are displayed throughout the app."
-          >
-            <div className="flex gap-2">
-              {([{ value: "24h", label: "24h", example: "14:30" }, { value: "12h", label: "12h", example: "2:30 PM" }] as const).map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => persist({ ...settings, time_format: opt.value })}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                    settings.time_format === opt.value
-                      ? "border-primary bg-primary/20 text-foreground"
-                      : "border-border text-muted-foreground hover:bg-muted/30"
-                  }`}
-                >
-                  {opt.label} <span className="text-xs text-muted-foreground ml-1">({opt.example})</span>
-                </button>
-              ))}
-            </div>
-          </SettingsSection>
-
-          <SettingsDivider />
-
-          {/* ── 6. Break Tracking ── */}
-          <SettingsSection
-            title="Break Tracking"
-            description="How paused time is handled in sessions."
-          >
-            <RadioGroup
-              value={settings.pause_mode}
-              onValueChange={(v) => persist({ ...settings, pause_mode: v })}
-              className="space-y-2"
-            >
-              <label className="flex items-start gap-3 p-3 rounded-xl border border-border cursor-pointer hover:bg-muted/30 transition-colors">
-                <RadioGroupItem value="deduct" className="mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium">Deduct breaks</p>
-                  <p className="text-xs text-muted-foreground">Paused time is subtracted. Only working time is saved.</p>
-                </div>
-              </label>
-              <label className="flex items-start gap-3 p-3 rounded-xl border border-border cursor-pointer hover:bg-muted/30 transition-colors">
-                <RadioGroupItem value="track" className="mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium">Track breaks separately</p>
-                  <p className="text-xs text-muted-foreground">Break patterns appear in Reports.</p>
-                </div>
-              </label>
-            </RadioGroup>
-          </SettingsSection>
-
-          <SettingsDivider />
-
-          {/* ── 7. Default Billable ── */}
-          <div className="py-4 flex items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold">New entries are billable</p>
-              <p className="text-xs text-muted-foreground">Default billing status for new time entries.</p>
-            </div>
-            <Switch
-              checked={settings.default_billable}
-              onCheckedChange={(v) => persist({ ...settings, default_billable: v })}
-            />
-          </div>
-
-          <SettingsDivider />
-
-          {/* ── 8. Rounding (PRO) ── */}
-          <ProSection
-            title="Rounding"
-            description="Fine-tune how durations and amounts are displayed."
-            isPro={isPro}
-          >
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Duration rounding</Label>
-                <div className="flex gap-2">
-                  <Select value={settings.round_duration} onValueChange={(v) => isPro ? persist({ ...settings, round_duration: v }) : setPaywallOpen(true)}>
-                    <SelectTrigger className="flex-1 h-10 rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
+          {/* ── Card 5: Rounding (PRO) ── */}
+          <ProCard title="Rounding" description="Fine-tune how durations and amounts are displayed." isPro={isPro}>
+            <CardRow label="Duration rounding">
+              <div className="flex gap-2">
+                <Select value={settings.round_duration} onValueChange={(v) => isPro ? persist({ ...settings, round_duration: v }) : setPaywallOpen(true)}>
+                  <SelectTrigger className="flex-1 h-8 rounded-lg text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No rounding</SelectItem>
+                    <SelectItem value="up">Round up</SelectItem>
+                    <SelectItem value="down">Round down</SelectItem>
+                    <SelectItem value="nearest">Nearest</SelectItem>
+                  </SelectContent>
+                </Select>
+                {settings.round_duration !== "none" && (
+                  <Select value={String(settings.round_duration_to)} onValueChange={(v) => isPro ? persist({ ...settings, round_duration_to: parseInt(v) }) : setPaywallOpen(true)}>
+                    <SelectTrigger className="w-20 h-8 rounded-lg text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">No rounding</SelectItem>
-                      <SelectItem value="up">Round up</SelectItem>
-                      <SelectItem value="down">Round down</SelectItem>
-                      <SelectItem value="nearest">Nearest</SelectItem>
+                      <SelectItem value="1">1 min</SelectItem>
+                      <SelectItem value="5">5 min</SelectItem>
+                      <SelectItem value="6">6 min</SelectItem>
+                      <SelectItem value="10">10 min</SelectItem>
+                      <SelectItem value="15">15 min</SelectItem>
+                      <SelectItem value="30">30 min</SelectItem>
+                      <SelectItem value="60">1 hour</SelectItem>
                     </SelectContent>
                   </Select>
-                  {settings.round_duration !== "none" && (
-                    <Select value={String(settings.round_duration_to)} onValueChange={(v) => isPro ? persist({ ...settings, round_duration_to: parseInt(v) }) : setPaywallOpen(true)}>
-                      <SelectTrigger className="w-24 h-10 rounded-xl">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1 min</SelectItem>
-                        <SelectItem value="5">5 min</SelectItem>
-                        <SelectItem value="6">6 min</SelectItem>
-                        <SelectItem value="10">10 min</SelectItem>
-                        <SelectItem value="15">15 min</SelectItem>
-                        <SelectItem value="30">30 min</SelectItem>
-                        <SelectItem value="60">1 hour</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
+                )}
               </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Billable amount rounding</Label>
-                <div className="flex gap-2">
-                  <Select value={settings.round_amount} onValueChange={(v) => isPro ? persist({ ...settings, round_amount: v }) : setPaywallOpen(true)}>
-                    <SelectTrigger className="flex-1 h-10 rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
+            </CardRow>
+            <CardDivider />
+            <CardRow label="Amount rounding">
+              <div className="flex gap-2">
+                <Select value={settings.round_amount} onValueChange={(v) => isPro ? persist({ ...settings, round_amount: v }) : setPaywallOpen(true)}>
+                  <SelectTrigger className="flex-1 h-8 rounded-lg text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No rounding</SelectItem>
+                    <SelectItem value="up">Round up</SelectItem>
+                    <SelectItem value="down">Round down</SelectItem>
+                    <SelectItem value="nearest">Nearest</SelectItem>
+                  </SelectContent>
+                </Select>
+                {settings.round_amount !== "none" && (
+                  <Select value={String(settings.round_amount_to)} onValueChange={(v) => isPro ? persist({ ...settings, round_amount_to: parseFloat(v) }) : setPaywallOpen(true)}>
+                    <SelectTrigger className="w-20 h-8 rounded-lg text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">No rounding</SelectItem>
-                      <SelectItem value="up">Round up</SelectItem>
-                      <SelectItem value="down">Round down</SelectItem>
-                      <SelectItem value="nearest">Nearest</SelectItem>
+                      <SelectItem value="0.01">0.01</SelectItem>
+                      <SelectItem value="0.05">0.05</SelectItem>
+                      <SelectItem value="0.10">0.10</SelectItem>
+                      <SelectItem value="0.50">0.50</SelectItem>
+                      <SelectItem value="1">1.00</SelectItem>
+                      <SelectItem value="5">5.00</SelectItem>
+                      <SelectItem value="10">10.00</SelectItem>
                     </SelectContent>
                   </Select>
-                  {settings.round_amount !== "none" && (
-                    <Select value={String(settings.round_amount_to)} onValueChange={(v) => isPro ? persist({ ...settings, round_amount_to: parseFloat(v) }) : setPaywallOpen(true)}>
-                      <SelectTrigger className="w-24 h-10 rounded-xl">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0.01">0.01</SelectItem>
-                        <SelectItem value="0.05">0.05</SelectItem>
-                        <SelectItem value="0.10">0.10</SelectItem>
-                        <SelectItem value="0.50">0.50</SelectItem>
-                        <SelectItem value="1">1.00</SelectItem>
-                        <SelectItem value="5">5.00</SelectItem>
-                        <SelectItem value="10">10.00</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
+                )}
               </div>
-              {(settings.round_duration !== "none" || settings.round_amount !== "none") && (
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Apply rounding to</Label>
+            </CardRow>
+            {(settings.round_duration !== "none" || settings.round_amount !== "none") && (
+              <>
+                <CardDivider />
+                <CardRow label="Apply rounding to">
                   <Select value={settings.round_scope} onValueChange={(v) => isPro ? persist({ ...settings, round_scope: v }) : setPaywallOpen(true)}>
-                    <SelectTrigger className="h-10 rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger className="h-8 rounded-lg text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="session">Each session individually</SelectItem>
+                      <SelectItem value="session">Each session</SelectItem>
                       <SelectItem value="total">Totals only</SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-[11px] text-muted-foreground leading-tight">
+                  <p className="text-[11px] text-muted-foreground mt-1.5 leading-tight">
                     {settings.round_scope === "session"
-                      ? "Each entry is rounded before summing. Standard for legal/consulting billing."
-                      : "Raw values are summed first, then the total is rounded. Fairer for project-based billing."}
+                      ? "Each entry is rounded before summing."
+                      : "Raw values are summed first, then rounded."}
                   </p>
-                </div>
-              )}
-            </div>
-            </div>
-          </ProSection>
+                </CardRow>
+              </>
+            )}
+          </ProCard>
 
-          <SettingsDivider />
-
-          {/* ── 9. Appearance ── */}
-          <SettingsSection title="Appearance">
-            <div className="space-y-4">
-              <div>
-                <Label className="text-xs text-muted-foreground mb-2 block">Mode</Label>
-                <div className="flex gap-2">
-                  {(["light", "dark"] as const).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => persist({ ...settings, theme: t })}
-                      className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                        settings.theme === t
-                          ? "border-primary bg-primary/20 text-foreground"
-                          : "border-border text-muted-foreground hover:bg-muted/30"
-                      }`}
-                    >
-                      {t === "light" ? "Light" : "Dark"}
-                    </button>
-                  ))}
-                </div>
+          {/* ── Card 6: Timer ── */}
+          <SettingsCard title="Timer">
+            <CardRow label="Completion sound" description="Played when a Focus session ends.">
+              <div className="flex items-center gap-2">
+                <Select value={settings.timer_sound} onValueChange={(v) => persist({ ...settings, timer_sound: v })}>
+                  <SelectTrigger className="flex-1 h-8 rounded-lg text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="chime">Default chime</SelectItem>
+                    <SelectItem value="bell">Bell</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
+                  </SelectContent>
+                </Select>
+                {settings.timer_sound === "none"
+                  ? <VolumeX className="w-4 h-4 text-muted-foreground shrink-0" />
+                  : <Volume2 className="w-4 h-4 text-muted-foreground shrink-0" />
+                }
               </div>
-              <div>
-                <Label className="text-xs text-muted-foreground mb-2 block">Color theme</Label>
-                <div className="flex gap-2">
-                  {([
-                    { value: "sunrise" as ColorTheme, label: "Sunrise", preview: "linear-gradient(135deg, hsl(330, 81%, 60%), hsl(43, 96%, 56%))" },
-                    { value: "stormy" as ColorTheme, label: "Stormy Skies", preview: "linear-gradient(135deg, hsl(220, 26%, 34%), hsl(212, 30%, 78%))" },
-                  ]).map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => {
-                        setColorTheme(opt.value);
-                        applyColorTheme(opt.value);
-                        window.dispatchEvent(new Event("trace-settings-changed"));
-                      }}
-                      className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors flex items-center justify-center gap-2 ${
-                        colorTheme === opt.value
-                          ? "border-primary bg-primary/20 text-foreground"
-                          : "border-border text-muted-foreground hover:bg-muted/30"
-                      }`}
-                    >
-                      <span
-                        className="w-4 h-4 rounded-full shrink-0"
-                        style={{ background: opt.preview }}
+            </CardRow>
+            <CardDivider />
+            <CardRow label="Focus presets" description="Tap a value to edit (in minutes).">
+              <div className="flex flex-wrap gap-1.5">
+                {settings.timer_presets.map((mins, i) => (
+                  <div key={i} className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/15 text-foreground text-xs font-medium">
+                    {editingPreset === i ? (
+                      <Input
+                        className="w-12 h-5 text-[11px] p-0.5 border-none bg-transparent text-center"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={commitEdit}
+                        onKeyDown={(e) => e.key === "Enter" && commitEdit()}
+                        autoFocus
+                        placeholder="min"
                       />
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
+                    ) : (
+                      <button onClick={() => startEdit(i)} className="font-medium">{formatPreset(mins)}</button>
+                    )}
+                    {settings.timer_presets.length > 1 && (
+                      <button onClick={() => removePreset(i)} className="text-muted-foreground hover:text-destructive">
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  onClick={addPreset}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-dashed border-border text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Plus className="w-3 h-3" /> Add
+                </button>
               </div>
-            </div>
-          </SettingsSection>
-
-          <SettingsDivider />
-
-          {/* ── 10. Idle reminder ── */}
-          <SettingsSection
-            title="Idle reminder"
-            description="Remind you to stop a running session after a period of inactivity."
-          >
-            <div className="flex items-center gap-3">
+            </CardRow>
+            <CardDivider />
+            <CardRow label="Idle reminder" description="Remind to stop a running session.">
               <Select
                 value={String(settings.idle_reminder_minutes)}
                 onValueChange={(v) => persist({ ...settings, idle_reminder_minutes: parseInt(v) })}
               >
-                <SelectTrigger className="w-32 h-10 rounded-xl">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger className="w-28 h-8 rounded-lg text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="0">Disabled</SelectItem>
                   <SelectItem value="5">5 minutes</SelectItem>
@@ -569,105 +549,16 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                   <SelectItem value="60">1 hour</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-          </SettingsSection>
+            </CardRow>
+          </SettingsCard>
 
-          <SettingsDivider />
-
-          {/* ── 11. Timer Completion Sound ── */}
-          <SettingsSection
-            title="Timer Completion Sound"
-            description="Played when a Focus session ends."
-          >
-            <div className="flex items-center gap-2">
-              <Select value={settings.timer_sound} onValueChange={(v) => persist({ ...settings, timer_sound: v })}>
-                <SelectTrigger className="flex-1 h-10 rounded-xl">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="chime">Default chime</SelectItem>
-                  <SelectItem value="bell">Bell</SelectItem>
-                  <SelectItem value="none">None</SelectItem>
-                </SelectContent>
-              </Select>
-              {settings.timer_sound === "none" ? (
-                <VolumeX className="w-4 h-4 text-muted-foreground shrink-0" />
-              ) : (
-                <Volume2 className="w-4 h-4 text-muted-foreground shrink-0" />
-              )}
-            </div>
-          </SettingsSection>
-
-          <SettingsDivider />
-
-          {/* ── 12. Focus Timer Presets ── */}
-          <SettingsSection
-            title="Focus Timer Presets"
-            description="Durations available in Focus mode. Tap a value to edit (in minutes)."
-          >
-            <div className="flex flex-wrap gap-2">
-              {settings.timer_presets.map((mins, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/20 text-foreground text-sm font-medium"
-                >
-                  {editingPreset === i ? (
-                    <Input
-                      className="w-16 h-6 text-xs p-1 border-none bg-transparent text-center"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={commitEdit}
-                      onKeyDown={(e) => e.key === "Enter" && commitEdit()}
-                      autoFocus
-                      placeholder="min"
-                    />
-                  ) : (
-                    <button onClick={() => startEdit(i)} className="font-medium">
-                      {formatPreset(mins)}
-                    </button>
-                  )}
-                  {settings.timer_presets.length > 1 && (
-                    <button onClick={() => removePreset(i)} className="text-muted-foreground hover:text-destructive">
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                onClick={addPreset}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-full border border-dashed border-border text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Plus className="w-3 h-3" /> Add
-              </button>
-            </div>
-          </SettingsSection>
-
-          <SettingsDivider />
-
-          {/* ── 13. Integrations ── */}
-          <div className="py-4">
-            <p className="text-sm font-semibold">Integrations</p>
-            <p className="text-xs text-muted-foreground mt-1">
+          {/* ── Card 7: Integrations (placeholder) ── */}
+          <SettingsCard title="Integrations">
+            <p className="text-[11px] text-muted-foreground py-1">
               Google Calendar and more coming soon.
             </p>
-          </div>
-        </div>
+          </SettingsCard>
 
-        {/* ── Footer buttons ── */}
-        <div className="sticky bottom-0 flex gap-3 bg-background px-5 py-4 border-t border-border pb-[calc(env(safe-area-inset-bottom,0px)+16px)]">
-          <Button
-            variant="outline"
-            className="flex-1 h-12 rounded-[28px] font-bold"
-            onClick={() => persist(DEFAULTS)}
-          >
-            Reset
-          </Button>
-          <Button
-            className="flex-1 h-12 rounded-[28px] font-bold"
-            onClick={() => onOpenChange(false)}
-          >
-            Apply
-          </Button>
         </div>
       </DialogContent>
 
@@ -681,28 +572,25 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
   );
 };
 
-/* ── Reusable sub-components ── */
+/* ── Card primitives ── */
 
-function SettingsSection({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+function SettingsCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="py-4 space-y-3">
-      <div>
-        <p className="text-sm font-semibold">{title}</p>
-        {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
-      </div>
+    <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+      <p className="text-sm font-semibold text-foreground">{title}</p>
       {children}
     </div>
   );
 }
 
-function ProSection({ title, description, isPro, children }: { title: string; description?: string; isPro: boolean; children: React.ReactNode }) {
+function ProCard({ title, description, isPro, children }: { title: string; description?: string; isPro: boolean; children: React.ReactNode }) {
   return (
-    <div className="my-2 rounded-2xl bg-muted/40 p-4 space-y-3 relative">
+    <div className="rounded-2xl border border-border bg-card p-4 space-y-3 relative overflow-hidden">
       <div className="flex items-center gap-2">
-        <p className="text-sm font-semibold">{title}</p>
+        <p className="text-sm font-semibold text-foreground">{title}</p>
         <ProBadge />
       </div>
-      {description && <p className="text-xs text-muted-foreground">{description}</p>}
+      {description && <p className="text-[11px] text-muted-foreground">{description}</p>}
       <div className={isPro ? "" : "pointer-events-none select-none"}>
         <div className={isPro ? "" : "opacity-30 blur-[1px]"}>
           {children}
@@ -719,8 +607,20 @@ function ProSection({ title, description, isPro, children }: { title: string; de
   );
 }
 
-function SettingsDivider() {
-  return <div className="border-t border-border" />;
+function CardRow({ label, description, children }: { label: string; description?: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <div>
+        <Label className="text-xs font-medium">{label}</Label>
+        {description && <p className="text-[11px] text-muted-foreground mt-0.5">{description}</p>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function CardDivider() {
+  return <div className="border-t border-border/50" />;
 }
 
 export default SettingsModal;

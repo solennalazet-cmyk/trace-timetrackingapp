@@ -122,6 +122,7 @@ const FocusMode = ({ onComplete, autoStartMinutes }: FocusModeProps) => {
   }, [status, timerSound]);
 
   const svgRef = useRef<SVGSVGElement>(null);
+  const draggingRef = useRef(false);
 
   const formatCountdown = (ms: number) => {
     const totalSec = Math.ceil(ms / 1000);
@@ -130,21 +131,43 @@ const FocusMode = ({ onComplete, autoStartMinutes }: FocusModeProps) => {
     return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   };
 
-  const handleDrag = useCallback(
-    (e: React.PointerEvent<HTMLElement>) => {
-      if (status !== "idle" || !svgRef.current) return;
+  const computeMinutes = useCallback(
+    (clientX: number, clientY: number) => {
+      if (!svgRef.current) return;
       const rect = svgRef.current.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
-      const angle = Math.atan2(e.clientY - cy, e.clientX - cx) + Math.PI / 2;
+      const angle = Math.atan2(clientY - cy, clientX - cx) + Math.PI / 2;
       let normalized = angle < 0 ? angle + 2 * Math.PI : angle;
       if (normalized > 2 * Math.PI) normalized -= 2 * Math.PI;
       const fraction = normalized / (2 * Math.PI);
       const minutes = Math.max(1, Math.round(fraction * 120));
       setCustomSeconds(minutes * 60);
     },
-    [status, setCustomSeconds]
+    [setCustomSeconds]
   );
+
+  const onPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLElement>) => {
+      if (status !== "idle") return;
+      draggingRef.current = true;
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      computeMinutes(e.clientX, e.clientY);
+    },
+    [status, computeMinutes]
+  );
+
+  const onPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLElement>) => {
+      if (!draggingRef.current) return;
+      computeMinutes(e.clientX, e.clientY);
+    },
+    [computeMinutes]
+  );
+
+  const onPointerUp = useCallback(() => {
+    draggingRef.current = false;
+  }, []);
 
   const handleStop = () => {
     const result = stop();
@@ -161,9 +184,12 @@ const FocusMode = ({ onComplete, autoStartMinutes }: FocusModeProps) => {
 
   return (
     <div className="flex flex-col items-center gap-6">
-      <div onPointerMove={status === "idle" ? (e) => {
-        if (e.buttons === 1) handleDrag(e);
-      } : undefined}>
+      <div
+        onPointerDown={status === "idle" ? onPointerDown : undefined}
+        onPointerMove={status === "idle" ? onPointerMove : undefined}
+        onPointerUp={status === "idle" ? onPointerUp : undefined}
+        style={{ touchAction: status === "idle" ? "none" : undefined }}
+      >
         <CircularTimer
           progress={status === "idle" ? totalSeconds / (120 * 60) : (status === "running" || status === "paused") ? 1 - progress : 0}
           arcColor="hsl(53, 98%, 77%)"

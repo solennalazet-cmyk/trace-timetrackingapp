@@ -167,9 +167,10 @@ const ClientBillingSummary = ({
             {/* Card header — clickable to expand */}
             <button
               onClick={() => toggleExpand(c.id)}
-              className="w-full text-left p-4"
+              className="w-full text-left px-4 py-3"
             >
-              <div className="flex items-center justify-between mb-2">
+              {/* Row 1: Header */}
+              <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2.5">
                   <div className="w-3 h-3 rounded-full shrink-0" style={{ background: color }} />
                   <span className="text-sm font-semibold text-foreground">{c.name}</span>
@@ -180,55 +181,37 @@ const ClientBillingSummary = ({
                 }
               </div>
 
-              {/* Key metrics */}
-              <div className="space-y-1.5">
-                {/* Row 1: Total worked */}
-                <div>
-                  <p className="text-lg font-bold font-mono text-foreground">{formatHM(c.totalMins)}</p>
-                  <p className="text-xs text-muted-foreground">Total worked</p>
-                </div>
-                {/* Row 2: Billable + amount */}
-                <div className="flex items-baseline justify-between">
-                  <div>
-                    <p className="text-base font-semibold font-mono text-foreground">{formatHM(c.billableMins)}</p>
-                    <p className="text-xs text-muted-foreground">Billable</p>
-                  </div>
-                  <p className="text-base font-semibold font-mono text-foreground">{sym}{c.billableValue.toFixed(0)}</p>
-                </div>
-                {/* Row 3: Unbillable (only if > 0) */}
-                {c.totalMins - c.billableMins > 0 && (
-                  <div>
-                    <p className="text-sm font-medium font-mono text-muted-foreground">{formatHM(c.totalMins - c.billableMins)}</p>
-                    <p className="text-xs text-muted-foreground">Unbillable</p>
-                  </div>
-                )}
+              {/* Row 2: Primary metrics — time left, amount right */}
+              <div className="flex items-baseline justify-between">
+                <p className="text-base font-semibold font-mono text-foreground">{formatHM(c.totalMins)}</p>
+                <p className="text-base font-semibold font-mono text-foreground">{sym}{c.billableValue.toFixed(0)}</p>
               </div>
+
+              {/* Row 3: Billable context */}
+              <p className="text-xs text-muted-foreground mt-0.5">{formatHM(c.billableMins)} billable</p>
+
+              {/* Row 4: Unbillable (only if > 0) */}
+              {c.totalMins - c.billableMins > 0 && (
+                <p className="text-xs text-muted-foreground">{formatHM(c.totalMins - c.billableMins)} unbillable</p>
+              )}
             </button>
 
             {/* Expanded: sessions + billing */}
             {isExpanded && (
               <div className="border-t border-border">
                 {/* Actions row */}
-                <div className="flex items-center justify-between px-4 py-2.5 bg-muted/20">
-                  <button
-                    onClick={() => onFilterClient?.(activeClientFilter === c.id ? null : c.id)}
-                    className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {activeClientFilter === c.id ? "Clear filter" : "Filter charts"}
-                  </button>
-                  <div className="flex items-center gap-3">
-                    {c.outstanding > 0 && (
-                      <span className="text-[11px] text-muted-foreground">{sym}{c.outstanding.toFixed(0)} outstanding</span>
-                    )}
-                     {isPro && c.outstanding > 0 && (
-                      <button
-                        onClick={() => onBillClient(c.id)}
-                        className="text-[11px] font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-primary/15 text-foreground hover:bg-primary/25 transition-colors"
-                      >
-                        Prepare billing <ArrowRight className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
+                <div className="flex items-center justify-end px-4 py-2 bg-muted/20 gap-3">
+                  {c.outstanding > 0 && (
+                    <span className="text-[11px] text-muted-foreground">{sym}{c.outstanding.toFixed(0)} outstanding</span>
+                  )}
+                  {isPro && c.billableValue > 0 && (
+                    <button
+                      onClick={() => onBillClient(c.id)}
+                      className="text-[11px] font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-primary/15 text-foreground hover:bg-primary/25 transition-colors"
+                    >
+                      Prepare billing <ArrowRight className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
 
                 {/* Session list */}

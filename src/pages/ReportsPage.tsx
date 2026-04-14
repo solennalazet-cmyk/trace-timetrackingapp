@@ -751,8 +751,8 @@ const ReportsPage = () => {
                 rangeEnd={rangeEnd}
                 rangeLabel={`${dateFrom.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} — ${dateTo.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`}
                 onBillClient={(clientId) => {
-                  setBillingClientId(clientId);
-                  setBillingOpen(true);
+                  setPrepareBillingClientId(clientId);
+                  setPrepareBillingOpen(true);
                 }}
                 onOpenUnassigned={() => setUnassignedOpen(true)}
                 onEditEntry={handleEdit}
@@ -1065,6 +1065,19 @@ const ReportsPage = () => {
           loadData();
         }} />
       <BillingDialog open={billingOpen} onOpenChange={(v) => { setBillingOpen(v); if (!v) setBillingClientId(null); }} onComplete={loadData} rounding={rounding} preselectedClientId={billingClientId} />
+      {prepareBillingClientId && (
+        <PrepareBillingSheet
+          open={prepareBillingOpen}
+          onOpenChange={(v) => { setPrepareBillingOpen(v); if (!v) setPrepareBillingClientId(null); }}
+          clientId={prepareBillingClientId}
+          clientName={clients[prepareBillingClientId] ?? "Unknown"}
+          clientCurrency={displayEntries.find(e => e.client_id === prepareBillingClientId)?.rate_currency ?? "EUR"}
+          entries={displayEntries.filter(e => e.client_id === prepareBillingClientId)}
+          rounding={rounding}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+        />
+      )}
       <PaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} />
       <UnassignedPanel
         open={unassignedOpen}

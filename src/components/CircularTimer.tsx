@@ -76,7 +76,7 @@ const CircularTimer = ({
         )}
         {/* Drag handle */}
         {showHandle && progress > 0 && !filled && (() => {
-          const angle = progress * 2 * Math.PI - Math.PI / 2;
+          const angle = progress * 2 * Math.PI;
           const hx = SIZE / 2 + RADIUS * Math.cos(angle);
           const hy = SIZE / 2 + RADIUS * Math.sin(angle);
           return (

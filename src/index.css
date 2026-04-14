@@ -95,40 +95,40 @@
 
   /* ── Stormy Skies color theme ── */
   .theme-stormy {
-    --background: 220 24% 94%;
-    --foreground: 226 30% 16%;
+    --background: 210 18% 94%;
+    --foreground: 215 32% 15%;
     --primary: 53 98% 77%;
-    --primary-foreground: 222 34% 16%;
-    --primary-text: 220 28% 38%;
-    --secondary: 220 14% 30%;
-    --secondary-foreground: 220 18% 94%;
-    --accent: 217 28% 86%;
-    --accent-foreground: 226 30% 16%;
+    --primary-foreground: 215 34% 14%;
+    --primary-text: 210 24% 36%;
+    --secondary: 210 18% 28%;
+    --secondary-foreground: 210 14% 94%;
+    --accent: 208 22% 85%;
+    --accent-foreground: 215 32% 15%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --muted: 220 18% 90%;
-    --muted-foreground: 220 10% 42%;
+    --muted: 210 14% 89%;
+    --muted-foreground: 210 12% 40%;
     --pink: 330 81% 60%;
-    --border: 220 18% 82%;
-    --input: 220 18% 82%;
+    --border: 210 14% 80%;
+    --input: 210 14% 80%;
     --ring: 53 98% 77%;
     --radius: 0.75rem;
 
-    --card: 220 22% 97%;
-    --card-foreground: 226 30% 16%;
-    --popover: 220 22% 97%;
-    --popover-foreground: 226 30% 16%;
-    --nav-bg: 224 26% 25%;
-    --timer-display: 226 34% 18%;
-    --timer-ring: 220 14% 78%;
+    --card: 210 16% 96%;
+    --card-foreground: 215 32% 15%;
+    --popover: 210 16% 96%;
+    --popover-foreground: 215 32% 15%;
+    --nav-bg: 212 28% 22%;
+    --timer-display: 215 34% 16%;
+    --timer-ring: 210 14% 76%;
 
-    --sidebar-background: 220 20% 95%;
-    --sidebar-foreground: 220 20% 26%;
-    --sidebar-primary: 220 24% 14%;
-    --sidebar-primary-foreground: 220 20% 96%;
-    --sidebar-accent: 220 18% 92%;
-    --sidebar-accent-foreground: 220 24% 14%;
-    --sidebar-border: 220 18% 86%;
+    --sidebar-background: 210 16% 94%;
+    --sidebar-foreground: 212 22% 24%;
+    --sidebar-primary: 212 28% 14%;
+    --sidebar-primary-foreground: 210 16% 96%;
+    --sidebar-accent: 210 14% 91%;
+    --sidebar-accent-foreground: 212 28% 14%;
+    --sidebar-border: 210 14% 84%;
     --sidebar-ring: 53 98% 77%;
   }
 

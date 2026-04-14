@@ -34,11 +34,13 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
   const [portalLoading, setPortalLoading] = useState(false);
   const [upgradeInterval, setUpgradeInterval] = useState<"monthly" | "yearly">("monthly");
 
-  // Business details editing
+  // Business / billing details editing
   const [editingBusiness, setEditingBusiness] = useState(false);
   const [bizName, setBizName] = useState("");
   const [bizAddress, setBizAddress] = useState("");
   const [bizTaxId, setBizTaxId] = useState("");
+  const [bizPhone, setBizPhone] = useState("");
+  const [bizPaymentLink, setBizPaymentLink] = useState("");
   const [bizShowOnExport, setBizShowOnExport] = useState(true);
 
   // Obfuscated support email — assembled at runtime to prevent scraping
@@ -314,17 +316,29 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
               </div>
             </div>
 
-            {/* Business Details */}
+            {/* Billing Information */}
             <div>
-              <h3 className="text-sm font-semibold text-foreground mb-2">Business Details</h3>
-              <p className="text-[11px] text-muted-foreground mb-3">Shown on PDF exports.</p>
+              <h3 className="text-sm font-semibold text-foreground mb-2">Billing Information</h3>
+              <p className="text-[11px] text-muted-foreground mb-3">These details will appear on your exported billing PDF.</p>
               {editingBusiness ? (
                 <div className="space-y-2">
                   <Input
                     className="h-8 text-sm rounded-xl"
-                    placeholder="Business / company name"
+                    placeholder="Full name / Business name"
                     value={bizName}
                     onChange={(e) => setBizName(e.target.value)}
+                  />
+                  <Input
+                    className="h-8 text-sm rounded-xl"
+                    placeholder={`Email (default: ${user.email})`}
+                    value=""
+                    disabled
+                  />
+                  <Input
+                    className="h-8 text-sm rounded-xl"
+                    placeholder="Phone number (optional)"
+                    value={bizPhone}
+                    onChange={(e) => setBizPhone(e.target.value)}
                   />
                   <textarea
                     className="w-full text-sm rounded-xl border border-input bg-background px-3 py-2 min-h-[56px] resize-none focus:outline-none focus:ring-2 focus:ring-ring"
@@ -334,9 +348,15 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
                   />
                   <Input
                     className="h-8 text-sm rounded-xl"
-                    placeholder="Tax / Fiscal ID (e.g. NIF, VAT)"
+                    placeholder="Tax / Company number (optional)"
                     value={bizTaxId}
                     onChange={(e) => setBizTaxId(e.target.value)}
+                  />
+                  <Input
+                    className="h-8 text-sm rounded-xl"
+                    placeholder="Payment link (optional)"
+                    value={bizPaymentLink}
+                    onChange={(e) => setBizPaymentLink(e.target.value)}
                   />
                   <div className="flex items-center justify-between pt-1">
                     <span className="text-xs text-muted-foreground">Show on exports</span>
@@ -349,9 +369,11 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
                         business_name: bizName.trim() || null,
                         business_address: bizAddress.trim() || null,
                         tax_id: bizTaxId.trim() || null,
+                        phone: bizPhone.trim() || null,
+                        payment_link: bizPaymentLink.trim() || null,
                         show_business_on_export: bizShowOnExport,
                       }).eq("id", user.id);
-                      toast.success("Business details saved.");
+                      toast.success("Billing information saved.");
                       setEditingBusiness(false);
                       refreshProfile();
                     }}>Save</Button>
@@ -364,11 +386,13 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
                     setBizName(profile.business_name ?? "");
                     setBizAddress(profile.business_address ?? "");
                     setBizTaxId(profile.tax_id ?? "");
+                    setBizPhone((profile as any).phone ?? "");
+                    setBizPaymentLink((profile as any).payment_link ?? "");
                     setBizShowOnExport(profile.show_business_on_export !== false);
                     setEditingBusiness(true);
                   }}
                 >
-                  {profile.business_name ? `${profile.business_name} · Edit` : "Add business details"}
+                  {profile.business_name ? `${profile.business_name} · Edit` : "Add billing information"}
                 </button>
               )}
             </div>

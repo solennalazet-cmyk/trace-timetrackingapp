@@ -17,6 +17,7 @@ import { getAnonymousEntries } from "@/lib/anonymous-store";
 import EntryDetailSheet, { type TimeEntry } from "@/components/EntryDetailSheet";
 import AssignmentModal, { type SessionData, type AssignmentResult, type ExistingEntry } from "@/components/AssignmentModal";
 import BillingDialog from "@/components/BillingDialog";
+import PrepareBillingSheet from "@/components/PrepareBillingSheet";
 import PaywallModal from "@/components/PaywallModal";
 import ClientBillingSummary from "@/components/ClientBillingSummary";
 import UnassignedPanel from "@/components/UnassignedPanel";
@@ -262,6 +263,8 @@ const ReportsPage = () => {
   const [assignOpen, setAssignOpen] = useState(false);
   const [billingOpen, setBillingOpen] = useState(false);
   const [billingClientId, setBillingClientId] = useState<string | null>(null);
+  const [prepareBillingOpen, setPrepareBillingOpen] = useState(false);
+  const [prepareBillingClientId, setPrepareBillingClientId] = useState<string | null>(null);
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [unassignedOpen, setUnassignedOpen] = useState(false);
   const [clientFilter, setClientFilter] = useState("");
@@ -748,8 +751,8 @@ const ReportsPage = () => {
                 rangeEnd={rangeEnd}
                 rangeLabel={`${dateFrom.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} — ${dateTo.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`}
                 onBillClient={(clientId) => {
-                  setBillingClientId(clientId);
-                  setBillingOpen(true);
+                  setPrepareBillingClientId(clientId);
+                  setPrepareBillingOpen(true);
                 }}
                 onOpenUnassigned={() => setUnassignedOpen(true)}
                 onEditEntry={handleEdit}
@@ -1062,6 +1065,19 @@ const ReportsPage = () => {
           loadData();
         }} />
       <BillingDialog open={billingOpen} onOpenChange={(v) => { setBillingOpen(v); if (!v) setBillingClientId(null); }} onComplete={loadData} rounding={rounding} preselectedClientId={billingClientId} />
+      {prepareBillingClientId && (
+        <PrepareBillingSheet
+          open={prepareBillingOpen}
+          onOpenChange={(v) => { setPrepareBillingOpen(v); if (!v) setPrepareBillingClientId(null); }}
+          clientId={prepareBillingClientId}
+          clientName={clients[prepareBillingClientId] ?? "Unknown"}
+          clientCurrency={displayEntries.find(e => e.client_id === prepareBillingClientId)?.rate_currency ?? "EUR"}
+          entries={displayEntries.filter(e => e.client_id === prepareBillingClientId)}
+          rounding={rounding}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+        />
+      )}
       <PaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} />
       <UnassignedPanel
         open={unassignedOpen}

@@ -142,6 +142,8 @@ export type Database = {
           current_period_end: string | null
           full_name: string | null
           id: string
+          payment_link: string | null
+          phone: string | null
           plan: string | null
           show_business_on_export: boolean | null
           stripe_customer_id: string | null
@@ -158,6 +160,8 @@ export type Database = {
           current_period_end?: string | null
           full_name?: string | null
           id: string
+          payment_link?: string | null
+          phone?: string | null
           plan?: string | null
           show_business_on_export?: boolean | null
           stripe_customer_id?: string | null
@@ -174,6 +178,8 @@ export type Database = {
           current_period_end?: string | null
           full_name?: string | null
           id?: string
+          payment_link?: string | null
+          phone?: string | null
           plan?: string | null
           show_business_on_export?: boolean | null
           stripe_customer_id?: string | null

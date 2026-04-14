@@ -12,11 +12,11 @@ export const SUNRISE_PALETTE = [
   "hsl(50 85% 52%)", "hsl(285 55% 52%)",
 ];
 
-/** Stormy Skies palette – cool blue-grey tones */
+/** Stormy Skies palette – blue-tinted grey tones inspired by coastal storms */
 export const STORMY_SKIES_PALETTE = [
-  "hsl(212 18% 70%)", "hsl(214 18% 58%)", "hsl(220 24% 42%)", "hsl(214 14% 48%)",
-  "hsl(208 16% 82%)", "hsl(223 24% 28%)", "hsl(216 18% 64%)", "hsl(210 12% 52%)",
-  "hsl(220 30% 20%)", "hsl(214 20% 76%)",
+  "hsl(210 16% 72%)", "hsl(212 22% 56%)", "hsl(215 28% 38%)", "hsl(210 14% 48%)",
+  "hsl(208 12% 80%)", "hsl(212 32% 24%)", "hsl(210 18% 62%)", "hsl(208 16% 50%)",
+  "hsl(215 34% 18%)", "hsl(210 14% 76%)",
 ];
 
 const hashStringToIndex = (str: string, max: number): number => {

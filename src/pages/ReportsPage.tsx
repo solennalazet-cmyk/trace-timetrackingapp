@@ -1076,6 +1076,7 @@ const ReportsPage = () => {
           rounding={rounding}
           dateFrom={dateFrom}
           dateTo={dateTo}
+          onComplete={loadData}
         />
       )}
       <PaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} />

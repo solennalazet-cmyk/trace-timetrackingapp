@@ -125,12 +125,15 @@ export function aggregateWithRounding<T extends RoundableEntry>(
   settings: RoundingSettings,
 ): { totalMinutes: number; totalValue: number } {
   if (settings.round_scope === "total") {
-    // Sum raw, then round once
+    // Sum raw, then round duration once
     const rawMins = entries.reduce((s, e) => s + e.duration_minutes, 0);
+    const roundedMins = roundDuration(rawMins, settings);
+    // Recompute value proportionally so displayed time × rate = displayed amount
     const rawVal = entries.reduce((s, e) => s + rawBillableValue(e.duration_minutes, e.rate_amount ?? null, e.rate_unit ?? null, e.billable ?? false), 0);
+    const scaledVal = rawMins > 0 ? rawVal * (roundedMins / rawMins) : rawVal;
     return {
-      totalMinutes: roundDuration(rawMins, settings),
-      totalValue: roundAmount(rawVal, settings),
+      totalMinutes: roundedMins,
+      totalValue: roundAmount(scaledVal, settings),
     };
   }
   // Per-session: round each, then sum

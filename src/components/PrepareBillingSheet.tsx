@@ -101,7 +101,7 @@ const PrepareBillingSheet = ({
       doc.setFont("helvetica", "normal");
       doc.setTextColor(100);
       if (user?.email) { doc.text(user.email, margin, y); y += 4; }
-      if ((profile as any).phone) { doc.text((profile as any).phone, margin, y); y += 4; }
+      if (profile.phone) { doc.text(profile.phone, margin, y); y += 4; }
       if (profile.business_address) {
         profile.business_address.split("\n").forEach((line) => { doc.text(line, margin, y); y += 4; });
       }
@@ -178,7 +178,7 @@ const PrepareBillingSheet = ({
       tableLineWidth: 0.2,
     });
 
-    const paymentLink = (profile as any)?.payment_link;
+    const paymentLink = profile?.payment_link;
     if (paymentLink) {
       const lastY = (doc as any).lastAutoTable?.finalY ?? y + 20;
       doc.setFontSize(9);
@@ -261,7 +261,7 @@ const PrepareBillingSheet = ({
   };
 
   const handleCopySummary = () => {
-    const paymentLink = (profile as any)?.payment_link;
+    const paymentLink = profile?.payment_link;
     const lines = [
       "Hi,",
       "",

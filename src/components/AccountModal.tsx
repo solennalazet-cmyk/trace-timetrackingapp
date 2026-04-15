@@ -87,8 +87,8 @@ const AccountModal = ({ open, onOpenChange }: AccountModalProps) => {
     setBizName(profile.business_name ?? "");
     setBizAddress(profile.business_address ?? "");
     setBizTaxId(profile.tax_id ?? "");
-    setBizPhone((profile as any).phone ?? "");
-    setBizPaymentLink((profile as any).payment_link ?? "");
+    setBizPhone(profile.phone ?? "");
+    setBizPaymentLink(profile.payment_link ?? "");
     setBizShowOnExport(profile.show_business_on_export !== false);
     setEditingBilling(true);
   };

@@ -14,6 +14,8 @@ interface Profile {
   business_address: string | null;
   tax_id: string | null;
   show_business_on_export: boolean | null;
+  payment_link: string | null;
+  phone: string | null;
 }
 
 interface AuthContextType {

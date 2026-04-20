@@ -77,7 +77,17 @@ const MobileSelectSheet = ({
   }, [isCreating, onCreate, search, onSelect, onOpenChange]);
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange} shouldScaleBackground={false}>
+    <Drawer
+      open={open}
+      onOpenChange={onOpenChange}
+      shouldScaleBackground={false}
+      // Prevent vaul from mutating <body> styles. When this sheet is rendered
+      // inside a Radix Dialog (Assignment / Manual / Call modals), both libs
+      // try to lock the body, producing a visible double-reflow that feels
+      // like the sheet opens twice. Disabling vaul's body styling avoids that.
+      noBodyStyles
+      setBackgroundColorOnScale={false}
+    >
       <DrawerContent className="max-h-[85dvh] flex flex-col">
         <DrawerHeader className="pb-2">
           <DrawerTitle>{title}</DrawerTitle>

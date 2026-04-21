@@ -12,6 +12,7 @@ import TimelinePage from "./pages/TimelinePage";
 import ClientsPage from "./pages/ClientsPage";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import PrivacyPage from "./pages/PrivacyPage";
 import { useEffect, useState } from "react";
 import { applyColorTheme, getStoredColorTheme } from "./hooks/useColorTheme";
 

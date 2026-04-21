@@ -42,7 +42,7 @@ function getActiveMode(): Mode | null {
 }
 
 const StartPage = () => {
-  const [mode, setMode] = useState<Mode>("stopwatch");
+  const [mode, setMode] = useState<Mode>(() => getActiveMode() ?? "stopwatch");
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();

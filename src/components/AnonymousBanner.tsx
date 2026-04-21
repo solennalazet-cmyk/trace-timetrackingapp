@@ -1,4 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { Link } from "react-router-dom";
 
 interface AnonymousBannerProps {
   onSignIn: () => void;
@@ -21,7 +22,8 @@ const AnonymousBanner = ({ onSignIn }: AnonymousBannerProps) => {
         </p>
       </button>
       <p className="mt-1.5 text-[10px] text-muted-foreground text-center leading-tight">
-        Your data is stored locally on this device only — no one but you can access it.
+        Your data is stored locally on this device only — no one but you can access it.{" "}
+        <Link to="/privacy" className="underline hover:text-foreground">Privacy Policy</Link>
       </p>
     </div>
   );

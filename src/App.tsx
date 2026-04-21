@@ -12,6 +12,7 @@ import TimelinePage from "./pages/TimelinePage";
 import ClientsPage from "./pages/ClientsPage";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import PrivacyPage from "./pages/PrivacyPage";
 import { useEffect, useState } from "react";
 import { applyColorTheme, getStoredColorTheme } from "./hooks/useColorTheme";
 
@@ -81,6 +82,7 @@ const AppInner = () => {
             <Route path="/clients" element={<ClientsPage />} />
           </Route>
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

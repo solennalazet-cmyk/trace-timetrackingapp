@@ -4,6 +4,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Link } from "react-router-dom";
 
 interface AboutModalProps {
   open: boolean;
@@ -21,6 +22,13 @@ const AboutModal = ({ open, onOpenChange }: AboutModalProps) => {
           <p className="text-sm text-muted-foreground">Version 1.0.0</p>
           <p className="text-sm text-foreground">Timer-first time tracking for freelancers.</p>
           <p className="text-xs text-muted-foreground mt-4">Made with care for independent professionals.</p>
+          <Link
+            to="/privacy"
+            className="text-xs text-primary underline mt-2 inline-block"
+            onClick={() => onOpenChange(false)}
+          >
+            Privacy Policy
+          </Link>
         </div>
       </DialogContent>
     </Dialog>

@@ -82,6 +82,7 @@ const AppInner = () => {
             <Route path="/clients" element={<ClientsPage />} />
           </Route>
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

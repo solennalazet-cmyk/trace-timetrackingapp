@@ -36,7 +36,7 @@ const ShiftMode = ({ onClockOut }: ShiftModeProps) => {
     <div className="flex flex-col items-center gap-6">
       <CircularTimer
         filled={status !== "idle"}
-        fillColor="hsl(330, 81%, 60%)"
+        fillColor={undefined}
         dimmed={status === "paused"}
         pulsing={false}
       >

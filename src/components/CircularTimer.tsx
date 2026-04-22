@@ -55,7 +55,7 @@ const CircularTimer = ({
           cx={SIZE / 2}
           cy={SIZE / 2}
           r={RADIUS}
-          fill={filled ? (fillColor || "hsl(var(--accent))") : "transparent"}
+          fill={filled ? (fillColor || "hsl(var(--primary))") : "transparent"}
           stroke="hsl(var(--timer-ring))"
           strokeWidth={STROKE}
         />

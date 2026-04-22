@@ -6,7 +6,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Timer, PenLine, Clock, Phone, Trash2, ArrowRight } from "lucide-react";
+import { Timer, PenLine, Clock, Phone, X, ArrowRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getAnonymousEntries } from "@/lib/anonymous-store";
@@ -224,9 +224,9 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
             <button
               onClick={() => onOpenChange(false)}
               className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-              title="Dismiss"
+              title="Close"
             >
-              <Trash2 className="w-4 h-4" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </SheetHeader>
@@ -290,25 +290,28 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
             )}
             {entries.map((entry) => (
               <SwipeDeleteRow key={entry.id} onSwipeLeft={() => softDelete(entry.id)}>
-                <button
-                  className="flex items-center justify-between w-full text-left px-3 py-3 rounded-lg hover:bg-muted/50 transition-colors"
-                  onClick={() => setSelectedEntry(entry)}
-                >
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center w-full px-3 py-3 rounded-lg hover:bg-muted/50 transition-colors">
+                  <button
+                    className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                    onClick={() => setSelectedEntry(entry)}
+                  >
                     {entryTypeIcon(entry.entry_type)}
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-mono text-sm font-semibold">{formatHHMM(entry.duration_minutes)}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground truncate">
                         {formatEntryDate(entry.entry_date)}
                         {entry.start_time && ` · ${formatTimeOfDay(entry.start_time)}`}
                         {entry.end_time && ` → ${formatTimeOfDay(entry.end_time)}`}
                       </p>
                     </div>
-                  </div>
-                  {entry.notes && (
-                    <p className="text-xs text-muted-foreground truncate max-w-[120px]">{entry.notes}</p>
-                  )}
-                </button>
+                  </button>
+                  <button
+                    className="ml-2 shrink-0 text-xs text-destructive hover:underline px-2 py-1"
+                    onClick={(e) => { e.stopPropagation(); softDelete(entry.id); }}
+                  >
+                    Delete
+                  </button>
+                </div>
               </SwipeDeleteRow>
             ))}
           </div>

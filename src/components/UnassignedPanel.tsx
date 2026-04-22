@@ -290,25 +290,28 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
             )}
             {entries.map((entry) => (
               <SwipeDeleteRow key={entry.id} onSwipeLeft={() => softDelete(entry.id)}>
-                <button
-                  className="flex items-center justify-between w-full text-left px-3 py-3 rounded-lg hover:bg-muted/50 transition-colors"
-                  onClick={() => setSelectedEntry(entry)}
-                >
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center w-full px-3 py-3 rounded-lg hover:bg-muted/50 transition-colors">
+                  <button
+                    className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                    onClick={() => setSelectedEntry(entry)}
+                  >
                     {entryTypeIcon(entry.entry_type)}
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-mono text-sm font-semibold">{formatHHMM(entry.duration_minutes)}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground truncate">
                         {formatEntryDate(entry.entry_date)}
                         {entry.start_time && ` · ${formatTimeOfDay(entry.start_time)}`}
                         {entry.end_time && ` → ${formatTimeOfDay(entry.end_time)}`}
                       </p>
                     </div>
-                  </div>
-                  {entry.notes && (
-                    <p className="text-xs text-muted-foreground truncate max-w-[120px]">{entry.notes}</p>
-                  )}
-                </button>
+                  </button>
+                  <button
+                    className="ml-2 shrink-0 text-xs text-destructive hover:underline px-2 py-1"
+                    onClick={(e) => { e.stopPropagation(); softDelete(entry.id); }}
+                  >
+                    Delete
+                  </button>
+                </div>
               </SwipeDeleteRow>
             ))}
           </div>

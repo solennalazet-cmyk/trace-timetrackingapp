@@ -50,19 +50,12 @@ const CircularTimer = ({
         className="absolute inset-0"
         style={{ transform: "rotate(-90deg)" }}
       >
-        <defs>
-          <radialGradient id="shiftFillGradient" cx="40%" cy="35%" r="65%">
-            <stop offset="0%" stopColor="hsl(45, 96%, 72%)" />
-            <stop offset="45%" stopColor="hsl(350, 75%, 65%)" />
-            <stop offset="100%" stopColor="hsl(330, 70%, 55%)" />
-          </radialGradient>
-        </defs>
         {/* Background ring */}
         <circle
           cx={SIZE / 2}
           cy={SIZE / 2}
           r={RADIUS}
-          fill={filled ? (fillColor || "url(#shiftFillGradient)") : "transparent"}
+          fill={filled ? (fillColor || "hsl(53, 98%, 77%)") : "transparent"}
           stroke="hsl(var(--timer-ring))"
           strokeWidth={STROKE}
         />

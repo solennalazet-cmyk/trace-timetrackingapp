@@ -51,10 +51,10 @@ const ShiftMode = ({ onClockOut }: ShiftModeProps) => {
           </>
         ) : (
           <>
-            <span className="font-mono text-3xl font-bold" style={{ color: "hsl(0, 0%, 95%)" }}>
+            <span className="font-mono text-3xl font-bold text-accent-foreground">
               Since {clockInTime}
             </span>
-            <span className="text-xs font-medium mt-1 uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.8)" }}>
+            <span className="text-xs font-medium mt-1 uppercase tracking-wider text-accent-foreground/70">
               {status === "paused" ? "Paused" : "Shift in progress"}
             </span>
           </>

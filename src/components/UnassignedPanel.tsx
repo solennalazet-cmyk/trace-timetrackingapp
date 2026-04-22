@@ -224,9 +224,9 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
             <button
               onClick={() => onOpenChange(false)}
               className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-              title="Dismiss"
+              title="Close"
             >
-              <Trash2 className="w-4 h-4" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </SheetHeader>

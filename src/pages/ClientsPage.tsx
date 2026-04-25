@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
-import { Search, Plus, Briefcase, ChevronDown, ChevronUp, Mail, Hash, Pencil } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Search, Plus, Briefcase, ChevronDown, ChevronUp, Mail, Hash, Pencil, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { toLocalDateKey } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { getAnonymousClients, saveAnonymousClient, getAnonymousProjects, saveAnonymousProject } from "@/lib/anonymous-store";
+import { getAnonymousClients, saveAnonymousClient, getAnonymousProjects, saveAnonymousProject, deleteAnonymousClient } from "@/lib/anonymous-store";
 import ClientFormModal from "@/components/ClientFormModal";
 import ProjectFormModal from "@/components/ProjectFormModal";
 import PaywallModal from "@/components/PaywallModal";
@@ -74,6 +74,8 @@ const ClientsPage = () => {
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStats[]>([]);
   const [projectStats, setProjectStats] = useState<ProjectStats[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [swipedId, setSwipedId] = useState<string | null>(null);
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Modals
@@ -190,12 +192,21 @@ const ClientsPage = () => {
   const handleDeleteClient = async () => {
     if (!deleteClientId) return;
     if (user) {
-      await supabase.from("time_entries").update({ client_id: null }).eq("client_id", deleteClientId);
+      // Delete all time entries assigned to this client OR to its projects
+      const clientProjects = projects.filter((p) => p.client_id === deleteClientId).map((p) => p.id);
+      await supabase.from("time_entries").delete().eq("client_id", deleteClientId);
+      if (clientProjects.length > 0) {
+        await supabase.from("time_entries").delete().in("project_id", clientProjects);
+      }
       await supabase.from("projects").delete().eq("client_id", deleteClientId);
       await supabase.from("clients").delete().eq("id", deleteClientId);
+    } else {
+      deleteAnonymousClient(deleteClientId);
     }
     setDeleteClientId(null);
+    setClientFormOpen(false);
     setExpandedId(null);
+    setSwipedId(null);
     toast.success("Client deleted.");
     loadData();
   };
@@ -303,106 +314,133 @@ const ClientsPage = () => {
           const clientProjects = getClientProjects(client.id);
 
           return (
-            <div
-              key={client.id}
-              className="rounded-xl border border-border bg-card overflow-hidden transition-all"
-            >
-              {/* Collapsed header */}
+            <div key={client.id} className="relative rounded-xl overflow-hidden">
+              {/* Swipe-revealed Delete button (behind the card) */}
               <button
-                className="flex items-center w-full px-4 py-3 text-left gap-3"
-                onClick={() => setExpandedId(expanded ? null : client.id)}
+                aria-label={`Delete ${client.name}`}
+                className="absolute inset-y-0 right-0 w-24 bg-destructive text-destructive-foreground flex items-center justify-center gap-1.5 text-sm font-semibold"
+                onClick={() => { setDeleteClientId(client.id); }}
               >
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${getAvatarColor(client.name)}`}>
-                  {getInitial(client.name)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm text-foreground truncate">{client.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {clientProjects.length} {clientProjects.length === 1 ? "project" : "projects"}
-                    {stats ? ` · ${stats.hours.toFixed(1)}h this month` : ""}
-                    {stats && stats.value > 0 ? ` · ${sym(client.currency)}${stats.value.toFixed(0)}` : ""}
-                  </p>
-                </div>
-                {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />}
+                <Trash2 className="w-4 h-4" /> Delete
               </button>
 
-              {/* Expanded content */}
-              {expanded && (
-                <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
-                  {/* Contact info */}
-                  {client.email && (
-                    <a href={`mailto:${client.email}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-                      <Mail className="w-3.5 h-3.5" /> {client.email}
-                    </a>
-                  )}
-                  {client.nif && (
-                    <button
-                      className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-                      onClick={() => { navigator.clipboard.writeText(client.nif!); toast.success("NIF copied."); }}
-                    >
-                      <Hash className="w-3.5 h-3.5" /> NIF: {client.nif}
-                    </button>
-                  )}
-                  {client.default_rate != null && (
-                    <p className="text-sm text-muted-foreground">
-                      Default rate: {sym(client.currency)}{client.default_rate}/hour
-                    </p>
-                  )}
-
-                  {/* Projects */}
-                  {clientProjects.length > 0 && (
-                    <div>
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Projects</p>
-                      <div className="space-y-2">
-                        {clientProjects.map((project) => {
-                          const ps = getProjectStats(project.id);
-                          const totalClientHours = stats?.hours || 1;
-                          const pct = ps ? Math.round((ps.hours / totalClientHours) * 100) : 0;
-                          const rateDisplay = project.rate
-                            ? `${sym(project.currency ?? client.currency)}${project.rate}/hour`
-                            : client.default_rate
-                              ? `Inherits ${sym(client.currency)}${client.default_rate}/hour`
-                              : "No rate";
-
-                          return (
-                            <div
-                              key={project.id}
-                              className="p-3 rounded-lg border border-border bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
-                              onClick={() => {
-                                setEditingProject(project);
-                                setProjectParentClient(client);
-                                setProjectFormOpen(true);
-                              }}
-                            >
-                              <p className="font-medium text-sm text-foreground">{project.name}</p>
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                {rateDisplay}
-                                {ps ? ` · ${ps.hours.toFixed(1)}h` : ""}
-                                {ps && ps.value > 0 ? ` · ${sym(project.currency ?? client.currency)}${ps.value.toFixed(0)}` : ""}
-                              </p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  <Button variant="outline" size="sm" className="gap-1 rounded-lg" onClick={() => handleAddProjectClick(client)}>
-                    <Plus className="w-3.5 h-3.5" /> Add Project
-                  </Button>
-
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1 rounded-lg flex-1"
-                      onClick={() => { setEditingClient(client); setClientFormOpen(true); }}
-                    >
-                      <Pencil className="w-3.5 h-3.5" /> Edit client
-                    </Button>
+              <div
+                className="relative rounded-xl border border-border bg-card overflow-hidden transition-transform duration-200 ease-out"
+                style={{ transform: swipedId === client.id ? "translateX(-96px)" : "translateX(0)" }}
+                onTouchStart={(e) => {
+                  const t = e.touches[0];
+                  swipeStartRef.current = { x: t.clientX, y: t.clientY };
+                }}
+                onTouchEnd={(e) => {
+                  const start = swipeStartRef.current;
+                  if (!start) return;
+                  const t = e.changedTouches[0];
+                  const dx = t.clientX - start.x;
+                  const dy = t.clientY - start.y;
+                  swipeStartRef.current = null;
+                  if (Math.abs(dy) > Math.abs(dx)) return; // vertical scroll
+                  if (dx < -40) setSwipedId(client.id);
+                  else if (dx > 40) setSwipedId((cur) => (cur === client.id ? null : cur));
+                }}
+              >
+                {/* Collapsed header */}
+                <button
+                  className="flex items-center w-full px-4 py-3 text-left gap-3"
+                  onClick={() => {
+                    if (swipedId === client.id) { setSwipedId(null); return; }
+                    setExpandedId(expanded ? null : client.id);
+                  }}
+                >
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${getAvatarColor(client.name)}`}>
+                    {getInitial(client.name)}
                   </div>
-                </div>
-              )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm text-foreground truncate">{client.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {clientProjects.length} {clientProjects.length === 1 ? "project" : "projects"}
+                      {stats ? ` · ${stats.hours.toFixed(1)}h this month` : ""}
+                      {stats && stats.value > 0 ? ` · ${sym(client.currency)}${stats.value.toFixed(0)}` : ""}
+                    </p>
+                  </div>
+                  {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />}
+                </button>
+
+                {/* Expanded content */}
+                {expanded && (
+                  <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
+                    {/* Contact info */}
+                    {client.email && (
+                      <a href={`mailto:${client.email}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+                        <Mail className="w-3.5 h-3.5" /> {client.email}
+                      </a>
+                    )}
+                    {client.nif && (
+                      <button
+                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+                        onClick={() => { navigator.clipboard.writeText(client.nif!); toast.success("NIF copied."); }}
+                      >
+                        <Hash className="w-3.5 h-3.5" /> NIF: {client.nif}
+                      </button>
+                    )}
+                    {client.default_rate != null && (
+                      <p className="text-sm text-muted-foreground">
+                        Default rate: {sym(client.currency)}{client.default_rate}/hour
+                      </p>
+                    )}
+
+                    {/* Projects */}
+                    {clientProjects.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Projects</p>
+                        <div className="space-y-2">
+                          {clientProjects.map((project) => {
+                            const ps = getProjectStats(project.id);
+                            const rateDisplay = project.rate
+                              ? `${sym(project.currency ?? client.currency)}${project.rate}/hour`
+                              : client.default_rate
+                                ? `Inherits ${sym(client.currency)}${client.default_rate}/hour`
+                                : "No rate";
+
+                            return (
+                              <div
+                                key={project.id}
+                                className="p-3 rounded-lg border border-border bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
+                                onClick={() => {
+                                  setEditingProject(project);
+                                  setProjectParentClient(client);
+                                  setProjectFormOpen(true);
+                                }}
+                              >
+                                <p className="font-medium text-sm text-foreground">{project.name}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {rateDisplay}
+                                  {ps ? ` · ${ps.hours.toFixed(1)}h` : ""}
+                                  {ps && ps.value > 0 ? ` · ${sym(project.currency ?? client.currency)}${ps.value.toFixed(0)}` : ""}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <Button variant="outline" size="sm" className="gap-1 rounded-lg" onClick={() => handleAddProjectClick(client)}>
+                      <Plus className="w-3.5 h-3.5" /> Add Project
+                    </Button>
+
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1 rounded-lg flex-1"
+                        onClick={() => { setEditingClient(client); setClientFormOpen(true); }}
+                      >
+                        <Pencil className="w-3.5 h-3.5" /> Edit client
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
@@ -413,6 +451,7 @@ const ClientsPage = () => {
         open={clientFormOpen}
         onOpenChange={setClientFormOpen}
         onSave={handleSaveClient}
+        onDelete={editingClient ? () => setDeleteClientId(editingClient.id) : undefined}
         initial={editingClient ? {
           name: editingClient.name, email: editingClient.email ?? "",
           nif: editingClient.nif ?? "", currency: editingClient.currency ?? "EUR",
@@ -444,7 +483,9 @@ const ClientsPage = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {clients.find((c) => c.id === deleteClientId)?.name}?</AlertDialogTitle>
-            <AlertDialogDescription>This will not delete associated time entries. They will show client as 'Removed'.</AlertDialogDescription>
+            <AlertDialogDescription>
+              All data assigned to this Client will be deleted, including its projects and time entries. This can't be undone.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>

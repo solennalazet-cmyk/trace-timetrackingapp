@@ -29,6 +29,7 @@ interface ClientFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (data: ClientFormData) => Promise<void>;
+  onDelete?: () => void;
   initial?: ClientFormData | null;
   title?: string;
 }
@@ -48,7 +49,7 @@ const RATE_UNITS = [
   { value: "project", label: "Per project" },
 ];
 
-const ClientFormModal = ({ open, onOpenChange, onSave, initial, title = "Add Client" }: ClientFormModalProps) => {
+const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title = "Add Client" }: ClientFormModalProps) => {
   const [form, setForm] = useState<ClientFormData>({
     name: "", email: "", nif: "", currency: "EUR", default_rate: "", rate_unit: "hour",
   });
@@ -111,12 +112,18 @@ const ClientFormModal = ({ open, onOpenChange, onSave, initial, title = "Add Cli
             </div>
           </div>
         </div>
-        <div className="flex gap-3 px-6 pb-6 pt-2">
+        <div className="flex gap-3 px-6 pt-2">
           <Button variant="outline" className="flex-1 rounded-[28px] h-12 font-bold" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-12 font-bold" onClick={handleSave} disabled={!form.name.trim() || saving}>
             {initial ? "Save Changes" : "Save Client"}
           </Button>
         </div>
+        {onDelete && initial && (
+          <button className="w-full text-center text-sm text-destructive hover:underline px-6 pb-6 pt-3" onClick={onDelete}>
+            Delete client
+          </button>
+        )}
+        {!(onDelete && initial) && <div className="pb-6" />}
       </DialogContent>
     </Dialog>
   );

@@ -49,8 +49,18 @@ export function getAnonymousClients() {
 }
 export function saveAnonymousClient(client: any) {
   const clients = getAnonymousClients();
-  clients.push(client);
+  const idx = clients.findIndex((c: any) => c.id === client.id);
+  if (idx >= 0) clients[idx] = { ...clients[idx], ...client };
+  else clients.push(client);
   setItem(KEYS.clients, clients);
+}
+export function deleteAnonymousClient(clientId: string) {
+  // Delete the client, all its projects, and all entries assigned to it (or its projects)
+  const projects = getAnonymousProjects();
+  const projectIds = new Set(projects.filter((p: any) => p.client_id === clientId).map((p: any) => p.id));
+  setItem(KEYS.clients, getAnonymousClients().filter((c: any) => c.id !== clientId));
+  setItem(KEYS.projects, projects.filter((p: any) => p.client_id !== clientId));
+  setItem(KEYS.entries, getAnonymousEntries().filter((e: any) => e.client_id !== clientId && !projectIds.has(e.project_id)));
 }
 
 // Projects
@@ -59,7 +69,9 @@ export function getAnonymousProjects() {
 }
 export function saveAnonymousProject(project: any) {
   const projects = getAnonymousProjects();
-  projects.push(project);
+  const idx = projects.findIndex((p: any) => p.id === project.id);
+  if (idx >= 0) projects[idx] = { ...projects[idx], ...project };
+  else projects.push(project);
   setItem(KEYS.projects, projects);
 }
 

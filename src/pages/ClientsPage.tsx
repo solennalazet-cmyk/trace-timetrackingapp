@@ -74,6 +74,8 @@ const ClientsPage = () => {
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStats[]>([]);
   const [projectStats, setProjectStats] = useState<ProjectStats[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [swipedId, setSwipedId] = useState<string | null>(null);
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Modals

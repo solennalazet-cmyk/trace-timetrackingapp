@@ -141,7 +141,12 @@ const MobileSelectSheet = ({
           {showAddOption && (
             <button
               type="button"
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-primary-text active:bg-accent"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-primary-text active:bg-accent touch-manipulation select-none"
+              onPointerDown={(e) => {
+                // Capture so pointerup fires on this same button even if
+                // viewport reflows (keyboard collapse) move it under the finger.
+                (e.currentTarget as HTMLButtonElement).setPointerCapture?.(e.pointerId);
+              }}
               onClick={handleCreate}
               disabled={isCreating}
             >
@@ -155,9 +160,12 @@ const MobileSelectSheet = ({
               key={item.id}
               type="button"
               className={cn(
-                "flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm active:bg-accent",
+                "flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm active:bg-accent touch-manipulation select-none",
                 value === item.id && "bg-accent/50 font-medium"
               )}
+              onPointerDown={(e) => {
+                (e.currentTarget as HTMLButtonElement).setPointerCapture?.(e.pointerId);
+              }}
               onClick={() => handleSelect(item)}
             >
               <div className="w-5 h-5 flex items-center justify-center shrink-0">

@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
-import { Search, Plus, Briefcase, ChevronDown, ChevronUp, Mail, Hash, Pencil } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Search, Plus, Briefcase, ChevronDown, ChevronUp, Mail, Hash, Pencil, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { toLocalDateKey } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { getAnonymousClients, saveAnonymousClient, getAnonymousProjects, saveAnonymousProject } from "@/lib/anonymous-store";
+import { getAnonymousClients, saveAnonymousClient, getAnonymousProjects, saveAnonymousProject, deleteAnonymousClient } from "@/lib/anonymous-store";
 import ClientFormModal from "@/components/ClientFormModal";
 import ProjectFormModal from "@/components/ProjectFormModal";
 import PaywallModal from "@/components/PaywallModal";

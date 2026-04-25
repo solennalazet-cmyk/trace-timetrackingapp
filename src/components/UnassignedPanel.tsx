@@ -198,7 +198,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
           loadEntries();
         },
       },
-      duration: 5000,
+      duration: 3750,
     });
 
     if (entries.length <= 1) onOpenChange(false);

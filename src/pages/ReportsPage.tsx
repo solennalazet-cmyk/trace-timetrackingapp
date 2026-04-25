@@ -43,7 +43,7 @@ const PeakHoursChart = ({ entries, size = 120 }: { entries: { start_time?: strin
         <div className="flex items-center justify-center rounded-full border border-dashed border-border" style={{ width: size, height: size }}>
           <span className="text-[10px] text-muted-foreground text-center px-3 leading-tight">Track more sessions<br />to see patterns</span>
         </div>
-        <span className="text-xs text-muted-foreground mt-1">Peak Hours</span>
+        <span className="text-xs text-muted-foreground mt-1">Most Productive Hours</span>
       </div>
     );
   }

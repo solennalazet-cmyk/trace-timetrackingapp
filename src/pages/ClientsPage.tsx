@@ -451,6 +451,7 @@ const ClientsPage = () => {
         open={clientFormOpen}
         onOpenChange={setClientFormOpen}
         onSave={handleSaveClient}
+        onDelete={editingClient ? () => setDeleteClientId(editingClient.id) : undefined}
         initial={editingClient ? {
           name: editingClient.name, email: editingClient.email ?? "",
           nif: editingClient.nif ?? "", currency: editingClient.currency ?? "EUR",

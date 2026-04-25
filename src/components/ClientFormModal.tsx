@@ -49,7 +49,7 @@ const RATE_UNITS = [
   { value: "project", label: "Per project" },
 ];
 
-const ClientFormModal = ({ open, onOpenChange, onSave, initial, title = "Add Client" }: ClientFormModalProps) => {
+const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title = "Add Client" }: ClientFormModalProps) => {
   const [form, setForm] = useState<ClientFormData>({
     name: "", email: "", nif: "", currency: "EUR", default_rate: "", rate_unit: "hour",
   });

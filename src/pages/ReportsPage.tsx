@@ -778,13 +778,16 @@ const ReportsPage = () => {
 
           {/* ── Entry Type Mini Donuts ── */}
           {rangeEntries.length > 0 && (() => {
+            // Input-type palette — intentionally distinct from client colors
+            // (which use the Sunrise palette: blues, ambers, roses, oranges, golds).
+            // We pick neutral/cool tones here so input-type donuts never look like a client.
             const ENTRY_TYPE_COLORS: Record<string, string> = {
-              stopwatch: "hsl(220 75% 58%)",  // blue
-              manual: "hsl(38 92% 55%)",      // amber
-              shift: "hsl(270 58% 58%)",      // violet
-              focus: "hsl(340 72% 55%)",      // rose
-              call: "hsl(22 88% 55%)",        // burnt orange
-              boost: "hsl(45 90% 52%)",       // gold
+              stopwatch: "hsl(215 16% 47%)",  // slate grey
+              manual: "hsl(175 55% 42%)",     // teal (was amber — clashed with client gold)
+              shift: "hsl(260 35% 55%)",      // muted violet
+              focus: "hsl(195 60% 45%)",      // deep cyan
+              call: "hsl(150 35% 45%)",       // sage green
+              boost: "hsl(280 40% 55%)",      // muted purple
             };
             const ENTRY_TYPE_LABELS: Record<string, string> = {
               stopwatch: "Stopwatch",

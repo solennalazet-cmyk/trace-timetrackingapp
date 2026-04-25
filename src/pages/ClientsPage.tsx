@@ -483,7 +483,9 @@ const ClientsPage = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {clients.find((c) => c.id === deleteClientId)?.name}?</AlertDialogTitle>
-            <AlertDialogDescription>This will not delete associated time entries. They will show client as 'Removed'.</AlertDialogDescription>
+            <AlertDialogDescription>
+              All data assigned to this Client will be deleted, including its projects and time entries. This can't be undone.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>

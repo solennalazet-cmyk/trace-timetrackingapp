@@ -117,10 +117,10 @@ const PeakHoursChart = ({ entries, size = 120 }: { entries: { start_time?: strin
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ paddingTop: size * 0.08 }}>
           <span className="text-sm font-bold font-mono text-foreground">{peakLabel}</span>
-          <span className="text-[11px] text-muted-foreground">peak hour</span>
+          <span className="text-[11px] text-muted-foreground">most worked</span>
         </div>
       </div>
-      <span className="text-xs text-muted-foreground mt-1">Peak Hours</span>
+      <span className="text-xs text-muted-foreground mt-1">Most Productive Hours</span>
     </div>
   );
 };

@@ -29,6 +29,7 @@ interface ClientFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (data: ClientFormData) => Promise<void>;
+  onDelete?: () => void;
   initial?: ClientFormData | null;
   title?: string;
 }

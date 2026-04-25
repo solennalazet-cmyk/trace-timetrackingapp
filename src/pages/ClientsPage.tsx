@@ -190,12 +190,21 @@ const ClientsPage = () => {
   const handleDeleteClient = async () => {
     if (!deleteClientId) return;
     if (user) {
-      await supabase.from("time_entries").update({ client_id: null }).eq("client_id", deleteClientId);
+      // Delete all time entries assigned to this client OR to its projects
+      const clientProjects = projects.filter((p) => p.client_id === deleteClientId).map((p) => p.id);
+      await supabase.from("time_entries").delete().eq("client_id", deleteClientId);
+      if (clientProjects.length > 0) {
+        await supabase.from("time_entries").delete().in("project_id", clientProjects);
+      }
       await supabase.from("projects").delete().eq("client_id", deleteClientId);
       await supabase.from("clients").delete().eq("id", deleteClientId);
+    } else {
+      deleteAnonymousClient(deleteClientId);
     }
     setDeleteClientId(null);
+    setClientFormOpen(false);
     setExpandedId(null);
+    setSwipedId(null);
     toast.success("Client deleted.");
     loadData();
   };

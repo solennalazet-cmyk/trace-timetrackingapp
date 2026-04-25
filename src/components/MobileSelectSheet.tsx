@@ -40,14 +40,21 @@ const MobileSelectSheet = ({
     if (open) {
       actionLockRef.current = false;
       setSearch("");
-      // Focus immediately so the keyboard animates with the sheet instead of
-      // popping in after the drawer transition and causing a second reflow.
-      const id = requestAnimationFrame(() => {
-        inputRef.current?.focus({ preventScroll: true });
-      });
-      return () => cancelAnimationFrame(id);
+      // IMPORTANT: do NOT auto-focus the search input. Auto-focus triggers the
+      // mobile keyboard *after* the drawer's open animation finishes, which
+      // reflows the viewport mid-interaction and causes a tap on one button to
+      // land on a different button (the "double trigger" bug). The user can
+      // tap the search field if they want to filter — that's an explicit
+      // intent and the reflow then happens before any selection tap.
     }
   }, [open]);
+
+  // Blur any focused element (closes the soft keyboard) before mutating state
+  // so the keyboard collapse doesn't reflow the viewport during navigation.
+  const dismissKeyboard = useCallback(() => {
+    const active = document.activeElement as HTMLElement | null;
+    if (active && typeof active.blur === "function") active.blur();
+  }, []);
 
   const filtered = items.filter((item) =>
     item.name.toLowerCase().includes(search.toLowerCase())
@@ -63,10 +70,11 @@ const MobileSelectSheet = ({
     (item: ComboboxItem) => {
       if (actionLockRef.current) return;
       actionLockRef.current = true;
+      dismissKeyboard();
       onSelect(item.id, item.name);
       onOpenChange(false);
     },
-    [onSelect, onOpenChange]
+    [onSelect, onOpenChange, dismissKeyboard]
   );
 
   const handleCreate = useCallback(async () => {
@@ -74,6 +82,7 @@ const MobileSelectSheet = ({
     const name = search.trim();
     if (!name) return;
     actionLockRef.current = true;
+    dismissKeyboard();
     setCreating(true);
     const created = await onCreate(name);
     if (created) {
@@ -82,7 +91,7 @@ const MobileSelectSheet = ({
     }
     setCreating(false);
     if (!created) actionLockRef.current = false;
-  }, [isCreating, onCreate, search, onSelect, onOpenChange]);
+  }, [isCreating, onCreate, search, onSelect, onOpenChange, dismissKeyboard]);
 
   return (
     <Drawer
@@ -132,7 +141,12 @@ const MobileSelectSheet = ({
           {showAddOption && (
             <button
               type="button"
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-primary-text active:bg-accent"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-primary-text active:bg-accent touch-manipulation select-none"
+              onPointerDown={(e) => {
+                // Capture so pointerup fires on this same button even if
+                // viewport reflows (keyboard collapse) move it under the finger.
+                (e.currentTarget as HTMLButtonElement).setPointerCapture?.(e.pointerId);
+              }}
               onClick={handleCreate}
               disabled={isCreating}
             >
@@ -146,9 +160,12 @@ const MobileSelectSheet = ({
               key={item.id}
               type="button"
               className={cn(
-                "flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm active:bg-accent",
+                "flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm active:bg-accent touch-manipulation select-none",
                 value === item.id && "bg-accent/50 font-medium"
               )}
+              onPointerDown={(e) => {
+                (e.currentTarget as HTMLButtonElement).setPointerCapture?.(e.pointerId);
+              }}
               onClick={() => handleSelect(item)}
             >
               <div className="w-5 h-5 flex items-center justify-center shrink-0">

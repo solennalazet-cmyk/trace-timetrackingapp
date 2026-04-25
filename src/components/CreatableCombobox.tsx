@@ -35,6 +35,7 @@ const CreatableCombobox = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const touchStartYRef = useRef<number | null>(null);
   const touchMovedRef = useRef(false);
+  const actionLockRef = useRef(false);
 
   const filtered = items.filter((item) =>
     item.name.toLowerCase().includes(search.toLowerCase())
@@ -88,11 +89,14 @@ const CreatableCombobox = ({
   }, [displayValue, pendingName]);
 
   const handleFocus = () => {
+    actionLockRef.current = false;
     setOpen(true);
     setSearch("");
   };
 
   const handleSelect = (item: ComboboxItem) => {
+    if (actionLockRef.current) return;
+    actionLockRef.current = true;
     onSelect(item.id, item.name);
     setSearch("");
     setOpen(false);
@@ -122,9 +126,10 @@ const CreatableCombobox = ({
   };
 
   const handleCreate = async () => {
-    if (creating) return;
+    if (actionLockRef.current || creating) return;
     const name = search.trim();
     if (!name) return;
+    actionLockRef.current = true;
     setCreating(true);
     setPendingName(name);
     setSearch("");
@@ -135,6 +140,7 @@ const CreatableCombobox = ({
       onSelect(created.id, created.name);
     } else {
       setPendingName("");
+      actionLockRef.current = false;
     }
     setCreating(false);
   };

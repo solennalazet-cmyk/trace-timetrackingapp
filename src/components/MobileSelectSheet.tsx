@@ -32,11 +32,13 @@ const MobileSelectSheet = ({
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const actionLockRef = useRef(false);
 
   const isCreating = externalCreating || creating;
 
   useEffect(() => {
     if (open) {
+      actionLockRef.current = false;
       setSearch("");
       // Focus immediately so the keyboard animates with the sheet instead of
       // popping in after the drawer transition and causing a second reflow.
@@ -59,6 +61,8 @@ const MobileSelectSheet = ({
 
   const handleSelect = useCallback(
     (item: ComboboxItem) => {
+      if (actionLockRef.current) return;
+      actionLockRef.current = true;
       onSelect(item.id, item.name);
       onOpenChange(false);
     },
@@ -66,9 +70,10 @@ const MobileSelectSheet = ({
   );
 
   const handleCreate = useCallback(async () => {
-    if (isCreating || !onCreate) return;
+    if (actionLockRef.current || isCreating || !onCreate) return;
     const name = search.trim();
     if (!name) return;
+    actionLockRef.current = true;
     setCreating(true);
     const created = await onCreate(name);
     if (created) {
@@ -76,6 +81,7 @@ const MobileSelectSheet = ({
       onOpenChange(false);
     }
     setCreating(false);
+    if (!created) actionLockRef.current = false;
   }, [isCreating, onCreate, search, onSelect, onOpenChange]);
 
   return (

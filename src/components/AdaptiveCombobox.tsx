@@ -37,10 +37,14 @@ const AdaptiveCombobox = ({
   const handleSheetOpenChange = useCallback((next: boolean) => {
     const now = Date.now();
     if (next) {
-      if (sheetOpen || now < ignoreClicksUntilRef.current || now - lastOpenRequestAtRef.current < 650) return;
+      // Only block re-open if we're already open OR a recent close just happened.
+      // The keyboard-reflow root cause is fixed in MobileSelectSheet (no auto-focus
+      // + pointer capture + interactive-widget=resizes-content), so this guard is
+      // now just a small safety net (200ms) for genuinely accidental double taps.
+      if (sheetOpen || now < ignoreClicksUntilRef.current) return;
       lastOpenRequestAtRef.current = now;
     } else {
-      ignoreClicksUntilRef.current = now + 650;
+      ignoreClicksUntilRef.current = now + 200;
     }
     setSheetOpen(next);
   }, [sheetOpen]);

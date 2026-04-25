@@ -31,16 +31,19 @@ const AdaptiveCombobox = ({
 }: AdaptiveComboboxProps) => {
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
-  // Guard against rapid double-taps re-triggering the drawer mid-animation.
-  // vaul's open transition is ~500ms; we lock for slightly longer.
-  const lastToggleAtRef = useRef(0);
+  const lastOpenRequestAtRef = useRef(0);
+  const ignoreClicksUntilRef = useRef(0);
 
   const handleSheetOpenChange = useCallback((next: boolean) => {
     const now = Date.now();
-    if (next && now - lastToggleAtRef.current < 600) return;
-    lastToggleAtRef.current = now;
+    if (next) {
+      if (sheetOpen || now < ignoreClicksUntilRef.current || now - lastOpenRequestAtRef.current < 650) return;
+      lastOpenRequestAtRef.current = now;
+    } else {
+      ignoreClicksUntilRef.current = now + 650;
+    }
     setSheetOpen(next);
-  }, []);
+  }, [sheetOpen]);
 
   const openSheet = useCallback(() => {
     handleSheetOpenChange(true);
@@ -55,13 +58,9 @@ const AdaptiveCombobox = ({
 
   const handleMobileCreate = useCallback(
     async (name: string) => {
-      const created = await onCreate(name);
-      if (created) {
-        onSelect(created.id, created.name);
-      }
-      return created;
+      return onCreate(name);
     },
-    [onCreate, onSelect]
+    [onCreate]
   );
 
   if (isMobile) {
@@ -75,8 +74,13 @@ const AdaptiveCombobox = ({
             "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background touch-manipulation select-none",
             !displayValue && "text-muted-foreground"
           )}
+          onPointerDown={(e) => {
+            if (e.pointerType !== "touch") return;
+            e.preventDefault();
+            e.stopPropagation();
+            openSheet();
+          }}
           onClick={(e) => {
-            // Prevent the click from bubbling to any parent that might also react.
             e.stopPropagation();
             openSheet();
           }}

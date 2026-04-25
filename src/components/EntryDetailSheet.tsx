@@ -107,7 +107,7 @@ const EntryDetailSheet = ({ entry, open, onOpenChange, onEdit, onDeleted }: Entr
     onDeleted(entry.id);
     onOpenChange(false);
     setDeleteConfirm(false);
-    toast.success("Entry deleted.");
+    toast.success("Entry deleted.", { duration: 2250 });
   };
 
   return (

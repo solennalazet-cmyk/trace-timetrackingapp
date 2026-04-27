@@ -9,7 +9,8 @@ interface CircularTimerProps {
   dimmed?: boolean;
   /** Fill the entire circle (shift active) */
   filled?: boolean;
-  /** Fill color for shift */
+  /** Fill color for shift — when omitted and filled=true, the page's
+      animated sky gradient is "frozen" inside the circle. */
   fillColor?: string;
   /** Show a draggable handle at the end of the arc */
   showHandle?: boolean;
@@ -32,6 +33,17 @@ const CircularTimer = ({
   children,
 }: CircularTimerProps) => {
   const offset = CIRCUMFERENCE - progress * CIRCUMFERENCE;
+  // When `filled` and no explicit fillColor, freeze the page sky inside the ring.
+  const useFrozenSky = filled && !fillColor;
+
+  // Stroke styling for the filled (clocked-in) state:
+  // - running   → solid primary, slightly thicker
+  // - paused    → desaturated + dashed for unmistakable visual distinction
+  const filledStrokeColor = dimmed
+    ? "hsl(var(--muted-foreground))"
+    : "hsl(var(--primary))";
+  const filledStrokeWidth = dimmed ? STROKE + 1 : STROKE + 2;
+  const filledStrokeDasharray = dimmed ? "6 6" : undefined;
 
   return (
     <div
@@ -40,26 +52,49 @@ const CircularTimer = ({
         width: SIZE,
         height: SIZE,
         animation: pulsing ? "timer-pulse 2s ease-in-out infinite" : undefined,
-        opacity: dimmed ? 0.6 : 1,
+        opacity: dimmed && !filled ? 0.6 : 1,
         transition: "opacity 0.3s ease",
       }}
     >
+      {/* Frozen sky fill — sits behind the SVG, clipped to a circle. */}
+      {useFrozenSky && (
+        <div
+          className="gradient-bg gradient-bg-frozen absolute"
+          style={{
+            top: STROKE,
+            left: STROKE,
+            width: SIZE - STROKE * 2,
+            height: SIZE - STROKE * 2,
+            borderRadius: "50%",
+            opacity: dimmed ? 0.55 : 1,
+            transition: "opacity 0.3s ease",
+          }}
+        />
+      )}
+
       <svg
         width={SIZE}
         height={SIZE}
         className="absolute inset-0"
         style={{ transform: "rotate(-90deg)" }}
       >
-        {/* Background ring */}
+        {/* Background ring / fill */}
         <circle
           cx={SIZE / 2}
           cy={SIZE / 2}
           r={RADIUS}
-          fill={filled ? (fillColor || "hsl(var(--primary))") : "transparent"}
-          stroke="hsl(var(--timer-ring))"
-          strokeWidth={STROKE}
+          fill={
+            filled
+              ? useFrozenSky
+                ? "transparent" // sky div behind handles the fill
+                : (fillColor || "hsl(var(--primary))")
+              : "transparent"
+          }
+          stroke={filled ? filledStrokeColor : "hsl(var(--timer-ring))"}
+          strokeWidth={filled ? filledStrokeWidth : STROKE}
+          strokeDasharray={filled ? filledStrokeDasharray : undefined}
         />
-        {/* Progress arc */}
+        {/* Progress arc (stopwatch / focus) */}
         {progress > 0 && !filled && (
           <circle
             cx={SIZE / 2}

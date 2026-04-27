@@ -231,6 +231,13 @@
   66%       { background-position: 50% 100%; }
 }
 
+/* Frozen sky — same layers as .gradient-bg, but paused.
+   Inherits the active variant's background via composition: we just
+   stop the animation. The element is clipped to a circle by its parent. */
+.gradient-bg-frozen {
+  animation-play-state: paused !important;
+}
+
 /* Page transition */
 .page-fade-enter {
   opacity: 0;

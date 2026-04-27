@@ -36,14 +36,11 @@ const CircularTimer = ({
   // When `filled` and no explicit fillColor, freeze the page sky inside the ring.
   const useFrozenSky = filled && !fillColor;
 
-  // Stroke styling for the filled (clocked-in) state:
-  // - running   → solid primary, slightly thicker
-  // - paused    → desaturated + dashed for unmistakable visual distinction
-  const filledStrokeColor = dimmed
-    ? "hsl(var(--muted-foreground))"
-    : "hsl(var(--primary))";
-  const filledStrokeWidth = dimmed ? STROKE + 1 : STROKE + 2;
-  const filledStrokeDasharray = dimmed ? "6 6" : undefined;
+  // Outer ring stays the neutral grey regardless of state. Paused state
+  // is signalled solely via the desaturated/dimmed sky fill behind it.
+  const filledStrokeColor = "hsl(var(--timer-ring))";
+  const filledStrokeWidth = STROKE;
+  const filledStrokeDasharray: string | undefined = undefined;
 
   return (
     <div

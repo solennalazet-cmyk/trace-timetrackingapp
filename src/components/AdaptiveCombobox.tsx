@@ -33,6 +33,7 @@ const AdaptiveCombobox = ({
   const [sheetOpen, setSheetOpen] = useState(false);
   const lastOpenRequestAtRef = useRef(0);
   const ignoreClicksUntilRef = useRef(0);
+  const ignoreSyntheticClickUntilRef = useRef(0);
 
   const handleSheetOpenChange = useCallback((next: boolean) => {
     const now = Date.now();
@@ -72,8 +73,9 @@ const AdaptiveCombobox = ({
       <>
         <button
           type="button"
-          // touch-manipulation removes 300ms tap delay & double-fire risk on Android.
-          // select-none avoids long-press selection that can synthesize an extra event.
+          // Touch opens on pointer-up, not pointer-down: this prevents the same
+          // tap from opening the sheet and then landing on an option after the
+          // viewport/keyboard or drawer has moved under the user's finger.
           className={cn(
             "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background touch-manipulation select-none",
             !displayValue && "text-muted-foreground"
@@ -82,9 +84,20 @@ const AdaptiveCombobox = ({
             if (e.pointerType !== "touch") return;
             e.preventDefault();
             e.stopPropagation();
+          }}
+          onPointerUp={(e) => {
+            if (e.pointerType !== "touch") return;
+            e.preventDefault();
+            e.stopPropagation();
+            ignoreSyntheticClickUntilRef.current = Date.now() + 500;
             openSheet();
           }}
           onClick={(e) => {
+            if (Date.now() < ignoreSyntheticClickUntilRef.current) {
+              e.preventDefault();
+              e.stopPropagation();
+              return;
+            }
             e.stopPropagation();
             openSheet();
           }}

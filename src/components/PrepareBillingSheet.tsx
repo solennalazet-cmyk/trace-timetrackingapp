@@ -7,7 +7,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { FileText, Share2, Copy, CheckCircle2 } from "lucide-react";
+import { FileText, Share2, Copy, CheckCircle2, BadgeCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -343,6 +343,15 @@ const PrepareBillingSheet = ({
               >
                 <Copy className="w-4 h-4" /> Copy payment summary
               </Button>
+              {unbilledBillableEntries.length > 0 && (
+                <Button
+                  className="w-full rounded-xl h-12 gap-2 justify-start font-medium bg-primary text-primary-foreground hover:bg-primary/90"
+                  onClick={() => setShowBilledPrompt(true)}
+                >
+                  <BadgeCheck className="w-4 h-4" />
+                  Mark {unbilledBillableEntries.length} session{unbilledBillableEntries.length > 1 ? "s" : ""} as billed
+                </Button>
+              )}
             </div>
 
             {billableEntries.length === 0 && (

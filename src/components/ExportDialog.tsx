@@ -223,7 +223,7 @@ const ExportDialog = ({
     y += 6;
 
     // ── Table (shows per-entry display values) ──
-    const tableHead = [["Date", "Duration", "Project", "Task", "Notes", "Billable", "Value"]];
+    const tableHead = [["Date", "Duration", "Project", "Task", "Billable", "Value"]];
     const tableBody = filteredEntries
       .sort((a, b) => (a.entry_date ?? "").localeCompare(b.entry_date ?? ""))
       .map((e) => {
@@ -233,7 +233,6 @@ const ExportDialog = ({
           formatDuration(displayMinutes),
           e.project_name ?? "",
           e.task_name ?? "",
-          (e.notes ?? "").slice(0, 60),
           e.billable ? "Yes" : "—",
           displayValue > 0 ? `€${displayValue.toFixed(2)}` : "—",
         ];

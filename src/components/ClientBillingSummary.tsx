@@ -209,7 +209,7 @@ const ClientBillingSummary = ({
                       onClick={() => onBillClient(c.id)}
                       className="text-[11px] font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-primary/15 text-foreground hover:bg-primary/25 transition-colors"
                     >
-                      Prepare billing <ArrowRight className="w-3 h-3" />
+                      Export and Bill <ArrowRight className="w-3 h-3" />
                     </button>
                   )}
                 </div>

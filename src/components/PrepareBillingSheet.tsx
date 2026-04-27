@@ -150,7 +150,7 @@ const PrepareBillingSheet = ({
     y += 6;
 
     const ev = (e: TimeEntry) => entryDisplayValues(e, rounding);
-    const tableHead = [["Date", "Duration", "Project", "Task", "Notes", "Value"]];
+    const tableHead = [["Date", "Duration", "Project", "Task", "Value"]];
     const tableBody = billableEntries
       .sort((a, b) => (a.entry_date ?? "").localeCompare(b.entry_date ?? ""))
       .map((e) => {
@@ -160,7 +160,6 @@ const PrepareBillingSheet = ({
           formatDuration(displayMinutes),
           e.project_name ?? "",
           e.task_name ?? "",
-          (e.notes ?? "").slice(0, 60),
           displayValue > 0 ? `${sym}${displayValue.toFixed(2)}` : "—",
         ];
       });

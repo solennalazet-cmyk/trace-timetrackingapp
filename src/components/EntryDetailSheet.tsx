@@ -110,6 +110,12 @@ const EntryDetailSheet = ({ entry, open, onOpenChange, onEdit, onDeleted }: Entr
     toast.success("Entry deleted.", { duration: 2250 });
   };
 
+  const handleEdit = () => {
+    const currentEntry = entry;
+    onOpenChange(false);
+    window.setTimeout(() => onEdit(currentEntry), 180);
+  };
+
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
@@ -182,7 +188,7 @@ const EntryDetailSheet = ({ entry, open, onOpenChange, onEdit, onDeleted }: Entr
             {isUnassigned && (
               <Button
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-12 font-bold"
-                onClick={() => { onOpenChange(false); onEdit(entry); }}
+                onClick={handleEdit}
               >
                 Assign this entry →
               </Button>
@@ -192,7 +198,7 @@ const EntryDetailSheet = ({ entry, open, onOpenChange, onEdit, onDeleted }: Entr
               <Button
                 variant="outline"
                 className="flex-1 rounded-[28px] h-10 gap-1"
-                onClick={() => { onOpenChange(false); onEdit(entry); }}
+                onClick={handleEdit}
               >
                 <Pencil className="w-3.5 h-3.5" /> Edit
               </Button>

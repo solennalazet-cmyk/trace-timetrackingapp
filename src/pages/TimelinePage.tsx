@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckSquare, Flame, Crown, ChevronDown } from "lucide-react";
-import { differenceInDays, format, isToday, isYesterday, parseISO } from "date-fns";
+import { differenceInDays, format, isToday, isYesterday, parseISO, startOfWeek } from "date-fns";
 import DateRangePicker from "@/components/DateRangePicker";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWeekStart } from "@/contexts/WeekStartContext";
 import { toLocalDateKey, getClientColor } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { getAnonymousEntries } from "@/lib/anonymous-store";
@@ -90,8 +91,9 @@ const TimelinePage = () => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const isPro = profile?.plan === "pro" || profile?.plan === "trial";
+  const weekStartsOn = useWeekStart();
 
-  const [from, setFrom] = useState(() => new Date(Date.now() - 6 * 86400000));
+  const [from, setFrom] = useState(() => startOfWeek(new Date(), { weekStartsOn }));
   const [to, setTo] = useState(() => new Date());
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [clients, setClients] = useState<Record<string, string>>({});

@@ -347,7 +347,6 @@ const PrepareBillingSheet = ({
                   className="w-full rounded-xl h-12 gap-2 justify-start font-medium bg-primary text-primary-foreground hover:bg-primary/90"
                   onClick={() => setShowBilledPrompt(true)}
                 >
-                  <BadgeCheck className="w-4 h-4" />
                   Mark {unbilledBillableEntries.length} session{unbilledBillableEntries.length > 1 ? "s" : ""} as billed
                 </Button>
               )}

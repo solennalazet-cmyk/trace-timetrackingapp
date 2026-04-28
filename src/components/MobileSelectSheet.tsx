@@ -194,9 +194,9 @@ const MobileSelectSheet = ({
               onPointerDown={(e) => {
                 // Capture so pointerup fires on this same button even if
                 // viewport reflows (keyboard collapse) move it under the finger.
-                (e.currentTarget as HTMLButtonElement).setPointerCapture?.(e.pointerId);
+                armAction("create", e.currentTarget, e.pointerId);
               }}
-              onClick={handleCreate}
+              onClick={() => handleCreate("create")}
               disabled={isCreating}
             >
               <Plus className="h-5 w-5 shrink-0" />
@@ -213,9 +213,9 @@ const MobileSelectSheet = ({
                 value === item.id && "bg-accent/50 font-medium"
               )}
               onPointerDown={(e) => {
-                (e.currentTarget as HTMLButtonElement).setPointerCapture?.(e.pointerId);
+                armAction(item.id, e.currentTarget, e.pointerId);
               }}
-              onClick={() => handleSelect(item)}
+              onClick={() => handleSelect(item, item.id)}
             >
               <div className="w-5 h-5 flex items-center justify-center shrink-0">
                 {value === item.id && <Check className="h-4 w-4 text-primary-text" />}

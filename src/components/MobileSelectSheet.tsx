@@ -33,12 +33,15 @@ const MobileSelectSheet = ({
   const [creating, setCreating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const actionLockRef = useRef(false);
+  const suppressActionsUntilRef = useRef(0);
+  const armedActionRef = useRef<string | null>(null);
 
   const isCreating = externalCreating || creating;
 
   useEffect(() => {
     if (open) {
       actionLockRef.current = false;
+      armedActionRef.current = null;
       setSearch("");
       // IMPORTANT: do NOT auto-focus the search input. Auto-focus triggers the
       // mobile keyboard *after* the drawer's open animation finishes, which
@@ -47,6 +50,26 @@ const MobileSelectSheet = ({
       // tap the search field if they want to filter — that's an explicit
       // intent and the reflow then happens before any selection tap.
     }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || typeof window === "undefined" || !window.visualViewport) return;
+
+    const suppressDuringKeyboardShift = () => {
+      // Mobile keyboards often resize the visual viewport after the original
+      // tap has completed. During that short delayed reflow, ignore option
+      // clicks unless they began with a fresh pointer-down on the option itself.
+      suppressActionsUntilRef.current = Date.now() + 450;
+      armedActionRef.current = null;
+    };
+
+    window.visualViewport.addEventListener("resize", suppressDuringKeyboardShift);
+    window.visualViewport.addEventListener("scroll", suppressDuringKeyboardShift);
+
+    return () => {
+      window.visualViewport?.removeEventListener("resize", suppressDuringKeyboardShift);
+      window.visualViewport?.removeEventListener("scroll", suppressDuringKeyboardShift);
+    };
   }, [open]);
 
   // Blur any focused element (closes the soft keyboard) before mutating state
@@ -67,8 +90,10 @@ const MobileSelectSheet = ({
   const showAddOption = allowCreate && onCreate && search.trim().length > 0 && !exactMatch;
 
   const handleSelect = useCallback(
-    (item: ComboboxItem) => {
-      if (actionLockRef.current) return;
+    (item: ComboboxItem, actionKey?: string) => {
+      if (actionLockRef.current || Date.now() < suppressActionsUntilRef.current) return;
+      if (actionKey && armedActionRef.current !== actionKey) return;
+      armedActionRef.current = null;
       actionLockRef.current = true;
       dismissKeyboard();
       onSelect(item.id, item.name);
@@ -77,8 +102,10 @@ const MobileSelectSheet = ({
     [onSelect, onOpenChange, dismissKeyboard]
   );
 
-  const handleCreate = useCallback(async () => {
-    if (actionLockRef.current || isCreating || !onCreate) return;
+  const handleCreate = useCallback(async (actionKey?: string) => {
+    if (actionLockRef.current || isCreating || !onCreate || Date.now() < suppressActionsUntilRef.current) return;
+    if (actionKey && armedActionRef.current !== actionKey) return;
+    armedActionRef.current = null;
     const name = search.trim();
     if (!name) return;
     actionLockRef.current = true;
@@ -92,6 +119,21 @@ const MobileSelectSheet = ({
     setCreating(false);
     if (!created) actionLockRef.current = false;
   }, [isCreating, onCreate, search, onSelect, onOpenChange, dismissKeyboard]);
+
+  const armAction = useCallback((key: string, element: HTMLButtonElement, pointerId: number) => {
+    if (Date.now() < suppressActionsUntilRef.current) {
+      armedActionRef.current = null;
+      return false;
+    }
+    armedActionRef.current = key;
+    element.setPointerCapture?.(pointerId);
+    return true;
+  }, []);
+
+  const suppressAfterSearchTouch = useCallback(() => {
+    suppressActionsUntilRef.current = Date.now() + 700;
+    armedActionRef.current = null;
+  }, []);
 
   return (
     <Drawer
@@ -112,7 +154,13 @@ const MobileSelectSheet = ({
 
         {/* Search bar */}
         <div className="px-4 pb-3">
-          <div className="flex items-center gap-2 rounded-lg border border-input bg-background px-3 h-10">
+          <div
+            className="flex items-center gap-2 rounded-lg border border-input bg-background px-3 h-10"
+            onPointerDown={(e) => {
+              if (e.pointerType === "touch") suppressAfterSearchTouch();
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
             <input
               ref={inputRef}
@@ -120,6 +168,7 @@ const MobileSelectSheet = ({
               placeholder={placeholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onFocus={suppressAfterSearchTouch}
               disabled={isCreating}
             />
             {isCreating && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}

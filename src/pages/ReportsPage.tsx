@@ -891,7 +891,33 @@ const ReportsPage = () => {
                     <MiniDonut data={avgData} centerLabel={formatHHMM(Math.round(totalMins / (displayEntries.length || 1)))} centerSub="avg" />
                     <span className="text-xs text-muted-foreground mt-1">Avg Session</span>
                   </div>
-                  <PeakHoursChart entries={displayEntries} />
+                  {/* Decimal hours — copy-friendly for spreadsheets */}
+                  {(() => {
+                    const decimal = (totalMins / 60).toFixed(2);
+                    const handleCopy = () => {
+                      navigator.clipboard.writeText(decimal).then(
+                        () => toast.success(`Copied ${decimal}`),
+                        () => toast.error("Couldn't copy")
+                      );
+                    };
+                    return (
+                      <div className="shrink-0 flex flex-col items-center">
+                        <button
+                          onClick={handleCopy}
+                          className="flex items-center justify-center rounded-full border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                          style={{ width: 120, height: 120 }}
+                          title="Tap to copy decimal hours"
+                        >
+                          <div className="flex flex-col items-center px-2">
+                            <span className="text-lg font-bold font-mono text-foreground tabular-nums">{decimal}</span>
+                            <span className="text-[11px] text-muted-foreground">decimal h</span>
+                            <span className="text-[10px] text-muted-foreground/70 mt-0.5">tap to copy</span>
+                          </div>
+                        </button>
+                        <span className="text-xs text-muted-foreground mt-1">For Excel</span>
+                      </div>
+                    );
+                  })()}
                   {/* Boost mini-metric */}
                   {(() => {
                     const boostMins = displayEntries.filter(e => e.entry_type === "boost").reduce((s, e) => s + edMins(e), 0);

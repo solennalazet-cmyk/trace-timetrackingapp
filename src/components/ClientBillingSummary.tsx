@@ -202,7 +202,7 @@ const ClientBillingSummary = ({
                 {/* Actions row */}
                 <div className="flex items-center justify-end px-4 py-2 bg-muted/20 gap-3">
                   {c.outstanding > 0 && (
-                    <span className="text-[11px] text-muted-foreground">{sym}{c.outstanding.toFixed(0)} outstanding</span>
+                    <span className="text-[11px] text-muted-foreground">{sym}{c.outstanding.toFixed(2)} outstanding</span>
                   )}
                   {isPro && c.billableValue > 0 && (
                     <button

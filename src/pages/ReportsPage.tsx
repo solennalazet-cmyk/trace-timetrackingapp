@@ -32,98 +32,7 @@ import ExportDialog from "@/components/ExportDialog";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
-// ── Peak Hours Radial Heatmap (custom SVG) ──
-const PEAK_HUE_BASE = 175; // teal/cyan family
-
-const PeakHoursChart = ({ entries, size = 120 }: { entries: { start_time?: string | null; duration_minutes: number }[]; size?: number }) => {
-  const withStart = entries.filter((e) => e.start_time);
-  if (withStart.length < 3) {
-    return (
-      <div className="shrink-0 flex flex-col items-center">
-        <div className="flex items-center justify-center rounded-full border border-dashed border-border" style={{ width: size, height: size }}>
-          <span className="text-[10px] text-muted-foreground text-center px-3 leading-tight">Track more sessions<br />to see patterns</span>
-        </div>
-        <span className="text-xs text-muted-foreground mt-1">Most Productive Hours</span>
-      </div>
-    );
-  }
-
-  // Bucket by hour
-  const buckets = new Array(24).fill(0);
-  withStart.forEach((e) => {
-    try {
-      const hour = new Date(e.start_time!).getHours();
-      buckets[hour] += e.duration_minutes;
-    } catch {}
-  });
-
-  const maxVal = Math.max(...buckets, 1);
-  const peakHour = buckets.indexOf(maxVal);
-
-  const cx = size / 2;
-  const cy = size * 0.55; // shift center down so half-circle fills top
-  const minR = size * 0.18;
-  const maxR = size * 0.46;
-
-  // Half-circle: 180° to 0° (top half), 24 slices of 7.5° each
-  const sliceAngle = 180 / 24;
-
-  const arcs = buckets.map((val, i) => {
-    const ratio = val / maxVal;
-    const outerR = minR + ratio * (maxR - minR);
-    // Angles: start from 180° (left), go clockwise
-    const startDeg = 180 - i * sliceAngle;
-    const endDeg = startDeg - sliceAngle;
-
-    const startRad = (startDeg * Math.PI) / 180;
-    const endRad = (endDeg * Math.PI) / 180;
-
-    const x1Outer = cx + outerR * Math.cos(startRad);
-    const y1Outer = cy - outerR * Math.sin(startRad);
-    const x2Outer = cx + outerR * Math.cos(endRad);
-    const y2Outer = cy - outerR * Math.sin(endRad);
-
-    const x1Inner = cx + minR * Math.cos(startRad);
-    const y1Inner = cy - minR * Math.sin(startRad);
-    const x2Inner = cx + minR * Math.cos(endRad);
-    const y2Inner = cy - minR * Math.sin(endRad);
-
-    const largeArc = sliceAngle > 180 ? 1 : 0;
-
-    const d = [
-      `M ${x1Inner} ${y1Inner}`,
-      `L ${x1Outer} ${y1Outer}`,
-      `A ${outerR} ${outerR} 0 ${largeArc} 0 ${x2Outer} ${y2Outer}`,
-      `L ${x2Inner} ${y2Inner}`,
-      `A ${minR} ${minR} 0 ${largeArc} 1 ${x1Inner} ${y1Inner}`,
-      "Z",
-    ].join(" ");
-
-    // Color: teal/cyan, darker saturation for higher values
-    const lightness = val === 0 ? 92 : 75 - ratio * 35; // 75 → 40 for active
-    const saturation = val === 0 ? 10 : 50 + ratio * 30;
-    const fill = `hsl(${PEAK_HUE_BASE} ${saturation}% ${lightness}%)`;
-
-    return <path key={i} d={d} fill={fill} stroke="hsl(var(--background))" strokeWidth={0.8} />;
-  });
-
-  const peakLabel = `${peakHour}h`;
-
-  return (
-    <div className="shrink-0 flex flex-col items-center">
-      <div className="relative" style={{ width: size, height: size }}>
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          {arcs}
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ paddingTop: size * 0.08 }}>
-          <span className="text-sm font-bold font-mono text-foreground">{peakLabel}</span>
-          <span className="text-[11px] text-muted-foreground">most worked</span>
-        </div>
-      </div>
-      <span className="text-xs text-muted-foreground mt-1">Most Productive Hours</span>
-    </div>
-  );
-};
+// (PeakHoursChart removed — replaced by Decimal Hours card)
 
 const formatHHMM = (mins: number) => {
   const h = Math.floor(mins / 60);
@@ -733,6 +642,40 @@ const ReportsPage = () => {
                   <span>Billable: {formatHHMM(billableMins)}</span>
                   {nonBillableMins > 0 && <span>Non-billable: {formatHHMM(nonBillableMins)}</span>}
                 </div>
+
+                {/* Compact ranked breakdown — only shown when filtered (decision-driven mobile read) */}
+                {clientFilter && timeDonutData.length > 0 && (() => {
+                  const sorted = [...timeDonutData].sort((a, b) => b.value - a.value);
+                  const top = sorted.slice(0, 4);
+                  const restMins = sorted.slice(4).reduce((s, d) => s + d.value, 0);
+                  const max = top[0]?.value ?? 1;
+                  return (
+                    <div className="mt-4 space-y-1.5 max-w-[360px] mx-auto">
+                      {top.map((d) => {
+                        const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
+                        const barPct = max > 0 ? (d.value / max) * 100 : 0;
+                        return (
+                          <div key={d.name} className="flex items-center gap-2 text-xs">
+                            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: d.fill }} />
+                            <span className="truncate text-foreground flex-1 min-w-0">{d.name}</span>
+                            <div className="relative h-1.5 w-16 rounded-full bg-muted/50 overflow-hidden shrink-0">
+                              <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${barPct}%`, background: d.fill, opacity: 0.7 }} />
+                            </div>
+                            <span className="font-mono text-muted-foreground tabular-nums w-12 text-right shrink-0">{formatHHMM(d.value)}</span>
+                            <span className="font-mono text-foreground font-semibold tabular-nums w-9 text-right shrink-0">{pct}%</span>
+                          </div>
+                        );
+                      })}
+                      {restMins > 0 && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-0.5">
+                          <div className="w-2 h-2 rounded-full shrink-0 bg-muted-foreground/40" />
+                          <span className="flex-1">+{sorted.length - 4} more</span>
+                          <span className="font-mono tabular-nums">{formatHHMM(restMins)}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })()}
@@ -857,7 +800,33 @@ const ReportsPage = () => {
                     <MiniDonut data={avgData} centerLabel={formatHHMM(Math.round(totalMins / (displayEntries.length || 1)))} centerSub="avg" />
                     <span className="text-xs text-muted-foreground mt-1">Avg Session</span>
                   </div>
-                  <PeakHoursChart entries={displayEntries} />
+                  {/* Decimal hours — copy-friendly for spreadsheets */}
+                  {(() => {
+                    const decimal = (totalMins / 60).toFixed(2);
+                    const handleCopy = () => {
+                      navigator.clipboard.writeText(decimal).then(
+                        () => toast.success(`Copied ${decimal}`),
+                        () => toast.error("Couldn't copy")
+                      );
+                    };
+                    return (
+                      <div className="shrink-0 flex flex-col items-center">
+                        <button
+                          onClick={handleCopy}
+                          className="flex items-center justify-center rounded-full border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                          style={{ width: 120, height: 120 }}
+                          title="Tap to copy decimal hours"
+                        >
+                          <div className="flex flex-col items-center px-2">
+                            <span className="text-lg font-bold font-mono text-foreground tabular-nums">{decimal}</span>
+                            <span className="text-[11px] text-muted-foreground">decimal h</span>
+                            <span className="text-[10px] text-muted-foreground/70 mt-0.5">tap to copy</span>
+                          </div>
+                        </button>
+                        <span className="text-xs text-muted-foreground mt-1">For Excel</span>
+                      </div>
+                    );
+                  })()}
                   {/* Boost mini-metric */}
                   {(() => {
                     const boostMins = displayEntries.filter(e => e.entry_type === "boost").reduce((s, e) => s + edMins(e), 0);

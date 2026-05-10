@@ -184,7 +184,7 @@ const ClientBillingSummary = ({
               {/* Row 2: Primary metrics — time left, amount right */}
               <div className="flex items-baseline justify-between">
                 <p className="text-base font-semibold font-mono text-foreground">{formatHM(c.totalMins)}</p>
-                <p className="text-base font-semibold font-mono text-foreground">{sym}{c.billableValue.toFixed(0)}</p>
+                <p className="text-base font-semibold font-mono text-foreground">{sym}{c.billableValue.toFixed(2)}</p>
               </div>
 
               {/* Row 3: Billable context */}

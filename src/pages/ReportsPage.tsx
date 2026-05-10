@@ -733,6 +733,40 @@ const ReportsPage = () => {
                   <span>Billable: {formatHHMM(billableMins)}</span>
                   {nonBillableMins > 0 && <span>Non-billable: {formatHHMM(nonBillableMins)}</span>}
                 </div>
+
+                {/* Compact ranked breakdown — only shown when filtered (decision-driven mobile read) */}
+                {clientFilter && timeDonutData.length > 0 && (() => {
+                  const sorted = [...timeDonutData].sort((a, b) => b.value - a.value);
+                  const top = sorted.slice(0, 4);
+                  const restMins = sorted.slice(4).reduce((s, d) => s + d.value, 0);
+                  const max = top[0]?.value ?? 1;
+                  return (
+                    <div className="mt-4 space-y-1.5 max-w-[360px] mx-auto">
+                      {top.map((d) => {
+                        const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
+                        const barPct = max > 0 ? (d.value / max) * 100 : 0;
+                        return (
+                          <div key={d.name} className="flex items-center gap-2 text-xs">
+                            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: d.fill }} />
+                            <span className="truncate text-foreground flex-1 min-w-0">{d.name}</span>
+                            <div className="relative h-1.5 w-16 rounded-full bg-muted/50 overflow-hidden shrink-0">
+                              <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${barPct}%`, background: d.fill, opacity: 0.7 }} />
+                            </div>
+                            <span className="font-mono text-muted-foreground tabular-nums w-12 text-right shrink-0">{formatHHMM(d.value)}</span>
+                            <span className="font-mono text-foreground font-semibold tabular-nums w-9 text-right shrink-0">{pct}%</span>
+                          </div>
+                        );
+                      })}
+                      {restMins > 0 && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-0.5">
+                          <div className="w-2 h-2 rounded-full shrink-0 bg-muted-foreground/40" />
+                          <span className="flex-1">+{sorted.length - 4} more</span>
+                          <span className="font-mono tabular-nums">{formatHHMM(restMins)}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })()}

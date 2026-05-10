@@ -774,7 +774,7 @@ const ReportsPage = () => {
               if (!active || !payload?.length || !chartRect) return null;
               const item = payload[0];
               const valueLabel = kind === "turnover"
-                ? `€${Number(item.value).toFixed(0)}`
+                ? `€${Number(item.value).toFixed(2)}`
                 : formatHHMM(Number(item.value));
               const x = chartRect.left + (coordinate?.x ?? 0) + 12;
               const y = chartRect.top + (coordinate?.y ?? 0) - 12;

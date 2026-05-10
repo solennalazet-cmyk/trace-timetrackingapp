@@ -791,42 +791,43 @@ const ReportsPage = () => {
             return (
               <div className="mb-5">
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Input Analysis</h3>
-                <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1">
-                  <div className="shrink-0 flex flex-col items-center">
-                    <MiniDonut data={hoursData} centerLabel={formatHHMM(totalMins)} centerSub="hours" />
-                    <span className="text-xs text-muted-foreground mt-1">Hours</span>
-                  </div>
-                  <div className="shrink-0 flex flex-col items-center">
-                    <MiniDonut data={avgData} centerLabel={formatHHMM(Math.round(totalMins / (displayEntries.length || 1)))} centerSub="avg" />
-                    <span className="text-xs text-muted-foreground mt-1">Avg Session</span>
-                  </div>
-                  {/* Decimal hours — copy-friendly for spreadsheets */}
+                 <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1">
                   {(() => {
                     const decimal = (totalMins / 60).toFixed(2);
-                    const handleCopy = () => {
-                      navigator.clipboard.writeText(decimal).then(
-                        () => toast.success(`Copied ${decimal}`),
-                        () => toast.error("Couldn't copy")
-                      );
+                    const handleHoursTap = () => {
+                      if (showDecimalHours) {
+                        navigator.clipboard?.writeText(decimal).then(
+                          () => toast.success(`Copied ${decimal}`),
+                          () => {}
+                        );
+                        return;
+                      }
+                      setShowDecimalHours(true);
+                      window.setTimeout(() => setShowDecimalHours(false), 4000);
                     };
                     return (
                       <div className="shrink-0 flex flex-col items-center">
                         <button
-                          onClick={handleCopy}
-                          className="flex items-center justify-center rounded-full border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
-                          style={{ width: 120, height: 120 }}
-                          title="Tap to copy decimal hours"
+                          type="button"
+                          onClick={handleHoursTap}
+                          title={showDecimalHours ? "Tap to copy" : "Tap for decimal"}
+                          aria-label={showDecimalHours ? `Decimal hours ${decimal}, tap to copy` : "Show decimal hours"}
+                          className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-transform active:scale-[0.98]"
                         >
-                          <div className="flex flex-col items-center px-2">
-                            <span className="text-lg font-bold font-mono text-foreground tabular-nums">{decimal}</span>
-                            <span className="text-[11px] text-muted-foreground">decimal h</span>
-                            <span className="text-[10px] text-muted-foreground/70 mt-0.5">tap to copy</span>
-                          </div>
+                          <MiniDonut
+                            data={hoursData}
+                            centerLabel={showDecimalHours ? decimal : formatHHMM(totalMins)}
+                            centerSub={showDecimalHours ? "decimal" : "hours"}
+                          />
                         </button>
-                        <span className="text-xs text-muted-foreground mt-1">For Excel</span>
+                        <span className="text-xs text-muted-foreground mt-1">Hours</span>
                       </div>
                     );
                   })()}
+                  <div className="shrink-0 flex flex-col items-center">
+                    <MiniDonut data={avgData} centerLabel={formatHHMM(Math.round(totalMins / (displayEntries.length || 1)))} centerSub="avg" />
+                    <span className="text-xs text-muted-foreground mt-1">Avg Session</span>
+                  </div>
                   {/* Boost mini-metric */}
                   {(() => {
                     const boostMins = displayEntries.filter(e => e.entry_type === "boost").reduce((s, e) => s + edMins(e), 0);

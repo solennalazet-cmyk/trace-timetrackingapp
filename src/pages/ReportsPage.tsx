@@ -871,8 +871,8 @@ const ReportsPage = () => {
                     );
                   })()}
                   <div className="shrink-0 flex flex-col items-center">
-                    <MiniDonut data={avgData} centerLabel={formatHHMM(Math.round(totalMins / (displayEntries.length || 1)))} centerSub="avg" />
-                    <span className="text-xs text-muted-foreground mt-1">Avg Session</span>
+                    <MiniDonut data={avgData} centerLabel={formatHHMM(Math.round(totalMins / (displayEntries.length || 1)))} centerSub="per session" />
+                    <span className="text-xs text-muted-foreground mt-1">Avg / Session</span>
                   </div>
                   {/* Boost mini-metric */}
                   {(() => {

@@ -89,6 +89,7 @@ const ReportsPage = () => {
   const [revenueTarget, setRevenueTarget] = useState(0);
   const [weekStartDay, setWeekStartDay] = useState(1);
   const [rounding, setRounding] = useState<RoundingSettings>(DEFAULT_ROUNDING);
+  const [showDecimalHours, setShowDecimalHours] = useState(false);
 
   // Settings are loaded inside the date initialization effect below
 

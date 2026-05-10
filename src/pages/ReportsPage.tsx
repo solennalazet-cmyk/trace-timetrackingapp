@@ -632,7 +632,7 @@ const ReportsPage = () => {
                         </PieChart>
                       </ResponsiveContainer>
                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-base font-bold font-mono text-foreground">{sym}{totalTurnoverValue.toFixed(0)}</span>
+                        <span className="text-base font-bold font-mono text-foreground">{sym}{totalTurnoverValue.toFixed(2)}</span>
                         <span className="text-xs text-muted-foreground">turnover</span>
                       </div>
                     </div>
@@ -774,7 +774,7 @@ const ReportsPage = () => {
               if (!active || !payload?.length || !chartRect) return null;
               const item = payload[0];
               const valueLabel = kind === "turnover"
-                ? `€${Number(item.value).toFixed(0)}`
+                ? `€${Number(item.value).toFixed(2)}`
                 : formatHHMM(Number(item.value));
               const x = chartRect.left + (coordinate?.x ?? 0) + 12;
               const y = chartRect.top + (coordinate?.y ?? 0) - 12;

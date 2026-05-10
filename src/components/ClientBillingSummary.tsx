@@ -184,7 +184,7 @@ const ClientBillingSummary = ({
               {/* Row 2: Primary metrics — time left, amount right */}
               <div className="flex items-baseline justify-between">
                 <p className="text-base font-semibold font-mono text-foreground">{formatHM(c.totalMins)}</p>
-                <p className="text-base font-semibold font-mono text-foreground">{sym}{c.billableValue.toFixed(0)}</p>
+                <p className="text-base font-semibold font-mono text-foreground">{sym}{c.billableValue.toFixed(2)}</p>
               </div>
 
               {/* Row 3: Billable context */}
@@ -202,7 +202,7 @@ const ClientBillingSummary = ({
                 {/* Actions row */}
                 <div className="flex items-center justify-end px-4 py-2 bg-muted/20 gap-3">
                   {c.outstanding > 0 && (
-                    <span className="text-[11px] text-muted-foreground">{sym}{c.outstanding.toFixed(0)} outstanding</span>
+                    <span className="text-[11px] text-muted-foreground">{sym}{c.outstanding.toFixed(2)} outstanding</span>
                   )}
                   {isPro && c.billableValue > 0 && (
                     <button

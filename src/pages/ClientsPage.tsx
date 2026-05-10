@@ -155,8 +155,8 @@ const ClientsPage = () => {
 
   // --- CRUD handlers ---
   const handleAddClientClick = () => {
-    if (isFree && clients.length >= 2) {
-      setPaywallMessage("You've reached the 2-client limit on the free plan. Upgrade to Pro for unlimited clients.");
+    if (isFree && clients.length >= 1) {
+      setPaywallMessage("You've reached the 1-client limit on the free plan. Upgrade to Pro for unlimited clients.");
       setPaywallOpen(true);
       return;
     }
@@ -212,8 +212,8 @@ const ClientsPage = () => {
   };
 
   const handleAddProjectClick = (client: Client) => {
-    if (isFree && projects.length >= 3) {
-      setPaywallMessage("You've reached the 3-project limit on the free plan. Upgrade to Pro for unlimited projects.");
+    if (isFree && projects.length >= 2) {
+      setPaywallMessage("You've reached the 2-project limit on the free plan. Upgrade to Pro for unlimited projects.");
       setPaywallOpen(true);
       return;
     }

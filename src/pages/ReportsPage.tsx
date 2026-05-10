@@ -770,25 +770,69 @@ const ReportsPage = () => {
 
             const totalTurnover = turnoverData.reduce((s, d) => s + d.value, 0);
 
-            const MiniDonut = ({ data, centerLabel, centerSub, size = 120 }: { data: { name: string; value: number; fill: string }[]; centerLabel: string; centerSub: string; size?: number }) => (
-              <div className="relative shrink-0 [&_svg]:outline-none [&_svg]:border-none [&_svg_*]:outline-none" style={{ width: size, height: size }}>
-                <ResponsiveContainer width={size} height={size}>
-                  <PieChart>
-                    <Pie data={data} innerRadius={size * 0.32} outerRadius={size * 0.46} dataKey="value" stroke="hsl(var(--background))" strokeWidth={2} paddingAngle={1}>
-                      {data.map((d, i) => <Cell key={i} fill={d.fill} />)}
-                    </Pie>
-                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: 11, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }} formatter={(value: number, name: string) => {
-                      if (centerSub === "turnover") return [`€${value.toFixed(0)}`, name];
-                      return [formatHHMM(value), name];
-                    }} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-sm font-bold font-mono text-foreground">{centerLabel}</span>
-                  <span className="text-[11px] text-muted-foreground">{centerSub === "turnover" ? "turnover" : centerSub}</span>
+            const PortalTooltipContent = ({ active, payload, coordinate, chartRect, kind }: any) => {
+              if (!active || !payload?.length || !chartRect) return null;
+              const item = payload[0];
+              const valueLabel = kind === "turnover"
+                ? `€${Number(item.value).toFixed(0)}`
+                : formatHHMM(Number(item.value));
+              const x = chartRect.left + (coordinate?.x ?? 0) + 12;
+              const y = chartRect.top + (coordinate?.y ?? 0) - 12;
+              return createPortal(
+                <div
+                  style={{
+                    position: "fixed",
+                    left: x,
+                    top: y,
+                    zIndex: 9999,
+                    pointerEvents: "none",
+                    background: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: 8,
+                    padding: "6px 8px",
+                    fontSize: 11,
+                    color: "hsl(var(--foreground))",
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <span style={{ color: item.payload?.fill, marginRight: 6 }}>●</span>
+                  {item.name}: <strong>{valueLabel}</strong>
+                </div>,
+                document.body
+              );
+            };
+
+            const MiniDonut = ({ data, centerLabel, centerSub, size = 120 }: { data: { name: string; value: number; fill: string }[]; centerLabel: string; centerSub: string; size?: number }) => {
+              const wrapRef = React.useRef<HTMLDivElement>(null);
+              const kind = centerSub === "turnover" ? "turnover" : "time";
+              return (
+                <div ref={wrapRef} className="relative shrink-0 [&_svg]:outline-none [&_svg]:border-none [&_svg_*]:outline-none" style={{ width: size, height: size }}>
+                  <ResponsiveContainer width={size} height={size}>
+                    <PieChart>
+                      <Pie data={data} innerRadius={size * 0.32} outerRadius={size * 0.46} dataKey="value" stroke="hsl(var(--background))" strokeWidth={2} paddingAngle={1}>
+                        {data.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                      </Pie>
+                      <Tooltip
+                        cursor={false}
+                        wrapperStyle={{ outline: "none" }}
+                        content={(props: any) => (
+                          <PortalTooltipContent
+                            {...props}
+                            kind={kind}
+                            chartRect={wrapRef.current?.getBoundingClientRect()}
+                          />
+                        )}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-sm font-bold font-mono text-foreground">{centerLabel}</span>
+                    <span className="text-[11px] text-muted-foreground">{centerSub === "turnover" ? "turnover" : centerSub}</span>
+                  </div>
                 </div>
-              </div>
-            );
+              );
+            };
 
             return (
               <div className="mb-5">

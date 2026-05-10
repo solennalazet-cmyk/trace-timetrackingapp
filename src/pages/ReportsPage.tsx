@@ -819,7 +819,7 @@ const ReportsPage = () => {
             return (
               <div className="mb-5">
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Input Analysis</h3>
-                 <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1">
+                 <div className="flex flex-wrap justify-center gap-4 pb-2">
                   {(() => {
                     const decimal = (totalMins / 60).toFixed(2);
                     const handleHoursTap = () => {

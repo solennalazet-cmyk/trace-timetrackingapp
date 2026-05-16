@@ -223,7 +223,10 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     }
   }, [clientsFull, allProjectsFull, tasks, existingEntry, clientId, projectId, taskId]);
 
-  const isInitialEditSkipActive = !!existingEntry && !hasUserChangedSelection;
+  const isInitialEditSkipActive =
+    !!existingEntry &&
+    !hasUserChangedSelection &&
+    existingEntry.rate_amount != null;
 
   const clearResolvedRate = useCallback((reason: string) => {
     console.log("[AssignmentModal] rate cleared", {

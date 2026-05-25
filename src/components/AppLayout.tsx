@@ -9,6 +9,8 @@ import AuthModal from "./AuthModal";
 
 const AppLayout = () => {
   const [authOpen, setAuthOpen] = useState(false);
+  const location = useLocation();
+  const isReports = location.pathname === "/reports";
 
   return (
     <div className="gradient-bg min-h-screen">

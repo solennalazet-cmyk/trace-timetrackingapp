@@ -9,7 +9,7 @@ const tabs = [
   { path: "/clients", label: "Projects", icon: Briefcase },
 ];
 
-const getThemeStyles = () => {
+export const getThemeStyles = () => {
   const theme = getStoredColorTheme();
   const isDark = document.documentElement.classList.contains("dark");
 

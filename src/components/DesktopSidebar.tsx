@@ -136,6 +136,18 @@ const DesktopSidebar = () => {
                 <button onClick={() => setAccountOpen(true)} className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-muted/50 transition-colors">
                   <CreditCard className="w-3.5 h-3.5" /> Account & Subscription
                 </button>
+                <button onClick={() => setHowItWorksOpen(true)} className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-muted/50 transition-colors">
+                  <Info className="w-3.5 h-3.5" /> How Trace works
+                </button>
+                <button onClick={() => setWhatsNewOpen(true)} className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-muted/50 transition-colors">
+                  <Sparkles className="w-3.5 h-3.5" /> What's new
+                </button>
+                <button onClick={() => setFeedbackOpen(true)} className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-muted/50 transition-colors">
+                  <MessageSquare className="w-3.5 h-3.5" /> Send feedback
+                </button>
+                <button onClick={() => setAboutOpen(true)} className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-muted/50 transition-colors">
+                  <Info className="w-3.5 h-3.5" /> About
+                </button>
                 <button onClick={handleSignOut} className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-muted/50 transition-colors text-muted-foreground">
                   <LogOut className="w-3.5 h-3.5" /> Sign out
                 </button>

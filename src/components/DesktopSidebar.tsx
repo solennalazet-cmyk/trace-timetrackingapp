@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Timer, BarChart3, CheckSquare, Briefcase, Settings, CreditCard, LogOut, LogIn, Info, MessageSquare, Sparkles, User, ChevronDown, MoreHorizontal } from "lucide-react";
+import { Timer, BarChart3, CheckSquare, Briefcase, Settings, CreditCard, LogOut, LogIn, Info, MessageSquare, Sparkles, User, ChevronDown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getThemeStyles } from "./BottomNav";
 import logo from "@/assets/logo.png";
 import SettingsModal from "./SettingsModal";
 import AccountModal from "./AccountModal";

@@ -11,7 +11,7 @@ const AppLayout = () => {
 
   return (
     <div className="gradient-bg min-h-screen">
-      <div className="lg:grid lg:grid-cols-[260px_minmax(0,1fr)_340px] lg:max-w-[1400px] lg:mx-auto lg:min-h-screen">
+      <div className="lg:grid lg:grid-cols-[260px_minmax(0,1fr)_340px] lg:min-h-screen">
         <DesktopSidebar />
 
         <div className="relative max-w-[420px] mx-auto min-h-screen w-full lg:max-w-none lg:mx-0">

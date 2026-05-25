@@ -53,7 +53,7 @@ const DesktopSidebar = () => {
             className="text-[10px] font-bold px-1.5 py-0.5 rounded"
             style={{
               background: "linear-gradient(135deg, hsl(43, 96%, 56%), hsl(53, 98%, 77%))",
-              color: colors.active === "hsl(43, 96%, 56%)" ? "hsl(222, 34%, 16%)" : "hsl(217, 33%, 17%)",
+              color: "hsl(222, 34%, 16%)",
             }}
           >
             PRO ✦

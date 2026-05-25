@@ -71,8 +71,7 @@ const DesktopSidebar = () => {
 
   return (
     <aside
-      className="hidden lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen lg:py-6 lg:px-4 lg:border-r border-border/40"
-      style={{ backgroundColor: colors.bg, backdropFilter: "blur(12px)" }}
+      className="hidden lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen lg:py-6 lg:px-4 lg:border-r border-border/40 bg-card/40 backdrop-blur-md"
     >
       {/* Logo */}
       <Link to="/" className="flex items-center gap-2 px-2 mb-8" aria-label="Trace home">
@@ -90,8 +89,8 @@ const DesktopSidebar = () => {
               to={path}
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors"
               style={{
-                background: isActive ? "hsl(var(--primary) / 0.12)" : "transparent",
-                color: isActive ? "hsl(var(--primary))" : "hsl(var(--foreground))",
+                background: isActive ? activeBg : "transparent",
+                color: isActive ? activeColor : "hsl(var(--foreground))",
               }}
             >
               <Icon className="w-4 h-4" />
@@ -102,6 +101,7 @@ const DesktopSidebar = () => {
       </nav>
 
       <div className="flex-1" />
+
 
       {/* More links dropdown */}
       <div className="mb-3">

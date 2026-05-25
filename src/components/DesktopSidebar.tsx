@@ -103,41 +103,6 @@ const DesktopSidebar = () => {
       <div className="flex-1" />
 
 
-      {/* More links dropdown */}
-      <div className="mb-3">
-        <button
-          onClick={() => setMoreMenuOpen((v) => !v)}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
-          aria-expanded={moreMenuOpen}
-        >
-          <MoreHorizontal className="w-3.5 h-3.5" />
-          <span className="flex-1 text-left">More</span>
-          <ChevronDown
-            className="w-3.5 h-3.5 transition-transform shrink-0"
-            style={{ transform: moreMenuOpen ? "rotate(180deg)" : "rotate(0deg)" }}
-          />
-        </button>
-        {moreMenuOpen && (
-          <div className="flex flex-col gap-0.5 mt-0.5">
-            <button onClick={() => setHowItWorksOpen(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
-              <Info className="w-3.5 h-3.5" /> How Trace works
-            </button>
-            {user && (
-              <>
-                <button onClick={() => setWhatsNewOpen(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
-                  <Sparkles className="w-3.5 h-3.5" /> What's new
-                </button>
-                <button onClick={() => setFeedbackOpen(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
-                  <MessageSquare className="w-3.5 h-3.5" /> Send feedback
-                </button>
-                <button onClick={() => setAboutOpen(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
-                  <Info className="w-3.5 h-3.5" /> About
-                </button>
-              </>
-            )}
-          </div>
-        )}
-      </div>
 
       {/* Account section */}
       <div className="rounded-2xl border border-border/60 bg-card/60 p-3">

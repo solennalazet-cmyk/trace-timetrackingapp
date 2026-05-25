@@ -36,10 +36,8 @@ const DesktopSidebar = () => {
     ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
     : "";
 
-  const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
-  // Workaround: primary yellow is unreadable on light card bg, so use foreground in light mode
-  const activeColor = isDark ? "hsl(var(--primary))" : "hsl(var(--foreground))";
-  const activeBg = isDark ? "hsl(var(--primary) / 0.12)" : "hsl(var(--foreground) / 0.08)";
+  const activeColor = "hsl(var(--primary))";
+  const activeBg = "hsl(var(--primary) / 0.12)";
 
   const planBadge = () => {
     if (!profile) return null;

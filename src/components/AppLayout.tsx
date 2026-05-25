@@ -1,13 +1,16 @@
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import Header from "./Header";
 import BottomNav from "./BottomNav";
 import DesktopSidebar from "./DesktopSidebar";
 import DesktopRightPanel from "./DesktopRightPanel";
+import ReportsRightPanel from "./ReportsRightPanel";
 import AuthModal from "./AuthModal";
 
 const AppLayout = () => {
   const [authOpen, setAuthOpen] = useState(false);
+  const location = useLocation();
+  const isReports = location.pathname === "/reports";
 
   return (
     <div className="gradient-bg min-h-screen">
@@ -34,7 +37,7 @@ const AppLayout = () => {
           </div>
         </div>
 
-        <DesktopRightPanel />
+        {isReports ? <ReportsRightPanel /> : <DesktopRightPanel />}
       </div>
       <AuthModal open={authOpen} onOpenChange={setAuthOpen} />
     </div>

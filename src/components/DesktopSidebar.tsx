@@ -37,7 +37,7 @@ const DesktopSidebar = () => {
     : "";
 
   const activeColor = "hsl(222, 34%, 16%)";
-  const activeBg = "linear-gradient(135deg, hsl(43, 96%, 56%), hsl(53, 98%, 77%))";
+  const activeBg = "hsl(var(--primary))";
 
   const planBadge = () => {
     if (!profile) return null;

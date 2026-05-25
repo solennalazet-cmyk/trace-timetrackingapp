@@ -36,8 +36,8 @@ const DesktopSidebar = () => {
     ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
     : "";
 
-  const activeColor = "hsl(var(--primary))";
-  const activeBg = "hsl(var(--primary) / 0.12)";
+  const activeColor = "hsl(222, 34%, 16%)";
+  const activeBg = "linear-gradient(135deg, hsl(43, 96%, 56%), hsl(53, 98%, 77%))";
 
   const planBadge = () => {
     if (!profile) return null;

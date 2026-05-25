@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Timer, BarChart3, CheckSquare, Briefcase, Settings, CreditCard, LogOut, LogIn, Info, MessageSquare, Sparkles, User } from "lucide-react";
+import { Timer, BarChart3, CheckSquare, Briefcase, Settings, CreditCard, LogOut, LogIn, Info, MessageSquare, Sparkles, User, ChevronDown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStoredColorTheme } from "@/hooks/useColorTheme";
 import logo from "@/assets/logo.png";

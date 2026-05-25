@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Timer, BarChart3, CheckSquare, Briefcase, Settings, CreditCard, LogOut, LogIn, Info, MessageSquare, Sparkles, User, ChevronDown } from "lucide-react";
+import { Timer, BarChart3, CheckSquare, Briefcase, Settings, CreditCard, LogOut, LogIn, Info, MessageSquare, Sparkles, User, ChevronDown, MoreHorizontal } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getStoredColorTheme } from "@/hooks/useColorTheme";
+import { getThemeStyles } from "./BottomNav";
 import logo from "@/assets/logo.png";
 import SettingsModal from "./SettingsModal";
 import AccountModal from "./AccountModal";
@@ -32,12 +32,13 @@ const DesktopSidebar = () => {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
 
   const initials = profile?.full_name
     ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
     : "";
 
-  const isStormy = getStoredColorTheme() === "stormy";
+  const colors = getThemeStyles();
 
   const planBadge = () => {
     if (!profile) return null;
@@ -51,7 +52,7 @@ const DesktopSidebar = () => {
             className="text-[10px] font-bold px-1.5 py-0.5 rounded"
             style={{
               background: "linear-gradient(135deg, hsl(43, 96%, 56%), hsl(53, 98%, 77%))",
-              color: isStormy ? "hsl(222, 34%, 16%)" : "hsl(217, 33%, 17%)",
+              color: colors.active === "hsl(43, 96%, 56%)" ? "hsl(222, 34%, 16%)" : "hsl(217, 33%, 17%)",
             }}
           >
             PRO ✦
@@ -70,7 +71,7 @@ const DesktopSidebar = () => {
   return (
     <aside
       className="hidden lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen lg:py-6 lg:px-4 lg:border-r border-border/40"
-      style={{ backgroundColor: "hsl(var(--card) / 0.4)", backdropFilter: "blur(12px)" }}
+      style={{ backgroundColor: colors.bg, backdropFilter: "blur(12px)" }}
     >
       {/* Logo */}
       <Link to="/" className="flex items-center gap-2 px-2 mb-8" aria-label="Trace home">
@@ -101,23 +102,39 @@ const DesktopSidebar = () => {
 
       <div className="flex-1" />
 
-      {/* Secondary links */}
-      <div className="flex flex-col gap-0.5 mb-3">
-        <button onClick={() => setHowItWorksOpen(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
-          <Info className="w-3.5 h-3.5" /> How Trace works
+      {/* More links dropdown */}
+      <div className="mb-3">
+        <button
+          onClick={() => setMoreMenuOpen((v) => !v)}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+          aria-expanded={moreMenuOpen}
+        >
+          <MoreHorizontal className="w-3.5 h-3.5" />
+          <span className="flex-1 text-left">More</span>
+          <ChevronDown
+            className="w-3.5 h-3.5 transition-transform shrink-0"
+            style={{ transform: moreMenuOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+          />
         </button>
-        {user && (
-          <>
-            <button onClick={() => setWhatsNewOpen(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
-              <Sparkles className="w-3.5 h-3.5" /> What's new
+        {moreMenuOpen && (
+          <div className="flex flex-col gap-0.5 mt-0.5">
+            <button onClick={() => setHowItWorksOpen(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
+              <Info className="w-3.5 h-3.5" /> How Trace works
             </button>
-            <button onClick={() => setFeedbackOpen(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
-              <MessageSquare className="w-3.5 h-3.5" /> Send feedback
-            </button>
-            <button onClick={() => setAboutOpen(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
-              <Info className="w-3.5 h-3.5" /> About
-            </button>
-          </>
+            {user && (
+              <>
+                <button onClick={() => setWhatsNewOpen(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
+                  <Sparkles className="w-3.5 h-3.5" /> What's new
+                </button>
+                <button onClick={() => setFeedbackOpen(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
+                  <MessageSquare className="w-3.5 h-3.5" /> Send feedback
+                </button>
+                <button onClick={() => setAboutOpen(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
+                  <Info className="w-3.5 h-3.5" /> About
+                </button>
+              </>
+            )}
+          </div>
         )}
       </div>
 

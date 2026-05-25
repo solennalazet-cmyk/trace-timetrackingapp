@@ -31,13 +31,15 @@ const DesktopSidebar = () => {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
 
   const initials = profile?.full_name
     ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
     : "";
 
-  const colors = getThemeStyles();
+  const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
+  // Workaround: primary yellow is unreadable on light card bg, so use foreground in light mode
+  const activeColor = isDark ? "hsl(var(--primary))" : "hsl(var(--foreground))";
+  const activeBg = isDark ? "hsl(var(--primary) / 0.12)" : "hsl(var(--foreground) / 0.08)";
 
   const planBadge = () => {
     if (!profile) return null;

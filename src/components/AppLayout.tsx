@@ -37,7 +37,7 @@ const AppLayout = () => {
           </div>
         </div>
 
-        <DesktopRightPanel />
+        {isReports ? <ReportsRightPanel /> : <DesktopRightPanel />}
       </div>
       <AuthModal open={authOpen} onOpenChange={setAuthOpen} />
     </div>

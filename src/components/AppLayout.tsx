@@ -21,7 +21,7 @@ const AppLayout = () => {
           </div>
 
           <div className="pt-14 lg:pt-0">
-            <main className="pb-20 px-4 lg:pb-8 lg:px-8 lg:pt-6 lg:flex lg:flex-col lg:items-center">
+            <main className="pb-20 px-4 lg:pb-8 lg:px-8 lg:pt-20 lg:flex lg:flex-col lg:items-center">
               <div className="w-full lg:max-w-[480px]">
                 <Outlet />
               </div>

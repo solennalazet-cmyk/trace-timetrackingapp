@@ -50,8 +50,9 @@ const DesktopRightPanel = () => {
 
   useEffect(() => {
     let cancelled = false;
+    let isFirst = true;
     const load = async () => {
-      setLoading(true);
+      if (isFirst) setLoading(true);
       const today = toLocalDateKey(new Date());
       if (user) {
         const { data } = await supabase

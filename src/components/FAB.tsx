@@ -23,7 +23,7 @@ const FAB = ({ onManualEntry, onLogCall }: FABProps) => {
 
   return (
     <>
-      <div className="fixed bottom-20 right-4 z-40 flex flex-col items-end gap-2" style={{ maxWidth: 420 }}>
+      <div className="fixed bottom-20 right-4 lg:absolute lg:bottom-6 lg:right-6 z-40 flex flex-col items-end gap-2" style={{ maxWidth: 420 }}>
         {open && (
           <div className="flex flex-col gap-2 mb-2 animate-in fade-in slide-in-from-bottom-2 duration-150">
             <button

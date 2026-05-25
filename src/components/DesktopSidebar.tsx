@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Timer, BarChart3, CheckSquare, Briefcase, Settings, CreditCard, LogOut, LogIn, Info, MessageSquare, Sparkles, User } from "lucide-react";
+import { Timer, BarChart3, CheckSquare, Briefcase, Settings, CreditCard, LogOut, LogIn, Info, MessageSquare, Sparkles, User, ChevronDown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStoredColorTheme } from "@/hooks/useColorTheme";
 import logo from "@/assets/logo.png";
@@ -31,6 +31,7 @@ const DesktopSidebar = () => {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
 
   const initials = profile?.full_name
     ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -121,10 +122,14 @@ const DesktopSidebar = () => {
       </div>
 
       {/* Account section */}
-      <div className="rounded-2xl border border-border/60 bg-card/60 p-3 space-y-2">
+      <div className="rounded-2xl border border-border/60 bg-card/60 p-3">
         {user ? (
           <>
-            <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => setAccountMenuOpen((v) => !v)}
+              className="w-full flex items-center gap-2.5 text-left"
+              aria-expanded={accountMenuOpen}
+            >
               <div className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold flex-shrink-0">
                 {initials || <User className="w-4 h-4" />}
               </div>
@@ -135,18 +140,24 @@ const DesktopSidebar = () => {
                   <span className="text-[10px] text-muted-foreground truncate">{user.email}</span>
                 </div>
               </div>
-            </div>
-            <div className="flex flex-col gap-0.5 pt-1 border-t border-border/40">
-              <button onClick={() => setSettingsOpen(true)} className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-muted/50 transition-colors">
-                <Settings className="w-3.5 h-3.5" /> Settings
-              </button>
-              <button onClick={() => setAccountOpen(true)} className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-muted/50 transition-colors">
-                <CreditCard className="w-3.5 h-3.5" /> Account & Subscription
-              </button>
-              <button onClick={handleSignOut} className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-muted/50 transition-colors text-muted-foreground">
-                <LogOut className="w-3.5 h-3.5" /> Sign out
-              </button>
-            </div>
+              <ChevronDown
+                className="w-4 h-4 text-muted-foreground transition-transform shrink-0"
+                style={{ transform: accountMenuOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+              />
+            </button>
+            {accountMenuOpen && (
+              <div className="flex flex-col gap-0.5 pt-2 mt-2 border-t border-border/40">
+                <button onClick={() => setSettingsOpen(true)} className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-muted/50 transition-colors">
+                  <Settings className="w-3.5 h-3.5" /> Settings
+                </button>
+                <button onClick={() => setAccountOpen(true)} className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-muted/50 transition-colors">
+                  <CreditCard className="w-3.5 h-3.5" /> Account & Subscription
+                </button>
+                <button onClick={handleSignOut} className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-muted/50 transition-colors text-muted-foreground">
+                  <LogOut className="w-3.5 h-3.5" /> Sign out
+                </button>
+              </div>
+            )}
           </>
         ) : (
           <button

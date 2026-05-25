@@ -11,7 +11,7 @@ const AppLayout = () => {
 
   return (
     <div className="gradient-bg min-h-screen">
-      <div className="lg:grid lg:grid-cols-[260px_minmax(0,1fr)_340px] lg:max-w-[1400px] lg:mx-auto lg:min-h-screen">
+      <div className="lg:grid lg:grid-cols-[260px_minmax(0,1fr)_340px] lg:min-h-screen">
         <DesktopSidebar />
 
         <div className="relative max-w-[420px] mx-auto min-h-screen w-full lg:max-w-none lg:mx-0">
@@ -21,7 +21,7 @@ const AppLayout = () => {
           </div>
 
           <div className="pt-14 lg:pt-0">
-            <main className="pb-20 px-4 lg:pb-8 lg:px-8 lg:pt-6 lg:flex lg:flex-col lg:items-center">
+            <main className="pb-20 px-4 lg:pb-8 lg:px-8 lg:pt-20 lg:flex lg:flex-col lg:items-center">
               <div className="w-full lg:max-w-[480px]">
                 <Outlet />
               </div>

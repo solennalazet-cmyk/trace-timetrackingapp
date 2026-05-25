@@ -50,8 +50,9 @@ const DesktopRightPanel = () => {
 
   useEffect(() => {
     let cancelled = false;
+    let isFirst = true;
     const load = async () => {
-      setLoading(true);
+      if (isFirst) setLoading(true);
       const today = toLocalDateKey(new Date());
       if (user) {
         const { data } = await supabase
@@ -83,7 +84,7 @@ const DesktopRightPanel = () => {
           setUnassignedCount(all.filter((e: any) => !e.client_id && !e.project_id).length);
         }
       }
-      if (!cancelled) setLoading(false);
+      if (!cancelled) { setLoading(false); isFirst = false; }
     };
     load();
 

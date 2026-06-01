@@ -58,6 +58,7 @@ const DEFAULTS: Settings = {
   revenue_target: 0,
   idle_reminder_minutes: 0,
   default_report_range: "weekly",
+  geolocation_mode: "off",
 };
 
 const formatPreset = (mins: number) => {

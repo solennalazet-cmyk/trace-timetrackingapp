@@ -171,12 +171,14 @@ const ClientsPage = () => {
         await supabase.from("clients").update({
           name: data.name, email: data.email || null, nif: data.nif || null,
           currency: data.currency, default_rate: data.default_rate ? parseFloat(data.default_rate) : null,
+          export_columns: data.export_columns ?? null,
         }).eq("id", editingClient.id);
         toast.success("Client updated.");
       } else {
         await supabase.from("clients").insert({
           name: data.name, email: data.email || null, nif: data.nif || null,
           currency: data.currency, default_rate: data.default_rate ? parseFloat(data.default_rate) : null,
+          export_columns: data.export_columns ?? null,
           user_id: user.id,
         });
         toast.success("Client added.");

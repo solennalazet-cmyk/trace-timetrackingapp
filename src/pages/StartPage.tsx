@@ -204,27 +204,76 @@ const StartPage = () => {
 
   useEffect(() => { fetchSummary(); }, [user]);
 
-  // Load show_logged_today setting
+  // Load show_logged_today + geolocation settings
   useEffect(() => {
     const loadSetting = async () => {
       if (user) {
         const { data } = await supabase
           .from("user_settings")
-          .select("show_logged_today")
+          .select("show_logged_today, geolocation_mode, geolocation_prompt_seen")
           .eq("user_id", user.id)
           .single();
-        if (data) setShowSummary(data.show_logged_today ?? true);
+        if (data) {
+          setShowSummary(data.show_logged_today ?? true);
+          setGeoMode(((data as any).geolocation_mode ?? "off") as "off" | "ask" | "always");
+          setGeoPromptSeen(((data as any).geolocation_prompt_seen ?? false) as boolean);
+        }
       } else {
         try {
           const raw = localStorage.getItem("trace_user_settings");
           if (raw) {
             const parsed = JSON.parse(raw);
             setShowSummary(parsed.show_logged_today ?? true);
+            setGeoMode((parsed.geolocation_mode ?? "off") as "off" | "ask" | "always");
+            setGeoPromptSeen(parsed.geolocation_prompt_seen ?? false);
           }
         } catch {}
       }
     };
     loadSetting();
+  }, [user]);
+
+  // Capture location when timer starts
+  const captureStart = useCallback(async (sessionMode: string, startedAt: string) => {
+    const loc = await requestLocation();
+    if (loc) cacheStartLocation(sessionMode, startedAt, loc);
+  }, []);
+
+  // Listen for timer start events
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { mode: string; startedAt: string };
+      if (!detail) return;
+      if (geoMode === "off") return;
+      // First-time pre-prompt
+      if (!geoPromptSeen) {
+        setPendingGeoStart(detail);
+        setGeoPrePromptOpen(true);
+        return;
+      }
+      captureStart(detail.mode, detail.startedAt);
+    };
+    window.addEventListener("trace-timer-started", handler as EventListener);
+    return () => window.removeEventListener("trace-timer-started", handler as EventListener);
+  }, [geoMode, geoPromptSeen, captureStart]);
+
+  const markPromptSeen = useCallback(async (mode: "off" | "ask" | "always") => {
+    setGeoPromptSeen(true);
+    setGeoMode(mode);
+    if (user) {
+      await supabase.from("user_settings").upsert(
+        { user_id: user.id, geolocation_prompt_seen: true, geolocation_mode: mode } as any,
+        { onConflict: "user_id" }
+      );
+    } else {
+      try {
+        const raw = localStorage.getItem("trace_user_settings");
+        const parsed = raw ? JSON.parse(raw) : {};
+        parsed.geolocation_prompt_seen = true;
+        parsed.geolocation_mode = mode;
+        localStorage.setItem("trace_user_settings", JSON.stringify(parsed));
+      } catch {}
+    }
   }, [user]);
 
   // Called when timer stops — opens the assignment modal

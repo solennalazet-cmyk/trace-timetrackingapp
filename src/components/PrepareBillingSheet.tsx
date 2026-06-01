@@ -64,20 +64,24 @@ const PrepareBillingSheet = ({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedColumns, setSelectedColumns] = useState<ExportColumnKey[]>([]);
   const [columnsLoaded, setColumnsLoaded] = useState(false);
+  const [clientHasSite, setClientHasSite] = useState(false);
 
   const sym = CURRENCY_SYMBOLS[clientCurrency] ?? "€";
 
-  // Load saved export column prefs for this client
+  // Load saved export column prefs + site presence for this client
   useEffect(() => {
     if (!open || !user) return;
     setColumnsLoaded(false);
     (async () => {
       const { data } = await supabase
         .from("clients")
-        .select("export_columns")
+        .select("export_columns, site_lat, site_lng")
         .eq("id", clientId)
         .maybeSingle();
       setSelectedColumns(resolveExportColumns((data as any)?.export_columns ?? null));
+      setClientHasSite(
+        (data as any)?.site_lat != null && (data as any)?.site_lng != null
+      );
       setColumnsLoaded(true);
     })();
   }, [open, user, clientId]);

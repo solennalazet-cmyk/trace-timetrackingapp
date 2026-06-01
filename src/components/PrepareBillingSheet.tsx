@@ -205,35 +205,61 @@ const PrepareBillingSheet = ({
 
     const head = ["Date", "Duration", ...orderedOptional.map((k) => optionalHeaders[k]), "Amount"];
 
-    const cellFor = (e: TimeEntry, key: ExportColumnKey): string => {
+    // Sort by date, then by start_time so same-day sessions are in chronological order
+    const sortedEntries = [...billableEntries].sort((a, b) => {
+      const d = (a.entry_date ?? "").localeCompare(b.entry_date ?? "");
+      if (d !== 0) return d;
+      const aT = a.start_time ? new Date(a.start_time).getTime() : 0;
+      const bT = b.start_time ? new Date(b.start_time).getTime() : 0;
+      return aT - bT;
+    });
+
+    // For each entry, compute the inter-session pause vs. the previous entry on the same day.
+    // pauseInfo[i] is filled when entry i has start_time, the previous entry shares the same
+    // date and has an end_time, and the gap is > 0.
+    type PauseInfo = { prevEnd: string; thisStart: string; gapMinutes: number };
+    const pauseInfo: (PauseInfo | null)[] = sortedEntries.map((e, i) => {
+      if (i === 0) return null;
+      const prev = sortedEntries[i - 1];
+      if (!prev.entry_date || !e.entry_date || prev.entry_date !== e.entry_date) return null;
+      if (!prev.end_time || !e.start_time) return null;
+      const gap = Math.round((new Date(e.start_time).getTime() - new Date(prev.end_time).getTime()) / 60000);
+      if (gap <= 0) return null;
+      return { prevEnd: prev.end_time, thisStart: e.start_time, gapMinutes: gap };
+    });
+
+    const cellFor = (e: TimeEntry, key: ExportColumnKey, pause: PauseInfo | null): string => {
       switch (key) {
         case "clock_in": return formatClock(e.start_time);
         case "clock_out": return formatClock(e.end_time);
-        case "pause_start": return "—"; // not tracked per-pause yet
-        case "pause_resume": return "—";
-        case "pause_total": return (e.break_minutes ?? 0) > 0 ? formatDuration(e.break_minutes ?? 0) : "—";
+        case "pause_start": return pause ? formatClock(pause.prevEnd) : "—";
+        case "pause_resume": return pause ? formatClock(pause.thisStart) : "—";
+        case "pause_total": {
+          const interSession = pause?.gapMinutes ?? 0;
+          const withinSession = e.break_minutes ?? 0;
+          const total = interSession + withinSession;
+          return total > 0 ? formatDuration(total) : "—";
+        }
         case "project": return e.project_name ?? "—";
         case "task": return e.task_name ?? "—";
         case "notes": {
           const n = e.notes ?? "";
           if (!n) return "—";
-          // Truncate in PDF; CSV/clipboard not affected here
           return n.length > 60 ? n.slice(0, 57) + "…" : n;
         }
       }
     };
 
-    const body = billableEntries
-      .sort((a, b) => (a.entry_date ?? "").localeCompare(b.entry_date ?? ""))
-      .map((e) => {
-        const { displayMinutes, displayValue } = entryDisplayValues(e, rounding);
-        return [
-          e.entry_date ? new Date(e.entry_date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "",
-          formatDuration(displayMinutes),
-          ...orderedOptional.map((k) => cellFor(e, k)),
-          displayValue > 0 ? `${sym}${displayValue.toFixed(2)}` : "—",
-        ];
-      });
+    const body = sortedEntries.map((e, i) => {
+      const { displayMinutes, displayValue } = entryDisplayValues(e, rounding);
+      const pause = pauseInfo[i];
+      return [
+        e.entry_date ? new Date(e.entry_date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "",
+        formatDuration(displayMinutes),
+        ...orderedOptional.map((k) => cellFor(e, k, pause)),
+        displayValue > 0 ? `${sym}${displayValue.toFixed(2)}` : "—",
+      ];
+    });
 
     autoTable(doc, {
       startY: y,

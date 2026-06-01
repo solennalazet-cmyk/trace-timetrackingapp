@@ -63,8 +63,11 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
 
   const [date, setDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [inputMode, setInputMode] = useState<"duration" | "times">("duration");
   const [hours, setHours] = useState("");
   const [minutes, setMinutes] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
 
   const [clientId, setClientId] = useState("");
   const [clientName, setClientName] = useState("");
@@ -115,6 +118,7 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
   useEffect(() => {
     if (!open) return;
     setDate(new Date()); setHours(""); setMinutes("");
+    setStartTime(""); setEndTime(""); setInputMode("duration");
     setClientId(""); setClientName(""); setProjectId(""); setProjectName("");
     setTaskId(""); setTaskName(""); setNotes(""); setTags([]);
     setBillable(true); setRateAmount(""); setRateCurrency("EUR"); setRateUnit("hour");
@@ -142,7 +146,28 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
     onResolved: applyResolvedRate,
   });
 
-  const totalMinutes = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
+  // Build a Date from the selected calendar day + a "HH:MM" string
+  const combineDateAndTime = (d: Date, hhmm: string): Date | null => {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm.trim());
+    if (!m) return null;
+    const h = parseInt(m[1], 10);
+    const min = parseInt(m[2], 10);
+    if (h > 23 || min > 59) return null;
+    const result = new Date(d);
+    result.setHours(h, min, 0, 0);
+    return result;
+  };
+
+  const startDate = inputMode === "times" ? combineDateAndTime(date, startTime) : null;
+  let endDate = inputMode === "times" ? combineDateAndTime(date, endTime) : null;
+  // If end < start, assume the session crosses midnight → add a day
+  if (startDate && endDate && endDate.getTime() <= startDate.getTime()) {
+    endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
+  }
+
+  const totalMinutes = inputMode === "times"
+    ? (startDate && endDate ? Math.max(0, Math.round((endDate.getTime() - startDate.getTime()) / 60000)) : 0)
+    : (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
   const canSave = totalMinutes > 0;
 
   const handleCreateClient = async (name: string): Promise<ComboboxItem | null> => {
@@ -209,6 +234,8 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
         break_minutes: 0,
         entry_type: "manual",
         entry_date: format(date, "yyyy-MM-dd"),
+        start_time: startDate ? startDate.toISOString() : null,
+        end_time: endDate ? endDate.toISOString() : null,
         billable,
         billing_status: "unbilled",
         client_id: clientId || null,
@@ -274,37 +301,66 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
             </Popover>
           </div>
 
-          {/* Duration */}
+          {/* Duration or Start/End times */}
           <div>
-            <Label>Duration</Label>
-            <div className="flex gap-2 items-center">
-              <div className="flex-1 flex items-center gap-1">
-                <Input
-                  ref={hoursRef}
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  placeholder="0"
-                  value={hours}
-                  onChange={(e) => setHours(e.target.value)}
-                  className="text-center"
-                />
-                <span className="text-sm text-muted-foreground font-medium">h</span>
-              </div>
-              <div className="flex-1 flex items-center gap-1">
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  max={59}
-                  placeholder="0"
-                  value={minutes}
-                  onChange={(e) => setMinutes(e.target.value)}
-                  className="text-center"
-                />
-                <span className="text-sm text-muted-foreground font-medium">m</span>
-              </div>
+            <div className="flex items-center justify-between mb-1.5">
+              <Label className="m-0">{inputMode === "duration" ? "Duration" : "Start & end time"}</Label>
+              <button
+                type="button"
+                onClick={() => setInputMode((m) => (m === "duration" ? "times" : "duration"))}
+                className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+              >
+                {inputMode === "duration" ? "Use start & end times" : "Use duration"}
+              </button>
             </div>
+            {inputMode === "duration" ? (
+              <div className="flex gap-2 items-center">
+                <div className="flex-1 flex items-center gap-1">
+                  <Input
+                    ref={hoursRef}
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    placeholder="0"
+                    value={hours}
+                    onChange={(e) => setHours(e.target.value)}
+                    className="text-center"
+                  />
+                  <span className="text-sm text-muted-foreground font-medium">h</span>
+                </div>
+                <div className="flex-1 flex items-center gap-1">
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={59}
+                    placeholder="0"
+                    value={minutes}
+                    onChange={(e) => setMinutes(e.target.value)}
+                    className="text-center"
+                  />
+                  <span className="text-sm text-muted-foreground font-medium">m</span>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <div className="flex gap-2 items-center">
+                  <div className="flex-1">
+                    <Label className="text-xs text-muted-foreground">Start</Label>
+                    <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="text-center" />
+                  </div>
+                  <div className="flex-1">
+                    <Label className="text-xs text-muted-foreground">End</Label>
+                    <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="text-center" />
+                  </div>
+                </div>
+                {totalMinutes > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Duration: {Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Client */}

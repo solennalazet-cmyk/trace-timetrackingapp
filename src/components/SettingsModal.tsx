@@ -110,6 +110,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
           revenue_target: (data as any).revenue_target ?? DEFAULTS.revenue_target,
           idle_reminder_minutes: (data as any).idle_reminder_minutes ?? DEFAULTS.idle_reminder_minutes,
           default_report_range: (data as any).default_report_range ?? DEFAULTS.default_report_range,
+          geolocation_mode: (data as any).geolocation_mode ?? DEFAULTS.geolocation_mode,
         });
       }
     } else {

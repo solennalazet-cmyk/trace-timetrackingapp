@@ -148,6 +148,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
         revenue_target: updated.revenue_target,
         idle_reminder_minutes: updated.idle_reminder_minutes,
         default_report_range: updated.default_report_range,
+        geolocation_mode: updated.geolocation_mode,
       } as any, { onConflict: "user_id" });
     } else {
       localStorage.setItem(LS_KEY, JSON.stringify(updated));

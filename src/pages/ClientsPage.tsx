@@ -460,6 +460,7 @@ const ClientsPage = () => {
           nif: editingClient.nif ?? "", currency: editingClient.currency ?? "EUR",
           default_rate: editingClient.default_rate != null ? String(editingClient.default_rate) : "",
           rate_unit: "hour",
+          export_columns: resolveExportColumns(editingClient.export_columns),
         } : null}
         title={editingClient ? "Edit Client" : "Add Client"}
       />

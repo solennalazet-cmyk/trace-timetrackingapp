@@ -37,6 +37,7 @@ interface Settings {
   revenue_target: number;
   idle_reminder_minutes: number;
   default_report_range: string;
+  geolocation_mode: string;
 }
 
 const DEFAULTS: Settings = {

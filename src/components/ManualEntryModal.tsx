@@ -146,7 +146,28 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
     onResolved: applyResolvedRate,
   });
 
-  const totalMinutes = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
+  // Build a Date from the selected calendar day + a "HH:MM" string
+  const combineDateAndTime = (d: Date, hhmm: string): Date | null => {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm.trim());
+    if (!m) return null;
+    const h = parseInt(m[1], 10);
+    const min = parseInt(m[2], 10);
+    if (h > 23 || min > 59) return null;
+    const result = new Date(d);
+    result.setHours(h, min, 0, 0);
+    return result;
+  };
+
+  const startDate = inputMode === "times" ? combineDateAndTime(date, startTime) : null;
+  let endDate = inputMode === "times" ? combineDateAndTime(date, endTime) : null;
+  // If end < start, assume the session crosses midnight → add a day
+  if (startDate && endDate && endDate.getTime() <= startDate.getTime()) {
+    endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
+  }
+
+  const totalMinutes = inputMode === "times"
+    ? (startDate && endDate ? Math.max(0, Math.round((endDate.getTime() - startDate.getTime()) / 60000)) : 0)
+    : (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
   const canSave = totalMinutes > 0;
 
   const handleCreateClient = async (name: string): Promise<ComboboxItem | null> => {

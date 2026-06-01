@@ -192,7 +192,7 @@ const ReportsPage = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     if (user) {
-      const entrySelect = "id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, billable_value, client_id, project_id, task_id, billing_status, start_time, client:clients(id, name), project:projects(id, name), task:tasks(id, name)";
+      const entrySelect = "id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, billable_value, client_id, project_id, task_id, billing_status, start_time, end_time, start_lat, start_lng, start_accuracy_m, start_on_site, start_distance_m, end_lat, end_lng, end_accuracy_m, end_on_site, end_distance_m, client:clients(id, name), project:projects(id, name), task:tasks(id, name)";
       const [{ data: re }, { data: c }, { data: p }, { data: t }, { data: inv }] = await Promise.all([
         supabase.from("time_entries").select(entrySelect)
           .eq("user_id", user.id).gte("entry_date", rangeStart).lte("entry_date", rangeEnd).is("deleted_at", null).order("entry_date", { ascending: false }),

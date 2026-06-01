@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, MapPin, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -16,8 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { toast } from "sonner";
 import ExportColumnsPicker from "@/components/ExportColumnsPicker";
 import { type ExportColumnKey, resolveExportColumns } from "@/lib/export-columns";
+import { requestLocation, type ClientGeoOverride } from "@/lib/geolocation";
 import { cn } from "@/lib/utils";
 
 interface ClientFormData {
@@ -28,6 +31,11 @@ interface ClientFormData {
   default_rate: string;
   rate_unit: string;
   export_columns?: ExportColumnKey[];
+  site_address?: string | null;
+  site_lat?: number | null;
+  site_lng?: number | null;
+  site_radius_m?: number | null;
+  geolocation_override?: ClientGeoOverride;
 }
 
 interface ClientFormModalProps {
@@ -58,16 +66,39 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
   const [form, setForm] = useState<ClientFormData>({
     name: "", email: "", nif: "", currency: "EUR", default_rate: "", rate_unit: "hour",
     export_columns: resolveExportColumns(null),
+    site_address: "", site_lat: null, site_lng: null, site_radius_m: 100,
+    geolocation_override: "inherit",
   });
   const [saving, setSaving] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [siteOpen, setSiteOpen] = useState(false);
+  const [capturingLoc, setCapturingLoc] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setForm(initial ?? { name: "", email: "", nif: "", currency: "EUR", default_rate: "", rate_unit: "hour", export_columns: resolveExportColumns(null) });
+      setForm(initial ?? {
+        name: "", email: "", nif: "", currency: "EUR", default_rate: "", rate_unit: "hour",
+        export_columns: resolveExportColumns(null),
+        site_address: "", site_lat: null, site_lng: null, site_radius_m: 100,
+        geolocation_override: "inherit",
+      });
       setExportOpen(false);
+      setSiteOpen(false);
     }
   }, [open, initial]);
+
+  const captureCurrentLocation = async () => {
+    if (capturingLoc) return;
+    setCapturingLoc(true);
+    const loc = await requestLocation();
+    setCapturingLoc(false);
+    if (!loc) {
+      toast.error("Couldn't get your location. Check browser permissions and try again.");
+      return;
+    }
+    setForm((f) => ({ ...f, site_lat: loc.lat, site_lng: loc.lng }));
+    toast.success(`Location set (±${loc.accuracy_m}m). Add an address label if you like.`);
+  };
 
   const handleSave = async () => {
     if (!form.name.trim() || saving) return;

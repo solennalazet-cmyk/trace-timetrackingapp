@@ -557,6 +557,61 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
             </CardRow>
           </SettingsCard>
 
+          {/* ── Card: Privacy & Location ── */}
+          <SettingsCard title="Privacy">
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5">
+                <Label className="text-xs font-medium flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-muted-foreground" /> Location proof
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="More info"
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Info className="w-3.5 h-3.5" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="top" className="w-64 text-[11px] leading-relaxed">
+                    You can override this per client on the client's page — useful when one client needs location proof but others don't.
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <p className="text-[11px] text-muted-foreground -mt-1">
+                Attach your coordinates to clock in / clock out as proof of presence. They only appear on exports if you include them.
+              </p>
+              <RadioGroup
+                value={settings.geolocation_mode}
+                onValueChange={(v) => persist({ ...settings, geolocation_mode: v })}
+                className="space-y-2 pt-1"
+              >
+                <label className="flex items-start gap-3 p-2.5 rounded-lg border border-border cursor-pointer hover:bg-muted/30 transition-colors">
+                  <RadioGroupItem value="off" className="mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium">Off</p>
+                    <p className="text-[11px] text-muted-foreground">Never capture location.</p>
+                  </div>
+                </label>
+                <label className="flex items-start gap-3 p-2.5 rounded-lg border border-border cursor-pointer hover:bg-muted/30 transition-colors">
+                  <RadioGroupItem value="ask" className="mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium">Ask each time</p>
+                    <p className="text-[11px] text-muted-foreground">Browser asks at clock in / out.</p>
+                  </div>
+                </label>
+                <label className="flex items-start gap-3 p-2.5 rounded-lg border border-border cursor-pointer hover:bg-muted/30 transition-colors">
+                  <RadioGroupItem value="always" className="mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium">Always</p>
+                    <p className="text-[11px] text-muted-foreground">Capture silently when permission is granted.</p>
+                  </div>
+                </label>
+              </RadioGroup>
+            </div>
+          </SettingsCard>
+
           {/* ── Card 7: Integrations (placeholder) ── */}
           <SettingsCard title="Integrations">
             <p className="text-[11px] text-muted-foreground py-1">

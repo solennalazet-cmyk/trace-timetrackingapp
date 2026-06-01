@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { ChevronDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import ExportColumnsPicker from "@/components/ExportColumnsPicker";
+import { type ExportColumnKey, resolveExportColumns } from "@/lib/export-columns";
+import { cn } from "@/lib/utils";
 
 interface ClientFormData {
   name: string;
@@ -23,6 +27,7 @@ interface ClientFormData {
   currency: string;
   default_rate: string;
   rate_unit: string;
+  export_columns?: ExportColumnKey[];
 }
 
 interface ClientFormModalProps {
@@ -52,12 +57,15 @@ const RATE_UNITS = [
 const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title = "Add Client" }: ClientFormModalProps) => {
   const [form, setForm] = useState<ClientFormData>({
     name: "", email: "", nif: "", currency: "EUR", default_rate: "", rate_unit: "hour",
+    export_columns: resolveExportColumns(null),
   });
   const [saving, setSaving] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setForm(initial ?? { name: "", email: "", nif: "", currency: "EUR", default_rate: "", rate_unit: "hour" });
+      setForm(initial ?? { name: "", email: "", nif: "", currency: "EUR", default_rate: "", rate_unit: "hour", export_columns: resolveExportColumns(null) });
+      setExportOpen(false);
     }
   }, [open, initial]);
 
@@ -70,7 +78,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[400px] rounded-2xl p-0">
+      <DialogContent className="max-w-[400px] rounded-2xl p-0 max-h-[90vh] overflow-y-auto">
         <DialogHeader className="px-6 pt-6 pb-0">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
@@ -110,6 +118,30 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Export settings */}
+          <div className="rounded-xl border border-border overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setExportOpen((v) => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 text-left"
+              aria-expanded={exportOpen}
+            >
+              <span className="text-sm font-semibold text-foreground">Export settings</span>
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", exportOpen && "rotate-180")} />
+            </button>
+            {exportOpen && (
+              <div className="px-4 pb-4 pt-1 space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Choose the data to include when exporting or billing for this client. Date, duration and amount are always included.
+                </p>
+                <ExportColumnsPicker
+                  value={form.export_columns ?? resolveExportColumns(null)}
+                  onChange={(next) => setForm({ ...form, export_columns: next })}
+                />
+              </div>
+            )}
           </div>
         </div>
         <div className="flex gap-3 px-6 pt-2">

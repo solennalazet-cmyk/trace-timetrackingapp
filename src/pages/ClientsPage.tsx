@@ -7,6 +7,7 @@ import { toLocalDateKey } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { getAnonymousClients, saveAnonymousClient, getAnonymousProjects, saveAnonymousProject, deleteAnonymousClient } from "@/lib/anonymous-store";
 import ClientFormModal from "@/components/ClientFormModal";
+import { resolveExportColumns } from "@/lib/export-columns";
 import ProjectFormModal from "@/components/ProjectFormModal";
 import PaywallModal from "@/components/PaywallModal";
 import SignInLink from "@/components/SignInLink";
@@ -29,6 +30,7 @@ interface Client {
   nif: string | null;
   currency: string | null;
   default_rate: number | null;
+  export_columns: string[] | null;
 }
 
 interface Project {
@@ -95,7 +97,7 @@ const ClientsPage = () => {
     setLoading(true);
     if (user) {
       const [{ data: c }, { data: p }] = await Promise.all([
-        supabase.from("clients").select("id, name, email, nif, currency, default_rate").eq("user_id", user.id).order("name"),
+        supabase.from("clients").select("id, name, email, nif, currency, default_rate, export_columns").eq("user_id", user.id).order("name"),
         supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", user.id),
       ]);
       setClients((c ?? []) as Client[]);
@@ -126,7 +128,7 @@ const ClientsPage = () => {
       setProjectStats(Object.entries(projStatsMap).map(([projectId, s]) => ({ projectId, ...s })));
     } else {
       const ac = getAnonymousClients();
-      setClients(ac.map((c: any) => ({ id: c.id, name: c.name, email: c.email ?? null, nif: c.nif ?? null, currency: c.currency ?? "EUR", default_rate: c.default_rate ?? null })));
+      setClients(ac.map((c: any) => ({ id: c.id, name: c.name, email: c.email ?? null, nif: c.nif ?? null, currency: c.currency ?? "EUR", default_rate: c.default_rate ?? null, export_columns: null })));
       const ap = getAnonymousProjects();
       setProjects(ap.map((p: any) => ({ id: p.id, name: p.name, client_id: p.client_id ?? null, rate: p.rate ?? null, currency: p.currency ?? null })));
       setMonthlyStats([]);
@@ -170,12 +172,14 @@ const ClientsPage = () => {
         await supabase.from("clients").update({
           name: data.name, email: data.email || null, nif: data.nif || null,
           currency: data.currency, default_rate: data.default_rate ? parseFloat(data.default_rate) : null,
+          export_columns: data.export_columns ?? null,
         }).eq("id", editingClient.id);
         toast.success("Client updated.");
       } else {
         await supabase.from("clients").insert({
           name: data.name, email: data.email || null, nif: data.nif || null,
           currency: data.currency, default_rate: data.default_rate ? parseFloat(data.default_rate) : null,
+          export_columns: data.export_columns ?? null,
           user_id: user.id,
         });
         toast.success("Client added.");
@@ -457,6 +461,7 @@ const ClientsPage = () => {
           nif: editingClient.nif ?? "", currency: editingClient.currency ?? "EUR",
           default_rate: editingClient.default_rate != null ? String(editingClient.default_rate) : "",
           rate_unit: "hour",
+          export_columns: resolveExportColumns(editingClient.export_columns),
         } : null}
         title={editingClient ? "Edit Client" : "Add Client"}
       />

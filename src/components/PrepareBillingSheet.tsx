@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
@@ -7,14 +7,17 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { FileText, Share2, Copy, CheckCircle2, BadgeCheck } from "lucide-react";
+import { FileText, Share2, Copy, CheckCircle2, ChevronDown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { type RoundingSettings, DEFAULT_ROUNDING, aggregateWithRounding, entryDisplayValues, hasActiveRounding, describeRounding } from "@/lib/rounding";
+import { type RoundingSettings, aggregateWithRounding, entryDisplayValues, hasActiveRounding, describeRounding } from "@/lib/rounding";
 import type { TimeEntry } from "@/components/EntryDetailSheet";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import ExportColumnsPicker from "@/components/ExportColumnsPicker";
+import { type ExportColumnKey, resolveExportColumns, EXPORT_COLUMN_OPTIONS } from "@/lib/export-columns";
+import { cn } from "@/lib/utils";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
@@ -28,6 +31,13 @@ const formatDuration = (mins: number) => {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+const formatClock = (iso: string | null) => {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  } catch { return "—"; }
 };
 
 interface PrepareBillingSheetProps {
@@ -51,16 +61,41 @@ const PrepareBillingSheet = ({
   const { user, profile } = useAuth();
   const [showBilledPrompt, setShowBilledPrompt] = useState(false);
   const [markingBilled, setMarkingBilled] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [selectedColumns, setSelectedColumns] = useState<ExportColumnKey[]>([]);
+  const [columnsLoaded, setColumnsLoaded] = useState(false);
 
   const sym = CURRENCY_SYMBOLS[clientCurrency] ?? "€";
 
-  const { billableEntries, unbillableEntries, billableMins, billableValue, totalMins, unbillableMins } = useMemo(() => {
+  // Load saved export column prefs for this client
+  useEffect(() => {
+    if (!open || !user) return;
+    setColumnsLoaded(false);
+    (async () => {
+      const { data } = await supabase
+        .from("clients")
+        .select("export_columns")
+        .eq("id", clientId)
+        .maybeSingle();
+      setSelectedColumns(resolveExportColumns((data as any)?.export_columns ?? null));
+      setColumnsLoaded(true);
+    })();
+  }, [open, user, clientId]);
+
+  // Persist on change (debounced via microtask — column toggles are infrequent)
+  const handleColumnsChange = (next: ExportColumnKey[]) => {
+    setSelectedColumns(next);
+    if (!user || !columnsLoaded) return;
+    supabase.from("clients").update({ export_columns: next as any }).eq("id", clientId).then(() => {});
+  };
+
+  const { billableEntries, billableMins, billableValue, totalMins, unbillableMins } = useMemo(() => {
     const billable = entries.filter((e) => e.billable);
     const unbillable = entries.filter((e) => !e.billable);
     const { totalMinutes: bMins, totalValue: bVal } = aggregateWithRounding(billable, rounding);
     const { totalMinutes: tMins } = aggregateWithRounding(entries, rounding);
     const { totalMinutes: uMins } = aggregateWithRounding(unbillable, rounding);
-    return { billableEntries: billable, unbillableEntries: unbillable, billableMins: bMins, billableValue: bVal, totalMins: tMins, unbillableMins: uMins };
+    return { billableEntries: billable, billableMins: bMins, billableValue: bVal, totalMins: tMins, unbillableMins: uMins };
   }, [entries, rounding]);
 
   const unbilledBillableEntries = useMemo(
@@ -74,8 +109,11 @@ const PrepareBillingSheet = ({
   const toLabel = dateTo.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
   const buildPDF = () => {
-    // ... keep existing code
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    // Auto-landscape when many optional columns selected (always-on: Date, Duration, Amount).
+    const totalCols = 3 + selectedColumns.length;
+    const orientation: "portrait" | "landscape" = totalCols > 5 ? "landscape" : "portrait";
+
+    const doc = new jsPDF({ orientation, unit: "mm", format: "a4" });
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
     const margin = 16;
@@ -149,27 +187,60 @@ const PrepareBillingSheet = ({
     doc.line(margin, y, pageW - margin, y);
     y += 6;
 
-    const ev = (e: TimeEntry) => entryDisplayValues(e, rounding);
-    const tableHead = [["Date", "Duration", "Project", "Task", "Value"]];
-    const tableBody = billableEntries
+    // Build dynamic columns
+    const optionalHeaders: Record<ExportColumnKey, string> = {
+      clock_in: "Clock in",
+      clock_out: "Clock out",
+      pause_start: "Pause start",
+      pause_resume: "Pause resume",
+      pause_total: "Pause total",
+      project: "Project",
+      task: "Task",
+      notes: "Notes",
+    };
+    // Preserve canonical option order
+    const orderedOptional = EXPORT_COLUMN_OPTIONS
+      .filter((o) => selectedColumns.includes(o.key))
+      .map((o) => o.key);
+
+    const head = ["Date", "Duration", ...orderedOptional.map((k) => optionalHeaders[k]), "Amount"];
+
+    const cellFor = (e: TimeEntry, key: ExportColumnKey): string => {
+      switch (key) {
+        case "clock_in": return formatClock(e.start_time);
+        case "clock_out": return formatClock(e.end_time);
+        case "pause_start": return "—"; // not tracked per-pause yet
+        case "pause_resume": return "—";
+        case "pause_total": return (e.break_minutes ?? 0) > 0 ? formatDuration(e.break_minutes ?? 0) : "—";
+        case "project": return e.project_name ?? "—";
+        case "task": return e.task_name ?? "—";
+        case "notes": {
+          const n = e.notes ?? "";
+          if (!n) return "—";
+          // Truncate in PDF; CSV/clipboard not affected here
+          return n.length > 60 ? n.slice(0, 57) + "…" : n;
+        }
+      }
+    };
+
+    const body = billableEntries
       .sort((a, b) => (a.entry_date ?? "").localeCompare(b.entry_date ?? ""))
       .map((e) => {
-        const { displayMinutes, displayValue } = ev(e);
+        const { displayMinutes, displayValue } = entryDisplayValues(e, rounding);
         return [
           e.entry_date ? new Date(e.entry_date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "",
           formatDuration(displayMinutes),
-          e.project_name ?? "",
-          e.task_name ?? "",
+          ...orderedOptional.map((k) => cellFor(e, k)),
           displayValue > 0 ? `${sym}${displayValue.toFixed(2)}` : "—",
         ];
       });
 
     autoTable(doc, {
       startY: y,
-      head: tableHead,
-      body: tableBody,
+      head: [head],
+      body,
       margin: { left: margin, right: margin },
-      styles: { fontSize: 8, cellPadding: 2.5, textColor: [50, 50, 50] },
+      styles: { fontSize: 8, cellPadding: 2.5, textColor: [50, 50, 50], overflow: "linebreak" },
       headStyles: { fillColor: [245, 245, 245], textColor: [60, 60, 60], fontStyle: "bold", lineColor: [220, 220, 220], lineWidth: 0.3 },
       alternateRowStyles: { fillColor: [252, 252, 252] },
       theme: "grid",
@@ -212,7 +283,6 @@ const PrepareBillingSheet = ({
     setMarkingBilled(true);
     try {
       const ids = unbilledBillableEntries.map((e) => e.id);
-      // Batch in chunks of 100 to avoid query limits
       for (let i = 0; i < ids.length; i += 100) {
         const chunk = ids.slice(i, i + 100);
         await supabase.from("time_entries").update({ billing_status: "billed" }).in("id", chunk);
@@ -283,7 +353,7 @@ const PrepareBillingSheet = ({
             <SheetTitle>{clientName}</SheetTitle>
           </SheetHeader>
 
-          <div className="px-6 pb-6 space-y-5">
+          <div className="px-6 pb-6 space-y-4">
             {/* Summary block */}
             <div className="rounded-xl bg-muted/50 p-4 space-y-2">
               <div>
@@ -314,6 +384,27 @@ const PrepareBillingSheet = ({
                 <p className="text-[11px] text-muted-foreground">
                   {unbilledBillableEntries.length} unbilled session{unbilledBillableEntries.length > 1 ? "s" : ""}
                 </p>
+              )}
+            </div>
+
+            {/* Export Settings */}
+            <div className="rounded-xl border border-border overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setSettingsOpen((v) => !v)}
+                className="w-full flex items-center justify-between px-4 py-3 text-left"
+                aria-expanded={settingsOpen}
+              >
+                <span className="text-sm font-semibold text-foreground">Export settings</span>
+                <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", settingsOpen && "rotate-180")} />
+              </button>
+              {settingsOpen && (
+                <div className="px-4 pb-4 pt-1 space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Choose the data you want to include in your export. Date, duration and amount are always included.
+                  </p>
+                  <ExportColumnsPicker value={selectedColumns} onChange={handleColumnsChange} />
+                </div>
               )}
             </div>
 

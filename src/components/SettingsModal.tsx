@@ -88,7 +88,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     if (user) {
       const { data } = await supabase
         .from("user_settings")
-        .select("timer_presets, pause_mode, timer_sound, theme, show_logged_today, round_duration, round_duration_to, round_amount, round_amount_to, round_scope, week_start_day, time_format, default_billable, daily_hour_target, revenue_target, idle_reminder_minutes, default_report_range")
+        .select("timer_presets, pause_mode, timer_sound, theme, show_logged_today, round_duration, round_duration_to, round_amount, round_amount_to, round_scope, week_start_day, time_format, default_billable, daily_hour_target, revenue_target, idle_reminder_minutes, default_report_range, geolocation_mode")
         .eq("user_id", user.id)
         .single();
       if (data) {

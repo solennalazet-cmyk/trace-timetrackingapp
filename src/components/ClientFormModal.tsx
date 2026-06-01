@@ -119,6 +119,30 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
               </Select>
             </div>
           </div>
+
+          {/* Export settings */}
+          <div className="rounded-xl border border-border overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setExportOpen((v) => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 text-left"
+              aria-expanded={exportOpen}
+            >
+              <span className="text-sm font-semibold text-foreground">Export settings</span>
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", exportOpen && "rotate-180")} />
+            </button>
+            {exportOpen && (
+              <div className="px-4 pb-4 pt-1 space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Choose the data to include when exporting or billing for this client. Date, duration and amount are always included.
+                </p>
+                <ExportColumnsPicker
+                  value={form.export_columns ?? resolveExportColumns(null)}
+                  onChange={(next) => setForm({ ...form, export_columns: next })}
+                />
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex gap-3 px-6 pt-2">
           <Button variant="outline" className="flex-1 rounded-[28px] h-12 font-bold" onClick={() => onOpenChange(false)}>Cancel</Button>

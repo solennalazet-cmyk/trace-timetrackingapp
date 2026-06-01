@@ -63,8 +63,11 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
 
   const [date, setDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [inputMode, setInputMode] = useState<"duration" | "times">("duration");
   const [hours, setHours] = useState("");
   const [minutes, setMinutes] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
 
   const [clientId, setClientId] = useState("");
   const [clientName, setClientName] = useState("");

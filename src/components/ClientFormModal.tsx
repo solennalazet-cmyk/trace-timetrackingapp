@@ -57,12 +57,15 @@ const RATE_UNITS = [
 const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title = "Add Client" }: ClientFormModalProps) => {
   const [form, setForm] = useState<ClientFormData>({
     name: "", email: "", nif: "", currency: "EUR", default_rate: "", rate_unit: "hour",
+    export_columns: resolveExportColumns(null),
   });
   const [saving, setSaving] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setForm(initial ?? { name: "", email: "", nif: "", currency: "EUR", default_rate: "", rate_unit: "hour" });
+      setForm(initial ?? { name: "", email: "", nif: "", currency: "EUR", default_rate: "", rate_unit: "hour", export_columns: resolveExportColumns(null) });
+      setExportOpen(false);
     }
   }, [open, initial]);
 
@@ -75,7 +78,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[400px] rounded-2xl p-0">
+      <DialogContent className="max-w-[400px] rounded-2xl p-0 max-h-[90vh] overflow-y-auto">
         <DialogHeader className="px-6 pt-6 pb-0">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>

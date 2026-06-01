@@ -118,6 +118,7 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
   useEffect(() => {
     if (!open) return;
     setDate(new Date()); setHours(""); setMinutes("");
+    setStartTime(""); setEndTime(""); setInputMode("duration");
     setClientId(""); setClientName(""); setProjectId(""); setProjectName("");
     setTaskId(""); setTaskName(""); setNotes(""); setTags([]);
     setBillable(true); setRateAmount(""); setRateCurrency("EUR"); setRateUnit("hour");

@@ -301,37 +301,66 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
             </Popover>
           </div>
 
-          {/* Duration */}
+          {/* Duration or Start/End times */}
           <div>
-            <Label>Duration</Label>
-            <div className="flex gap-2 items-center">
-              <div className="flex-1 flex items-center gap-1">
-                <Input
-                  ref={hoursRef}
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  placeholder="0"
-                  value={hours}
-                  onChange={(e) => setHours(e.target.value)}
-                  className="text-center"
-                />
-                <span className="text-sm text-muted-foreground font-medium">h</span>
-              </div>
-              <div className="flex-1 flex items-center gap-1">
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  max={59}
-                  placeholder="0"
-                  value={minutes}
-                  onChange={(e) => setMinutes(e.target.value)}
-                  className="text-center"
-                />
-                <span className="text-sm text-muted-foreground font-medium">m</span>
-              </div>
+            <div className="flex items-center justify-between mb-1.5">
+              <Label className="m-0">{inputMode === "duration" ? "Duration" : "Start & end time"}</Label>
+              <button
+                type="button"
+                onClick={() => setInputMode((m) => (m === "duration" ? "times" : "duration"))}
+                className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+              >
+                {inputMode === "duration" ? "Use start & end times" : "Use duration"}
+              </button>
             </div>
+            {inputMode === "duration" ? (
+              <div className="flex gap-2 items-center">
+                <div className="flex-1 flex items-center gap-1">
+                  <Input
+                    ref={hoursRef}
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    placeholder="0"
+                    value={hours}
+                    onChange={(e) => setHours(e.target.value)}
+                    className="text-center"
+                  />
+                  <span className="text-sm text-muted-foreground font-medium">h</span>
+                </div>
+                <div className="flex-1 flex items-center gap-1">
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={59}
+                    placeholder="0"
+                    value={minutes}
+                    onChange={(e) => setMinutes(e.target.value)}
+                    className="text-center"
+                  />
+                  <span className="text-sm text-muted-foreground font-medium">m</span>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <div className="flex gap-2 items-center">
+                  <div className="flex-1">
+                    <Label className="text-xs text-muted-foreground">Start</Label>
+                    <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="text-center" />
+                  </div>
+                  <div className="flex-1">
+                    <Label className="text-xs text-muted-foreground">End</Label>
+                    <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="text-center" />
+                  </div>
+                </div>
+                {totalMinutes > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Duration: {Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Client */}

@@ -214,8 +214,8 @@ const ClientBillingSummary = ({
                   )}
                 </div>
 
-                {/* Session list */}
-                <div className="max-h-60 overflow-y-auto">
+                {/* Session list — expand to show all when a single client is filtered and range ≤ 7 days */}
+                <div className={activeClientFilter && daysInRange <= 7 ? "" : "max-h-60 overflow-y-auto"}>
                   {c.entries.map((entry) => (
                     <button
                       key={entry.id}

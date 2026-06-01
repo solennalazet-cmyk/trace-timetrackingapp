@@ -50,6 +50,7 @@ export type Database = {
           currency: string | null
           default_rate: number | null
           email: string | null
+          export_columns: string[] | null
           id: string
           name: string
           nif: string | null
@@ -60,6 +61,7 @@ export type Database = {
           currency?: string | null
           default_rate?: number | null
           email?: string | null
+          export_columns?: string[] | null
           id?: string
           name: string
           nif?: string | null
@@ -70,6 +72,7 @@ export type Database = {
           currency?: string | null
           default_rate?: number | null
           email?: string | null
+          export_columns?: string[] | null
           id?: string
           name?: string
           nif?: string | null

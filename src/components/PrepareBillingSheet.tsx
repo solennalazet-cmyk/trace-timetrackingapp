@@ -283,6 +283,11 @@ const PrepareBillingSheet = ({
       ];
     });
 
+    // Find location column index in the final table (Date + Duration + optionals + Amount)
+    const locationColIndex = orderedOptional.includes("location")
+      ? 2 + orderedOptional.indexOf("location")
+      : -1;
+
     autoTable(doc, {
       startY: y,
       head: [head],
@@ -294,6 +299,23 @@ const PrepareBillingSheet = ({
       theme: "grid",
       tableLineColor: [230, 230, 230],
       tableLineWidth: 0.2,
+      didParseCell: (data) => {
+        // Color-code the Location column only when the client has a site set
+        if (!clientHasSite || locationColIndex < 0) return;
+        if (data.section !== "body" || data.column.index !== locationColIndex) return;
+        const text = String(data.cell.raw ?? "");
+        if (text.startsWith("On-site")) {
+          // sage green
+          data.cell.styles.fillColor = [219, 234, 224];
+          data.cell.styles.textColor = [29, 78, 50];
+          data.cell.styles.fontStyle = "bold";
+        } else if (text.startsWith("Off-site")) {
+          // mustard yellow
+          data.cell.styles.fillColor = [250, 232, 187];
+          data.cell.styles.textColor = [102, 65, 13];
+          data.cell.styles.fontStyle = "bold";
+        }
+      },
     });
 
     const paymentLink = profile?.payment_link;

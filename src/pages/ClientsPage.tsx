@@ -471,6 +471,11 @@ const ClientsPage = () => {
           default_rate: editingClient.default_rate != null ? String(editingClient.default_rate) : "",
           rate_unit: "hour",
           export_columns: resolveExportColumns(editingClient.export_columns),
+          site_address: (editingClient as any).site_address ?? "",
+          site_lat: (editingClient as any).site_lat ?? null,
+          site_lng: (editingClient as any).site_lng ?? null,
+          site_radius_m: (editingClient as any).site_radius_m ?? 100,
+          geolocation_override: (editingClient as any).geolocation_override ?? "inherit",
         } : null}
         title={editingClient ? "Edit Client" : "Add Client"}
       />

@@ -40,6 +40,16 @@ export interface TimeEntry {
   task_id: string | null;
   start_time: string | null;
   end_time: string | null;
+  start_lat?: number | null;
+  start_lng?: number | null;
+  start_accuracy_m?: number | null;
+  start_on_site?: boolean | null;
+  start_distance_m?: number | null;
+  end_lat?: number | null;
+  end_lng?: number | null;
+  end_accuracy_m?: number | null;
+  end_on_site?: boolean | null;
+  end_distance_m?: number | null;
   client_name?: string;
   project_name?: string;
   task_name?: string;

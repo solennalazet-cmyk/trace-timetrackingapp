@@ -194,6 +194,7 @@ const PrepareBillingSheet = ({
       pause_start: "Pause start",
       pause_resume: "Pause resume",
       pause_total: "Pause total",
+      location: "Location",
       project: "Project",
       task: "Task",
       notes: "Notes",

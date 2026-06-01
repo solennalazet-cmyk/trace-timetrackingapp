@@ -28,10 +28,10 @@ const ExportColumnsPicker = ({ value, onChange, className }: ExportColumnsPicker
           >
             <span
               className={cn(
-                "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors",
+                "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors",
                 active
                   ? "bg-primary border-primary text-[hsl(222,34%,16%)]"
-                  : "bg-transparent border-border group-hover:border-foreground/40"
+                  : "bg-transparent border-foreground/30 group-hover:border-foreground/60"
               )}
             >
               {active && <Check className="h-3.5 w-3.5" strokeWidth={3} />}

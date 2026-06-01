@@ -10,6 +10,7 @@ export type ExportColumnKey =
   | "pause_resume"
   | "pause_total"
   | "clock_out"
+  | "location"
   | "project"
   | "task"
   | "notes";
@@ -20,6 +21,7 @@ export const EXPORT_COLUMN_OPTIONS: { key: ExportColumnKey; label: string }[] = 
   { key: "pause_start", label: "Clock in pause time" },
   { key: "pause_resume", label: "Clock in pause resume time" },
   { key: "pause_total", label: "Pause total duration" },
+  { key: "location", label: "Location proof" },
   { key: "project", label: "Project name" },
   { key: "task", label: "Task name" },
   { key: "notes", label: "Notes" },

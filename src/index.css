@@ -63,6 +63,12 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Location proof badges — sage green (on-site) / mustard yellow (off-site) */
+    --badge-onsite-bg: 140 30% 88%;
+    --badge-onsite-text: 145 50% 22%;
+    --badge-offsite-bg: 42 85% 85%;
+    --badge-offsite-text: 35 75% 25%;
   }
 
   .dark {
@@ -91,6 +97,11 @@
     --nav-bg: 270 20% 14%;
     --timer-display: 0 0% 95%;
     --timer-ring: 240 5% 30%;
+
+    --badge-onsite-bg: 145 30% 22%;
+    --badge-onsite-text: 140 40% 82%;
+    --badge-offsite-bg: 38 50% 22%;
+    --badge-offsite-text: 42 80% 82%;
   }
 
   /* ── Stormy Skies color theme ── */

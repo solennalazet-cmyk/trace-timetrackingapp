@@ -1,0 +1,19 @@
+{
+  "name": "Trace — Time Tracking",
+  "short_name": "Trace",
+  "description": "Timer-first time tracking for freelancers. Start instantly, organize later.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f4f1",
+  "theme_color": "#f5f4f1",
+  "icons": [
+    {
+      "src": "/placeholder.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

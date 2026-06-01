@@ -97,7 +97,7 @@ const ClientsPage = () => {
     setLoading(true);
     if (user) {
       const [{ data: c }, { data: p }] = await Promise.all([
-        supabase.from("clients").select("id, name, email, nif, currency, default_rate, export_columns").eq("user_id", user.id).order("name"),
+        supabase.from("clients").select("id, name, email, nif, currency, default_rate, export_columns, site_address, site_lat, site_lng, site_radius_m, geolocation_override").eq("user_id", user.id).order("name"),
         supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", user.id),
       ]);
       setClients((c ?? []) as Client[]);
@@ -167,21 +167,30 @@ const ClientsPage = () => {
   };
 
   const handleSaveClient = async (data: any) => {
+    const siteFields = {
+      site_address: data.site_address || null,
+      site_lat: data.site_lat ?? null,
+      site_lng: data.site_lng ?? null,
+      site_radius_m: data.site_radius_m ?? 100,
+      geolocation_override: data.geolocation_override ?? "inherit",
+    };
     if (user) {
       if (editingClient) {
         await supabase.from("clients").update({
           name: data.name, email: data.email || null, nif: data.nif || null,
           currency: data.currency, default_rate: data.default_rate ? parseFloat(data.default_rate) : null,
           export_columns: data.export_columns ?? null,
-        }).eq("id", editingClient.id);
+          ...siteFields,
+        } as any).eq("id", editingClient.id);
         toast.success("Client updated.");
       } else {
         await supabase.from("clients").insert({
           name: data.name, email: data.email || null, nif: data.nif || null,
           currency: data.currency, default_rate: data.default_rate ? parseFloat(data.default_rate) : null,
           export_columns: data.export_columns ?? null,
+          ...siteFields,
           user_id: user.id,
-        });
+        } as any);
         toast.success("Client added.");
       }
     } else {
@@ -462,6 +471,11 @@ const ClientsPage = () => {
           default_rate: editingClient.default_rate != null ? String(editingClient.default_rate) : "",
           rate_unit: "hour",
           export_columns: resolveExportColumns(editingClient.export_columns),
+          site_address: (editingClient as any).site_address ?? "",
+          site_lat: (editingClient as any).site_lat ?? null,
+          site_lng: (editingClient as any).site_lng ?? null,
+          site_radius_m: (editingClient as any).site_radius_m ?? 100,
+          geolocation_override: (editingClient as any).geolocation_override ?? "inherit",
         } : null}
         title={editingClient ? "Edit Client" : "Add Client"}
       />

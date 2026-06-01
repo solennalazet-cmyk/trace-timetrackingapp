@@ -64,20 +64,24 @@ const PrepareBillingSheet = ({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedColumns, setSelectedColumns] = useState<ExportColumnKey[]>([]);
   const [columnsLoaded, setColumnsLoaded] = useState(false);
+  const [clientHasSite, setClientHasSite] = useState(false);
 
   const sym = CURRENCY_SYMBOLS[clientCurrency] ?? "€";
 
-  // Load saved export column prefs for this client
+  // Load saved export column prefs + site presence for this client
   useEffect(() => {
     if (!open || !user) return;
     setColumnsLoaded(false);
     (async () => {
       const { data } = await supabase
         .from("clients")
-        .select("export_columns")
+        .select("export_columns, site_lat, site_lng")
         .eq("id", clientId)
         .maybeSingle();
       setSelectedColumns(resolveExportColumns((data as any)?.export_columns ?? null));
+      setClientHasSite(
+        (data as any)?.site_lat != null && (data as any)?.site_lng != null
+      );
       setColumnsLoaded(true);
     })();
   }, [open, user, clientId]);
@@ -194,6 +198,7 @@ const PrepareBillingSheet = ({
       pause_start: "Pause start",
       pause_resume: "Pause resume",
       pause_total: "Pause total",
+      location: "Location",
       project: "Project",
       task: "Task",
       notes: "Notes",
@@ -228,6 +233,22 @@ const PrepareBillingSheet = ({
       return { prevEnd: prev.end_time, thisStart: e.start_time, gapMinutes: gap };
     });
 
+    const formatLocationCell = (e: TimeEntry): string => {
+      // Prefer end (clock out) location; fall back to start (clock in) location
+      const lat = (e.end_lat ?? e.start_lat) as number | null | undefined;
+      const lng = (e.end_lng ?? e.start_lng) as number | null | undefined;
+      const acc = (e.end_accuracy_m ?? e.start_accuracy_m) as number | null | undefined;
+      const onSite = (e.end_on_site ?? e.start_on_site) as boolean | null | undefined;
+      const dist = (e.end_distance_m ?? e.start_distance_m) as number | null | undefined;
+      if (lat == null || lng == null) return "—";
+      if (clientHasSite && onSite != null) {
+        return onSite ? "On-site" : `Off-site · ${dist ?? "?"}m`;
+      }
+      // No site set → show raw coordinates (worker may have multiple worksites)
+      const base = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      return acc != null ? `${base} (±${acc}m)` : base;
+    };
+
     const cellFor = (e: TimeEntry, key: ExportColumnKey, pause: PauseInfo | null): string => {
       switch (key) {
         case "clock_in": return formatClock(e.start_time);
@@ -240,6 +261,7 @@ const PrepareBillingSheet = ({
           const total = interSession + withinSession;
           return total > 0 ? formatDuration(total) : "—";
         }
+        case "location": return formatLocationCell(e);
         case "project": return e.project_name ?? "—";
         case "task": return e.task_name ?? "—";
         case "notes": {
@@ -261,6 +283,11 @@ const PrepareBillingSheet = ({
       ];
     });
 
+    // Find location column index in the final table (Date + Duration + optionals + Amount)
+    const locationColIndex = orderedOptional.includes("location")
+      ? 2 + orderedOptional.indexOf("location")
+      : -1;
+
     autoTable(doc, {
       startY: y,
       head: [head],
@@ -272,6 +299,23 @@ const PrepareBillingSheet = ({
       theme: "grid",
       tableLineColor: [230, 230, 230],
       tableLineWidth: 0.2,
+      didParseCell: (data) => {
+        // Color-code the Location column only when the client has a site set
+        if (!clientHasSite || locationColIndex < 0) return;
+        if (data.section !== "body" || data.column.index !== locationColIndex) return;
+        const text = String(data.cell.raw ?? "");
+        if (text.startsWith("On-site")) {
+          // sage green
+          data.cell.styles.fillColor = [219, 234, 224];
+          data.cell.styles.textColor = [29, 78, 50];
+          data.cell.styles.fontStyle = "bold";
+        } else if (text.startsWith("Off-site")) {
+          // mustard yellow
+          data.cell.styles.fillColor = [250, 232, 187];
+          data.cell.styles.textColor = [102, 65, 13];
+          data.cell.styles.fontStyle = "bold";
+        }
+      },
     });
 
     const paymentLink = profile?.payment_link;

@@ -619,6 +619,25 @@ const StartPage = () => {
         targetMode={conflictTargetMode}
         onAction={handleConflictAction}
       />
+
+      {/* Geolocation pre-prompt (first session only) */}
+      <GeolocationPrePromptModal
+        open={geoPrePromptOpen}
+        onOpenChange={setGeoPrePromptOpen}
+        onEnable={async () => {
+          setGeoPrePromptOpen(false);
+          await markPromptSeen("ask");
+          if (pendingGeoStart) {
+            captureStart(pendingGeoStart.mode, pendingGeoStart.startedAt);
+            setPendingGeoStart(null);
+          }
+        }}
+        onDecline={async () => {
+          setGeoPrePromptOpen(false);
+          await markPromptSeen("off");
+          setPendingGeoStart(null);
+        }}
+      />
     </div>
   );
 };

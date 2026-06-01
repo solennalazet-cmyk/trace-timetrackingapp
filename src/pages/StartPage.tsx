@@ -83,6 +83,12 @@ const StartPage = () => {
   const [conflictActiveMode, setConflictActiveMode] = useState<Mode>("stopwatch");
   const [conflictTargetMode, setConflictTargetMode] = useState<Mode>("stopwatch");
 
+  // Geolocation
+  const [geoMode, setGeoMode] = useState<"off" | "ask" | "always">("off");
+  const [geoPromptSeen, setGeoPromptSeen] = useState(true);
+  const [geoPrePromptOpen, setGeoPrePromptOpen] = useState(false);
+  const [pendingGeoStart, setPendingGeoStart] = useState<{ mode: string; startedAt: string } | null>(null);
+
   const handleModeSwitch = (target: Mode) => {
     if (target === mode) return;
     const active = getActiveMode();

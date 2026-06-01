@@ -167,21 +167,30 @@ const ClientsPage = () => {
   };
 
   const handleSaveClient = async (data: any) => {
+    const siteFields = {
+      site_address: data.site_address || null,
+      site_lat: data.site_lat ?? null,
+      site_lng: data.site_lng ?? null,
+      site_radius_m: data.site_radius_m ?? 100,
+      geolocation_override: data.geolocation_override ?? "inherit",
+    };
     if (user) {
       if (editingClient) {
         await supabase.from("clients").update({
           name: data.name, email: data.email || null, nif: data.nif || null,
           currency: data.currency, default_rate: data.default_rate ? parseFloat(data.default_rate) : null,
           export_columns: data.export_columns ?? null,
-        }).eq("id", editingClient.id);
+          ...siteFields,
+        } as any).eq("id", editingClient.id);
         toast.success("Client updated.");
       } else {
         await supabase.from("clients").insert({
           name: data.name, email: data.email || null, nif: data.nif || null,
           currency: data.currency, default_rate: data.default_rate ? parseFloat(data.default_rate) : null,
           export_columns: data.export_columns ?? null,
+          ...siteFields,
           user_id: user.id,
-        });
+        } as any);
         toast.success("Client added.");
       }
     } else {

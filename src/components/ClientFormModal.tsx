@@ -151,6 +151,84 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
             </div>
           </div>
 
+          {/* Place of work */}
+          <div className="rounded-xl border border-border overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setSiteOpen((v) => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 text-left"
+              aria-expanded={siteOpen}
+            >
+              <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <MapPin className="h-4 w-4" /> Place of work
+                {form.site_lat != null && (
+                  <span className="text-[10px] font-normal text-muted-foreground">· set</span>
+                )}
+              </span>
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", siteOpen && "rotate-180")} />
+            </button>
+            {siteOpen && (
+              <div className="px-4 pb-4 pt-1 space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Optional. When set, clock in/out can be tagged as <span className="font-medium text-foreground">On-site</span> or <span className="font-medium text-foreground">Off-site</span> on exports.
+                </p>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Address (optional label)</Label>
+                  <Input
+                    className="h-10 rounded-xl"
+                    value={form.site_address ?? ""}
+                    onChange={(e) => setForm({ ...form, site_address: e.target.value })}
+                    placeholder="e.g. Office, Warehouse 2"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full rounded-xl h-10 gap-2"
+                  onClick={captureCurrentLocation}
+                  disabled={capturingLoc}
+                >
+                  {capturingLoc ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+                  {form.site_lat != null ? "Update with current location" : "Use current location"}
+                </Button>
+                {form.site_lat != null && form.site_lng != null && (
+                  <p className="text-[11px] text-muted-foreground font-mono">
+                    {form.site_lat.toFixed(5)}, {form.site_lng.toFixed(5)}
+                  </p>
+                )}
+                <div className="space-y-1.5">
+                  <Label className="text-xs flex items-center justify-between">
+                    <span>Geofence radius</span>
+                    <span className="text-muted-foreground">{form.site_radius_m ?? 100}m</span>
+                  </Label>
+                  <Slider
+                    min={50}
+                    max={500}
+                    step={10}
+                    value={[form.site_radius_m ?? 100]}
+                    onValueChange={([v]) => setForm({ ...form, site_radius_m: v })}
+                  />
+                  <p className="text-[11px] text-muted-foreground">Workers within this distance count as On-site.</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Location capture for this client</Label>
+                  <Select
+                    value={form.geolocation_override ?? "inherit"}
+                    onValueChange={(v: ClientGeoOverride) => setForm({ ...form, geolocation_override: v })}
+                  >
+                    <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="inherit">Use global setting</SelectItem>
+                      <SelectItem value="always">Always capture</SelectItem>
+                      <SelectItem value="never">Never capture</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+          </div>
+
+
           {/* Export settings */}
           <div className="rounded-xl border border-border overflow-hidden">
             <button

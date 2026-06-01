@@ -127,7 +127,7 @@ const ClientsPage = () => {
       setProjectStats(Object.entries(projStatsMap).map(([projectId, s]) => ({ projectId, ...s })));
     } else {
       const ac = getAnonymousClients();
-      setClients(ac.map((c: any) => ({ id: c.id, name: c.name, email: c.email ?? null, nif: c.nif ?? null, currency: c.currency ?? "EUR", default_rate: c.default_rate ?? null })));
+      setClients(ac.map((c: any) => ({ id: c.id, name: c.name, email: c.email ?? null, nif: c.nif ?? null, currency: c.currency ?? "EUR", default_rate: c.default_rate ?? null, export_columns: null })));
       const ap = getAnonymousProjects();
       setProjects(ap.map((p: any) => ({ id: p.id, name: p.name, client_id: p.client_id ?? null, rate: p.rate ?? null, currency: p.currency ?? null })));
       setMonthlyStats([]);

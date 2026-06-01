@@ -233,6 +233,22 @@ const PrepareBillingSheet = ({
       return { prevEnd: prev.end_time, thisStart: e.start_time, gapMinutes: gap };
     });
 
+    const formatLocationCell = (e: TimeEntry): string => {
+      // Prefer end (clock out) location; fall back to start (clock in) location
+      const lat = (e.end_lat ?? e.start_lat) as number | null | undefined;
+      const lng = (e.end_lng ?? e.start_lng) as number | null | undefined;
+      const acc = (e.end_accuracy_m ?? e.start_accuracy_m) as number | null | undefined;
+      const onSite = (e.end_on_site ?? e.start_on_site) as boolean | null | undefined;
+      const dist = (e.end_distance_m ?? e.start_distance_m) as number | null | undefined;
+      if (lat == null || lng == null) return "—";
+      if (clientHasSite && onSite != null) {
+        return onSite ? "On-site" : `Off-site · ${dist ?? "?"}m`;
+      }
+      // No site set → show raw coordinates (worker may have multiple worksites)
+      const base = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      return acc != null ? `${base} (±${acc}m)` : base;
+    };
+
     const cellFor = (e: TimeEntry, key: ExportColumnKey, pause: PauseInfo | null): string => {
       switch (key) {
         case "clock_in": return formatClock(e.start_time);
@@ -245,6 +261,7 @@ const PrepareBillingSheet = ({
           const total = interSession + withinSession;
           return total > 0 ? formatDuration(total) : "—";
         }
+        case "location": return formatLocationCell(e);
         case "project": return e.project_name ?? "—";
         case "task": return e.task_name ?? "—";
         case "notes": {

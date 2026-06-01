@@ -7,6 +7,7 @@ import { toLocalDateKey } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { getAnonymousClients, saveAnonymousClient, getAnonymousProjects, saveAnonymousProject, deleteAnonymousClient } from "@/lib/anonymous-store";
 import ClientFormModal from "@/components/ClientFormModal";
+import { resolveExportColumns } from "@/lib/export-columns";
 import ProjectFormModal from "@/components/ProjectFormModal";
 import PaywallModal from "@/components/PaywallModal";
 import SignInLink from "@/components/SignInLink";

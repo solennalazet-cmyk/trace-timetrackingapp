@@ -96,7 +96,7 @@ const ClientsPage = () => {
     setLoading(true);
     if (user) {
       const [{ data: c }, { data: p }] = await Promise.all([
-        supabase.from("clients").select("id, name, email, nif, currency, default_rate").eq("user_id", user.id).order("name"),
+        supabase.from("clients").select("id, name, email, nif, currency, default_rate, export_columns").eq("user_id", user.id).order("name"),
         supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", user.id),
       ]);
       setClients((c ?? []) as Client[]);

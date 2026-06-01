@@ -338,6 +338,50 @@ const StartPage = () => {
       end_time: session.startedAt ? now.toISOString() : null,
     };
 
+    // ── Geolocation capture ──
+    // Read cached start fix (set when timer started), capture end fix now.
+    let clientSite: { site_lat: number | null; site_lng: number | null; site_radius_m: number | null; geolocation_override: string | null } | null = null;
+    if (user && assignment?.clientId) {
+      const { data: c } = await supabase
+        .from("clients")
+        .select("site_lat, site_lng, site_radius_m, geolocation_override")
+        .eq("id", assignment.clientId)
+        .single();
+      clientSite = (c as any) ?? null;
+    }
+    const clientOverride = (clientSite?.geolocation_override ?? "inherit") as "inherit" | "always" | "never";
+    const shouldCapture =
+      clientOverride === "always" ||
+      (clientOverride !== "never" && geoMode !== "off");
+
+    if (shouldCapture) {
+      const startLoc: CapturedLocation | null = readStartLocation(session.entryType ?? "timer", session.startedAt);
+      const endLoc: CapturedLocation | null = await requestLocation();
+
+      if (startLoc) {
+        entry.start_lat = startLoc.lat;
+        entry.start_lng = startLoc.lng;
+        entry.start_accuracy_m = startLoc.accuracy_m;
+        if (clientSite) {
+          const ev = evaluateOnSite(startLoc, clientSite);
+          if (ev) { entry.start_on_site = ev.on_site; entry.start_distance_m = ev.distance_m; }
+        }
+      }
+      if (endLoc) {
+        entry.end_lat = endLoc.lat;
+        entry.end_lng = endLoc.lng;
+        entry.end_accuracy_m = endLoc.accuracy_m;
+        if (clientSite) {
+          const ev = evaluateOnSite(endLoc, clientSite);
+          if (ev) { entry.end_on_site = ev.on_site; entry.end_distance_m = ev.distance_m; }
+        }
+      }
+      if (!startLoc && !endLoc && geoMode !== "off") {
+        toast("Location unavailable — entry saved without it.");
+      }
+      clearStartLocation(session.entryType ?? "timer");
+    }
+
     if (user) {
       const { error } = await supabase.from("time_entries").insert({ ...entry, user_id: user.id });
       if (error) throw error;

@@ -29,6 +29,7 @@ interface Client {
   nif: string | null;
   currency: string | null;
   default_rate: number | null;
+  export_columns: string[] | null;
 }
 
 interface Project {

@@ -19,6 +19,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { saveAnonymousEntry, getAnonymousEntries } from "@/lib/anonymous-store";
 import { toast } from "sonner";
 import { getCongratsMessage } from "@/lib/boost-challenges";
+import GeolocationPrePromptModal from "@/components/GeolocationPrePromptModal";
+import {
+  requestLocation,
+  evaluateOnSite,
+  cacheStartLocation,
+  readStartLocation,
+  clearStartLocation,
+  type CapturedLocation,
+} from "@/lib/geolocation";
 
 type Mode = "stopwatch" | "focus" | "shift";
 

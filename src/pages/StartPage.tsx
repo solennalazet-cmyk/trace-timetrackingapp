@@ -19,6 +19,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { saveAnonymousEntry, getAnonymousEntries } from "@/lib/anonymous-store";
 import { toast } from "sonner";
 import { getCongratsMessage } from "@/lib/boost-challenges";
+import GeolocationPrePromptModal from "@/components/GeolocationPrePromptModal";
+import {
+  requestLocation,
+  evaluateOnSite,
+  cacheStartLocation,
+  readStartLocation,
+  clearStartLocation,
+  type CapturedLocation,
+} from "@/lib/geolocation";
 
 type Mode = "stopwatch" | "focus" | "shift";
 
@@ -73,6 +82,12 @@ const StartPage = () => {
   const [conflictOpen, setConflictOpen] = useState(false);
   const [conflictActiveMode, setConflictActiveMode] = useState<Mode>("stopwatch");
   const [conflictTargetMode, setConflictTargetMode] = useState<Mode>("stopwatch");
+
+  // Geolocation
+  const [geoMode, setGeoMode] = useState<"off" | "ask" | "always">("off");
+  const [geoPromptSeen, setGeoPromptSeen] = useState(true);
+  const [geoPrePromptOpen, setGeoPrePromptOpen] = useState(false);
+  const [pendingGeoStart, setPendingGeoStart] = useState<{ mode: string; startedAt: string } | null>(null);
 
   const handleModeSwitch = (target: Mode) => {
     if (target === mode) return;
@@ -189,27 +204,76 @@ const StartPage = () => {
 
   useEffect(() => { fetchSummary(); }, [user]);
 
-  // Load show_logged_today setting
+  // Load show_logged_today + geolocation settings
   useEffect(() => {
     const loadSetting = async () => {
       if (user) {
         const { data } = await supabase
           .from("user_settings")
-          .select("show_logged_today")
+          .select("show_logged_today, geolocation_mode, geolocation_prompt_seen")
           .eq("user_id", user.id)
           .single();
-        if (data) setShowSummary(data.show_logged_today ?? true);
+        if (data) {
+          setShowSummary(data.show_logged_today ?? true);
+          setGeoMode(((data as any).geolocation_mode ?? "off") as "off" | "ask" | "always");
+          setGeoPromptSeen(((data as any).geolocation_prompt_seen ?? false) as boolean);
+        }
       } else {
         try {
           const raw = localStorage.getItem("trace_user_settings");
           if (raw) {
             const parsed = JSON.parse(raw);
             setShowSummary(parsed.show_logged_today ?? true);
+            setGeoMode((parsed.geolocation_mode ?? "off") as "off" | "ask" | "always");
+            setGeoPromptSeen(parsed.geolocation_prompt_seen ?? false);
           }
         } catch {}
       }
     };
     loadSetting();
+  }, [user]);
+
+  // Capture location when timer starts
+  const captureStart = useCallback(async (sessionMode: string, startedAt: string) => {
+    const loc = await requestLocation();
+    if (loc) cacheStartLocation(sessionMode, startedAt, loc);
+  }, []);
+
+  // Listen for timer start events
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { mode: string; startedAt: string };
+      if (!detail) return;
+      if (geoMode === "off") return;
+      // First-time pre-prompt
+      if (!geoPromptSeen) {
+        setPendingGeoStart(detail);
+        setGeoPrePromptOpen(true);
+        return;
+      }
+      captureStart(detail.mode, detail.startedAt);
+    };
+    window.addEventListener("trace-timer-started", handler as EventListener);
+    return () => window.removeEventListener("trace-timer-started", handler as EventListener);
+  }, [geoMode, geoPromptSeen, captureStart]);
+
+  const markPromptSeen = useCallback(async (mode: "off" | "ask" | "always") => {
+    setGeoPromptSeen(true);
+    setGeoMode(mode);
+    if (user) {
+      await supabase.from("user_settings").upsert(
+        { user_id: user.id, geolocation_prompt_seen: true, geolocation_mode: mode } as any,
+        { onConflict: "user_id" }
+      );
+    } else {
+      try {
+        const raw = localStorage.getItem("trace_user_settings");
+        const parsed = raw ? JSON.parse(raw) : {};
+        parsed.geolocation_prompt_seen = true;
+        parsed.geolocation_mode = mode;
+        localStorage.setItem("trace_user_settings", JSON.stringify(parsed));
+      } catch {}
+    }
   }, [user]);
 
   // Called when timer stops — opens the assignment modal
@@ -273,6 +337,50 @@ const StartPage = () => {
       start_time: session.startedAt || null,
       end_time: session.startedAt ? now.toISOString() : null,
     };
+
+    // ── Geolocation capture ──
+    // Read cached start fix (set when timer started), capture end fix now.
+    let clientSite: { site_lat: number | null; site_lng: number | null; site_radius_m: number | null; geolocation_override: string | null } | null = null;
+    if (user && assignment?.clientId) {
+      const { data: c } = await supabase
+        .from("clients")
+        .select("site_lat, site_lng, site_radius_m, geolocation_override")
+        .eq("id", assignment.clientId)
+        .single();
+      clientSite = (c as any) ?? null;
+    }
+    const clientOverride = (clientSite?.geolocation_override ?? "inherit") as "inherit" | "always" | "never";
+    const shouldCapture =
+      clientOverride === "always" ||
+      (clientOverride !== "never" && geoMode !== "off");
+
+    if (shouldCapture) {
+      const startLoc: CapturedLocation | null = readStartLocation(session.entryType ?? "timer", session.startedAt);
+      const endLoc: CapturedLocation | null = await requestLocation();
+
+      if (startLoc) {
+        entry.start_lat = startLoc.lat;
+        entry.start_lng = startLoc.lng;
+        entry.start_accuracy_m = startLoc.accuracy_m;
+        if (clientSite) {
+          const ev = evaluateOnSite(startLoc, clientSite);
+          if (ev) { entry.start_on_site = ev.on_site; entry.start_distance_m = ev.distance_m; }
+        }
+      }
+      if (endLoc) {
+        entry.end_lat = endLoc.lat;
+        entry.end_lng = endLoc.lng;
+        entry.end_accuracy_m = endLoc.accuracy_m;
+        if (clientSite) {
+          const ev = evaluateOnSite(endLoc, clientSite);
+          if (ev) { entry.end_on_site = ev.on_site; entry.end_distance_m = ev.distance_m; }
+        }
+      }
+      if (!startLoc && !endLoc && geoMode !== "off") {
+        toast("Location unavailable — entry saved without it.");
+      }
+      clearStartLocation(session.entryType ?? "timer");
+    }
 
     if (user) {
       const { error } = await supabase.from("time_entries").insert({ ...entry, user_id: user.id });
@@ -510,6 +618,25 @@ const StartPage = () => {
         activeMode={conflictActiveMode}
         targetMode={conflictTargetMode}
         onAction={handleConflictAction}
+      />
+
+      {/* Geolocation pre-prompt (first session only) */}
+      <GeolocationPrePromptModal
+        open={geoPrePromptOpen}
+        onOpenChange={setGeoPrePromptOpen}
+        onEnable={async () => {
+          setGeoPrePromptOpen(false);
+          await markPromptSeen("ask");
+          if (pendingGeoStart) {
+            captureStart(pendingGeoStart.mode, pendingGeoStart.startedAt);
+            setPendingGeoStart(null);
+          }
+        }}
+        onDecline={async () => {
+          setGeoPrePromptOpen(false);
+          await markPromptSeen("off");
+          setPendingGeoStart(null);
+        }}
       />
     </div>
   );

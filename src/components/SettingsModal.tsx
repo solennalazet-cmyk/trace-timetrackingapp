@@ -8,7 +8,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { X, Plus, Volume2, VolumeX } from "lucide-react";
+import { X, Plus, Volume2, VolumeX, Info, MapPin } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +37,7 @@ interface Settings {
   revenue_target: number;
   idle_reminder_minutes: number;
   default_report_range: string;
+  geolocation_mode: string;
 }
 
 const DEFAULTS: Settings = {
@@ -56,6 +58,7 @@ const DEFAULTS: Settings = {
   revenue_target: 0,
   idle_reminder_minutes: 0,
   default_report_range: "weekly",
+  geolocation_mode: "off",
 };
 
 const formatPreset = (mins: number) => {
@@ -85,7 +88,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     if (user) {
       const { data } = await supabase
         .from("user_settings")
-        .select("timer_presets, pause_mode, timer_sound, theme, show_logged_today, round_duration, round_duration_to, round_amount, round_amount_to, round_scope, week_start_day, time_format, default_billable, daily_hour_target, revenue_target, idle_reminder_minutes, default_report_range")
+        .select("timer_presets, pause_mode, timer_sound, theme, show_logged_today, round_duration, round_duration_to, round_amount, round_amount_to, round_scope, week_start_day, time_format, default_billable, daily_hour_target, revenue_target, idle_reminder_minutes, default_report_range, geolocation_mode")
         .eq("user_id", user.id)
         .single();
       if (data) {
@@ -107,6 +110,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
           revenue_target: (data as any).revenue_target ?? DEFAULTS.revenue_target,
           idle_reminder_minutes: (data as any).idle_reminder_minutes ?? DEFAULTS.idle_reminder_minutes,
           default_report_range: (data as any).default_report_range ?? DEFAULTS.default_report_range,
+          geolocation_mode: (data as any).geolocation_mode ?? DEFAULTS.geolocation_mode,
         });
       }
     } else {
@@ -144,6 +148,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
         revenue_target: updated.revenue_target,
         idle_reminder_minutes: updated.idle_reminder_minutes,
         default_report_range: updated.default_report_range,
+        geolocation_mode: updated.geolocation_mode,
       } as any, { onConflict: "user_id" });
     } else {
       localStorage.setItem(LS_KEY, JSON.stringify(updated));
@@ -550,6 +555,61 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                 </SelectContent>
               </Select>
             </CardRow>
+          </SettingsCard>
+
+          {/* ── Card: Privacy & Location ── */}
+          <SettingsCard title="Privacy">
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5">
+                <Label className="text-xs font-medium flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-muted-foreground" /> Location proof
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="More info"
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Info className="w-3.5 h-3.5" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="top" className="w-64 text-[11px] leading-relaxed">
+                    You can override this per client on the client's page — useful when one client needs location proof but others don't.
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <p className="text-[11px] text-muted-foreground -mt-1">
+                Attach your coordinates to clock in / clock out as proof of presence. They only appear on exports if you include them.
+              </p>
+              <RadioGroup
+                value={settings.geolocation_mode}
+                onValueChange={(v) => persist({ ...settings, geolocation_mode: v })}
+                className="space-y-2 pt-1"
+              >
+                <label className="flex items-start gap-3 p-2.5 rounded-lg border border-border cursor-pointer hover:bg-muted/30 transition-colors">
+                  <RadioGroupItem value="off" className="mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium">Off</p>
+                    <p className="text-[11px] text-muted-foreground">Never capture location.</p>
+                  </div>
+                </label>
+                <label className="flex items-start gap-3 p-2.5 rounded-lg border border-border cursor-pointer hover:bg-muted/30 transition-colors">
+                  <RadioGroupItem value="ask" className="mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium">Ask each time</p>
+                    <p className="text-[11px] text-muted-foreground">Browser asks at clock in / out.</p>
+                  </div>
+                </label>
+                <label className="flex items-start gap-3 p-2.5 rounded-lg border border-border cursor-pointer hover:bg-muted/30 transition-colors">
+                  <RadioGroupItem value="always" className="mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium">Always</p>
+                    <p className="text-[11px] text-muted-foreground">Capture silently when permission is granted.</p>
+                  </div>
+                </label>
+              </RadioGroup>
+            </div>
           </SettingsCard>
 
           {/* ── Card 7: Integrations (placeholder) ── */}

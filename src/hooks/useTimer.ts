@@ -181,6 +181,13 @@ export function useTimer(mode: TimerMode) {
     writeLS(lsKey, state);
     setTimerState(state);
 
+    // Notify listeners (e.g. geolocation capture) that a session has started
+    try {
+      window.dispatchEvent(
+        new CustomEvent("trace-timer-started", { detail: { mode, startedAt: now } })
+      );
+    } catch {}
+
     if (user) {
       const sessionType = mode === "shift" ? "shift" : "stopwatch";
       supabase

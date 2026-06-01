@@ -234,6 +234,8 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
         break_minutes: 0,
         entry_type: "manual",
         entry_date: format(date, "yyyy-MM-dd"),
+        start_time: startDate ? startDate.toISOString() : null,
+        end_time: endDate ? endDate.toISOString() : null,
         billable,
         billing_status: "unbilled",
         client_id: clientId || null,

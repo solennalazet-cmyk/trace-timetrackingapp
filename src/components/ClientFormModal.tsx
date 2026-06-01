@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { ChevronDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import ExportColumnsPicker from "@/components/ExportColumnsPicker";
+import { type ExportColumnKey, resolveExportColumns } from "@/lib/export-columns";
+import { cn } from "@/lib/utils";
 
 interface ClientFormData {
   name: string;
@@ -23,6 +27,7 @@ interface ClientFormData {
   currency: string;
   default_rate: string;
   rate_unit: string;
+  export_columns?: ExportColumnKey[];
 }
 
 interface ClientFormModalProps {

@@ -51,9 +51,14 @@ export type Database = {
           default_rate: number | null
           email: string | null
           export_columns: string[] | null
+          geolocation_override: string | null
           id: string
           name: string
           nif: string | null
+          site_address: string | null
+          site_lat: number | null
+          site_lng: number | null
+          site_radius_m: number | null
           user_id: string
         }
         Insert: {
@@ -62,9 +67,14 @@ export type Database = {
           default_rate?: number | null
           email?: string | null
           export_columns?: string[] | null
+          geolocation_override?: string | null
           id?: string
           name: string
           nif?: string | null
+          site_address?: string | null
+          site_lat?: number | null
+          site_lng?: number | null
+          site_radius_m?: number | null
           user_id: string
         }
         Update: {
@@ -73,9 +83,14 @@ export type Database = {
           default_rate?: number | null
           email?: string | null
           export_columns?: string[] | null
+          geolocation_override?: string | null
           id?: string
           name?: string
           nif?: string | null
+          site_address?: string | null
+          site_lat?: number | null
+          site_lng?: number | null
+          site_radius_m?: number | null
           user_id?: string
         }
         Relationships: []
@@ -273,6 +288,11 @@ export type Database = {
           created_at: string | null
           deleted_at: string | null
           duration_minutes: number
+          end_accuracy_m: number | null
+          end_distance_m: number | null
+          end_lat: number | null
+          end_lng: number | null
+          end_on_site: boolean | null
           end_time: string | null
           entry_date: string | null
           entry_type: string | null
@@ -283,6 +303,11 @@ export type Database = {
           rate_amount: number | null
           rate_currency: string | null
           rate_unit: string | null
+          start_accuracy_m: number | null
+          start_distance_m: number | null
+          start_lat: number | null
+          start_lng: number | null
+          start_on_site: boolean | null
           start_time: string | null
           tags: string[] | null
           task_id: string | null
@@ -297,6 +322,11 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           duration_minutes: number
+          end_accuracy_m?: number | null
+          end_distance_m?: number | null
+          end_lat?: number | null
+          end_lng?: number | null
+          end_on_site?: boolean | null
           end_time?: string | null
           entry_date?: string | null
           entry_type?: string | null
@@ -307,6 +337,11 @@ export type Database = {
           rate_amount?: number | null
           rate_currency?: string | null
           rate_unit?: string | null
+          start_accuracy_m?: number | null
+          start_distance_m?: number | null
+          start_lat?: number | null
+          start_lng?: number | null
+          start_on_site?: boolean | null
           start_time?: string | null
           tags?: string[] | null
           task_id?: string | null
@@ -321,6 +356,11 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           duration_minutes?: number
+          end_accuracy_m?: number | null
+          end_distance_m?: number | null
+          end_lat?: number | null
+          end_lng?: number | null
+          end_on_site?: boolean | null
           end_time?: string | null
           entry_date?: string | null
           entry_type?: string | null
@@ -331,6 +371,11 @@ export type Database = {
           rate_amount?: number | null
           rate_currency?: string | null
           rate_unit?: string | null
+          start_accuracy_m?: number | null
+          start_distance_m?: number | null
+          start_lat?: number | null
+          start_lng?: number | null
+          start_on_site?: boolean | null
           start_time?: string | null
           tags?: string[] | null
           task_id?: string | null
@@ -396,6 +441,8 @@ export type Database = {
           daily_hour_target: number | null
           default_billable: boolean | null
           default_report_range: string | null
+          geolocation_mode: string | null
+          geolocation_prompt_seen: boolean | null
           id: string
           idle_reminder_minutes: number | null
           pause_mode: string | null
@@ -418,6 +465,8 @@ export type Database = {
           daily_hour_target?: number | null
           default_billable?: boolean | null
           default_report_range?: string | null
+          geolocation_mode?: string | null
+          geolocation_prompt_seen?: boolean | null
           id?: string
           idle_reminder_minutes?: number | null
           pause_mode?: string | null
@@ -440,6 +489,8 @@ export type Database = {
           daily_hour_target?: number | null
           default_billable?: boolean | null
           default_report_range?: string | null
+          geolocation_mode?: string | null
+          geolocation_prompt_seen?: boolean | null
           id?: string
           idle_reminder_minutes?: number | null
           pause_mode?: string | null

@@ -1,93 +1,85 @@
+# Phase 1: Geolocation proof + PWA install guidance
 
-## Trace – Master Plan
+Three things in this ship:
 
----
+## 1. How Trace Works — add "Install to home screen" step
 
-### 1. Tab Navigation
+Add a fourth step to `HowTraceWorksModal.tsx` titled **"Install on your phone"** with a `Smartphone` icon and a short description plus a "Show me how" link that expands inline instructions:
 
-- **Done tab** (formerly Timeline): `src/pages/TimelinePage.tsx`
-  - Route: `/timeline`, icon: `CheckSquare`, label: "Done"
-  - Date range picker, client color legend, hero stats, task list grouped by day
-  - Insights section (Pro-locked with blur overlay for free users)
-  - Free plan: 7-day limit on tasks + restricted date range picker
+- **iPhone (Safari):** Tap the Share button → Add to Home Screen → Add.
+- **Android (Chrome):** Tap the ⋮ menu → Install app (or Add to Home Screen).
+- Once installed, Trace opens like a real app — fullscreen, no browser bar, and notifications work reliably.
 
----
+To make Trace actually installable, add a minimal web app manifest (`public/manifest.json`) with `display: "standalone"`, icons, theme color, and link it from `index.html`. **No service worker, no `vite-plugin-pwa`** — keeps the Lovable preview stable. Installability + notifications work without offline caching.
 
-### 2. Client Color-Coding
+## 2. Geolocation Phase 1
 
-- `getClientColor(id)` extracted to `src/lib/utils.ts`
-- Deterministic hash → consistent colors across Reports, Done tab, etc.
+### Database (one migration)
 
----
+`clients`: add `site_address text`, `site_lat double precision`, `site_lng double precision`, `site_radius_m integer default 100`.
+`time_entries`: add `start_lat`, `start_lng`, `start_accuracy_m`, `start_on_site boolean`, `start_distance_m`, plus same `end_*` set.
+`user_settings`: add `geolocation_mode text default 'off'` (`off | ask | always`), `geolocation_prompt_seen boolean default false`.
 
-### 3. Multi-Task Assignment
+### Settings → Privacy section
 
-- **File: `src/components/AssignmentModal.tsx`**
-- "+" button appends tasks to a list with editable duration splits
-- Save creates one `time_entry` per task, splitting total duration
-- Task combobox resets after each addition
+New "Location proof" block with three options (Off / Ask each time / Always) and a small **info icon** next to the heading. On tap (mobile-safe Popover, not Tooltip): "You can override this per client on the client's page — useful when one client needs location proof but others don't."
 
----
+### Client form (`ClientFormModal`)
 
-### 4. Mobile Modal Scrolling & Touch Handling
+New "Place of work" collapsible section:
+- Address field (optional)
+- "📍 Use current location" button — runs the high-accuracy capture, fills lat/lng, reverse-geocodes the address via a free service (Nominatim) and pre-fills it
+- Radius slider (50–500m, default 100m)
+- Per-client override: Inherit / Always capture / Never capture
 
-- **Dialog (`src/components/ui/dialog.tsx`)**:
-  - `useVisualViewportStyle` hook dynamically repositions centered dialogs when the mobile keyboard opens using `window.visualViewport` API
-  - `maxHeight` and `top` are recalculated on viewport resize/scroll events
-  - All modals use `overscroll-contain`, `-webkit-overflow-scrolling: touch`, `touch-action: pan-y`
+### Capture logic (new `src/lib/geolocation.ts`)
 
-- **CreatableCombobox (`src/components/CreatableCombobox.tsx`)**:
-  - Touch gesture tracking (`touchStartYRef`, `touchMovedRef`) differentiates scroll from tap
-  - `runIfNotScrolling()` wrapper prevents accidental item selection during swipe
-  - Dropdown uses `overscroll-contain` + `touch-action: pan-y` to prevent parent/browser scroll
-  - Accepts `scrollContainerRef` prop — dropdown auto-closes when parent scrolls
+- `requestLocation()`: `getCurrentPosition({ enableHighAccuracy: true, timeout: 10000, maximumAge: 0 })`, retry once if accuracy >100m, resolves `null` on any failure (graceful).
+- `evaluateOnSite(lat, lng, client)`: haversine distance vs `site_lat/lng`, returns `{ on_site, distance_m }` or `null` if client has no site set.
+- Pre-prompt modal: shown once before the first real permission request. Copy:
+  > Trace can attach your location to clock in/out times as proof you were on site. Coordinates stay private on your account — they only appear on exports **if you choose to include them in Export Settings**. You're in control.
+  
+  Buttons: **Enable** (sets mode to `ask` or `always` based on user pick, flips `geolocation_prompt_seen=true`, then calls `getCurrentPosition`) / **Not now** (sets mode to `off`, flips flag, never auto-asks again).
 
-- **All editing modals** (`AssignmentModal`, `ManualEntryModal`, `CallLogModal`):
-  - Use `position="centered"` on DialogContent
-  - Split layout: fixed header + scrollable body (`overflow-y-auto overscroll-contain`) + sticky footer
-  - `onPointerDownOutside` / `onInteractOutside` disabled to prevent accidental dismissal
-  - `dvh` units for max height; safe-area padding for bottom buttons
+### Hook into timer
 
----
+In `useTimer` start/stop paths: if `geolocation_mode !== 'off'` and client override allows, fire `requestLocation()` in parallel with the existing DB write. Don't block clock in/out. On resolve, patch the `time_entries` row with the captured fields. On failure, show a soft toast: "Location unavailable — entry saved without it."
 
-### 5. Rate Resolution & Billing Integrity
+### Export rendering
 
-- **Rate cascade** (`src/lib/resolve-rate.ts`):
-  1. Project rate (from `projects` table)
-  2. Most recent entry rate for this project
-  3. Client default rate (from `clients` table)
-  4. Most recent entry rate for this client
-  5. Fallback: `{ amount: null, currency: "EUR" }`
+`ExportColumnsPicker`: new option **"Include on-site verification"** (only enabled when Clock in or Clock out is also selected).
 
-- **`useAutoResolvedRate` hook** (`src/hooks/useAutoResolvedRate.ts`):
-  - Request key pattern prevents stale async responses from overwriting current state
-  - `skip` flag avoids re-resolving when editing an existing entry with unchanged client/project
-  - `onReset` clears rate fields immediately; `onResolved` applies the resolved rate
-  - For anonymous users: synchronous lookup from local `clients`/`projects` arrays
+In `PrepareBillingSheet` / PDF export rendering: under the clock in/out time, render a secondary line:
+- **Client has site set:** color-coded badge — sage green "On-site" or mustard "Off-site · 320m". Tokens added to `index.css` (`--badge-onsite`, `--badge-offsite`) so all themes get proper contrast.
+- **Client has no site set:** plain coordinate string `41.3851, 2.1734 (±12m)` with a tappable Google Maps link. No color code. (This is the new behavior you just asked for — handles workers with multiple sites.)
 
-- **Dependent field clearing** (all modals):
-  - Changing Client → clears Project, Task, TaskList, and triggers rate re-resolve
-  - Changing Project → clears Task, TaskList, and triggers rate re-resolve
+### Idle clock-out reminder (geofence-aware)
 
-- **Billing status protection** (save handlers in `StartPage`, `TimelinePage`, `ReportsPage`):
-  - If any billing-critical field changes (Client, Project, Task, Rate, Billable), `billing_status` resets to `"unbilled"` and `invoice_id` is cleared
-  - Manual rate edits within an entry do NOT update the client's global default
+Extend existing `idle_reminder_minutes` logic: while clocked in, poll location every few minutes (only if mode is `always` and client has site set). If user leaves geofence for >15min, fire a notification:
+- Browser/PWA installed to home screen: Web Notifications API + a tiny inline service worker registration just for notifications (no caching, no offline — registered only after user grants notification permission, and skipped inside iframes/preview hosts per Lovable PWA guidance).
+- Capacitor native (when packaged): `@capacitor/local-notifications`.
 
----
+Reuses the user's existing notification permission grant; if not granted, falls back to in-app toast on next focus.
 
-### 6. Focus Mode Drag Handle
+## 3. Files touched
 
-- **Files: `CircularTimer.tsx`, `FocusMode.tsx`**
-- 12px white circle with shadow at end of progress arc
-- Visible only when `status === "idle"`, disappears on start
+- `supabase/migrations/<new>.sql` — one migration with all column additions (no new tables, no GRANT changes needed)
+- `src/lib/geolocation.ts` — new
+- `src/components/GeolocationPrePromptModal.tsx` — new
+- `src/components/HowTraceWorksModal.tsx` — add install step
+- `src/components/ClientFormModal.tsx` — place-of-work block
+- `src/components/SettingsModal.tsx` — Location proof block + info popover
+- `src/components/ExportColumnsPicker.tsx` + `src/lib/export-columns.ts` — new option
+- `src/components/PrepareBillingSheet.tsx` — render secondary lines
+- `src/hooks/useTimer.ts` — capture on start/stop
+- `src/index.css` — sage/mustard badge tokens
+- `public/manifest.json` + `index.html` — installability
+- `public/icons/*` — manifest icons (generated)
 
----
+## Out of scope (deferred to Phase 2)
 
-### 7. Technical Notes
+- Photo proof, signature capture, full audit log UI
+- Reverse-geocoding fallback when offline
+- Editing captured coordinates after the fact
 
-- `SUNRISE_PALETTE` + `getClientColor` live in `src/lib/utils.ts`
-- Tasks scoped by `project_id` in `tasks` table
-- Multi-task assignment creates multiple rows in single transaction
-- No custom backend schema changes needed for these features
-- Supabase types auto-generated — never edit `src/integrations/supabase/types.ts`
-- `.env` and `client.ts` are auto-managed — never edit manually
+Want me to proceed exactly as above, or trim anything (e.g. skip the off-site geofence poll, skip reverse-geocode, skip icons generation)?

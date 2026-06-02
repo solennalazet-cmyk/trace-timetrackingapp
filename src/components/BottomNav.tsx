@@ -8,6 +8,7 @@ const workerTabs = [
   { path: "/reports", label: "Reports", icon: BarChart3 },
   { path: "/timeline", label: "Done", icon: CheckSquare },
   { path: "/clients", label: "Projects", icon: Briefcase },
+  { path: "/payments", label: "Pay", icon: Wallet },
 ];
 
 const employerTabs = [

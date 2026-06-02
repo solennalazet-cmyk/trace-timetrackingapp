@@ -68,7 +68,12 @@ Deno.serve(async (req) => {
         .eq("id", user.id);
     }
 
-    const origin = req.headers.get("origin") || "https://trace-timetrackingapp.lovable.app";
+    const ALLOWED_ORIGINS = [
+      "https://trace-timetrackingapp.lovable.app",
+      "https://trace.lla-studio.com",
+    ];
+    const rawOrigin = req.headers.get("origin") ?? "";
+    const origin = ALLOWED_ORIGINS.includes(rawOrigin) ? rawOrigin : ALLOWED_ORIGINS[0];
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
@@ -85,7 +90,7 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("Checkout error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: "An internal error occurred. Please try again." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

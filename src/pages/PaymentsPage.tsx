@@ -260,22 +260,27 @@ const PaymentsPage = () => {
                     </div>
                   </div>
 
-                  {(t.overdue > 0 || fullyPaid) && (
-                    <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
-                      {fullyPaid ? (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                          <Check className="w-3.5 h-3.5" /> Fully paid
-                        </span>
-                      ) : (
-                        <>
-                          <span className="text-xs font-medium text-foreground">Overdue</span>
-                          <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded-md bg-destructive/10 text-destructive">
-                            {sym}{t.overdue.toFixed(2)}
+                  {(() => {
+                    const partial = t.paid > 0.005 && t.outstanding > 0.005;
+                    const showOverdue = t.overdue > 0 || partial;
+                    if (!showOverdue && !fullyPaid) return null;
+                    return (
+                      <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
+                        {fullyPaid ? (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                            <Check className="w-3.5 h-3.5" /> Fully paid
                           </span>
-                        </>
-                      )}
-                    </div>
-                  )}
+                        ) : (
+                          <>
+                            <span className="text-xs font-medium text-orange-600 dark:text-orange-400">Overdue</span>
+                            <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                              {sym}{(t.overdue > 0 ? t.overdue : t.outstanding).toFixed(2)}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </button>
 
                 {/* Expanded body */}

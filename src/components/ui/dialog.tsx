@@ -30,17 +30,22 @@ const useVisualViewportStyle = (enabled: boolean, mode: "centered" | "sheet" = "
           top: `${visualViewport.offsetTop + visualViewport.height / 2}px`,
         });
       } else {
-        // sheet: bottom-anchored. Push above the keyboard and constrain height.
+        // sheet: only adjust when keyboard is visible (visualViewport shrinks).
         const keyboardOffset = Math.max(
           0,
           window.innerHeight - visualViewport.offsetTop - visualViewport.height
         );
-        setViewportStyle({
-          maxHeight: `${visualViewport.height - 8}px`,
-          bottom: `${keyboardOffset}px`,
-        });
+        if (keyboardOffset > 0) {
+          setViewportStyle({
+            maxHeight: `${visualViewport.height - 8}px`,
+            bottom: `${keyboardOffset}px`,
+          });
+        } else {
+          setViewportStyle({});
+        }
       }
     };
+
 
     updateViewportStyle();
 

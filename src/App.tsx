@@ -4,12 +4,16 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "./contexts/AuthContext";
+import { RoleProvider } from "./contexts/RoleContext";
 import { WeekStartProvider } from "./contexts/WeekStartContext";
 import AppLayout from "./components/AppLayout";
 import StartPage from "./pages/StartPage";
 import ReportsPage from "./pages/ReportsPage";
 import TimelinePage from "./pages/TimelinePage";
 import ClientsPage from "./pages/ClientsPage";
+import EmployerHomePage from "./pages/EmployerHomePage";
+import WorkersPage from "./pages/WorkersPage";
+import PaymentsPage from "./pages/PaymentsPage";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import PrivacyPage from "./pages/PrivacyPage";
@@ -80,6 +84,9 @@ const AppInner = () => {
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/timeline" element={<TimelinePage />} />
             <Route path="/clients" element={<ClientsPage />} />
+            <Route path="/employer" element={<EmployerHomePage />} />
+            <Route path="/workers" element={<WorkersPage />} />
+            <Route path="/payments" element={<PaymentsPage />} />
           </Route>
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/privacy" element={<PrivacyPage />} />
@@ -111,7 +118,9 @@ const App = () => (
         }}
       />
       <AuthProvider>
-        <AppInner />
+        <RoleProvider>
+          <AppInner />
+        </RoleProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

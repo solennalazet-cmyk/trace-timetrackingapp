@@ -1,85 +1,109 @@
-# Phase 1: Geolocation proof + PWA install guidance
+# Trace Connected Workflow — V1 Plan
 
-Three things in this ship:
+Mobile-first extension of existing Clients + Reports. No new product surface; reuses cards, sheets, and Unassigned-style action cards.
 
-## 1. How Trace Works — add "Install to home screen" step
+## 1. Roles
 
-Add a fourth step to `HowTraceWorksModal.tsx` titled **"Install on your phone"** with a `Smartphone` icon and a short description plus a "Show me how" link that expands inline instructions:
+- Every account has an `active_role`: `worker` (default) | `employer`.
+- First connection assigns role:
+  - If you invite someone as **your client** → you are `worker`.
+  - If you invite someone as **your worker** → you are `employer`.
+- Role toggle always visible in the header avatar dropdown (top of menu, above Settings), pill segmented control: ● Worker / ○ Employer. Switching role re-routes nav:
+  - Worker view: Start, Timeline, Reports, Clients (unchanged).
+  - Employer view: Home (dashboard), Workers, Payments.
+- "Client" remains the worker-facing label; "Employer" is the role name on the toggle. UI strings adapt per active role.
 
-- **iPhone (Safari):** Tap the Share button → Add to Home Screen → Add.
-- **Android (Chrome):** Tap the ⋮ menu → Install app (or Add to Home Screen).
-- Once installed, Trace opens like a real app — fullscreen, no browser bar, and notifications work reliably.
+## 2. Connections
 
-To make Trace actually installable, add a minimal web app manifest (`public/manifest.json`) with `display: "standalone"`, icons, theme color, and link it from `index.html`. **No service worker, no `vite-plugin-pwa`** — keeps the Lovable preview stable. Installability + notifications work without offline caching.
+Reuses existing `clients` table — no new Employer entity. Adds a link to a Trace user.
 
-## 2. Geolocation Phase 1
+### Worker side (Clients page)
+- Existing client card gets a **Connect Trace user** button (under the card menu).
+- "Add client" modal gets a new option **Connect Trace user**: enter email → sends invite.
+- Pending/Rejected connection state appears as a subtle badge on the client card.
 
-### Database (one migration)
+### Employer side (Workers page)
+- Mirror of Clients page: list of workers, "Add worker" → email invite.
+- Reuses ClientFormModal pattern (renamed WorkerFormModal in employer view).
 
-`clients`: add `site_address text`, `site_lat double precision`, `site_lng double precision`, `site_radius_m integer default 100`.
-`time_entries`: add `start_lat`, `start_lng`, `start_accuracy_m`, `start_on_site boolean`, `start_distance_m`, plus same `end_*` set.
-`user_settings`: add `geolocation_mode text default 'off'` (`off | ask | always`), `geolocation_prompt_seen boolean default false`.
+### Invitation handling
+- Invite sends an email (Lovable transactional email) with a signup/login link carrying the invite token.
+- New signups with that email auto-accept the connection on first login.
+- Existing users see an **action card** (same visual as UnassignedPanel):
+  - On next login: shown as a modal once, dismissible.
+  - After dismiss: persists on Home until Accept/Decline.
 
-### Settings → Privacy section
+## 3. Reports — "Send" flow
 
-New "Location proof" block with three options (Off / Ask each time / Always) and a small **info icon** next to the heading. On tap (mobile-safe Popover, not Tooltip): "You can override this per client on the client's page — useful when one client needs location proof but others don't."
+- Rename **Export & Bill** → **Send** in `PrepareBillingSheet` and triggers throughout.
+- Sheet shows three primary actions: **Export PDF**, **Export CSV**, **Submit to Client** (last one disabled with tooltip if client isn't a connected Trace user).
+- Rename **Export Settings** → **Shared Report Settings** (in client form + report sheet). Visually separated card above the actions. Columns list unchanged — they govern PDF, CSV, and submitted reports identically.
+- Submit to Client → confirmation modal (Client, Email, Contact, Period, Hours, Amount) → creates a `submitted_report`.
 
-### Client form (`ClientFormModal`)
+## 4. Submitted Reports
 
-New "Place of work" collapsible section:
-- Address field (optional)
-- "📍 Use current location" button — runs the high-accuracy capture, fills lat/lng, reverse-geocodes the address via a free service (Nominatim) and pre-fills it
-- Radius slider (50–500m, default 100m)
-- Per-client override: Inherit / Always capture / Never capture
+New section on each client card (worker view) and each worker card (employer view): **Submitted Reports** list with period, hours, amount, submitted date, status badge.
 
-### Capture logic (new `src/lib/geolocation.ts`)
+Statuses: `submitted` · `approved` · `rejected` · `due` · `partially_paid` · `paid`.
 
-- `requestLocation()`: `getCurrentPosition({ enableHighAccuracy: true, timeout: 10000, maximumAge: 0 })`, retry once if accuracy >100m, resolves `null` on any failure (graceful).
-- `evaluateOnSite(lat, lng, client)`: haversine distance vs `site_lat/lng`, returns `{ on_site, distance_m }` or `null` if client has no site set.
-- Pre-prompt modal: shown once before the first real permission request. Copy:
-  > Trace can attach your location to clock in/out times as proof you were on site. Coordinates stay private on your account — they only appear on exports **if you choose to include them in Export Settings**. You're in control.
-  
-  Buttons: **Enable** (sets mode to `ask` or `always` based on user pick, flips `geolocation_prompt_seen=true`, then calls `getCurrentPosition`) / **Not now** (sets mode to `off`, flips flag, never auto-asks again).
+## 5. Employer Review
 
-### Hook into timer
+- Employer opens a submitted report → interactive card mirroring the worker's report, honoring Shared Report Settings (columns toggle which fields render).
+- Actions: **Approve** / **Reject**.
+- Reject → required reason (Missing session / Incorrect hours / Incorrect information / Other + free text). Worker notified via action card on Home with reason; can edit entries and resubmit (creates a new submission linked to the original).
+- Approve → status `approved` → automatically moves to **Payments Due** on both sides. Worker notified.
 
-In `useTimer` start/stop paths: if `geolocation_mode !== 'off'` and client override allows, fire `requestLocation()` in parallel with the existing DB write. Don't block clock in/out. On resolve, patch the `time_entries` row with the captured fields. On failure, show a soft toast: "Location unavailable — entry saved without it."
+## 6. Payments
 
-### Export rendering
+Both roles can register payments against an approved submitted report.
 
-`ExportColumnsPicker`: new option **"Include on-site verification"** (only enabled when Clock in or Clock out is also selected).
+- Payment registration modal: amount, date, optional note. Multiple payments per report.
+- Computed: total due, total paid (sum), outstanding. Status derives: `due` (0 paid) → `partially_paid` (0 < paid < due) → `paid` (paid ≥ due).
+- Payments tracker visible inside the submitted-report detail sheet, and aggregated on a **Payments** tab (Due / Paid filter).
 
-In `PrepareBillingSheet` / PDF export rendering: under the clock in/out time, render a secondary line:
-- **Client has site set:** color-coded badge — sage green "On-site" or mustard "Off-site · 320m". Tokens added to `index.css` (`--badge-onsite`, `--badge-offsite`) so all themes get proper contrast.
-- **Client has no site set:** plain coordinate string `41.3851, 2.1734 (±12m)` with a tappable Google Maps link. No color code. (This is the new behavior you just asked for — handles workers with multiple sites.)
+## 7. Employer Home Dashboard
 
-### Idle clock-out reminder (geofence-aware)
+Sections, in order, action-first:
+1. **Pending Reports** — submitted, awaiting review.
+2. **Payments Due** — approved, unpaid/partially paid.
+3. **Recent Activity** — last 10 submissions / approvals / payments.
+4. **Attendance Snapshot** — recent completed sessions per worker (only fields enabled in their Shared Report Settings).
 
-Extend existing `idle_reminder_minutes` logic: while clocked in, poll location every few minutes (only if mode is `always` and client has site set). If user leaves geofence for >15min, fire a notification:
-- Browser/PWA installed to home screen: Web Notifications API + a tiny inline service worker registration just for notifications (no caching, no offline — registered only after user grants notification permission, and skipped inside iframes/preview hosts per Lovable PWA guidance).
-- Capacitor native (when packaged): `@capacitor/local-notifications`.
+## 8. Out of scope (deferred)
 
-Reuses the user's existing notification permission grant; if not granted, falls back to in-app toast on next focus.
+Messaging, chat, scheduling, shift assignment, leave, payroll, automatic payments, calendar planning.
 
-## 3. Files touched
+---
 
-- `supabase/migrations/<new>.sql` — one migration with all column additions (no new tables, no GRANT changes needed)
-- `src/lib/geolocation.ts` — new
-- `src/components/GeolocationPrePromptModal.tsx` — new
-- `src/components/HowTraceWorksModal.tsx` — add install step
-- `src/components/ClientFormModal.tsx` — place-of-work block
-- `src/components/SettingsModal.tsx` — Location proof block + info popover
-- `src/components/ExportColumnsPicker.tsx` + `src/lib/export-columns.ts` — new option
-- `src/components/PrepareBillingSheet.tsx` — render secondary lines
-- `src/hooks/useTimer.ts` — capture on start/stop
-- `src/index.css` — sage/mustard badge tokens
-- `public/manifest.json` + `index.html` — installability
-- `public/icons/*` — manifest icons (generated)
+## Technical notes
 
-## Out of scope (deferred to Phase 2)
+### Schema (one migration)
+- `profiles`: add `active_role text default 'worker'`, `available_roles text[] default '{worker}'`.
+- `clients`: add `connected_user_id uuid null`, `connection_status text` (`none|pending|accepted|rejected`), `invited_email text`, `invite_token uuid`, `invited_at timestamptz`.
+- New `submitted_reports`:
+  - `id`, `worker_user_id`, `employer_user_id`, `client_id`, `period_start`, `period_end`
+  - `total_hours numeric`, `total_amount numeric`, `currency text`
+  - `shared_columns text[]` (snapshot at submit time, so later toggle changes don't rewrite history)
+  - `entries_snapshot jsonb` (immutable copy of the included entries, so edits/deletes don't mutate a submitted report)
+  - `status text` default `submitted`
+  - `submitted_at`, `reviewed_at`, `rejection_reason text`, `rejection_note text`, `parent_submission_id uuid` (for resubmits)
+- New `report_payments`: `id`, `submitted_report_id`, `amount`, `currency`, `paid_at`, `recorded_by_user_id`, `note`.
+- All tables: GRANTs + RLS — worker can CRUD their own row, employer can SELECT/UPDATE rows where they are the employer (approve/reject/record-payment only).
 
-- Photo proof, signature capture, full audit log UI
-- Reverse-geocoding fallback when offline
-- Editing captured coordinates after the fact
+### Email
+- Use Lovable transactional email (`send-transactional-email` edge function, scaffolded if not present) for invites + notifications. Suppress sending if recipient has no email or has opted out — graceful failure logs only.
 
-Want me to proceed exactly as above, or trim anything (e.g. skip the off-site geofence poll, skip reverse-geocode, skip icons generation)?
+### UI reuse
+- Action cards: copy UnassignedPanel pattern.
+- Submitted report sheet: reuse PrepareBillingSheet layout (read-only when status ≠ draft).
+- Role toggle: new `RoleSwitcher` at top of `HeaderMenu`.
+- Employer routes: `/home`, `/workers`, `/payments` rendered inside existing `AppLayout` with role-aware `BottomNav` + `DesktopSidebar`.
+
+### Build order
+1. Migration (schema + RLS).
+2. Role model + toggle + role-aware nav.
+3. Connections (invite/accept/reject, action card, email).
+4. Send rename + Shared Report Settings rename + Submit to Client flow + `submitted_reports` writes.
+5. Employer Home + report review (approve/reject).
+6. Payments registration + Payments tab on both sides.
+7. Notifications (action cards on both sides for approval/rejection/payment).

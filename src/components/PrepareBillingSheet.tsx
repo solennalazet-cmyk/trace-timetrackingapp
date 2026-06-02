@@ -557,6 +557,17 @@ const PrepareBillingSheet = ({
               >
                 <Copy className="w-4 h-4" /> Copy payment summary
               </Button>
+              <Button
+                className="w-full rounded-xl h-12 gap-2 justify-start font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+                onClick={() => setSubmitOpen(true)}
+                disabled={billableEntries.length === 0 || !isConnected}
+                title={isConnected ? undefined : "Client isn't a connected Trace user."}
+              >
+                <Send className="w-4 h-4" /> Submit to client
+                {!isConnected && billableEntries.length > 0 && (
+                  <span className="ml-auto text-[10px] font-normal opacity-80">Not connected</span>
+                )}
+              </Button>
               {unbilledBillableEntries.length > 0 && (
                 <Button
                   className="w-full rounded-xl h-12 gap-2 justify-start font-medium bg-primary text-primary-foreground hover:bg-primary/90"

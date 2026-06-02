@@ -159,6 +159,48 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
             </div>
           </div>
 
+          {/* Connect Trace user */}
+          <div className="rounded-xl border border-border overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setConnectOpen((v) => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 text-left"
+              aria-expanded={connectOpen}
+            >
+              <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <UserPlus className="h-4 w-4" /> Connect Trace user
+                {form.connection_status === "pending" && (
+                  <span className="text-[10px] font-normal text-muted-foreground">· pending</span>
+                )}
+                {form.connection_status === "accepted" && (
+                  <span className="text-[10px] font-normal text-primary">· connected</span>
+                )}
+                {form.connection_status === "rejected" && (
+                  <span className="text-[10px] font-normal text-destructive">· declined</span>
+                )}
+              </span>
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", connectOpen && "rotate-180")} />
+            </button>
+            {connectOpen && (
+              <div className="px-4 pb-4 pt-1 space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Invite this client to Trace so you can submit reports directly. They'll see an invite next time they sign in.
+                </p>
+                <Input
+                  className="h-10 rounded-xl"
+                  type="email"
+                  placeholder="client@example.com"
+                  value={form.invited_trace_email ?? ""}
+                  onChange={(e) => setForm({ ...form, invited_trace_email: e.target.value })}
+                  disabled={form.connection_status === "accepted"}
+                />
+                {form.connection_status === "pending" && (
+                  <p className="text-[11px] text-muted-foreground">Invite is waiting on the client to respond.</p>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Place of work */}
           <div className="rounded-xl border border-border overflow-hidden">
             <button

@@ -1,35 +1,164 @@
+import { useCallback, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Inbox, Wallet, Activity, Users } from "lucide-react";
+import { Inbox, Wallet, Activity, ChevronRight } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import SubmittedReportSheet, { type SubmittedReport } from "@/components/SubmittedReportSheet";
 
-const sections = [
-  { icon: Inbox, title: "Pending reports", desc: "Reports awaiting your review will appear here." },
-  { icon: Wallet, title: "Payments due", desc: "Approved reports awaiting payment." },
-  { icon: Activity, title: "Recent activity", desc: "Submissions, approvals and payments." },
-  { icon: Users, title: "Attendance snapshot", desc: "Recent completed sessions per worker." },
-];
+const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
+
+const formatPeriod = (start: string, end: string) => {
+  const s = new Date(start + "T00:00:00");
+  const e = new Date(end + "T00:00:00");
+  const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" };
+  return `${s.toLocaleDateString("en-GB", opts)} – ${e.toLocaleDateString("en-GB", opts)}`;
+};
 
 const EmployerHomePage = () => {
+  const { user } = useAuth();
+  const [pending, setPending] = useState<SubmittedReport[]>([]);
+  const [approved, setApproved] = useState<SubmittedReport[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [active, setActive] = useState<SubmittedReport | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    const [pRes, aRes] = await Promise.all([
+      supabase
+        .from("submitted_reports")
+        .select("*, clients!inner(name)")
+        .eq("employer_user_id", user.id)
+        .eq("status", "submitted")
+        .order("submitted_at", { ascending: false }),
+      supabase
+        .from("submitted_reports")
+        .select("*, clients!inner(name)")
+        .eq("employer_user_id", user.id)
+        .eq("status", "approved")
+        .order("reviewed_at", { ascending: false })
+        .limit(20),
+    ]);
+    const mapRow = (r: any): SubmittedReport => ({ ...r, client_name: r.clients?.name });
+    setPending(((pRes.data ?? []) as any[]).map(mapRow));
+    setApproved(((aRes.data ?? []) as any[]).map(mapRow));
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const openReport = (r: SubmittedReport) => {
+    setActive(r);
+    setSheetOpen(true);
+  };
+
   return (
-    <div className="pt-6 space-y-4">
+    <div className="pt-6 space-y-4 pb-24">
       <header className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight">Home</h1>
         <p className="text-sm text-muted-foreground">Your employer dashboard.</p>
       </header>
 
-      {sections.map(({ icon: Icon, title, desc }) => (
-        <Card key={title} className="p-4">
-          <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center shrink-0">
-              <Icon className="w-4 h-4 text-muted-foreground" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-sm font-semibold">{title}</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
-              <p className="text-[11px] text-muted-foreground/70 mt-2 italic">Activates once workers submit reports.</p>
-            </div>
+      {/* Pending reports */}
+      <section className="space-y-2">
+        <div className="flex items-center gap-2 px-1">
+          <Inbox className="w-4 h-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold">Pending reports</h2>
+          {pending.length > 0 && (
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground">
+              {pending.length}
+            </span>
+          )}
+        </div>
+        {loading ? (
+          <Card className="p-4 text-xs text-muted-foreground text-center">Loading…</Card>
+        ) : pending.length === 0 ? (
+          <Card className="p-4 text-xs text-muted-foreground text-center">No reports waiting for review.</Card>
+        ) : (
+          <div className="space-y-2">
+            {pending.map((r) => {
+              const sym = CURRENCY_SYMBOLS[r.currency] ?? "€";
+              return (
+                <button
+                  key={r.id}
+                  onClick={() => openReport(r)}
+                  className="w-full text-left"
+                >
+                  <Card className="p-4 hover:bg-muted/40 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{r.client_name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {formatPeriod(r.period_start, r.period_end)} · {Number(r.total_hours).toFixed(1)}h
+                        </p>
+                      </div>
+                      <p className="text-sm font-mono font-semibold">{sym}{Number(r.total_amount).toFixed(2)}</p>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                    </div>
+                  </Card>
+                </button>
+              );
+            })}
           </div>
+        )}
+      </section>
+
+      {/* Payments due */}
+      <section className="space-y-2">
+        <div className="flex items-center gap-2 px-1">
+          <Wallet className="w-4 h-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold">Payments due</h2>
+          {approved.length > 0 && (
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-muted text-foreground">
+              {approved.length}
+            </span>
+          )}
+        </div>
+        {approved.length === 0 ? (
+          <Card className="p-4 text-xs text-muted-foreground text-center">Approved reports awaiting payment will appear here.</Card>
+        ) : (
+          <div className="space-y-2">
+            {approved.map((r) => {
+              const sym = CURRENCY_SYMBOLS[r.currency] ?? "€";
+              return (
+                <button key={r.id} onClick={() => openReport(r)} className="w-full text-left">
+                  <Card className="p-4 hover:bg-muted/40 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{r.client_name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {formatPeriod(r.period_start, r.period_end)} · approved
+                        </p>
+                      </div>
+                      <p className="text-sm font-mono font-semibold">{sym}{Number(r.total_amount).toFixed(2)}</p>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                    </div>
+                  </Card>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Recent activity placeholder */}
+      <section className="space-y-2">
+        <div className="flex items-center gap-2 px-1">
+          <Activity className="w-4 h-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold">Recent activity</h2>
+        </div>
+        <Card className="p-4 text-xs text-muted-foreground text-center">
+          Submissions, approvals and payments will appear here.
         </Card>
-      ))}
+      </section>
+
+      <SubmittedReportSheet
+        open={sheetOpen}
+        onOpenChange={(v) => { setSheetOpen(v); if (!v) load(); }}
+        report={active}
+        onReviewed={load}
+      />
     </div>
   );
 };

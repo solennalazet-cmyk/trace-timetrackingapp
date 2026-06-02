@@ -13,6 +13,7 @@ import UnassignedPanel from "@/components/UnassignedPanel";
 import TodayEntriesSheet from "@/components/TodayEntriesSheet";
 import WelcomeBanner from "@/components/WelcomeBanner";
 import ConnectionInvitesCard from "@/components/ConnectionInvitesCard";
+import WorkerNotificationsCard from "@/components/WorkerNotificationsCard";
 import SessionConflictDialog from "@/components/SessionConflictDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { toLocalDateKey } from "@/lib/utils";

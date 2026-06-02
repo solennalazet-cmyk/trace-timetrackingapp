@@ -875,7 +875,7 @@ const ReportsPage = () => {
             const showBlurred = isFree && !hasGoals;
             if (!hasGoals && !showBlurred) return null;
             return (
-              <div className="mb-6 space-y-3 relative">
+              <div className="mb-6 space-y-3 relative lg:hidden">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Goals</h3>
                   {isPro && (

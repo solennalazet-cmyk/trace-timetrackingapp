@@ -605,6 +605,38 @@ const PrepareBillingSheet = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Submit to client confirmation */}
+      <AlertDialog open={submitOpen} onOpenChange={setSubmitOpen}>
+        <AlertDialogContent className="rounded-2xl max-w-[360px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Send className="w-5 h-5 text-primary" />
+              Submit report?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p className="text-muted-foreground">
+                  This will send the report to {clientName} for review. You can't edit it after submitting.
+                </p>
+                <div className="rounded-lg bg-muted/50 p-3 space-y-1 text-xs">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Client</span><span className="font-medium text-foreground">{clientName}</span></div>
+                  {clientEmail && <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span className="font-medium text-foreground truncate ml-2">{clientEmail}</span></div>}
+                  <div className="flex justify-between"><span className="text-muted-foreground">Period</span><span className="font-medium text-foreground">{fromLabel} – {toLabel}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Hours</span><span className="font-mono font-medium text-foreground">{formatHM(billableMins)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-mono font-medium text-foreground">{sym}{billableValue.toFixed(2)}</span></div>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSubmitToClient} disabled={submitting}>
+              {submitting ? "Submitting…" : "Submit"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

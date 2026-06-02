@@ -423,6 +423,52 @@ const PrepareBillingSheet = ({
     toast.success("Payment summary copied.");
   };
 
+  const isConnected = connectionStatus === "accepted" && !!connectedUserId;
+
+  const handleSubmitToClient = async () => {
+    if (!user || !connectedUserId) return;
+    if (billableEntries.length === 0) {
+      toast.error("No billable entries to submit.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      // Snapshot includes ALL fields the consumer might need to render the report.
+      const snapshot = billableEntries.map((e) => ({ ...e }));
+      const { error } = await supabase.from("submitted_reports").insert({
+        worker_user_id: user.id,
+        employer_user_id: connectedUserId,
+        client_id: clientId,
+        period_start: rangeStart,
+        period_end: rangeEnd,
+        total_hours: Number((billableMins / 60).toFixed(2)),
+        total_amount: Number(billableValue.toFixed(2)),
+        currency: clientCurrency,
+        shared_columns: selectedColumns as any,
+        entries_snapshot: snapshot as any,
+        status: "submitted",
+      } as any);
+      if (error) throw error;
+      toast.success(`Report submitted to ${clientName}.`);
+      setSubmitOpen(false);
+      // Mark sessions as billed since they've been submitted for review
+      if (unbilledBillableEntries.length > 0) {
+        const ids = unbilledBillableEntries.map((e) => e.id);
+        for (let i = 0; i < ids.length; i += 100) {
+          const chunk = ids.slice(i, i + 100);
+          await supabase.from("time_entries").update({ billing_status: "billed" }).in("id", chunk);
+        }
+      }
+      onComplete?.();
+      onOpenChange(false);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Couldn't submit report. Try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>

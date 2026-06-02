@@ -473,7 +473,7 @@ const PrepareBillingSheet = ({
                 className="w-full flex items-center justify-between px-4 py-3 text-left"
                 aria-expanded={settingsOpen}
               >
-                <span className="text-sm font-semibold text-foreground">Export settings</span>
+                <span className="text-sm font-semibold text-foreground">Shared report settings</span>
                 <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", settingsOpen && "rotate-180")} />
               </button>
               {settingsOpen && (

@@ -25,10 +25,20 @@ const formatRelative = (iso: string) => {
   return `${days}d ago`;
 };
 
+interface ActivityItem {
+  id: string;
+  ts: string;
+  type: "submitted" | "approved" | "rejected" | "payment";
+  clientName: string;
+  amount?: number;
+  currency?: string;
+}
+
 const EmployerHomePage = () => {
   const { user } = useAuth();
   const [pending, setPending] = useState<SubmittedReport[]>([]);
   const [approved, setApproved] = useState<SubmittedReport[]>([]);
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState<SubmittedReport | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -36,7 +46,7 @@ const EmployerHomePage = () => {
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const [pRes, aRes] = await Promise.all([
+    const [pRes, aRes, recentReviewedRes] = await Promise.all([
       supabase
         .from("submitted_reports")
         .select("*")
@@ -50,8 +60,20 @@ const EmployerHomePage = () => {
         .eq("status", "approved")
         .order("reviewed_at", { ascending: false })
         .limit(20),
+      supabase
+        .from("submitted_reports")
+        .select("id, client_id, status, reviewed_at, submitted_at, total_amount, currency")
+        .eq("employer_user_id", user.id)
+        .order("submitted_at", { ascending: false })
+        .limit(20),
     ]);
-    const allRows = [...((pRes.data ?? []) as any[]), ...((aRes.data ?? []) as any[])];
+
+    const reviewedRows = (recentReviewedRes.data ?? []) as any[];
+    const allRows = [
+      ...((pRes.data ?? []) as any[]),
+      ...((aRes.data ?? []) as any[]),
+      ...reviewedRows,
+    ];
     const clientIds = Array.from(new Set(allRows.map((r) => r.client_id))).filter(Boolean);
     let nameMap = new Map<string, string>();
     if (clientIds.length > 0) {
@@ -64,6 +86,50 @@ const EmployerHomePage = () => {
     const mapRow = (r: any): SubmittedReport => ({ ...r, client_name: nameMap.get(r.client_id) ?? "Worker" });
     setPending(((pRes.data ?? []) as any[]).map(mapRow));
     setApproved(((aRes.data ?? []) as any[]).map(mapRow));
+
+    // Build activity feed: submissions + review actions + recorded payments
+    const items: ActivityItem[] = [];
+    for (const r of reviewedRows) {
+      items.push({
+        id: `s-${r.id}`,
+        ts: r.submitted_at,
+        type: "submitted",
+        clientName: nameMap.get(r.client_id) ?? "Worker",
+        amount: Number(r.total_amount),
+        currency: r.currency,
+      });
+      if (r.reviewed_at && (r.status === "approved" || r.status === "rejected")) {
+        items.push({
+          id: `rv-${r.id}`,
+          ts: r.reviewed_at,
+          type: r.status,
+          clientName: nameMap.get(r.client_id) ?? "Worker",
+          amount: Number(r.total_amount),
+          currency: r.currency,
+        });
+      }
+    }
+
+    const { data: payRows } = await supabase
+      .from("report_payments")
+      .select("id, submitted_report_id, amount, currency, created_at")
+      .eq("recorded_by_user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    const reportLookup = new Map(reviewedRows.map((r) => [r.id, r.client_id]));
+    for (const p of (payRows ?? []) as any[]) {
+      const cid = reportLookup.get(p.submitted_report_id);
+      items.push({
+        id: `p-${p.id}`,
+        ts: p.created_at,
+        type: "payment",
+        clientName: (cid && nameMap.get(cid)) || "Worker",
+        amount: Number(p.amount),
+        currency: p.currency,
+      });
+    }
+    items.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
+    setActivity(items.slice(0, 10));
     setLoading(false);
   }, [user]);
 

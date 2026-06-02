@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 
 import {
+import Seo from "@/components/Seo";
   PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Sector as RechartsSector,
 } from "recharts";
 import {
@@ -72,6 +73,7 @@ const renderCompactDateTick = ({ x, y, payload }: any) => {
   const dateStr = parts.slice(1).join(" ");
   return (
     <g transform={`translate(${x},${y})`}>
+      <Seo title={"Reports — Trace Time Tracking"} description={"Review billable hours, rounding, and earnings by client and project. Export PDF invoices and time reports."} path={"/reports"} />
       <text x={0} y={0} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize="10">
         <tspan x={0} dy={10}>{weekday}</tspan>
         <tspan x={0} dy={11}>{dateStr}</tspan>

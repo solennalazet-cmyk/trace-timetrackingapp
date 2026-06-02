@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import SubmittedReportSheet, { type SubmittedReport } from "@/components/SubmittedReportSheet";
 import RejectReportDialog from "@/components/RejectReportDialog";
+import Seo from "@/components/Seo";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
@@ -228,6 +229,7 @@ const EmployerHomePage = () => {
               const isApproving = approvingId === r.id;
               return (
                 <Card key={r.id} className="overflow-hidden">
+                  <Seo title={"Team Dashboard — Trace for Employers"} description={"Approve worker time reports, review payments, and monitor team activity at a glance."} path={"/employer"} />
                   <button
                     onClick={() => openReport(r)}
                     className="w-full text-left p-4 hover:bg-muted/40 transition-colors"

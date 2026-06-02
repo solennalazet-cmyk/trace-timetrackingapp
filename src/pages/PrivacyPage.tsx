@@ -1,12 +1,14 @@
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import Seo from "@/components/Seo";
 
 const PrivacyPage = () => {
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-background text-foreground px-4 py-6 max-w-2xl mx-auto">
+      <Seo title={"Privacy Policy — Trace"} description={"How Trace collects, uses, and protects your time tracking and account data."} path={"/privacy"} />
       <Button
         variant="ghost"
         size="sm"

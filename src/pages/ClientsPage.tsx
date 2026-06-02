@@ -15,6 +15,7 @@ import SignInLink from "@/components/SignInLink";
 import ClientPaymentsSection from "@/components/ClientPaymentsSection";
 import { toast } from "sonner";
 import {
+import Seo from "@/components/Seo";
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -300,6 +301,7 @@ const ClientsPage = () => {
 
   return (
     <div className="pb-24 px-4">
+      <Seo title={"Clients & Projects — Trace"} description={"Manage clients, nested projects, hourly rates and budgets for accurate freelance time tracking."} path={"/clients"} />
       <h1 className="text-2xl font-bold tracking-tight mb-3 mt-2">Clients</h1>
       {/* Search */}
       <div className="relative mb-3">

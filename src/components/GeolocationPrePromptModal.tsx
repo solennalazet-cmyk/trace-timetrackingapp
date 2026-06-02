@@ -42,7 +42,7 @@ const GeolocationPrePromptModal = ({
             Trace can attach your location to clock in/out times as proof you were on
             site. Coordinates stay private on your account — they only appear on
             exports <strong className="text-foreground">if you choose to include
-            them</strong> in Export Settings. You're in control.
+            them</strong> in Shared report settings. You're in control.
           </p>
         </div>
         <div className="px-6 pb-6 pt-2 space-y-2">

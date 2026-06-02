@@ -311,7 +311,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 text-primary">
                   <FileDown className="h-4 w-4" />
                 </span>
-                Export settings
+                Shared report settings
               </span>
               <ChevronDown className={cn("h-4 w-4 text-secondary-foreground/70 transition-transform", exportOpen && "rotate-180")} />
             </button>
@@ -319,7 +319,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
             {exportOpen && (
               <div className="px-4 pb-4 pt-1 space-y-3">
                 <p className="text-xs text-muted-foreground">
-                  Choose the data to include when exporting or billing for this client. Date, duration and amount are always included.
+                  Columns to include when exporting, sharing, or submitting reports for this client. Date, duration and amount are always included.
                 </p>
                 <ExportColumnsPicker
                   value={form.export_columns ?? resolveExportColumns(null)}

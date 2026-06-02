@@ -7,7 +7,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { FileText, Share2, Copy, CheckCircle2, ChevronDown } from "lucide-react";
+import { FileText, Share2, Copy, CheckCircle2, ChevronDown, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -65,23 +65,31 @@ const PrepareBillingSheet = ({
   const [selectedColumns, setSelectedColumns] = useState<ExportColumnKey[]>([]);
   const [columnsLoaded, setColumnsLoaded] = useState(false);
   const [clientHasSite, setClientHasSite] = useState(false);
+  const [clientEmail, setClientEmail] = useState<string | null>(null);
+  const [connectedUserId, setConnectedUserId] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<string>("none");
+  const [submitOpen, setSubmitOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const sym = CURRENCY_SYMBOLS[clientCurrency] ?? "€";
 
-  // Load saved export column prefs + site presence for this client
+  // Load saved export column prefs + site presence + connection state for this client
   useEffect(() => {
     if (!open || !user) return;
     setColumnsLoaded(false);
     (async () => {
       const { data } = await supabase
         .from("clients")
-        .select("export_columns, site_lat, site_lng")
+        .select("export_columns, site_lat, site_lng, email, connected_user_id, connection_status")
         .eq("id", clientId)
         .maybeSingle();
       setSelectedColumns(resolveExportColumns((data as any)?.export_columns ?? null));
       setClientHasSite(
         (data as any)?.site_lat != null && (data as any)?.site_lng != null
       );
+      setClientEmail((data as any)?.email ?? null);
+      setConnectedUserId((data as any)?.connected_user_id ?? null);
+      setConnectionStatus((data as any)?.connection_status ?? "none");
       setColumnsLoaded(true);
     })();
   }, [open, user, clientId]);
@@ -415,6 +423,52 @@ const PrepareBillingSheet = ({
     toast.success("Payment summary copied.");
   };
 
+  const isConnected = connectionStatus === "accepted" && !!connectedUserId;
+
+  const handleSubmitToClient = async () => {
+    if (!user || !connectedUserId) return;
+    if (billableEntries.length === 0) {
+      toast.error("No billable entries to submit.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      // Snapshot includes ALL fields the consumer might need to render the report.
+      const snapshot = billableEntries.map((e) => ({ ...e }));
+      const { error } = await supabase.from("submitted_reports").insert({
+        worker_user_id: user.id,
+        employer_user_id: connectedUserId,
+        client_id: clientId,
+        period_start: rangeStart,
+        period_end: rangeEnd,
+        total_hours: Number((billableMins / 60).toFixed(2)),
+        total_amount: Number(billableValue.toFixed(2)),
+        currency: clientCurrency,
+        shared_columns: selectedColumns as any,
+        entries_snapshot: snapshot as any,
+        status: "submitted",
+      } as any);
+      if (error) throw error;
+      toast.success(`Report submitted to ${clientName}.`);
+      setSubmitOpen(false);
+      // Mark sessions as billed since they've been submitted for review
+      if (unbilledBillableEntries.length > 0) {
+        const ids = unbilledBillableEntries.map((e) => e.id);
+        for (let i = 0; i < ids.length; i += 100) {
+          const chunk = ids.slice(i, i + 100);
+          await supabase.from("time_entries").update({ billing_status: "billed" }).in("id", chunk);
+        }
+      }
+      onComplete?.();
+      onOpenChange(false);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Couldn't submit report. Try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
@@ -465,7 +519,7 @@ const PrepareBillingSheet = ({
                 className="w-full flex items-center justify-between px-4 py-3 text-left"
                 aria-expanded={settingsOpen}
               >
-                <span className="text-sm font-semibold text-foreground">Export settings</span>
+                <span className="text-sm font-semibold text-foreground">Shared report settings</span>
                 <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", settingsOpen && "rotate-180")} />
               </button>
               {settingsOpen && (
@@ -503,6 +557,17 @@ const PrepareBillingSheet = ({
               >
                 <Copy className="w-4 h-4" /> Copy payment summary
               </Button>
+              <Button
+                className="w-full rounded-xl h-12 gap-2 justify-start font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+                onClick={() => setSubmitOpen(true)}
+                disabled={billableEntries.length === 0 || !isConnected}
+                title={isConnected ? undefined : "Client isn't a connected Trace user."}
+              >
+                <Send className="w-4 h-4" /> Submit to client
+                {!isConnected && billableEntries.length > 0 && (
+                  <span className="ml-auto text-[10px] font-normal opacity-80">Not connected</span>
+                )}
+              </Button>
               {unbilledBillableEntries.length > 0 && (
                 <Button
                   className="w-full rounded-xl h-12 gap-2 justify-start font-medium bg-primary text-primary-foreground hover:bg-primary/90"
@@ -536,6 +601,38 @@ const PrepareBillingSheet = ({
             <AlertDialogCancel disabled={markingBilled}>Not now</AlertDialogCancel>
             <AlertDialogAction onClick={handleMarkAsBilled} disabled={markingBilled}>
               {markingBilled ? "Marking…" : "Yes, mark as billed"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Submit to client confirmation */}
+      <AlertDialog open={submitOpen} onOpenChange={setSubmitOpen}>
+        <AlertDialogContent className="rounded-2xl max-w-[360px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Send className="w-5 h-5 text-primary" />
+              Submit report?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p className="text-muted-foreground">
+                  This will send the report to {clientName} for review. You can't edit it after submitting.
+                </p>
+                <div className="rounded-lg bg-muted/50 p-3 space-y-1 text-xs">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Client</span><span className="font-medium text-foreground">{clientName}</span></div>
+                  {clientEmail && <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span className="font-medium text-foreground truncate ml-2">{clientEmail}</span></div>}
+                  <div className="flex justify-between"><span className="text-muted-foreground">Period</span><span className="font-medium text-foreground">{fromLabel} – {toLabel}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Hours</span><span className="font-mono font-medium text-foreground">{formatHM(billableMins)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-mono font-medium text-foreground">{sym}{billableValue.toFixed(2)}</span></div>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSubmitToClient} disabled={submitting}>
+              {submitting ? "Submitting…" : "Submit"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

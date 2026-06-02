@@ -561,7 +561,7 @@ const ClientsPage = () => {
       <Link
         to="/payments"
         aria-label="Payments"
-        className="fixed left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-5 h-12 rounded-full bg-primary text-primary-foreground font-semibold shadow-lg hover:bg-primary/90 transition-colors"
+        className="fixed left-1/2 lg:left-[calc(50%-40px)] -translate-x-1/2 z-40 flex items-center gap-2 px-5 h-12 rounded-full bg-primary text-primary-foreground font-semibold shadow-lg hover:bg-primary/90 transition-colors"
         style={{
           bottom: "calc(env(safe-area-inset-bottom, 0px) + 80px)",
           boxShadow: "0 6px 20px rgba(0,0,0,0.18)",

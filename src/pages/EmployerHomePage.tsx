@@ -67,7 +67,7 @@ const EmployerHomePage = () => {
     <div className="pt-6 space-y-4 pb-24">
       <header className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight">Home</h1>
-        <p className="text-sm text-muted-foreground">Your employer dashboard.</p>
+        <p className="text-sm text-muted-foreground">Your dashboard.</p>
       </header>
 
       {/* Pending reports */}

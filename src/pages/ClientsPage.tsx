@@ -11,6 +11,7 @@ import { resolveExportColumns } from "@/lib/export-columns";
 import ProjectFormModal from "@/components/ProjectFormModal";
 import PaywallModal from "@/components/PaywallModal";
 import SignInLink from "@/components/SignInLink";
+import ClientPaymentsSection from "@/components/ClientPaymentsSection";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -458,6 +459,11 @@ const ClientsPage = () => {
                     <Button variant="outline" size="sm" className="gap-1 rounded-lg" onClick={() => handleAddProjectClick(client)}>
                       <Plus className="w-3.5 h-3.5" /> Add Project
                     </Button>
+
+                    {user && (
+                      <ClientPaymentsSection clientId={client.id} workerUserId={user.id} />
+                    )}
+
 
                     <div className="flex gap-2 pt-2">
                       <Button

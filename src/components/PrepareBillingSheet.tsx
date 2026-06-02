@@ -358,17 +358,42 @@ const PrepareBillingSheet = ({
 
   const handleMarkAsBilled = async () => {
     if (!user) return;
+    if (billableEntries.length === 0) {
+      toast.error("No billable entries to track.");
+      return;
+    }
     setMarkingBilled(true);
     try {
+      // 1. Create the Payments entry (submitted_report)
+      const snapshot = billableEntries.map((e) => ({ ...e }));
+      const connected = connectionStatus === "accepted" ? connectedUserId : null;
+      const { error: insertErr } = await supabase.from("submitted_reports").insert({
+        worker_user_id: user.id,
+        employer_user_id: connected,
+        client_id: clientId,
+        period_start: rangeStart,
+        period_end: rangeEnd,
+        total_hours: Number((billableMins / 60).toFixed(2)),
+        total_amount: Number(billableValue.toFixed(2)),
+        currency: clientCurrency,
+        shared_columns: selectedColumns as any,
+        entries_snapshot: snapshot as any,
+        // Connected → 'submitted' (employer reviews). Solo → 'approved' (no reviewer).
+        status: connected ? "submitted" : "approved",
+        reviewed_at: connected ? null : new Date().toISOString(),
+      } as any);
+      if (insertErr) throw insertErr;
+
+      // 2. Mark the underlying sessions as billed
       const ids = unbilledBillableEntries.map((e) => e.id);
       for (let i = 0; i < ids.length; i += 100) {
         const chunk = ids.slice(i, i + 100);
         await supabase.from("time_entries").update({ billing_status: "billed" }).in("id", chunk);
       }
-      toast.success(`${ids.length} session${ids.length > 1 ? "s" : ""} marked as billed.`);
+      toast.success("Added to Payments.");
       onComplete?.();
-    } catch {
-      toast.error("Failed to mark sessions as billed.");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to add to Payments.");
     }
     setMarkingBilled(false);
     setShowBilledPrompt(false);
@@ -573,7 +598,7 @@ const PrepareBillingSheet = ({
                   className="w-full rounded-xl h-12 gap-2 justify-start font-medium bg-primary text-primary-foreground hover:bg-primary/90"
                   onClick={() => setShowBilledPrompt(true)}
                 >
-                  Mark {unbilledBillableEntries.length} session{unbilledBillableEntries.length > 1 ? "s" : ""} as billed
+                  Add {unbilledBillableEntries.length} session{unbilledBillableEntries.length > 1 ? "s" : ""} to Payments
                 </Button>
               )}
             </div>
@@ -585,22 +610,22 @@ const PrepareBillingSheet = ({
         </SheetContent>
       </Sheet>
 
-      {/* Mark as billed prompt */}
+      {/* Add to Track Payments prompt */}
       <AlertDialog open={showBilledPrompt} onOpenChange={setShowBilledPrompt}>
         <AlertDialogContent className="rounded-2xl max-w-[360px]">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-primary" />
-              Mark as billed?
+              Add to Track Payments?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Mark {unbilledBillableEntries.length} unbilled session{unbilledBillableEntries.length > 1 ? "s" : ""} as billed? This helps you track what's already been invoiced.
+              Track {billableEntries.length} billable session{billableEntries.length > 1 ? "s" : ""} for {clientName} in the Payments tab. The sessions will also be marked as billed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={markingBilled}>Not now</AlertDialogCancel>
             <AlertDialogAction onClick={handleMarkAsBilled} disabled={markingBilled}>
-              {markingBilled ? "Marking…" : "Yes, mark as billed"}
+              {markingBilled ? "Adding…" : "Yes, add to Payments"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -235,7 +235,14 @@ const PaymentsPage = () => {
                   onClick={() => handleExpand(key, t.outstanding)}
                   className="w-full text-left p-4 hover:bg-muted/30 transition-colors"
                 >
-                  <div className="flex items-center gap-3 mb-3">
+                  <div className="flex items-center gap-2.5 mb-3">
+                    {!isEmployer && (
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: getClientColor(key) }}
+                        aria-hidden
+                      />
+                    )}
                     <h2 className="text-base font-semibold flex-1 truncate">{name}</h2>
                     <ChevronDown
                       className={`w-4 h-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`}

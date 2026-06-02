@@ -457,14 +457,14 @@ const PrepareBillingSheet = ({
 
   const handleSubmitToClient = async () => {
     if (!user || !connectedUserId) return;
-    if (billableEntries.length === 0) {
-      toast.error("No billable entries to submit.");
+    if (reportEntries.length === 0) {
+      toast.error("No entries to submit.");
       return;
     }
     setSubmitting(true);
     try {
       // Snapshot includes ALL fields the consumer might need to render the report.
-      const snapshot = billableEntries.map((e) => ({ ...e }));
+      const snapshot = reportEntries.map((e) => ({ ...e }));
       const { error } = await supabase.from("submitted_reports").insert({
         worker_user_id: user.id,
         employer_user_id: connectedUserId,

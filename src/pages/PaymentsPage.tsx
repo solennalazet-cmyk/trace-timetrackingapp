@@ -102,6 +102,19 @@ const PaymentsPage = () => {
     return { outstanding: out, paidUp: done };
   }, [reports, paidByReport]);
 
+  const totals = useMemo(() => {
+    const byCurrency = new Map<string, { outstanding: number; paid: number }>();
+    for (const r of reports) {
+      const total = Number(r.total_amount);
+      const paid = paidByReport.get(r.id) ?? 0;
+      const entry = byCurrency.get(r.currency) ?? { outstanding: 0, paid: 0 };
+      entry.outstanding += Math.max(0, total - paid);
+      entry.paid += Math.min(total, paid);
+      byCurrency.set(r.currency, entry);
+    }
+    return Array.from(byCurrency.entries());
+  }, [reports, paidByReport]);
+
   const activeReport = reports.find((r) => r.id === activeReportId) ?? null;
 
   const handleRecord = (r: ReportRow) => {

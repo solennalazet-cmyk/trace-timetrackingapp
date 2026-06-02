@@ -220,6 +220,35 @@ const PaymentsPage = () => {
         <h2 className="text-sm font-semibold px-1">Outstanding</h2>
         {loading ? (
           <Card className="p-4 text-xs text-muted-foreground text-center">Loading…</Card>
+      {!loading && totals.length > 0 && (
+        <div className="grid grid-cols-2 gap-2">
+          <Card className="p-3">
+            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Outstanding</p>
+            <div className="mt-1 space-y-0.5">
+              {totals.map(([cur, t]) => (
+                <p key={cur} className="text-sm font-mono font-semibold">
+                  {CURRENCY_SYMBOLS[cur] ?? cur}{t.outstanding.toFixed(2)}
+                </p>
+              ))}
+            </div>
+          </Card>
+          <Card className="p-3">
+            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Paid</p>
+            <div className="mt-1 space-y-0.5">
+              {totals.map(([cur, t]) => (
+                <p key={cur} className="text-sm font-mono font-semibold">
+                  {CURRENCY_SYMBOLS[cur] ?? cur}{t.paid.toFixed(2)}
+                </p>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold px-1">Outstanding</h2>
+        {loading ? (
+          <Card className="p-4 text-xs text-muted-foreground text-center">Loading…</Card>
         ) : outstanding.length === 0 ? (
           <Card className="p-6 text-center">
             <Wallet className="w-7 h-7 text-muted-foreground mx-auto mb-2" />

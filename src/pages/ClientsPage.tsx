@@ -31,6 +31,8 @@ interface Client {
   currency: string | null;
   default_rate: number | null;
   export_columns: string[] | null;
+  invited_email?: string | null;
+  connection_status?: string | null;
 }
 
 interface Project {
@@ -97,7 +99,7 @@ const ClientsPage = () => {
     setLoading(true);
     if (user) {
       const [{ data: c }, { data: p }] = await Promise.all([
-        supabase.from("clients").select("id, name, email, nif, currency, default_rate, export_columns, site_address, site_lat, site_lng, site_radius_m, geolocation_override").eq("user_id", user.id).order("name"),
+        supabase.from("clients").select("id, name, email, nif, currency, default_rate, export_columns, site_address, site_lat, site_lng, site_radius_m, geolocation_override, invited_email, connection_status").eq("user_id", user.id).order("name"),
         supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", user.id),
       ]);
       setClients((c ?? []) as Client[]);
@@ -174,6 +176,20 @@ const ClientsPage = () => {
       site_radius_m: data.site_radius_m ?? 100,
       geolocation_override: data.geolocation_override ?? "inherit",
     };
+    const inviteEmail = (data.invited_trace_email || "").trim().toLowerCase();
+    const isNewInvite =
+      inviteEmail.length > 0 &&
+      data.connection_status !== "accepted" &&
+      inviteEmail !== ((editingClient as any)?.invited_email || "").toLowerCase();
+    const connectionFields = isNewInvite
+      ? {
+          invited_email: inviteEmail,
+          connection_status: "pending",
+          connection_initiated_by: "worker",
+          invited_at: new Date().toISOString(),
+        }
+      : {};
+
     if (user) {
       if (editingClient) {
         await supabase.from("clients").update({
@@ -181,17 +197,19 @@ const ClientsPage = () => {
           currency: data.currency, default_rate: data.default_rate ? parseFloat(data.default_rate) : null,
           export_columns: data.export_columns ?? null,
           ...siteFields,
+          ...connectionFields,
         } as any).eq("id", editingClient.id);
-        toast.success("Client updated.");
+        toast.success(isNewInvite ? "Client updated. Invite sent." : "Client updated.");
       } else {
         await supabase.from("clients").insert({
           name: data.name, email: data.email || null, nif: data.nif || null,
           currency: data.currency, default_rate: data.default_rate ? parseFloat(data.default_rate) : null,
           export_columns: data.export_columns ?? null,
           ...siteFields,
+          ...connectionFields,
           user_id: user.id,
         } as any);
-        toast.success("Client added.");
+        toast.success(isNewInvite ? "Client added. Invite sent." : "Client added.");
       }
     } else {
       const id = editingClient?.id ?? `local-${Date.now()}`;
@@ -476,6 +494,8 @@ const ClientsPage = () => {
           site_lng: (editingClient as any).site_lng ?? null,
           site_radius_m: (editingClient as any).site_radius_m ?? 100,
           geolocation_override: (editingClient as any).geolocation_override ?? "inherit",
+          invited_trace_email: (editingClient as any).invited_email ?? "",
+          connection_status: (editingClient as any).connection_status ?? null,
         } : null}
         title={editingClient ? "Edit Client" : "Add Client"}
       />

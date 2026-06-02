@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronDown, MapPin, Loader2 } from "lucide-react";
+import { ChevronDown, MapPin, Loader2, UserPlus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +36,10 @@ interface ClientFormData {
   site_lng?: number | null;
   site_radius_m?: number | null;
   geolocation_override?: ClientGeoOverride;
+  /** If set, send a Trace connection invite to this email on save. */
+  invited_trace_email?: string | null;
+  /** Read-only: current connection status of the client row, if any. */
+  connection_status?: string | null;
 }
 
 interface ClientFormModalProps {
@@ -68,10 +72,12 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
     export_columns: resolveExportColumns(null),
     site_address: "", site_lat: null, site_lng: null, site_radius_m: 100,
     geolocation_override: "inherit",
+    invited_trace_email: "",
   });
   const [saving, setSaving] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [siteOpen, setSiteOpen] = useState(false);
+  const [connectOpen, setConnectOpen] = useState(false);
   const [capturingLoc, setCapturingLoc] = useState(false);
 
   useEffect(() => {
@@ -81,9 +87,11 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
         export_columns: resolveExportColumns(null),
         site_address: "", site_lat: null, site_lng: null, site_radius_m: 100,
         geolocation_override: "inherit",
+        invited_trace_email: "",
       });
       setExportOpen(false);
       setSiteOpen(false);
+      setConnectOpen(false);
     }
   }, [open, initial]);
 
@@ -149,6 +157,48 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Connect Trace user */}
+          <div className="rounded-xl border border-border overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setConnectOpen((v) => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 text-left"
+              aria-expanded={connectOpen}
+            >
+              <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <UserPlus className="h-4 w-4" /> Connect Trace user
+                {form.connection_status === "pending" && (
+                  <span className="text-[10px] font-normal text-muted-foreground">· pending</span>
+                )}
+                {form.connection_status === "accepted" && (
+                  <span className="text-[10px] font-normal text-primary">· connected</span>
+                )}
+                {form.connection_status === "rejected" && (
+                  <span className="text-[10px] font-normal text-destructive">· declined</span>
+                )}
+              </span>
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", connectOpen && "rotate-180")} />
+            </button>
+            {connectOpen && (
+              <div className="px-4 pb-4 pt-1 space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Invite this client to Trace so you can submit reports directly. They'll see an invite next time they sign in.
+                </p>
+                <Input
+                  className="h-10 rounded-xl"
+                  type="email"
+                  placeholder="client@example.com"
+                  value={form.invited_trace_email ?? ""}
+                  onChange={(e) => setForm({ ...form, invited_trace_email: e.target.value })}
+                  disabled={form.connection_status === "accepted"}
+                />
+                {form.connection_status === "pending" && (
+                  <p className="text-[11px] text-muted-foreground">Invite is waiting on the client to respond.</p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Place of work */}

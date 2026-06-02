@@ -65,23 +65,31 @@ const PrepareBillingSheet = ({
   const [selectedColumns, setSelectedColumns] = useState<ExportColumnKey[]>([]);
   const [columnsLoaded, setColumnsLoaded] = useState(false);
   const [clientHasSite, setClientHasSite] = useState(false);
+  const [clientEmail, setClientEmail] = useState<string | null>(null);
+  const [connectedUserId, setConnectedUserId] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<string>("none");
+  const [submitOpen, setSubmitOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const sym = CURRENCY_SYMBOLS[clientCurrency] ?? "€";
 
-  // Load saved export column prefs + site presence for this client
+  // Load saved export column prefs + site presence + connection state for this client
   useEffect(() => {
     if (!open || !user) return;
     setColumnsLoaded(false);
     (async () => {
       const { data } = await supabase
         .from("clients")
-        .select("export_columns, site_lat, site_lng")
+        .select("export_columns, site_lat, site_lng, email, connected_user_id, connection_status")
         .eq("id", clientId)
         .maybeSingle();
       setSelectedColumns(resolveExportColumns((data as any)?.export_columns ?? null));
       setClientHasSite(
         (data as any)?.site_lat != null && (data as any)?.site_lng != null
       );
+      setClientEmail((data as any)?.email ?? null);
+      setConnectedUserId((data as any)?.connected_user_id ?? null);
+      setConnectionStatus((data as any)?.connection_status ?? "none");
       setColumnsLoaded(true);
     })();
   }, [open, user, clientId]);

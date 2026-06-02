@@ -229,16 +229,48 @@ const EmployerHomePage = () => {
         )}
       </section>
 
-      {/* Recent activity placeholder */}
+      {/* Recent activity */}
       <section className="space-y-2">
         <div className="flex items-center gap-2 px-1">
           <Activity className="w-4 h-4 text-muted-foreground" />
           <h2 className="text-sm font-semibold">Recent activity</h2>
         </div>
-        <Card className="p-4 text-xs text-muted-foreground text-center">
-          Submissions, approvals and payments will appear here.
-        </Card>
+        {activity.length === 0 ? (
+          <Card className="p-4 text-xs text-muted-foreground text-center">
+            Submissions, approvals and payments will appear here.
+          </Card>
+        ) : (
+          <Card className="divide-y divide-border">
+            {activity.map((a) => {
+              const sym = CURRENCY_SYMBOLS[a.currency ?? "EUR"] ?? "€";
+              const meta = (() => {
+                switch (a.type) {
+                  case "submitted": return { Icon: FileText, label: `${a.clientName} submitted a report` };
+                  case "approved": return { Icon: Check, label: `You approved ${a.clientName}'s report` };
+                  case "rejected": return { Icon: X, label: `You rejected ${a.clientName}'s report` };
+                  case "payment": return { Icon: Wallet, label: `Payment recorded for ${a.clientName}` };
+                }
+              })();
+              const Icon = meta.Icon;
+              return (
+                <div key={a.id} className="flex items-center gap-3 px-3 py-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-foreground/10 flex items-center justify-center shrink-0">
+                    <Icon className="w-3.5 h-3.5 text-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">{meta.label}</p>
+                    <p className="text-[11px] text-muted-foreground">{formatRelative(a.ts)}</p>
+                  </div>
+                  {a.amount != null && (
+                    <p className="text-xs font-mono font-semibold">{sym}{a.amount.toFixed(2)}</p>
+                  )}
+                </div>
+              );
+            })}
+          </Card>
+        )}
       </section>
+
 
       <SubmittedReportSheet
         open={sheetOpen}

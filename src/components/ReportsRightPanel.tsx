@@ -38,16 +38,25 @@ const ReportsRightPanel = () => {
     let isFirst = true;
     const load = async () => {
       let ws: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1;
+      let dht = 0;
+      let rt = 0;
       if (user) {
-        const { data } = await supabase.from("user_settings").select("week_start_day").eq("user_id", user.id).single();
+        const { data } = await supabase.from("user_settings").select("week_start_day, daily_hour_target, revenue_target").eq("user_id", user.id).single();
         ws = ((data as any)?.week_start_day ?? 1) as any;
+        dht = Number((data as any)?.daily_hour_target ?? 0);
+        rt = Number((data as any)?.revenue_target ?? 0);
       } else {
         try {
           const raw = localStorage.getItem("trace_user_settings");
-          if (raw) ws = (JSON.parse(raw).week_start_day ?? 1) as any;
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            ws = (parsed.week_start_day ?? 1) as any;
+            dht = Number(parsed.daily_hour_target ?? 0);
+            rt = Number(parsed.revenue_target ?? 0);
+          }
         } catch {}
       }
-      if (!cancelled) setWeekStart(ws);
+      if (!cancelled) { setWeekStart(ws); setDailyHourTarget(dht); setRevenueTarget(rt); }
 
       const from = startOfWeek(new Date(), { weekStartsOn: ws });
       const to = new Date(from); to.setDate(to.getDate() + 6);

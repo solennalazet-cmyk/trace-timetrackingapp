@@ -86,10 +86,10 @@ const ConnectionInvitesCard = () => {
   return (
     <div className="space-y-2 mt-4">
       {invites.map((invite) => (
-        <Card key={invite.id} className="p-4 border-primary/30 bg-primary/5">
+        <Card key={invite.id} className="p-4 bg-card border-border shadow-sm">
           <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
-              <UserPlus className="w-4 h-4 text-primary" />
+            <div className="w-9 h-9 rounded-xl bg-foreground/10 flex items-center justify-center shrink-0">
+              <UserPlus className="w-4 h-4 text-foreground" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-foreground">

@@ -780,24 +780,6 @@ const ReportsPage = () => {
                       >
                         {data.map((d, i) => <Cell key={i} fill={d.fill} />)}
                       </Pie>
-                      <Tooltip
-                        cursor={false}
-                        allowEscapeViewBox={{ x: true, y: true }}
-                        wrapperStyle={{ zIndex: 9999, outline: "none", pointerEvents: "none" }}
-                        contentStyle={{
-                          borderRadius: 8,
-                          fontSize: 11,
-                          border: "1px solid hsl(var(--border))",
-                          background: "hsl(var(--card))",
-                          color: "hsl(var(--foreground))",
-                          boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
-                        }}
-                        itemStyle={{ color: "hsl(var(--foreground))" }}
-                        formatter={(value: number, name: string) => {
-                          if (isTurnover) return [`€${Number(value).toFixed(2)}`, name];
-                          return [formatHHMM(Number(value)), name];
-                        }}
-                      />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">

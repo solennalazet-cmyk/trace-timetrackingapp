@@ -266,3 +266,13 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+
+/* Onboarding CTA pulse — 3 pulses then stop */
+@keyframes cta-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 hsl(var(--primary) / 0.55); }
+  50% { transform: scale(1.06); box-shadow: 0 0 0 14px hsl(var(--primary) / 0); }
+}
+.animate-cta-pulse {
+  animation: cta-pulse 0.9s ease-out 3;
+}

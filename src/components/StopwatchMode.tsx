@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useTimer, formatTimer } from "@/hooks/useTimer";
 import CircularTimer from "./CircularTimer";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,16 @@ interface StopwatchModeProps {
 
 const StopwatchMode = ({ onStop }: StopwatchModeProps) => {
   const { status, elapsedMs, totalPausedMs, start, pause, resume, stop } = useTimer("stopwatch");
+  const [pulse, setPulse] = useState(false);
+
+  useEffect(() => {
+    const handler = () => {
+      setPulse(true);
+      setTimeout(() => setPulse(false), 2800);
+    };
+    window.addEventListener("trace-onboard-pulse-start", handler);
+    return () => window.removeEventListener("trace-onboard-pulse-start", handler);
+  }, []);
 
   const handleStop = async () => {
     const result = await stop();
@@ -44,8 +55,8 @@ const StopwatchMode = ({ onStop }: StopwatchModeProps) => {
       <div className="flex gap-3 w-full max-w-[280px]">
         {status === "idle" && (
           <Button
-            onClick={start}
-            className={`flex-1 bg-primary text-primary-foreground hover:bg-primary/90 ${BTN}`}
+            onClick={() => { setPulse(false); start(); }}
+            className={`flex-1 bg-primary text-primary-foreground hover:bg-primary/90 ${BTN} ${pulse ? "animate-cta-pulse" : ""}`}
           >
             Start
           </Button>

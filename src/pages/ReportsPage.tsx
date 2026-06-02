@@ -617,11 +617,7 @@ const ReportsPage = () => {
                             paddingAngle={1}
                             label={(props) => renderInitialsLabel(props, turnoverDonutData, totalTurnover)}
                             labelLine={false}
-                            activeIndex={activeTurnIdx}
-                            activeShape={renderActiveShape}
-                            onMouseEnter={(_, idx) => setActiveTurnIdx(idx)}
-                            onMouseLeave={() => setActiveTurnIdx(undefined)}
-                            onClick={(_, idx) => setActiveTurnIdx(prev => prev === idx ? undefined : idx)}
+                            isAnimationActive={false}
                           >
                             {turnoverDonutData.map((d, i) => <Cell key={i} fill={d.fill} stroke="hsl(var(--background))" strokeWidth={2} />)}
                           </Pie>

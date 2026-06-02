@@ -115,6 +115,11 @@ const PrepareBillingSheet = ({
     [billableEntries]
   );
 
+  // Entries to include in the shared report. When the project/client has no
+  // billable entries, fall back to all entries so unbillable work can still be
+  // sent/exported (just without monetary amounts).
+  const reportEntries = billableEntries.length > 0 ? billableEntries : entries;
+
   const rangeStart = dateFrom.toISOString().split("T")[0];
   const rangeEnd = dateTo.toISOString().split("T")[0];
   const fromLabel = dateFrom.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
@@ -219,7 +224,7 @@ const PrepareBillingSheet = ({
     const head = ["Date", "Duration", ...orderedOptional.map((k) => optionalHeaders[k]), "Amount"];
 
     // Sort by date, then by start_time so same-day sessions are in chronological order
-    const sortedEntries = [...billableEntries].sort((a, b) => {
+    const sortedEntries = [...reportEntries].sort((a, b) => {
       const d = (a.entry_date ?? "").localeCompare(b.entry_date ?? "");
       if (d !== 0) return d;
       const aT = a.start_time ? new Date(a.start_time).getTime() : 0;
@@ -400,7 +405,7 @@ const PrepareBillingSheet = ({
   };
 
   const handleExportPDF = () => {
-    if (billableEntries.length === 0) { toast.error("No billable entries to export."); return; }
+    if (reportEntries.length === 0) { toast.error("No entries to export."); return; }
     const doc = buildPDF();
     doc.save(`billing-${clientName.replace(/\s+/g, "-")}-${rangeStart}-to-${rangeEnd}.pdf`);
     toast.success("PDF exported.");
@@ -408,7 +413,7 @@ const PrepareBillingSheet = ({
   };
 
   const handleSharePDF = async () => {
-    if (billableEntries.length === 0) { toast.error("No billable entries to share."); return; }
+    if (reportEntries.length === 0) { toast.error("No entries to share."); return; }
     const doc = buildPDF();
     const blob = doc.output("blob");
     const file = new File([blob], `billing-${clientName.replace(/\s+/g, "-")}-${rangeStart}-to-${rangeEnd}.pdf`, { type: "application/pdf" });
@@ -452,14 +457,14 @@ const PrepareBillingSheet = ({
 
   const handleSubmitToClient = async () => {
     if (!user || !connectedUserId) return;
-    if (billableEntries.length === 0) {
-      toast.error("No billable entries to submit.");
+    if (reportEntries.length === 0) {
+      toast.error("No entries to submit.");
       return;
     }
     setSubmitting(true);
     try {
       // Snapshot includes ALL fields the consumer might need to render the report.
-      const snapshot = billableEntries.map((e) => ({ ...e }));
+      const snapshot = reportEntries.map((e) => ({ ...e }));
       const { error } = await supabase.from("submitted_reports").insert({
         worker_user_id: user.id,
         employer_user_id: connectedUserId,
@@ -563,7 +568,7 @@ const PrepareBillingSheet = ({
                 variant="outline"
                 className="w-full rounded-xl h-12 gap-2 justify-start font-medium"
                 onClick={handleExportPDF}
-                disabled={billableEntries.length === 0}
+                disabled={reportEntries.length === 0}
               >
                 <FileText className="w-4 h-4" /> Export PDF
               </Button>
@@ -571,7 +576,7 @@ const PrepareBillingSheet = ({
                 variant="outline"
                 className="w-full rounded-xl h-12 gap-2 justify-start font-medium"
                 onClick={handleSharePDF}
-                disabled={billableEntries.length === 0}
+                disabled={reportEntries.length === 0}
               >
                 <Share2 className="w-4 h-4" /> Share PDF
               </Button>
@@ -585,11 +590,11 @@ const PrepareBillingSheet = ({
               <Button
                 className="w-full rounded-xl h-12 gap-2 justify-start font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
                 onClick={() => setSubmitOpen(true)}
-                disabled={billableEntries.length === 0 || !isConnected}
+                disabled={reportEntries.length === 0 || !isConnected}
                 title={isConnected ? undefined : "Client isn't a connected Trace user."}
               >
                 <Send className="w-4 h-4" /> Submit to client
-                {!isConnected && billableEntries.length > 0 && (
+                {!isConnected && reportEntries.length > 0 && (
                   <span className="ml-auto text-[10px] font-normal opacity-80">Not connected</span>
                 )}
               </Button>
@@ -603,8 +608,8 @@ const PrepareBillingSheet = ({
               )}
             </div>
 
-            {billableEntries.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center">No billable entries in this period.</p>
+            {reportEntries.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center">No entries in this period.</p>
             )}
           </div>
         </SheetContent>

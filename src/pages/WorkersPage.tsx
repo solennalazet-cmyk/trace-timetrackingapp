@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Users, Mail, X, Clock } from "lucide-react";
+import { Plus, Users, Mail, X, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import WorkerInviteModal from "@/components/WorkerInviteModal";
+import WorkerDetailsSection from "@/components/WorkerDetailsSection";
 
 interface WorkerInvite {
   id: string;

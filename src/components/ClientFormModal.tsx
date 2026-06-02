@@ -160,15 +160,18 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
           </div>
 
           {/* Connect Trace user */}
-          <div className="rounded-xl border border-border overflow-hidden">
+          <div className="rounded-xl border border-primary/30 bg-primary/5 overflow-hidden transition-colors hover:bg-primary/10">
             <button
               type="button"
               onClick={() => setConnectOpen((v) => !v)}
-              className="w-full flex items-center justify-between px-4 py-3 text-left"
+              className="w-full flex items-center justify-between px-4 py-3.5 text-left"
               aria-expanded={connectOpen}
             >
-              <span className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <UserPlus className="h-4 w-4" /> Connect Trace user
+              <span className="text-sm font-semibold text-foreground flex items-center gap-2.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                  <UserPlus className="h-4 w-4" />
+                </span>
+                Connect Trace user
                 {form.connection_status === "pending" && (
                   <span className="text-[10px] font-normal text-muted-foreground">· pending</span>
                 )}
@@ -181,6 +184,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
               </span>
               <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", connectOpen && "rotate-180")} />
             </button>
+
             {connectOpen && (
               <div className="px-4 pb-4 pt-1 space-y-2">
                 <p className="text-xs text-muted-foreground">
@@ -202,21 +206,25 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
           </div>
 
           {/* Place of work */}
-          <div className="rounded-xl border border-border overflow-hidden">
+          <div className="rounded-xl border border-primary/30 bg-primary/5 overflow-hidden transition-colors hover:bg-primary/10">
             <button
               type="button"
               onClick={() => setSiteOpen((v) => !v)}
-              className="w-full flex items-center justify-between px-4 py-3 text-left"
+              className="w-full flex items-center justify-between px-4 py-3.5 text-left"
               aria-expanded={siteOpen}
             >
-              <span className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <MapPin className="h-4 w-4" /> Place of work
+              <span className="text-sm font-semibold text-foreground flex items-center gap-2.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                  <MapPin className="h-4 w-4" />
+                </span>
+                Place of work
                 {form.site_lat != null && (
                   <span className="text-[10px] font-normal text-muted-foreground">· set</span>
                 )}
               </span>
               <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", siteOpen && "rotate-180")} />
             </button>
+
             {siteOpen && (
               <div className="px-4 pb-4 pt-1 space-y-3">
                 <p className="text-xs text-muted-foreground">

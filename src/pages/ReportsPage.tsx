@@ -591,11 +591,7 @@ const ReportsPage = () => {
                           paddingAngle={1}
                           label={(props) => renderInitialsLabel(props, timeDonutData, total)}
                           labelLine={false}
-                          activeIndex={activeTimeIdx}
-                          activeShape={renderActiveShape}
-                          onMouseEnter={(_, idx) => setActiveTimeIdx(idx)}
-                          onMouseLeave={() => setActiveTimeIdx(undefined)}
-                          onClick={(_, idx) => setActiveTimeIdx(prev => prev === idx ? undefined : idx)}
+                          isAnimationActive={false}
                         >
                           {timeDonutData.map((d, i) => <Cell key={i} fill={d.fill} stroke="hsl(var(--background))" strokeWidth={2} />)}
                         </Pie>

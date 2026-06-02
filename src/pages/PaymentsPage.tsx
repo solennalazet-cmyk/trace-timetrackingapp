@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/contexts/RoleContext";
 import SubmittedReportSheet, { type SubmittedReport } from "@/components/SubmittedReportSheet";
 import { toast } from "sonner";
+import { getClientColor } from "@/lib/utils";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 

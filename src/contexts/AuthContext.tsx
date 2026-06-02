@@ -16,6 +16,8 @@ interface Profile {
   show_business_on_export: boolean | null;
   payment_link: string | null;
   phone: string | null;
+  active_role: string | null;
+  available_roles: string[] | null;
 }
 
 interface AuthContextType {
@@ -46,7 +48,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
       .from("profiles")
-      .select("id, full_name, plan, trial_started_at, subscription_status, created_at, current_period_end, business_name, business_address, tax_id, show_business_on_export, payment_link, phone")
+      .select("id, full_name, plan, trial_started_at, subscription_status, created_at, current_period_end, business_name, business_address, tax_id, show_business_on_export, payment_link, phone, active_role, available_roles")
       .eq("id", userId)
       .single();
     setProfile(data as Profile | null);

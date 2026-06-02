@@ -17,6 +17,7 @@ import FeedbackModal from "./FeedbackModal";
 import WhatsNewModal from "./WhatsNewModal";
 import SettingsModal from "./SettingsModal";
 import AccountModal from "./AccountModal";
+import RoleSwitcher from "./RoleSwitcher";
 
 const HeaderMenu = () => {
   const { user, profile, signOut } = useAuth();
@@ -106,6 +107,10 @@ const HeaderMenu = () => {
                   <p className="text-sm font-medium truncate">{profile?.full_name || "User"}</p>
                   {planBadge()}
                 </div>
+              </div>
+              <DropdownMenuSeparator />
+              <div className="px-2 py-2 flex justify-center">
+                <RoleSwitcher />
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setSettingsOpen(true)} className="cursor-pointer">

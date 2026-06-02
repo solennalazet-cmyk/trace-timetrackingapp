@@ -1,12 +1,19 @@
 import { Link, useLocation } from "react-router-dom";
-import { Timer, BarChart3, CheckSquare, Briefcase } from "lucide-react";
+import { Timer, BarChart3, CheckSquare, Briefcase, Home, Users, Wallet } from "lucide-react";
 import { getStoredColorTheme } from "@/hooks/useColorTheme";
+import { useRole } from "@/contexts/RoleContext";
 
-const tabs = [
+const workerTabs = [
   { path: "/", label: "Start", icon: Timer },
   { path: "/reports", label: "Reports", icon: BarChart3 },
   { path: "/timeline", label: "Done", icon: CheckSquare },
   { path: "/clients", label: "Projects", icon: Briefcase },
+];
+
+const employerTabs = [
+  { path: "/employer", label: "Home", icon: Home },
+  { path: "/workers", label: "Workers", icon: Users },
+  { path: "/payments", label: "Payments", icon: Wallet },
 ];
 
 export const getThemeStyles = () => {
@@ -42,6 +49,8 @@ export const getThemeStyles = () => {
 const BottomNav = () => {
   const location = useLocation();
   const colors = getThemeStyles();
+  const { activeRole } = useRole();
+  const tabs = activeRole === "employer" ? employerTabs : workerTabs;
 
   return (
     <nav

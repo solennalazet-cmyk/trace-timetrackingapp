@@ -216,10 +216,6 @@ const PaymentsPage = () => {
         </p>
       </header>
 
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold px-1">Outstanding</h2>
-        {loading ? (
-          <Card className="p-4 text-xs text-muted-foreground text-center">Loading…</Card>
       {!loading && totals.length > 0 && (
         <div className="grid grid-cols-2 gap-2">
           <Card className="p-3">
@@ -244,6 +240,7 @@ const PaymentsPage = () => {
           </Card>
         </div>
       )}
+
 
       <section className="space-y-2">
         <h2 className="text-sm font-semibold px-1">Outstanding</h2>

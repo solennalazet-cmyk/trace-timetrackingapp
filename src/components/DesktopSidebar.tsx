@@ -82,10 +82,18 @@ const DesktopSidebar = () => {
       className="hidden lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen lg:py-6 lg:px-4 lg:border-r border-border/40 bg-card/40 backdrop-blur-md"
     >
       {/* Logo */}
-      <Link to="/" className="flex items-center gap-2 px-2 mb-8" aria-label="Trace home">
+      <Link to="/" className="flex items-center gap-2 px-2 mb-4" aria-label="Trace home">
         <img src={logo} alt="" className="w-8 h-8 rounded-lg object-cover" />
         <span className="font-mono text-xl font-bold text-timer-display">Trace</span>
       </Link>
+
+      {/* Role switcher */}
+      {user && (
+        <div className="px-2 mb-4">
+          <RoleSwitcher />
+        </div>
+      )}
+
 
       {/* Nav */}
       <nav className="flex flex-col gap-1">

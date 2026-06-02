@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Inbox, Wallet, Activity, ChevronRight } from "lucide-react";
+import { Inbox, Wallet, Activity, ChevronRight, Check, X, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import SubmittedReportSheet, { type SubmittedReport } from "@/components/SubmittedReportSheet";
@@ -14,10 +14,31 @@ const formatPeriod = (start: string, end: string) => {
   return `${s.toLocaleDateString("en-GB", opts)} – ${e.toLocaleDateString("en-GB", opts)}`;
 };
 
+const formatRelative = (iso: string) => {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.round(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.round(hrs / 24);
+  return `${days}d ago`;
+};
+
+interface ActivityItem {
+  id: string;
+  ts: string;
+  type: "submitted" | "approved" | "rejected" | "payment";
+  clientName: string;
+  amount?: number;
+  currency?: string;
+}
+
 const EmployerHomePage = () => {
   const { user } = useAuth();
   const [pending, setPending] = useState<SubmittedReport[]>([]);
   const [approved, setApproved] = useState<SubmittedReport[]>([]);
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState<SubmittedReport | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -25,7 +46,7 @@ const EmployerHomePage = () => {
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const [pRes, aRes] = await Promise.all([
+    const [pRes, aRes, recentReviewedRes] = await Promise.all([
       supabase
         .from("submitted_reports")
         .select("*")
@@ -39,8 +60,20 @@ const EmployerHomePage = () => {
         .eq("status", "approved")
         .order("reviewed_at", { ascending: false })
         .limit(20),
+      supabase
+        .from("submitted_reports")
+        .select("id, client_id, status, reviewed_at, submitted_at, total_amount, currency")
+        .eq("employer_user_id", user.id)
+        .order("submitted_at", { ascending: false })
+        .limit(20),
     ]);
-    const allRows = [...((pRes.data ?? []) as any[]), ...((aRes.data ?? []) as any[])];
+
+    const reviewedRows = (recentReviewedRes.data ?? []) as any[];
+    const allRows = [
+      ...((pRes.data ?? []) as any[]),
+      ...((aRes.data ?? []) as any[]),
+      ...reviewedRows,
+    ];
     const clientIds = Array.from(new Set(allRows.map((r) => r.client_id))).filter(Boolean);
     let nameMap = new Map<string, string>();
     if (clientIds.length > 0) {
@@ -53,6 +86,50 @@ const EmployerHomePage = () => {
     const mapRow = (r: any): SubmittedReport => ({ ...r, client_name: nameMap.get(r.client_id) ?? "Worker" });
     setPending(((pRes.data ?? []) as any[]).map(mapRow));
     setApproved(((aRes.data ?? []) as any[]).map(mapRow));
+
+    // Build activity feed: submissions + review actions + recorded payments
+    const items: ActivityItem[] = [];
+    for (const r of reviewedRows) {
+      items.push({
+        id: `s-${r.id}`,
+        ts: r.submitted_at,
+        type: "submitted",
+        clientName: nameMap.get(r.client_id) ?? "Worker",
+        amount: Number(r.total_amount),
+        currency: r.currency,
+      });
+      if (r.reviewed_at && (r.status === "approved" || r.status === "rejected")) {
+        items.push({
+          id: `rv-${r.id}`,
+          ts: r.reviewed_at,
+          type: r.status,
+          clientName: nameMap.get(r.client_id) ?? "Worker",
+          amount: Number(r.total_amount),
+          currency: r.currency,
+        });
+      }
+    }
+
+    const { data: payRows } = await supabase
+      .from("report_payments")
+      .select("id, submitted_report_id, amount, currency, created_at")
+      .eq("recorded_by_user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    const reportLookup = new Map(reviewedRows.map((r) => [r.id, r.client_id]));
+    for (const p of (payRows ?? []) as any[]) {
+      const cid = reportLookup.get(p.submitted_report_id);
+      items.push({
+        id: `p-${p.id}`,
+        ts: p.created_at,
+        type: "payment",
+        clientName: (cid && nameMap.get(cid)) || "Worker",
+        amount: Number(p.amount),
+        currency: p.currency,
+      });
+    }
+    items.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
+    setActivity(items.slice(0, 10));
     setLoading(false);
   }, [user]);
 
@@ -152,16 +229,48 @@ const EmployerHomePage = () => {
         )}
       </section>
 
-      {/* Recent activity placeholder */}
+      {/* Recent activity */}
       <section className="space-y-2">
         <div className="flex items-center gap-2 px-1">
           <Activity className="w-4 h-4 text-muted-foreground" />
           <h2 className="text-sm font-semibold">Recent activity</h2>
         </div>
-        <Card className="p-4 text-xs text-muted-foreground text-center">
-          Submissions, approvals and payments will appear here.
-        </Card>
+        {activity.length === 0 ? (
+          <Card className="p-4 text-xs text-muted-foreground text-center">
+            Submissions, approvals and payments will appear here.
+          </Card>
+        ) : (
+          <Card className="divide-y divide-border">
+            {activity.map((a) => {
+              const sym = CURRENCY_SYMBOLS[a.currency ?? "EUR"] ?? "€";
+              const meta = (() => {
+                switch (a.type) {
+                  case "submitted": return { Icon: FileText, label: `${a.clientName} submitted a report` };
+                  case "approved": return { Icon: Check, label: `You approved ${a.clientName}'s report` };
+                  case "rejected": return { Icon: X, label: `You rejected ${a.clientName}'s report` };
+                  case "payment": return { Icon: Wallet, label: `Payment recorded for ${a.clientName}` };
+                }
+              })();
+              const Icon = meta.Icon;
+              return (
+                <div key={a.id} className="flex items-center gap-3 px-3 py-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-foreground/10 flex items-center justify-center shrink-0">
+                    <Icon className="w-3.5 h-3.5 text-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">{meta.label}</p>
+                    <p className="text-[11px] text-muted-foreground">{formatRelative(a.ts)}</p>
+                  </div>
+                  {a.amount != null && (
+                    <p className="text-xs font-mono font-semibold">{sym}{a.amount.toFixed(2)}</p>
+                  )}
+                </div>
+              );
+            })}
+          </Card>
+        )}
       </section>
+
 
       <SubmittedReportSheet
         open={sheetOpen}

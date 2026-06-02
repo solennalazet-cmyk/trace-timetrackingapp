@@ -568,7 +568,7 @@ const PrepareBillingSheet = ({
                 variant="outline"
                 className="w-full rounded-xl h-12 gap-2 justify-start font-medium"
                 onClick={handleExportPDF}
-                disabled={billableEntries.length === 0}
+                disabled={reportEntries.length === 0}
               >
                 <FileText className="w-4 h-4" /> Export PDF
               </Button>
@@ -576,7 +576,7 @@ const PrepareBillingSheet = ({
                 variant="outline"
                 className="w-full rounded-xl h-12 gap-2 justify-start font-medium"
                 onClick={handleSharePDF}
-                disabled={billableEntries.length === 0}
+                disabled={reportEntries.length === 0}
               >
                 <Share2 className="w-4 h-4" /> Share PDF
               </Button>
@@ -590,11 +590,11 @@ const PrepareBillingSheet = ({
               <Button
                 className="w-full rounded-xl h-12 gap-2 justify-start font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
                 onClick={() => setSubmitOpen(true)}
-                disabled={billableEntries.length === 0 || !isConnected}
+                disabled={reportEntries.length === 0 || !isConnected}
                 title={isConnected ? undefined : "Client isn't a connected Trace user."}
               >
                 <Send className="w-4 h-4" /> Submit to client
-                {!isConnected && billableEntries.length > 0 && (
+                {!isConnected && reportEntries.length > 0 && (
                   <span className="ml-auto text-[10px] font-normal opacity-80">Not connected</span>
                 )}
               </Button>
@@ -608,8 +608,8 @@ const PrepareBillingSheet = ({
               )}
             </div>
 
-            {billableEntries.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center">No billable entries in this period.</p>
+            {reportEntries.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center">No entries in this period.</p>
             )}
           </div>
         </SheetContent>

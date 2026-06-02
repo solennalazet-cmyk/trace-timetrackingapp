@@ -405,7 +405,7 @@ const PrepareBillingSheet = ({
   };
 
   const handleExportPDF = () => {
-    if (billableEntries.length === 0) { toast.error("No billable entries to export."); return; }
+    if (reportEntries.length === 0) { toast.error("No entries to export."); return; }
     const doc = buildPDF();
     doc.save(`billing-${clientName.replace(/\s+/g, "-")}-${rangeStart}-to-${rangeEnd}.pdf`);
     toast.success("PDF exported.");
@@ -413,7 +413,7 @@ const PrepareBillingSheet = ({
   };
 
   const handleSharePDF = async () => {
-    if (billableEntries.length === 0) { toast.error("No billable entries to share."); return; }
+    if (reportEntries.length === 0) { toast.error("No entries to share."); return; }
     const doc = buildPDF();
     const blob = doc.output("blob");
     const file = new File([blob], `billing-${clientName.replace(/\s+/g, "-")}-${rangeStart}-to-${rangeEnd}.pdf`, { type: "application/pdf" });

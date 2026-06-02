@@ -28,19 +28,29 @@ const EmployerHomePage = () => {
     const [pRes, aRes] = await Promise.all([
       supabase
         .from("submitted_reports")
-        .select("*, clients!inner(name)")
+        .select("*")
         .eq("employer_user_id", user.id)
         .eq("status", "submitted")
         .order("submitted_at", { ascending: false }),
       supabase
         .from("submitted_reports")
-        .select("*, clients!inner(name)")
+        .select("*")
         .eq("employer_user_id", user.id)
         .eq("status", "approved")
         .order("reviewed_at", { ascending: false })
         .limit(20),
     ]);
-    const mapRow = (r: any): SubmittedReport => ({ ...r, client_name: r.clients?.name });
+    const allRows = [...((pRes.data ?? []) as any[]), ...((aRes.data ?? []) as any[])];
+    const clientIds = Array.from(new Set(allRows.map((r) => r.client_id))).filter(Boolean);
+    let nameMap = new Map<string, string>();
+    if (clientIds.length > 0) {
+      const { data: clientRows } = await supabase
+        .from("clients")
+        .select("id, name")
+        .in("id", clientIds);
+      nameMap = new Map((clientRows ?? []).map((c: any) => [c.id, c.name]));
+    }
+    const mapRow = (r: any): SubmittedReport => ({ ...r, client_name: nameMap.get(r.client_id) ?? "Worker" });
     setPending(((pRes.data ?? []) as any[]).map(mapRow));
     setApproved(((aRes.data ?? []) as any[]).map(mapRow));
     setLoading(false);

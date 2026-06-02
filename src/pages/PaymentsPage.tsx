@@ -30,7 +30,9 @@ const toLocalDateKey = (d: Date) => {
 
 const DEFAULT_NET_DAYS = 30;
 
-interface ReportRow extends SubmittedReport {}
+interface ReportRow extends SubmittedReport {
+  reviewed_at: string | null;
+}
 
 interface PaymentRow {
   id: string;

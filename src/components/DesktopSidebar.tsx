@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Timer, BarChart3, CheckSquare, Briefcase, Settings, CreditCard, LogOut, LogIn, Info, MessageSquare, Sparkles, User, ChevronDown } from "lucide-react";
+import { Timer, BarChart3, CheckSquare, Briefcase, Settings, CreditCard, LogOut, LogIn, Info, MessageSquare, Sparkles, User, ChevronDown, Home, Users, Wallet } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/contexts/RoleContext";
 import logo from "@/assets/logo.png";
 import SettingsModal from "./SettingsModal";
 import AccountModal from "./AccountModal";
@@ -10,18 +11,27 @@ import HowTraceWorksModal from "./HowTraceWorksModal";
 import AboutModal from "./AboutModal";
 import FeedbackModal from "./FeedbackModal";
 import WhatsNewModal from "./WhatsNewModal";
+import RoleSwitcher from "./RoleSwitcher";
 
-const navItems = [
+const workerNav = [
   { path: "/", label: "Start", icon: Timer },
   { path: "/reports", label: "Reports", icon: BarChart3 },
   { path: "/timeline", label: "Done", icon: CheckSquare },
   { path: "/clients", label: "Projects", icon: Briefcase },
 ];
 
+const employerNav = [
+  { path: "/employer", label: "Home", icon: Home },
+  { path: "/workers", label: "Workers", icon: Users },
+  { path: "/payments", label: "Payments", icon: Wallet },
+];
+
 const DesktopSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
+  const { activeRole } = useRole();
+  const navItems = activeRole === "employer" ? employerNav : workerNav;
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);

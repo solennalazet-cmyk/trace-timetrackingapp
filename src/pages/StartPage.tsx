@@ -12,6 +12,7 @@ import CallLogModal from "@/components/CallLogModal";
 import UnassignedPanel from "@/components/UnassignedPanel";
 import TodayEntriesSheet from "@/components/TodayEntriesSheet";
 import WelcomeBanner from "@/components/WelcomeBanner";
+import ConnectionInvitesCard from "@/components/ConnectionInvitesCard";
 import SessionConflictDialog from "@/components/SessionConflictDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { toLocalDateKey } from "@/lib/utils";
@@ -537,6 +538,10 @@ const StartPage = () => {
 
       {/* Welcome banner (first visit only) */}
       <WelcomeBanner onDismiss={() => {}} />
+
+      {/* Incoming connection invites */}
+      <ConnectionInvitesCard />
+
 
       {/* Summary cards */}
       {showSummary && (

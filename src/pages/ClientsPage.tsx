@@ -300,12 +300,14 @@ const ClientsPage = () => {
 
   return (
     <div className="pb-24 px-4">
+      <h1 className="text-2xl font-bold tracking-tight mb-3 mt-2">Clients</h1>
       {/* Search */}
       <div className="relative mb-3">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           className="pl-9"
           placeholder="Search clients, projects..."
+          aria-label="Search clients and projects"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />

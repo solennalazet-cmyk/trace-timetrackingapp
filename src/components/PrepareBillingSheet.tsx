@@ -598,7 +598,7 @@ const PrepareBillingSheet = ({
                   className="w-full rounded-xl h-12 gap-2 justify-start font-medium bg-primary text-primary-foreground hover:bg-primary/90"
                   onClick={() => setShowBilledPrompt(true)}
                 >
-                  Mark {unbilledBillableEntries.length} session{unbilledBillableEntries.length > 1 ? "s" : ""} as billed
+                  Add {unbilledBillableEntries.length} session{unbilledBillableEntries.length > 1 ? "s" : ""} to Payments
                 </Button>
               )}
             </div>
@@ -610,22 +610,22 @@ const PrepareBillingSheet = ({
         </SheetContent>
       </Sheet>
 
-      {/* Mark as billed prompt */}
+      {/* Add to Track Payments prompt */}
       <AlertDialog open={showBilledPrompt} onOpenChange={setShowBilledPrompt}>
         <AlertDialogContent className="rounded-2xl max-w-[360px]">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-primary" />
-              Mark as billed?
+              Add to Track Payments?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Mark {unbilledBillableEntries.length} unbilled session{unbilledBillableEntries.length > 1 ? "s" : ""} as billed? This helps you track what's already been invoiced.
+              Track {billableEntries.length} billable session{billableEntries.length > 1 ? "s" : ""} for {clientName} in the Payments tab. The sessions will also be marked as billed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={markingBilled}>Not now</AlertDialogCancel>
             <AlertDialogAction onClick={handleMarkAsBilled} disabled={markingBilled}>
-              {markingBilled ? "Marking…" : "Yes, mark as billed"}
+              {markingBilled ? "Adding…" : "Yes, add to Payments"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

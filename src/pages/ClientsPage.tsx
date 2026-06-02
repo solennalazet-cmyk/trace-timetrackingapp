@@ -176,6 +176,20 @@ const ClientsPage = () => {
       site_radius_m: data.site_radius_m ?? 100,
       geolocation_override: data.geolocation_override ?? "inherit",
     };
+    const inviteEmail = (data.invited_trace_email || "").trim().toLowerCase();
+    const isNewInvite =
+      inviteEmail.length > 0 &&
+      data.connection_status !== "accepted" &&
+      inviteEmail !== ((editingClient as any)?.invited_email || "").toLowerCase();
+    const connectionFields = isNewInvite
+      ? {
+          invited_email: inviteEmail,
+          connection_status: "pending",
+          connection_initiated_by: "worker",
+          invited_at: new Date().toISOString(),
+        }
+      : {};
+
     if (user) {
       if (editingClient) {
         await supabase.from("clients").update({
@@ -183,17 +197,19 @@ const ClientsPage = () => {
           currency: data.currency, default_rate: data.default_rate ? parseFloat(data.default_rate) : null,
           export_columns: data.export_columns ?? null,
           ...siteFields,
+          ...connectionFields,
         } as any).eq("id", editingClient.id);
-        toast.success("Client updated.");
+        toast.success(isNewInvite ? "Client updated. Invite sent." : "Client updated.");
       } else {
         await supabase.from("clients").insert({
           name: data.name, email: data.email || null, nif: data.nif || null,
           currency: data.currency, default_rate: data.default_rate ? parseFloat(data.default_rate) : null,
           export_columns: data.export_columns ?? null,
           ...siteFields,
+          ...connectionFields,
           user_id: user.id,
         } as any);
-        toast.success("Client added.");
+        toast.success(isNewInvite ? "Client added. Invite sent." : "Client added.");
       }
     } else {
       const id = editingClient?.id ?? `local-${Date.now()}`;

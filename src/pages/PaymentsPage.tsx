@@ -395,7 +395,7 @@ const PaymentsPage = () => {
       )}
 
       <SubmittedReportSheet
-        reportId={openReportId}
+        report={reports.find((r) => r.id === openReportId) ?? null}
         open={!!openReportId}
         onOpenChange={(v) => { if (!v) setOpenReportId(null); }}
       />

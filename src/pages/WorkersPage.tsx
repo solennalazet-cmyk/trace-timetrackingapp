@@ -29,6 +29,7 @@ const WorkersPage = () => {
   const [workers, setWorkers] = useState<ConnectedWorker[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!user) return;

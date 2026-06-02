@@ -144,6 +144,20 @@ export function useTimer(mode: TimerMode) {
         .eq("user_id", user.id)
         .single();
       if (data) {
+        // Safety: auto-clean stale sessions older than 18 hours (forgotten timers).
+        const STALE_MS = 18 * 60 * 60 * 1000;
+        const startedMs = new Date(data.started_at).getTime();
+        if (Date.now() - startedMs > STALE_MS) {
+          console.warn(`[useTimer] auto-cleaning stale ${data.session_type} session (>18h old)`);
+          await supabase.from("active_sessions").delete().eq("user_id", user.id);
+          clearLS(LS_KEYS.stopwatch);
+          clearLS(LS_KEYS.shift);
+          if (mode === data.session_type || (mode === "stopwatch" && data.session_type === "stopwatch") || (mode === "shift" && data.session_type === "shift")) {
+            setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+            setElapsedMs(0);
+          }
+          return;
+        }
         const sessionType = mode === "shift" ? "shift" : "stopwatch";
         if (data.session_type === sessionType) {
           // Double-check recentlyStopped after async call
@@ -171,6 +185,7 @@ export function useTimer(mode: TimerMode) {
           }
         }
       }
+
     };
     syncFromSupabase();
   }, [user, mode, lsKey]);

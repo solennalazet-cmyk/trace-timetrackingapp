@@ -55,6 +55,21 @@ const ExportDialog = ({
   const [selectedClient, setSelectedClient] = useState(clientFilter || "all");
   const [showBusiness, setShowBusiness] = useState(profile?.show_business_on_export !== false);
 
+  // Post-export tracking prompt state
+  interface TrackGroup {
+    clientId: string;
+    clientName: string;
+    entries: TimeEntry[];
+    totalMinutes: number;
+    totalValue: number;
+    currency: string;
+    selected: boolean;
+  }
+  const [trackPromptOpen, setTrackPromptOpen] = useState(false);
+  const [trackGroups, setTrackGroups] = useState<TrackGroup[]>([]);
+  const [unassignedCount, setUnassignedCount] = useState(0);
+  const [trackSubmitting, setTrackSubmitting] = useState(false);
+
   // Sync dates when dialog opens
   const handleOpenChange = (v: boolean) => {
     if (v) {
@@ -88,6 +103,41 @@ const ExportDialog = ({
     return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   };
 
+  const evaluateTrackingPrompt = () => {
+    const billable = filteredEntries.filter((e) => e.billable);
+    if (billable.length === 0) {
+      onOpenChange(false);
+      return;
+    }
+    let unassigned = 0;
+    const byClient = new Map<string, TimeEntry[]>();
+    for (const e of billable) {
+      if (!e.client_id) { unassigned++; continue; }
+      if (!byClient.has(e.client_id)) byClient.set(e.client_id, []);
+      byClient.get(e.client_id)!.push(e);
+    }
+    const groups: TrackGroup[] = Array.from(byClient.entries()).map(([clientId, es]) => {
+      const { totalMinutes, totalValue } = aggregateWithRounding(es, rounding);
+      const currency = es.find((x) => x.rate_currency)?.rate_currency ?? "EUR";
+      return {
+        clientId,
+        clientName: clients[clientId] ?? "Client",
+        entries: es,
+        totalMinutes,
+        totalValue,
+        currency,
+        selected: true,
+      };
+    });
+    if (groups.length === 0 && unassigned === 0) {
+      onOpenChange(false);
+      return;
+    }
+    setTrackGroups(groups);
+    setUnassignedCount(unassigned);
+    setTrackPromptOpen(true);
+  };
+
   const handleExport = () => {
     if (filteredEntries.length === 0) {
       toast.error("No entries to export for this range.");
@@ -95,6 +145,61 @@ const ExportDialog = ({
     }
     if (format === "csv") exportCSV();
     else exportPDF();
+    // Don't auto-close — show tracking prompt next
+    evaluateTrackingPrompt();
+  };
+
+  const handleConfirmTrack = async () => {
+    if (!user) return;
+    const chosen = trackGroups.filter((g) => g.selected);
+    if (chosen.length === 0) {
+      setTrackPromptOpen(false);
+      onOpenChange(false);
+      return;
+    }
+    setTrackSubmitting(true);
+    try {
+      const clientIdsToCheck = chosen.map((g) => g.clientId);
+      const { data: clientRows } = await supabase
+        .from("clients")
+        .select("id, connected_user_id, connection_status, currency")
+        .in("id", clientIdsToCheck);
+      const cMap = new Map((clientRows ?? []).map((c: any) => [c.id, c]));
+
+      const inserts = chosen.map((g) => {
+        const c = cMap.get(g.clientId);
+        const connected = c?.connection_status === "accepted" ? c?.connected_user_id ?? null : null;
+        return {
+          worker_user_id: user.id,
+          employer_user_id: connected,
+          client_id: g.clientId,
+          period_start: rangeStart,
+          period_end: rangeEnd,
+          total_hours: Number((g.totalMinutes / 60).toFixed(2)),
+          total_amount: Number(g.totalValue.toFixed(2)),
+          currency: g.currency ?? c?.currency ?? "EUR",
+          shared_columns: [] as any,
+          entries_snapshot: g.entries as any,
+          // Connected → 'submitted' (employer can review). Solo → 'approved' (no employer to review).
+          status: connected ? "submitted" : "approved",
+          reviewed_at: connected ? null : new Date().toISOString(),
+        } as any;
+      });
+
+      const { error } = await supabase.from("submitted_reports").insert(inserts);
+      if (error) throw error;
+      toast.success(chosen.length === 1 ? "Tracked in Payments." : `Tracked ${chosen.length} reports in Payments.`);
+      setTrackPromptOpen(false);
+      onOpenChange(false);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Couldn't track in Payments.");
+    } finally {
+      setTrackSubmitting(false);
+    }
+  };
+
+  const handleSkipTrack = () => {
+    setTrackPromptOpen(false);
     onOpenChange(false);
   };
 

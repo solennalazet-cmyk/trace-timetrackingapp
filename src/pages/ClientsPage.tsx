@@ -11,6 +11,7 @@ import { resolveExportColumns } from "@/lib/export-columns";
 import ProjectFormModal from "@/components/ProjectFormModal";
 import PaywallModal from "@/components/PaywallModal";
 import SignInLink from "@/components/SignInLink";
+import ClientPaymentsSection from "@/components/ClientPaymentsSection";
 import { toast } from "sonner";
 import {
   AlertDialog,

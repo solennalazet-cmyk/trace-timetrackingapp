@@ -120,17 +120,31 @@ const WorkersPage = () => {
         </Card>
       ) : (
         <div className="space-y-3">
-          {workers.map((w) => (
-            <Card key={w.id} className="p-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-foreground/10 text-foreground flex items-center justify-center font-semibold">
-                {w.name.slice(0, 1).toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold truncate">{w.name}</p>
-                {w.email && <p className="text-xs text-muted-foreground truncate">{w.email}</p>}
-              </div>
-            </Card>
-          ))}
+          {workers.map((w) => {
+            const expanded = expandedId === w.id;
+            return (
+              <Card key={w.id} className="overflow-hidden">
+                <button
+                  className="w-full p-4 flex items-center gap-3 text-left"
+                  onClick={() => setExpandedId(expanded ? null : w.id)}
+                >
+                  <div className="h-10 w-10 rounded-full bg-foreground/10 text-foreground flex items-center justify-center font-semibold shrink-0">
+                    {w.name.slice(0, 1).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold truncate">{w.name}</p>
+                    {w.email && <p className="text-xs text-muted-foreground truncate">{w.email}</p>}
+                  </div>
+                  {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                </button>
+                {expanded && user && (
+                  <div className="px-4 pb-4 border-t border-border pt-3">
+                    <WorkerDetailsSection workerUserId={w.user_id} employerUserId={user.id} />
+                  </div>
+                )}
+              </Card>
+            );
+          })}
 
           {invites.map((i) => (
             <Card key={i.id} className="p-4 flex items-center gap-3 bg-secondary">

@@ -202,7 +202,7 @@ const EmployerHomePage = () => {
         </div>
       )}
       <header className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">Employer Dashboard</h1>
+        <h1 className="sr-only">Employer Dashboard</h1>
         <p className="text-sm text-muted-foreground">Your dashboard.</p>
       </header>
 

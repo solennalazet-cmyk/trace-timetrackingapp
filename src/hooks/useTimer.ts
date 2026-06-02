@@ -141,7 +141,20 @@ export function useTimer(mode: TimerMode) {
 
   // Sync with Supabase on load + realtime for cross-device consistency
   useEffect(() => {
-    if (!user || mode === "focus") return;
+    if (mode === "focus") return;
+
+    // No authenticated user → no remote source of truth.
+    // Clear any stale LS so a ghost timer can't survive across refreshes.
+    if (!user) {
+      const lsState = readLS(lsKey);
+      if (lsState?.startedAt) {
+        console.warn(`[useTimer] clearing LS ghost timer for ${mode}: no authenticated user`);
+        clearLS(lsKey);
+        setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+        setElapsedMs(0);
+      }
+      return;
+    }
 
     const sessionType = mode === "shift" ? "shift" : "stopwatch";
 

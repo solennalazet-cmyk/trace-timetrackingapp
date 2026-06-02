@@ -507,7 +507,7 @@ const StartPage = () => {
 
   return (
     <div className="flex flex-col items-center pt-4">
-      <h1 className="text-2xl font-bold tracking-tight mb-2 w-full px-4 text-left">Time Tracker</h1>
+      <h1 className="sr-only">Time Tracker</h1>
       {/* Mode toggle */}
       <div
         className="flex mb-6"

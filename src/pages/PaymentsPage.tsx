@@ -144,7 +144,7 @@ const PaymentsPage = () => {
     const total = Number(r.total_amount);
     const pct = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
     const remaining = Math.max(0, total - paid);
-    const partyName = clientNames.get(r.client_id) ?? (isEmployer ? "Worker" : "Client");
+    const partyName = partyNames.get(r.id) ?? (isEmployer ? "Worker" : "Client");
     const reportPayments = payments.filter((p) => p.submitted_report_id === r.id);
 
     return (

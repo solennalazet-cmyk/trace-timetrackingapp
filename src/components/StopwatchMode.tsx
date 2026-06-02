@@ -55,8 +55,8 @@ const StopwatchMode = ({ onStop }: StopwatchModeProps) => {
       <div className="flex gap-3 w-full max-w-[280px]">
         {status === "idle" && (
           <Button
-            onClick={start}
-            className={`flex-1 bg-primary text-primary-foreground hover:bg-primary/90 ${BTN}`}
+            onClick={() => { setPulse(false); start(); }}
+            className={`flex-1 bg-primary text-primary-foreground hover:bg-primary/90 ${BTN} ${pulse ? "animate-cta-pulse" : ""}`}
           >
             Start
           </Button>

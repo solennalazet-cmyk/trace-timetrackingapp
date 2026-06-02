@@ -115,6 +115,11 @@ const PrepareBillingSheet = ({
     [billableEntries]
   );
 
+  // Entries to include in the shared report. When the project/client has no
+  // billable entries, fall back to all entries so unbillable work can still be
+  // sent/exported (just without monetary amounts).
+  const reportEntries = billableEntries.length > 0 ? billableEntries : entries;
+
   const rangeStart = dateFrom.toISOString().split("T")[0];
   const rangeEnd = dateTo.toISOString().split("T")[0];
   const fromLabel = dateFrom.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });

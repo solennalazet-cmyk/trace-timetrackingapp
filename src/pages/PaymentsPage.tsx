@@ -49,7 +49,7 @@ const PaymentsPage = () => {
 
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [payments, setPayments] = useState<PaymentRow[]>([]);
-  const [clientNames, setClientNames] = useState<Map<string, string>>(new Map());
+  const [partyNames, setPartyNames] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [recordOpen, setRecordOpen] = useState(false);
   const [activeReportId, setActiveReportId] = useState<string | null>(null);
@@ -70,16 +70,25 @@ const PaymentsPage = () => {
 
     if (list.length > 0) {
       const ids = list.map((r) => r.id);
-      const clientIds = Array.from(new Set(list.map((r) => r.client_id))).filter(Boolean);
-      const [{ data: payRows }, { data: clientRows }] = await Promise.all([
-        supabase.from("report_payments").select("*").in("submitted_report_id", ids),
-        supabase.from("clients").select("id, name").in("id", clientIds),
-      ]);
+      const { data: payRows } = await supabase.from("report_payments").select("*").in("submitted_report_id", ids);
       setPayments((payRows ?? []) as PaymentRow[]);
-      setClientNames(new Map((clientRows ?? []).map((c: any) => [c.id, c.name as string])));
+
+      const nameMap = new Map<string, string>();
+      if (isEmployer) {
+        const workerIds = Array.from(new Set(list.map((r) => r.worker_user_id))).filter(Boolean);
+        const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", workerIds);
+        const profMap = new Map((profiles ?? []).map((p: any) => [p.id, (p.full_name as string) || "Worker"]));
+        for (const r of list) nameMap.set(r.id, profMap.get(r.worker_user_id) ?? "Worker");
+      } else {
+        const clientIds = Array.from(new Set(list.map((r) => r.client_id))).filter(Boolean);
+        const { data: clientRows } = await supabase.from("clients").select("id, name").in("id", clientIds);
+        const cMap = new Map((clientRows ?? []).map((c: any) => [c.id, c.name as string]));
+        for (const r of list) nameMap.set(r.id, cMap.get(r.client_id) ?? "Client");
+      }
+      setPartyNames(nameMap);
     } else {
       setPayments([]);
-      setClientNames(new Map());
+      setPartyNames(new Map());
     }
     setLoading(false);
   }, [user, isEmployer]);

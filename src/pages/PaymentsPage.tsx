@@ -414,6 +414,7 @@ const PaymentsPage = () => {
         report={reports.find((r) => r.id === openReportId) ?? null}
         open={!!openReportId}
         onOpenChange={(v) => { if (!v) setOpenReportId(null); }}
+        readOnly
       />
     </div>
   );

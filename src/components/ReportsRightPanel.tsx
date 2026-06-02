@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toLocalDateKey, getClientColor } from "@/lib/utils";
 import { getAnonymousEntries } from "@/lib/anonymous-store";
+import { Progress } from "@/components/ui/progress";
 
 interface Entry {
   duration_minutes: number;

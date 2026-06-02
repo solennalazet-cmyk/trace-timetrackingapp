@@ -677,6 +677,48 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_invites: {
+        Row: {
+          created_at: string
+          employer_user_id: string
+          id: string
+          invite_token: string
+          invited_at: string
+          invited_email: string
+          invited_name: string | null
+          responded_at: string | null
+          status: string
+          updated_at: string
+          worker_user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          employer_user_id: string
+          id?: string
+          invite_token?: string
+          invited_at?: string
+          invited_email: string
+          invited_name?: string | null
+          responded_at?: string | null
+          status?: string
+          updated_at?: string
+          worker_user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          employer_user_id?: string
+          id?: string
+          invite_token?: string
+          invited_at?: string
+          invited_email?: string
+          invited_name?: string | null
+          responded_at?: string | null
+          status?: string
+          updated_at?: string
+          worker_user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

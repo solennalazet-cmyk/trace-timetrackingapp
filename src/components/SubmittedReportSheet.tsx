@@ -198,7 +198,7 @@ const SubmittedReportSheet = ({ open, onOpenChange, report, onReviewed, readOnly
                       <span>{e.entry_date ? new Date(e.entry_date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "—"}</span>
                       <span className="font-mono">{formatDur(mins)}</span>
                       {orderedCols.map((k) => (
-                        <span key={k} className="truncate">{cellFor(e, k)}</span>
+                        <span key={k} className="truncate">{cellFor(e, k, pauseInfo[idx])}</span>
                       ))}
                       <span className="text-right font-mono">{amt > 0 ? `${sym}${Number(amt).toFixed(2)}` : "—"}</span>
                     </div>

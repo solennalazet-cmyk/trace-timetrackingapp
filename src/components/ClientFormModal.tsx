@@ -160,7 +160,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
           </div>
 
           {/* Connect Trace user */}
-          <div className="rounded-xl border border-primary/30 bg-primary/5 overflow-hidden transition-colors hover:bg-primary/10">
+          <div className="rounded-xl bg-secondary overflow-hidden shadow-sm transition-colors hover:bg-secondary/80">
             <button
               type="button"
               onClick={() => setConnectOpen((v) => !v)}
@@ -206,7 +206,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
           </div>
 
           {/* Place of work */}
-          <div className="rounded-xl border border-primary/30 bg-primary/5 overflow-hidden transition-colors hover:bg-primary/10">
+          <div className="rounded-xl bg-secondary overflow-hidden shadow-sm transition-colors hover:bg-secondary/80">
             <button
               type="button"
               onClick={() => setSiteOpen((v) => !v)}
@@ -288,7 +288,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
 
 
           {/* Export settings */}
-          <div className="rounded-xl border border-primary/30 bg-primary/5 overflow-hidden transition-colors hover:bg-primary/10">
+          <div className="rounded-xl bg-secondary overflow-hidden shadow-sm transition-colors hover:bg-secondary/80">
             <button
               type="button"
               onClick={() => setExportOpen((v) => !v)}

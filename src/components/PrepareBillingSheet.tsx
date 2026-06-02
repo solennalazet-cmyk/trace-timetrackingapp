@@ -7,7 +7,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { FileText, Share2, Copy, CheckCircle2, ChevronDown } from "lucide-react";
+import { FileText, Share2, Copy, CheckCircle2, ChevronDown, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";

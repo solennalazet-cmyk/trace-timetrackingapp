@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Search, Plus, Briefcase, ChevronDown, ChevronUp, Mail, Hash, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, Briefcase, ChevronDown, ChevronUp, Mail, Hash, Pencil, Trash2, Wallet } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";

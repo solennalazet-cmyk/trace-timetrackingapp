@@ -1,0 +1,21 @@
+# Trace — Time Tracking for Freelancers
+
+Trace is a timer-first time tracking app built for freelancers and small teams. Start tracking instantly, organize and assign work later. Generate professional invoices, monitor billable hours, and stay on top of client projects.
+
+## Key features
+- One-tap timer with retrospective assignment to clients, projects, and tasks
+- Client and project management with hourly rates and budgets
+- Reports with rounding rules, billable filters, and PDF export
+- Team time tracking for employers (Pro)
+- Daily coaching and achievements to build a tracking habit
+- Free tier with generous limits; Pro unlocks advanced features
+
+## Primary pages
+- Home / Timer: https://trace.lla-studio.com/
+- Reports: https://trace.lla-studio.com/reports
+- Timeline: https://trace.lla-studio.com/timeline
+- Clients & projects: https://trace.lla-studio.com/clients
+- Privacy: https://trace.lla-studio.com/privacy
+
+## Contact
+LLA Studio — https://lla-studio.com

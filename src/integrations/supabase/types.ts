@@ -46,6 +46,9 @@ export type Database = {
       }
       clients: {
         Row: {
+          connected_user_id: string | null
+          connection_initiated_by: string | null
+          connection_status: string
           created_at: string | null
           currency: string | null
           default_rate: number | null
@@ -53,6 +56,9 @@ export type Database = {
           export_columns: string[] | null
           geolocation_override: string | null
           id: string
+          invite_token: string | null
+          invited_at: string | null
+          invited_email: string | null
           name: string
           nif: string | null
           site_address: string | null
@@ -62,6 +68,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          connected_user_id?: string | null
+          connection_initiated_by?: string | null
+          connection_status?: string
           created_at?: string | null
           currency?: string | null
           default_rate?: number | null
@@ -69,6 +78,9 @@ export type Database = {
           export_columns?: string[] | null
           geolocation_override?: string | null
           id?: string
+          invite_token?: string | null
+          invited_at?: string | null
+          invited_email?: string | null
           name: string
           nif?: string | null
           site_address?: string | null
@@ -78,6 +90,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          connected_user_id?: string | null
+          connection_initiated_by?: string | null
+          connection_status?: string
           created_at?: string | null
           currency?: string | null
           default_rate?: number | null
@@ -85,6 +100,9 @@ export type Database = {
           export_columns?: string[] | null
           geolocation_override?: string | null
           id?: string
+          invite_token?: string | null
+          invited_at?: string | null
+          invited_email?: string | null
           name?: string
           nif?: string | null
           site_address?: string | null
@@ -153,6 +171,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          active_role: string
+          available_roles: string[]
           billing_interval: string | null
           business_address: string | null
           business_name: string | null
@@ -171,6 +191,8 @@ export type Database = {
           trial_started_at: string | null
         }
         Insert: {
+          active_role?: string
+          available_roles?: string[]
           billing_interval?: string | null
           business_address?: string | null
           business_name?: string | null
@@ -189,6 +211,8 @@ export type Database = {
           trial_started_at?: string | null
         }
         Update: {
+          active_role?: string
+          available_roles?: string[]
           billing_interval?: string | null
           business_address?: string | null
           business_name?: string | null
@@ -242,6 +266,121 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          note: string | null
+          paid_at: string
+          recorded_by_user_id: string
+          submitted_report_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          note?: string | null
+          paid_at?: string
+          recorded_by_user_id: string
+          submitted_report_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          note?: string | null
+          paid_at?: string
+          recorded_by_user_id?: string
+          submitted_report_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_payments_submitted_report_id_fkey"
+            columns: ["submitted_report_id"]
+            isOneToOne: false
+            referencedRelation: "submitted_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submitted_reports: {
+        Row: {
+          client_id: string
+          created_at: string
+          currency: string
+          employer_user_id: string | null
+          entries_snapshot: Json
+          id: string
+          parent_submission_id: string | null
+          period_end: string
+          period_start: string
+          rejection_note: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          shared_columns: string[]
+          status: string
+          submitted_at: string
+          total_amount: number
+          total_hours: number
+          updated_at: string
+          worker_user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          currency?: string
+          employer_user_id?: string | null
+          entries_snapshot?: Json
+          id?: string
+          parent_submission_id?: string | null
+          period_end: string
+          period_start: string
+          rejection_note?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          shared_columns?: string[]
+          status?: string
+          submitted_at?: string
+          total_amount?: number
+          total_hours?: number
+          updated_at?: string
+          worker_user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          currency?: string
+          employer_user_id?: string | null
+          entries_snapshot?: Json
+          id?: string
+          parent_submission_id?: string | null
+          period_end?: string
+          period_start?: string
+          rejection_note?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          shared_columns?: string[]
+          status?: string
+          submitted_at?: string
+          total_amount?: number
+          total_hours?: number
+          updated_at?: string
+          worker_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submitted_reports_parent_submission_id_fkey"
+            columns: ["parent_submission_id"]
+            isOneToOne: false
+            referencedRelation: "submitted_reports"
             referencedColumns: ["id"]
           },
         ]
@@ -543,7 +682,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      can_access_submission: { Args: { _sub_id: string }; Returns: boolean }
+      email_matches_auth_user: { Args: { _email: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

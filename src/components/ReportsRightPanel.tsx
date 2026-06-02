@@ -176,6 +176,44 @@ const ReportsRightPanel = () => {
         </div>
       </div>
 
+
+      {/* Goals — weekly progress */}
+      {(dailyHourTarget > 0 || revenueTarget > 0) && (() => {
+        const proratedHourTarget = dailyHourTarget > 0 ? dailyHourTarget * 7 : 0;
+        const proratedRevenueTarget = revenueTarget > 0 ? revenueTarget * (7 / 30) : 0;
+        const hourProgress = proratedHourTarget > 0 ? Math.min(100, (totalMins / 60 / proratedHourTarget) * 100) : 0;
+        const revenueProgress = proratedRevenueTarget > 0 ? Math.min(100, (billableValue / proratedRevenueTarget) * 100) : 0;
+        return (
+          <div className="rounded-xl border border-border/60 bg-card/60 p-3 mb-4 space-y-2.5">
+            <p className="text-xs font-semibold text-foreground">Goals</p>
+            {proratedHourTarget > 0 && (
+              <div>
+                <div className="flex items-baseline justify-between mb-1 text-[11px]">
+                  <span className="text-foreground">Hours</span>
+                  <span className="font-mono text-muted-foreground">
+                    {(totalMins / 60).toFixed(1)} / {proratedHourTarget.toFixed(1)}h
+                    <span className="ml-1 text-foreground font-semibold">{Math.round(hourProgress)}%</span>
+                  </span>
+                </div>
+                <Progress value={hourProgress} className="h-1.5 rounded-full" />
+              </div>
+            )}
+            {proratedRevenueTarget > 0 && (
+              <div>
+                <div className="flex items-baseline justify-between mb-1 text-[11px]">
+                  <span className="text-foreground">Revenue</span>
+                  <span className="font-mono text-muted-foreground">
+                    {sym}{billableValue.toFixed(0)} / {sym}{proratedRevenueTarget.toFixed(0)}
+                    <span className="ml-1 text-foreground font-semibold">{Math.round(revenueProgress)}%</span>
+                  </span>
+                </div>
+                <Progress value={revenueProgress} className="h-1.5 rounded-full" />
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Top clients */}
       <div className="rounded-xl border border-border/60 bg-card/60 p-3">
         <p className="text-xs font-semibold text-foreground mb-2">Top clients</p>

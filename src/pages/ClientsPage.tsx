@@ -494,6 +494,8 @@ const ClientsPage = () => {
           site_lng: (editingClient as any).site_lng ?? null,
           site_radius_m: (editingClient as any).site_radius_m ?? 100,
           geolocation_override: (editingClient as any).geolocation_override ?? "inherit",
+          invited_trace_email: (editingClient as any).invited_email ?? "",
+          connection_status: (editingClient as any).connection_status ?? null,
         } : null}
         title={editingClient ? "Edit Client" : "Add Client"}
       />

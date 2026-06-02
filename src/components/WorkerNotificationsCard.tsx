@@ -49,6 +49,8 @@ const WorkerNotificationsCard = () => {
         .eq("worker_user_id", user.id)
         .in("status", ["approved", "rejected"])
         .not("reviewed_at", "is", null)
+        .not("employer_user_id", "is", null)
+        .neq("employer_user_id", user.id)
         .order("reviewed_at", { ascending: false })
         .limit(10),
       supabase

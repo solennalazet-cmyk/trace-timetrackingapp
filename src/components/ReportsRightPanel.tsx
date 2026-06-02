@@ -29,6 +29,8 @@ const ReportsRightPanel = () => {
   const { user } = useAuth();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [weekStart, setWeekStart] = useState<0 | 1 | 2 | 3 | 4 | 5 | 6>(1);
+  const [dailyHourTarget, setDailyHourTarget] = useState(0);
+  const [revenueTarget, setRevenueTarget] = useState(0);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {

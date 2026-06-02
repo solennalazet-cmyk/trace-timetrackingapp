@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import WorkerInviteModal from "@/components/WorkerInviteModal";
 import WorkerDetailsSection from "@/components/WorkerDetailsSection";
+import Seo from "@/components/Seo";
 
 interface WorkerInvite {
   id: string;
@@ -97,6 +98,7 @@ const WorkersPage = () => {
 
   return (
     <div className="pt-6 space-y-4 pb-24">
+      <Seo title={"Workers — Trace for Employers"} description={"Invite team members and manage their hourly rates, schedules, and reporting permissions."} path={"/workers"} />
       <header className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight">Workers</h1>

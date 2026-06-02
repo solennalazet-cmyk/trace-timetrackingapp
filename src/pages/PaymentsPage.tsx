@@ -9,6 +9,7 @@ import { useRole } from "@/contexts/RoleContext";
 import SubmittedReportSheet, { type SubmittedReport } from "@/components/SubmittedReportSheet";
 import { toast } from "sonner";
 import { getClientColor } from "@/lib/utils";
+import Seo from "@/components/Seo";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
@@ -213,6 +214,7 @@ const PaymentsPage = () => {
 
   return (
     <div className="pt-6 space-y-4 pb-24">
+      <Seo title={"Payments — Trace"} description={"Track approved reports, outstanding invoices, and worker payouts in one place."} path={"/payments"} />
       <header className="space-y-1 px-1">
         <h1 className="text-2xl font-bold tracking-tight">Payments</h1>
         <p className="text-sm text-muted-foreground">

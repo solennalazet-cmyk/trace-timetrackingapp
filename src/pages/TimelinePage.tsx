@@ -14,6 +14,7 @@ import AssignmentModal, { type SessionData, type AssignmentResult, type Existing
 import PaywallModal from "@/components/PaywallModal";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import Seo from "@/components/Seo";
 
 const formatHHMM = (mins: number) => {
   const h = Math.floor(mins / 60);
@@ -312,6 +313,7 @@ const TimelinePage = () => {
   if (entries.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 px-4">
+        <Seo title={"Timeline — Trace Time Tracking"} description={"Browse your tracked sessions day-by-day with clean bullet-journal style timeline view."} path={"/timeline"} />
         <CheckSquare className="w-12 h-12 text-muted-foreground opacity-30" />
         <p className="text-muted-foreground text-sm text-center">Your completed tasks will appear here.<br />Start the timer to log your first session.</p>
         <Button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-12 px-6 font-bold" onClick={() => navigate("/")}>

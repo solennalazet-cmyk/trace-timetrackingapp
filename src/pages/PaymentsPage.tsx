@@ -102,6 +102,19 @@ const PaymentsPage = () => {
     return { outstanding: out, paidUp: done };
   }, [reports, paidByReport]);
 
+  const totals = useMemo(() => {
+    const byCurrency = new Map<string, { outstanding: number; paid: number }>();
+    for (const r of reports) {
+      const total = Number(r.total_amount);
+      const paid = paidByReport.get(r.id) ?? 0;
+      const entry = byCurrency.get(r.currency) ?? { outstanding: 0, paid: 0 };
+      entry.outstanding += Math.max(0, total - paid);
+      entry.paid += Math.min(total, paid);
+      byCurrency.set(r.currency, entry);
+    }
+    return Array.from(byCurrency.entries());
+  }, [reports, paidByReport]);
+
   const activeReport = reports.find((r) => r.id === activeReportId) ?? null;
 
   const handleRecord = (r: ReportRow) => {
@@ -202,6 +215,32 @@ const PaymentsPage = () => {
           {isEmployer ? "Track what's owed and record payments." : "See what's been paid against your approved reports."}
         </p>
       </header>
+
+      {!loading && totals.length > 0 && (
+        <div className="grid grid-cols-2 gap-2">
+          <Card className="p-3">
+            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Outstanding</p>
+            <div className="mt-1 space-y-0.5">
+              {totals.map(([cur, t]) => (
+                <p key={cur} className="text-sm font-mono font-semibold">
+                  {CURRENCY_SYMBOLS[cur] ?? cur}{t.outstanding.toFixed(2)}
+                </p>
+              ))}
+            </div>
+          </Card>
+          <Card className="p-3">
+            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Paid</p>
+            <div className="mt-1 space-y-0.5">
+              {totals.map(([cur, t]) => (
+                <p key={cur} className="text-sm font-mono font-semibold">
+                  {CURRENCY_SYMBOLS[cur] ?? cur}{t.paid.toFixed(2)}
+                </p>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
 
       <section className="space-y-2">
         <h2 className="text-sm font-semibold px-1">Outstanding</h2>

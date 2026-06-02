@@ -320,6 +320,14 @@ const TimelinePage = () => {
     );
   }
 
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
     <div className="pb-24">
       {/* Sticky top controls – sits right below the fixed app header (h-14) */}

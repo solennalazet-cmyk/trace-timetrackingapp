@@ -460,6 +460,11 @@ const ClientsPage = () => {
                       <Plus className="w-3.5 h-3.5" /> Add Project
                     </Button>
 
+                    {user && (
+                      <ClientPaymentsSection clientId={client.id} workerUserId={user.id} />
+                    )}
+
+
                     <div className="flex gap-2 pt-2">
                       <Button
                         variant="outline"

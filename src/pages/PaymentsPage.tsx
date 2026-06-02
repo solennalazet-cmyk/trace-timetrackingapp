@@ -244,11 +244,11 @@ const PaymentsPage = () => {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Amount Due</p>
-                      <p className="text-lg font-mono font-semibold mt-0.5">{sym}{t.outstanding.toFixed(2)}</p>
+                      <p className="text-lg font-mono font-semibold mt-0.5 text-primary-foreground">{sym}{t.outstanding.toFixed(2)}</p>
                     </div>
                     <div>
                       <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Amount Paid</p>
-                      <p className="text-lg font-mono font-semibold mt-0.5">{sym}{t.paid.toFixed(2)}</p>
+                      <p className="text-lg font-mono font-semibold mt-0.5 text-primary-foreground">{sym}{t.paid.toFixed(2)}</p>
                     </div>
                   </div>
 

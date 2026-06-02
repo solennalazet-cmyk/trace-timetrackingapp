@@ -543,6 +543,11 @@ const StartPage = () => {
       {/* Incoming connection invites */}
       <ConnectionInvitesCard />
 
+      {/* Report review and payment notifications */}
+      <WorkerNotificationsCard />
+
+
+
 
       {/* Summary cards */}
       {showSummary && (

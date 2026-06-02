@@ -224,7 +224,7 @@ const PrepareBillingSheet = ({
     const head = ["Date", "Duration", ...orderedOptional.map((k) => optionalHeaders[k]), "Amount"];
 
     // Sort by date, then by start_time so same-day sessions are in chronological order
-    const sortedEntries = [...billableEntries].sort((a, b) => {
+    const sortedEntries = [...reportEntries].sort((a, b) => {
       const d = (a.entry_date ?? "").localeCompare(b.entry_date ?? "");
       if (d !== 0) return d;
       const aT = a.start_time ? new Date(a.start_time).getTime() : 0;

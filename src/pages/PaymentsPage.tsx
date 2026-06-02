@@ -199,6 +199,18 @@ const PaymentsPage = () => {
     load();
   };
 
+  // Sync draft amount when underlying data changes while a group is expanded
+  useEffect(() => {
+    if (!expandedKey) return;
+    const rows = reports.filter((r) => (isEmployer ? r.worker_user_id : r.client_id) === expandedKey);
+    if (rows.length === 0) {
+      setExpandedKey(null);
+      return;
+    }
+    const t = computeGroupTotals(rows);
+    setDraftAmount(t.outstanding.toFixed(2));
+  }, [expandedKey, reports, payments, isEmployer]);
+
   return (
     <div className="pt-6 space-y-4 pb-24">
       <header className="space-y-1 px-1">

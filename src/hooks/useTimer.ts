@@ -125,70 +125,146 @@ export function useTimer(mode: TimerMode) {
     };
   }, [status, computeElapsed]);
 
-  // Sync with Supabase on load for authenticated users
+  // Sanity: if LS has a future-dated startedAt (clock skew / corruption), wipe it
+  useEffect(() => {
+    if (timerState.startedAt) {
+      const startedMs = new Date(timerState.startedAt).getTime();
+      if (isNaN(startedMs) || startedMs > Date.now() + 60_000) {
+        console.warn(`[useTimer] clearing corrupt LS for ${mode} (startedAt=${timerState.startedAt})`);
+        clearLS(lsKey);
+        setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+        setElapsedMs(0);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync with Supabase on load + realtime for cross-device consistency
   useEffect(() => {
     if (!user || mode === "focus") return;
-    if (isRecentlyStopped(mode)) {
-      console.log(`[useTimer] sync skipped: ${mode} was recently stopped`);
-      return;
-    }
-    if (stoppingRef.current) {
-      console.log(`[useTimer] sync skipped: stop in progress for ${mode}`);
-      return;
-    }
-    const syncFromSupabase = async () => {
-      console.log(`[useTimer] sync restore triggered for ${mode}`);
+
+    const sessionType = mode === "shift" ? "shift" : "stopwatch";
+
+    const reconcile = async () => {
+      if (isRecentlyStopped(mode)) {
+        console.log(`[useTimer] reconcile skipped: ${mode} was recently stopped`);
+        return;
+      }
+      if (stoppingRef.current) {
+        console.log(`[useTimer] reconcile skipped: stop in progress for ${mode}`);
+        return;
+      }
+      console.log(`[useTimer] reconcile triggered for ${mode}`);
       const { data } = await supabase
         .from("active_sessions")
         .select("*")
         .eq("user_id", user.id)
-        .single();
-      if (data) {
-        // Safety: auto-clean stale sessions older than 18 hours (forgotten timers).
-        const STALE_MS = 18 * 60 * 60 * 1000;
-        const startedMs = new Date(data.started_at).getTime();
-        if (Date.now() - startedMs > STALE_MS) {
-          console.warn(`[useTimer] auto-cleaning stale ${data.session_type} session (>18h old)`);
-          await supabase.from("active_sessions").delete().eq("user_id", user.id);
-          clearLS(LS_KEYS.stopwatch);
-          clearLS(LS_KEYS.shift);
-          if (mode === data.session_type || (mode === "stopwatch" && data.session_type === "stopwatch") || (mode === "shift" && data.session_type === "shift")) {
-            setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
-            setElapsedMs(0);
-          }
-          return;
+        .maybeSingle();
+
+      // No active session in Supabase → clear any stale LS for this mode
+      if (!data) {
+        const lsState = readLS(lsKey);
+        if (lsState?.startedAt) {
+          console.warn(`[useTimer] clearing stale LS for ${mode}: no Supabase session`);
+          clearLS(lsKey);
+          setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+          setElapsedMs(0);
         }
-        const sessionType = mode === "shift" ? "shift" : "stopwatch";
-        if (data.session_type === sessionType) {
-          // Double-check recentlyStopped after async call
-          if (isRecentlyStopped(mode) || stoppingRef.current) {
-            console.log(`[useTimer] sync aborted after fetch: ${mode} was recently stopped or stopping`);
-            return;
-          }
-          console.log(`[useTimer] active session restored from Supabase for ${mode}`);
-          const supabaseState: TimerState = {
-            startedAt: data.started_at,
-            pausedAt: data.paused_at,
-            totalPausedMs: data.total_paused_ms ?? 0,
-          };
-          const lsState = readLS(lsKey);
-          if (lsState?.startedAt) {
-            const lsTime = new Date(lsState.startedAt).getTime();
-            const sbTime = new Date(data.started_at).getTime();
-            if (sbTime < lsTime) {
-              setTimerState(supabaseState);
-              writeLS(lsKey, supabaseState);
-            }
-          } else {
-            setTimerState(supabaseState);
-            writeLS(lsKey, supabaseState);
-          }
-        }
+        return;
       }
 
+      // Auto-clean stale sessions older than 18 hours (forgotten timers)
+      const STALE_MS = 18 * 60 * 60 * 1000;
+      const startedMs = new Date(data.started_at).getTime();
+      if (Date.now() - startedMs > STALE_MS) {
+        console.warn(`[useTimer] auto-cleaning stale ${data.session_type} session (>18h old)`);
+        await supabase.from("active_sessions").delete().eq("user_id", user.id);
+        clearLS(LS_KEYS.stopwatch);
+        clearLS(LS_KEYS.shift);
+        setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+        setElapsedMs(0);
+        return;
+      }
+
+      // Supabase row is for a different mode → clear our LS if it has stale data
+      if (data.session_type !== sessionType) {
+        const lsState = readLS(lsKey);
+        if (lsState?.startedAt) {
+          console.warn(`[useTimer] clearing stale LS for ${mode}: Supabase has different session_type=${data.session_type}`);
+          clearLS(lsKey);
+          setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+          setElapsedMs(0);
+        }
+        return;
+      }
+
+      // Re-check after async
+      if (isRecentlyStopped(mode) || stoppingRef.current) return;
+
+      console.log(`[useTimer] active session restored from Supabase for ${mode}`);
+      const supabaseState: TimerState = {
+        startedAt: data.started_at,
+        pausedAt: data.paused_at,
+        totalPausedMs: data.total_paused_ms ?? 0,
+      };
+      setTimerState(supabaseState);
+      writeLS(lsKey, supabaseState);
     };
-    syncFromSupabase();
+
+    reconcile();
+
+    // Realtime: another device stops/starts/updates → reflect here immediately
+    const channel = supabase
+      .channel(`active_sessions_${user.id}_${mode}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "active_sessions", filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          if (stoppingRef.current) return;
+          console.log(`[useTimer] realtime ${payload.eventType} for ${mode}`, payload);
+          if (payload.eventType === "DELETE") {
+            clearLS(lsKey);
+            setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+            setElapsedMs(0);
+            return;
+          }
+          const row: any = payload.new;
+          if (!row) return;
+          if (row.session_type !== sessionType) {
+            // A different mode is now active on another device → clear ours
+            const lsState = readLS(lsKey);
+            if (lsState?.startedAt) {
+              clearLS(lsKey);
+              setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+              setElapsedMs(0);
+            }
+            return;
+          }
+          const next: TimerState = {
+            startedAt: row.started_at,
+            pausedAt: row.paused_at,
+            totalPausedMs: row.total_paused_ms ?? 0,
+          };
+          setTimerState(next);
+          writeLS(lsKey, next);
+        }
+      )
+      .subscribe();
+
+    // Reconcile when tab becomes visible again (covers cross-device stops without realtime)
+    const onVis = () => {
+      if (document.visibilityState === "visible") reconcile();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", reconcile);
+
+    return () => {
+      supabase.removeChannel(channel);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", reconcile);
+    };
   }, [user, mode, lsKey]);
+
 
   const start = useCallback(() => {
     const now = new Date().toISOString();

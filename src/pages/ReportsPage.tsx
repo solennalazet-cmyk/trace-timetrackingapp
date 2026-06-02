@@ -473,6 +473,7 @@ const ReportsPage = () => {
 
   return (
     <div className="pb-24 px-4 overflow-x-hidden">
+      <h1 className="text-2xl font-bold tracking-tight mb-3 mt-2">Reports</h1>
       {/* ── 1. Date picker ── */}
       <div className="mb-3">
         <DateRangePicker

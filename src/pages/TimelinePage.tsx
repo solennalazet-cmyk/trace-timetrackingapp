@@ -70,6 +70,7 @@ const InkCheckbox = ({ checked, onToggle }: { checked: boolean; onToggle: () => 
   return (
     <button
       onClick={handleClick}
+      aria-label={checked ? "Mark task incomplete" : "Mark task complete"}
       className="shrink-0 flex items-center justify-center w-5 h-5 rounded-[4px] border border-primary/40 transition-colors duration-200 focus:outline-none"
       style={{
         backgroundColor: checked ? "hsl(var(--primary))" : "transparent",
@@ -335,6 +336,7 @@ const TimelinePage = () => {
         "sticky top-14 lg:top-0 z-40 -mx-4 px-4 pt-2 pb-3 -mt-2 transition-colors",
         scrolled ? "bg-background/85 backdrop-blur-md border-b border-border/30" : "bg-transparent border-b border-transparent"
       )}>
+        <h1 className="text-lg font-bold tracking-tight mb-2">Done</h1>
         <div className="mb-2">
           <DateRangePicker from={from} to={to} onChange={handleRangeChange} />
         </div>

@@ -69,12 +69,12 @@ const PaymentsPage = () => {
     // Include submitted (pending) + approved so worker can track regardless of employer action
     const { data: rRows } = await supabase
       .from("submitted_reports")
-      .select("id, worker_user_id, employer_user_id, client_id, period_start, period_end, total_amount, currency, status, submitted_at, reviewed_at")
+      .select("id, worker_user_id, employer_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, status, submitted_at, reviewed_at, shared_columns, entries_snapshot, rejection_reason, rejection_note")
       .eq(col, user.id)
       .in("status", ["submitted", "approved"])
       .order("period_end", { ascending: false });
 
-    const list = (rRows ?? []) as ReportRow[];
+    const list = (rRows ?? []) as unknown as ReportRow[];
     setReports(list);
 
     if (list.length > 0) {

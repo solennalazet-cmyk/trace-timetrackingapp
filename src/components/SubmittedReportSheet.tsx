@@ -66,17 +66,42 @@ const SubmittedReportSheet = ({ open, onOpenChange, report, onReviewed, readOnly
   const [working, setWorking] = useState(false);
 
   const sym = report ? (CURRENCY_SYMBOLS[report.currency] ?? "€") : "€";
-  const entries = useMemo(() => (Array.isArray(report?.entries_snapshot) ? report!.entries_snapshot : []), [report]);
+  const entries = useMemo(() => {
+    const arr = Array.isArray(report?.entries_snapshot) ? [...report!.entries_snapshot] : [];
+    arr.sort((a: any, b: any) => {
+      const da = (a.entry_date ?? "") + (a.start_time ?? "");
+      const db = (b.entry_date ?? "") + (b.start_time ?? "");
+      return da.localeCompare(db);
+    });
+    return arr;
+  }, [report]);
   const sharedCols = (report?.shared_columns ?? []) as ExportColumnKey[];
   const orderedCols = EXPORT_COLUMN_OPTIONS.filter((o) => sharedCols.includes(o.key)).map((o) => o.key);
 
-  const cellFor = (e: any, key: ExportColumnKey): string => {
+  const pauseInfo = useMemo(() => {
+    return entries.map((e: any, i: number) => {
+      if (i === 0) return null;
+      const prev = entries[i - 1];
+      if (!prev.entry_date || !e.entry_date || prev.entry_date !== e.entry_date) return null;
+      if (!prev.end_time || !e.start_time) return null;
+      const gap = Math.round((new Date(e.start_time).getTime() - new Date(prev.end_time).getTime()) / 60000);
+      if (gap <= 0) return null;
+      return { prevEnd: prev.end_time as string, thisStart: e.start_time as string, gapMinutes: gap };
+    });
+  }, [entries]);
+
+  const cellFor = (e: any, key: ExportColumnKey, pause: { prevEnd: string; thisStart: string; gapMinutes: number } | null): string => {
     switch (key) {
       case "clock_in": return formatClock(e.start_time);
       case "clock_out": return formatClock(e.end_time);
-      case "pause_start":
-      case "pause_resume":
-      case "pause_total": return e.break_minutes ? formatDur(e.break_minutes) : "—";
+      case "pause_start": return pause ? formatClock(pause.prevEnd) : "—";
+      case "pause_resume": return pause ? formatClock(pause.thisStart) : "—";
+      case "pause_total": {
+        const interSession = pause?.gapMinutes ?? 0;
+        const withinSession = e.break_minutes ?? 0;
+        const total = interSession + withinSession;
+        return total > 0 ? formatDur(total) : "—";
+      }
       case "location": return e.end_on_site != null ? (e.end_on_site ? "On-site" : "Off-site") : "—";
       case "project": return e.project_name ?? "—";
       case "task": return e.task_name ?? "—";
@@ -142,9 +167,6 @@ const SubmittedReportSheet = ({ open, onOpenChange, report, onReviewed, readOnly
               <p className="text-xs text-muted-foreground pt-1">
                 {formatDate(report.period_start)} – {formatDate(report.period_end)} · {formatHM(totalMins)}
               </p>
-              <p className="text-[11px] text-muted-foreground">
-                Status: <span className="font-semibold capitalize">{report.status}</span>
-              </p>
               {report.status === "rejected" && (
                 <p className="text-[11px] text-destructive">
                   Reason: {REJECT_REASONS.find((r) => r.value === report.rejection_reason)?.label ?? report.rejection_reason}
@@ -173,7 +195,7 @@ const SubmittedReportSheet = ({ open, onOpenChange, report, onReviewed, readOnly
                       <span>{e.entry_date ? new Date(e.entry_date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "—"}</span>
                       <span className="font-mono">{formatDur(mins)}</span>
                       {orderedCols.map((k) => (
-                        <span key={k} className="truncate">{cellFor(e, k)}</span>
+                        <span key={k} className="truncate">{cellFor(e, k, pauseInfo[idx])}</span>
                       ))}
                       <span className="text-right font-mono">{amt > 0 ? `${sym}${Number(amt).toFixed(2)}` : "—"}</span>
                     </div>

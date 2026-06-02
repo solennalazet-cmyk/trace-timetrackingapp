@@ -4,8 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/contexts/RoleContext";
 
 /**
- * Live count of submitted_reports awaiting employer review for the current user.
- * Returns 0 when the user isn't acting as employer.
+ * Count of submitted_reports awaiting review for the current employer.
+ * Refreshes on mount, on window focus, and when a `pending-reports-changed`
+ * custom event is dispatched.
  */
 export const usePendingReportsCount = () => {
   const { user } = useAuth();
@@ -29,24 +30,14 @@ export const usePendingReportsCount = () => {
     };
 
     refresh();
-
-    const channel = supabase
-      .channel(`pending-reports-${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "submitted_reports",
-          filter: `employer_user_id=eq.${user.id}`,
-        },
-        () => refresh(),
-      )
-      .subscribe();
-
+    const onFocus = () => refresh();
+    const onCustom = () => refresh();
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("pending-reports-changed", onCustom);
     return () => {
       cancelled = true;
-      supabase.removeChannel(channel);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("pending-reports-changed", onCustom);
     };
   }, [user, activeRole]);
 

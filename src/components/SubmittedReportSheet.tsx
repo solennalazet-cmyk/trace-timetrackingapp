@@ -167,9 +167,6 @@ const SubmittedReportSheet = ({ open, onOpenChange, report, onReviewed, readOnly
               <p className="text-xs text-muted-foreground pt-1">
                 {formatDate(report.period_start)} – {formatDate(report.period_end)} · {formatHM(totalMins)}
               </p>
-              <p className="text-[11px] text-muted-foreground">
-                Status: <span className="font-semibold capitalize">{report.status}</span>
-              </p>
               {report.status === "rejected" && (
                 <p className="text-[11px] text-destructive">
                   Reason: {REJECT_REASONS.find((r) => r.value === report.rejection_reason)?.label ?? report.rejection_reason}

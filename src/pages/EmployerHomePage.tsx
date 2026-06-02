@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Inbox, Wallet, Activity, ChevronRight, Check, X, FileText } from "lucide-react";
+import { Inbox, Wallet, Activity, ChevronRight, Check, X, FileText, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import SubmittedReportSheet, { type SubmittedReport } from "@/components/SubmittedReportSheet";
+import RejectReportDialog from "@/components/RejectReportDialog";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
@@ -34,6 +36,8 @@ interface ActivityItem {
   currency?: string;
 }
 
+const PULL_THRESHOLD = 70;
+
 const EmployerHomePage = () => {
   const { user } = useAuth();
   const [pending, setPending] = useState<SubmittedReport[]>([]);
@@ -42,6 +46,13 @@ const EmployerHomePage = () => {
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState<SubmittedReport | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [rejectId, setRejectId] = useState<string | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+
+  // Pull-to-refresh state
+  const [pullY, setPullY] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const touchStartY = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -87,7 +98,6 @@ const EmployerHomePage = () => {
     setPending(((pRes.data ?? []) as any[]).map(mapRow));
     setApproved(((aRes.data ?? []) as any[]).map(mapRow));
 
-    // Build activity feed: submissions + review actions + recorded payments
     const items: ActivityItem[] = [];
     for (const r of reviewedRows) {
       items.push({
@@ -131,6 +141,7 @@ const EmployerHomePage = () => {
     items.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
     setActivity(items.slice(0, 10));
     setLoading(false);
+    window.dispatchEvent(new Event("pending-reports-changed"));
   }, [user]);
 
   useEffect(() => { load(); }, [load]);
@@ -140,8 +151,56 @@ const EmployerHomePage = () => {
     setSheetOpen(true);
   };
 
+  const handleQuickApprove = async (r: SubmittedReport, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setApprovingId(r.id);
+    const { error } = await supabase
+      .from("submitted_reports")
+      .update({ status: "approved" } as any)
+      .eq("id", r.id);
+    setApprovingId(null);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Approved ${r.client_name}'s report.`);
+    load();
+  };
+
+  // Pull-to-refresh handlers
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (window.scrollY > 0) return;
+    touchStartY.current = e.touches[0].clientY;
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (touchStartY.current == null || refreshing) return;
+    const delta = e.touches[0].clientY - touchStartY.current;
+    if (delta > 0 && window.scrollY <= 0) {
+      setPullY(Math.min(delta * 0.5, 100));
+    }
+  };
+  const onTouchEnd = async () => {
+    if (touchStartY.current == null) return;
+    touchStartY.current = null;
+    if (pullY >= PULL_THRESHOLD && !refreshing) {
+      setRefreshing(true);
+      setPullY(50);
+      await load();
+      setRefreshing(false);
+    }
+    setPullY(0);
+  };
+
   return (
-    <div className="pt-6 space-y-4 pb-24">
+    <div
+      className="pt-6 space-y-4 pb-24"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      style={{ transform: pullY ? `translateY(${pullY}px)` : undefined, transition: refreshing || touchStartY.current === null ? "transform 200ms ease" : undefined }}
+    >
+      {(pullY > 0 || refreshing) && (
+        <div className="flex justify-center -mt-4 mb-1" aria-hidden>
+          <Loader2 className={`w-4 h-4 text-muted-foreground ${refreshing || pullY >= PULL_THRESHOLD ? "animate-spin" : ""}`} style={{ opacity: Math.min(pullY / PULL_THRESHOLD, 1) }} />
+        </div>
+      )}
       <header className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight">Home</h1>
         <p className="text-sm text-muted-foreground">Your dashboard.</p>
@@ -166,13 +225,13 @@ const EmployerHomePage = () => {
           <div className="space-y-2">
             {pending.map((r) => {
               const sym = CURRENCY_SYMBOLS[r.currency] ?? "€";
+              const isApproving = approvingId === r.id;
               return (
-                <button
-                  key={r.id}
-                  onClick={() => openReport(r)}
-                  className="w-full text-left"
-                >
-                  <Card className="p-4 hover:bg-muted/40 transition-colors">
+                <Card key={r.id} className="overflow-hidden">
+                  <button
+                    onClick={() => openReport(r)}
+                    className="w-full text-left p-4 hover:bg-muted/40 transition-colors"
+                  >
                     <div className="flex items-center gap-3">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold truncate">{r.client_name}</p>
@@ -183,8 +242,25 @@ const EmployerHomePage = () => {
                       <p className="text-sm font-mono font-semibold">{sym}{Number(r.total_amount).toFixed(2)}</p>
                       <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
                     </div>
-                  </Card>
-                </button>
+                  </button>
+                  <div className="grid grid-cols-2 border-t border-border">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setRejectId(r.id); }}
+                      disabled={isApproving}
+                      className="flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted/40 transition-colors border-r border-border disabled:opacity-50"
+                    >
+                      <X className="w-3.5 h-3.5" /> Reject
+                    </button>
+                    <button
+                      onClick={(e) => handleQuickApprove(r, e)}
+                      disabled={isApproving}
+                      className="flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                    >
+                      {isApproving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                      {isApproving ? "Approving…" : "Approve"}
+                    </button>
+                  </div>
+                </Card>
               );
             })}
           </div>
@@ -271,12 +347,18 @@ const EmployerHomePage = () => {
         )}
       </section>
 
-
       <SubmittedReportSheet
         open={sheetOpen}
         onOpenChange={(v) => { setSheetOpen(v); if (!v) load(); }}
         report={active}
         onReviewed={load}
+      />
+
+      <RejectReportDialog
+        open={rejectId !== null}
+        onOpenChange={(v) => { if (!v) setRejectId(null); }}
+        reportId={rejectId}
+        onRejected={load}
       />
     </div>
   );

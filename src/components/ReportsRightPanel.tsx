@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toLocalDateKey, getClientColor } from "@/lib/utils";
 import { getAnonymousEntries } from "@/lib/anonymous-store";
+import { Progress } from "@/components/ui/progress";
 
 interface Entry {
   duration_minutes: number;
@@ -29,6 +30,8 @@ const ReportsRightPanel = () => {
   const { user } = useAuth();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [weekStart, setWeekStart] = useState<0 | 1 | 2 | 3 | 4 | 5 | 6>(1);
+  const [dailyHourTarget, setDailyHourTarget] = useState(0);
+  const [revenueTarget, setRevenueTarget] = useState(0);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -36,16 +39,25 @@ const ReportsRightPanel = () => {
     let isFirst = true;
     const load = async () => {
       let ws: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1;
+      let dht = 0;
+      let rt = 0;
       if (user) {
-        const { data } = await supabase.from("user_settings").select("week_start_day").eq("user_id", user.id).single();
+        const { data } = await supabase.from("user_settings").select("week_start_day, daily_hour_target, revenue_target").eq("user_id", user.id).single();
         ws = ((data as any)?.week_start_day ?? 1) as any;
+        dht = Number((data as any)?.daily_hour_target ?? 0);
+        rt = Number((data as any)?.revenue_target ?? 0);
       } else {
         try {
           const raw = localStorage.getItem("trace_user_settings");
-          if (raw) ws = (JSON.parse(raw).week_start_day ?? 1) as any;
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            ws = (parsed.week_start_day ?? 1) as any;
+            dht = Number(parsed.daily_hour_target ?? 0);
+            rt = Number(parsed.revenue_target ?? 0);
+          }
         } catch {}
       }
-      if (!cancelled) setWeekStart(ws);
+      if (!cancelled) { setWeekStart(ws); setDailyHourTarget(dht); setRevenueTarget(rt); }
 
       const from = startOfWeek(new Date(), { weekStartsOn: ws });
       const to = new Date(from); to.setDate(to.getDate() + 6);
@@ -163,6 +175,44 @@ const ReportsRightPanel = () => {
           </ResponsiveContainer>
         </div>
       </div>
+
+
+      {/* Goals — weekly progress */}
+      {(dailyHourTarget > 0 || revenueTarget > 0) && (() => {
+        const proratedHourTarget = dailyHourTarget > 0 ? dailyHourTarget * 7 : 0;
+        const proratedRevenueTarget = revenueTarget > 0 ? revenueTarget * (7 / 30) : 0;
+        const hourProgress = proratedHourTarget > 0 ? Math.min(100, (totalMins / 60 / proratedHourTarget) * 100) : 0;
+        const revenueProgress = proratedRevenueTarget > 0 ? Math.min(100, (billableValue / proratedRevenueTarget) * 100) : 0;
+        return (
+          <div className="rounded-xl border border-border/60 bg-card/60 p-3 mb-4 space-y-2.5">
+            <p className="text-xs font-semibold text-foreground">Goals</p>
+            {proratedHourTarget > 0 && (
+              <div>
+                <div className="flex items-baseline justify-between mb-1 text-[11px]">
+                  <span className="text-foreground">Hours</span>
+                  <span className="font-mono text-muted-foreground">
+                    {(totalMins / 60).toFixed(1)} / {proratedHourTarget.toFixed(1)}h
+                    <span className="ml-1 text-foreground font-semibold">{Math.round(hourProgress)}%</span>
+                  </span>
+                </div>
+                <Progress value={hourProgress} className="h-1.5 rounded-full" />
+              </div>
+            )}
+            {proratedRevenueTarget > 0 && (
+              <div>
+                <div className="flex items-baseline justify-between mb-1 text-[11px]">
+                  <span className="text-foreground">Revenue</span>
+                  <span className="font-mono text-muted-foreground">
+                    {sym}{billableValue.toFixed(0)} / {sym}{proratedRevenueTarget.toFixed(0)}
+                    <span className="ml-1 text-foreground font-semibold">{Math.round(revenueProgress)}%</span>
+                  </span>
+                </div>
+                <Progress value={revenueProgress} className="h-1.5 rounded-full" />
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Top clients */}
       <div className="rounded-xl border border-border/60 bg-card/60 p-3">

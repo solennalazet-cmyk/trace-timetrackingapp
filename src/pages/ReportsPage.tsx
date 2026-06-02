@@ -591,11 +591,7 @@ const ReportsPage = () => {
                           paddingAngle={1}
                           label={(props) => renderInitialsLabel(props, timeDonutData, total)}
                           labelLine={false}
-                          activeIndex={activeTimeIdx}
-                          activeShape={renderActiveShape}
-                          onMouseEnter={(_, idx) => setActiveTimeIdx(idx)}
-                          onMouseLeave={() => setActiveTimeIdx(undefined)}
-                          onClick={(_, idx) => setActiveTimeIdx(prev => prev === idx ? undefined : idx)}
+                          isAnimationActive={false}
                         >
                           {timeDonutData.map((d, i) => <Cell key={i} fill={d.fill} stroke="hsl(var(--background))" strokeWidth={2} />)}
                         </Pie>
@@ -621,11 +617,7 @@ const ReportsPage = () => {
                             paddingAngle={1}
                             label={(props) => renderInitialsLabel(props, turnoverDonutData, totalTurnover)}
                             labelLine={false}
-                            activeIndex={activeTurnIdx}
-                            activeShape={renderActiveShape}
-                            onMouseEnter={(_, idx) => setActiveTurnIdx(idx)}
-                            onMouseLeave={() => setActiveTurnIdx(undefined)}
-                            onClick={(_, idx) => setActiveTurnIdx(prev => prev === idx ? undefined : idx)}
+                            isAnimationActive={false}
                           >
                             {turnoverDonutData.map((d, i) => <Cell key={i} fill={d.fill} stroke="hsl(var(--background))" strokeWidth={2} />)}
                           </Pie>
@@ -788,24 +780,6 @@ const ReportsPage = () => {
                       >
                         {data.map((d, i) => <Cell key={i} fill={d.fill} />)}
                       </Pie>
-                      <Tooltip
-                        cursor={false}
-                        allowEscapeViewBox={{ x: true, y: true }}
-                        wrapperStyle={{ zIndex: 9999, outline: "none", pointerEvents: "none" }}
-                        contentStyle={{
-                          borderRadius: 8,
-                          fontSize: 11,
-                          border: "1px solid hsl(var(--border))",
-                          background: "hsl(var(--card))",
-                          color: "hsl(var(--foreground))",
-                          boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
-                        }}
-                        itemStyle={{ color: "hsl(var(--foreground))" }}
-                        formatter={(value: number, name: string) => {
-                          if (isTurnover) return [`€${Number(value).toFixed(2)}`, name];
-                          return [formatHHMM(Number(value)), name];
-                        }}
-                      />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -901,7 +875,7 @@ const ReportsPage = () => {
             const showBlurred = isFree && !hasGoals;
             if (!hasGoals && !showBlurred) return null;
             return (
-              <div className="mb-6 space-y-3 relative">
+              <div className="mb-6 space-y-3 relative lg:hidden">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Goals</h3>
                   {isPro && (
@@ -1033,9 +1007,26 @@ const ReportsPage = () => {
             </div>
           )}
 
-          {/* Export */}
+          {/* Export — opens the same Send-to-client flow as the per-client "Send" button */}
           <div className="mb-6">
-            <Button variant="outline" className="w-full gap-2 rounded-xl h-11" onClick={() => setExportOpen(true)}>
+            <Button
+              variant="outline"
+              className="w-full gap-2 rounded-xl h-11"
+              onClick={() => {
+                let targetClientId = clientFilter;
+                if (!targetClientId) {
+                  const uniqueClients = Array.from(new Set(displayEntries.map((e) => e.client_id).filter(Boolean))) as string[];
+                  if (uniqueClients.length === 1) {
+                    targetClientId = uniqueClients[0];
+                  } else {
+                    toast.info("Filter by a single client to send a report.");
+                    return;
+                  }
+                }
+                setPrepareBillingClientId(targetClientId);
+                setPrepareBillingOpen(true);
+              }}
+            >
               <Download className="w-4 h-4" /> Export
             </Button>
           </div>

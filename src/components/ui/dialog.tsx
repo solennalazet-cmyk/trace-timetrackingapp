@@ -12,7 +12,7 @@ const DialogPortal = DialogPrimitive.Portal;
 
 const DialogClose = DialogPrimitive.Close;
 
-const useVisualViewportStyle = (enabled: boolean) => {
+const useVisualViewportStyle = (enabled: boolean, mode: "centered" | "sheet" = "centered") => {
   const [viewportStyle, setViewportStyle] = React.useState<React.CSSProperties>({});
 
   React.useEffect(() => {
@@ -24,10 +24,22 @@ const useVisualViewportStyle = (enabled: boolean) => {
     const visualViewport = window.visualViewport;
 
     const updateViewportStyle = () => {
-      setViewportStyle({
-        maxHeight: `calc(${visualViewport.height}px - 1rem)`,
-        top: `${visualViewport.offsetTop + visualViewport.height / 2}px`,
-      });
+      if (mode === "centered") {
+        setViewportStyle({
+          maxHeight: `calc(${visualViewport.height}px - 1rem)`,
+          top: `${visualViewport.offsetTop + visualViewport.height / 2}px`,
+        });
+      } else {
+        // sheet: bottom-anchored. Push above the keyboard and constrain height.
+        const keyboardOffset = Math.max(
+          0,
+          window.innerHeight - visualViewport.offsetTop - visualViewport.height
+        );
+        setViewportStyle({
+          maxHeight: `${visualViewport.height - 8}px`,
+          bottom: `${keyboardOffset}px`,
+        });
+      }
     };
 
     updateViewportStyle();
@@ -41,10 +53,11 @@ const useVisualViewportStyle = (enabled: boolean) => {
       visualViewport.removeEventListener("scroll", updateViewportStyle);
       window.removeEventListener("orientationchange", updateViewportStyle);
     };
-  }, [enabled]);
+  }, [enabled, mode]);
 
   return viewportStyle;
 };
+
 
 const DialogOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,

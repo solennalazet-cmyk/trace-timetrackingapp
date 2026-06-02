@@ -322,8 +322,8 @@ const TimelinePage = () => {
 
   return (
     <div className="pb-24">
-      {/* Sticky top controls – full width, sits below the app header (56px) */}
-      <div className="sticky top-0 z-40 -mx-4 px-4 pt-2 pb-3 bg-background/80 backdrop-blur-md border-b border-border/30">
+      {/* Sticky top controls – sits right below the fixed app header (h-14) */}
+      <div className="sticky top-14 lg:top-0 z-40 -mx-4 px-4 pt-2 pb-3 bg-background/85 backdrop-blur-md border-b border-border/30 -mt-2">
         <div className="mb-2">
           <DateRangePicker from={from} to={to} onChange={handleRangeChange} />
         </div>

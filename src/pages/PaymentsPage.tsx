@@ -6,7 +6,7 @@ import { Wallet, Check, ChevronDown, Trash2, Pencil, Calendar as CalendarIcon } 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/contexts/RoleContext";
-import SubmittedReportSheet from "@/components/SubmittedReportSheet";
+import SubmittedReportSheet, { type SubmittedReport } from "@/components/SubmittedReportSheet";
 import { toast } from "sonner";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };

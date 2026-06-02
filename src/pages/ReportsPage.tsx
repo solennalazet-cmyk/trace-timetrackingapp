@@ -1007,9 +1007,26 @@ const ReportsPage = () => {
             </div>
           )}
 
-          {/* Export */}
+          {/* Export — opens the same Send-to-client flow as the per-client "Send" button */}
           <div className="mb-6">
-            <Button variant="outline" className="w-full gap-2 rounded-xl h-11" onClick={() => setExportOpen(true)}>
+            <Button
+              variant="outline"
+              className="w-full gap-2 rounded-xl h-11"
+              onClick={() => {
+                let targetClientId = clientFilter;
+                if (!targetClientId) {
+                  const uniqueClients = Array.from(new Set(displayEntries.map((e) => e.client_id).filter(Boolean))) as string[];
+                  if (uniqueClients.length === 1) {
+                    targetClientId = uniqueClients[0];
+                  } else {
+                    toast.info("Filter by a single client to send a report.");
+                    return;
+                  }
+                }
+                setPrepareBillingClientId(targetClientId);
+                setPrepareBillingOpen(true);
+              }}
+            >
               <Download className="w-4 h-4" /> Export
             </Button>
           </div>

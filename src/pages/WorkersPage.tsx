@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Users, Mail, X, Clock } from "lucide-react";
+import { Plus, Users, Mail, X, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import WorkerInviteModal from "@/components/WorkerInviteModal";
+import WorkerDetailsSection from "@/components/WorkerDetailsSection";
 
 interface WorkerInvite {
   id: string;
@@ -28,6 +29,7 @@ const WorkersPage = () => {
   const [workers, setWorkers] = useState<ConnectedWorker[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -118,17 +120,31 @@ const WorkersPage = () => {
         </Card>
       ) : (
         <div className="space-y-3">
-          {workers.map((w) => (
-            <Card key={w.id} className="p-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-foreground/10 text-foreground flex items-center justify-center font-semibold">
-                {w.name.slice(0, 1).toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold truncate">{w.name}</p>
-                {w.email && <p className="text-xs text-muted-foreground truncate">{w.email}</p>}
-              </div>
-            </Card>
-          ))}
+          {workers.map((w) => {
+            const expanded = expandedId === w.id;
+            return (
+              <Card key={w.id} className="overflow-hidden">
+                <button
+                  className="w-full p-4 flex items-center gap-3 text-left"
+                  onClick={() => setExpandedId(expanded ? null : w.id)}
+                >
+                  <div className="h-10 w-10 rounded-full bg-foreground/10 text-foreground flex items-center justify-center font-semibold shrink-0">
+                    {w.name.slice(0, 1).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold truncate">{w.name}</p>
+                    {w.email && <p className="text-xs text-muted-foreground truncate">{w.email}</p>}
+                  </div>
+                  {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                </button>
+                {expanded && user && (
+                  <div className="px-4 pb-4 border-t border-border pt-3">
+                    <WorkerDetailsSection workerUserId={w.user_id} employerUserId={user.id} />
+                  </div>
+                )}
+              </Card>
+            );
+          })}
 
           {invites.map((i) => (
             <Card key={i.id} className="p-4 flex items-center gap-3 bg-secondary">

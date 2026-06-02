@@ -51,7 +51,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    const origin = req.headers.get("origin") || "https://trace-timetrackingapp.lovable.app";
+    const ALLOWED_ORIGINS = [
+      "https://trace-timetrackingapp.lovable.app",
+      "https://trace.lla-studio.com",
+    ];
+    const rawOrigin = req.headers.get("origin") ?? "";
+    const origin = ALLOWED_ORIGINS.includes(rawOrigin) ? rawOrigin : ALLOWED_ORIGINS[0];
 
     const session = await stripe.billingPortal.sessions.create({
       customer: profile.stripe_customer_id,

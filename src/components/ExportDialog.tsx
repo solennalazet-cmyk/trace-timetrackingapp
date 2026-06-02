@@ -462,6 +462,75 @@ const ExportDialog = ({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Post-export: Track in Payments prompt */}
+      <AlertDialog open={trackPromptOpen} onOpenChange={setTrackPromptOpen}>
+        <AlertDialogContent className="max-w-[420px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Wallet className="w-5 h-5 text-primary" />
+              Track this report in Payments?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {trackGroups.length > 0
+                ? "You can record payments against this report from the Payments tab."
+                : "All sessions in this export are unassigned."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {trackGroups.length > 0 && (
+            <div className="space-y-2 my-2">
+              {trackGroups.map((g) => {
+                const sym = CURRENCY_SYMBOLS[g.currency] ?? "€";
+                return (
+                  <label
+                    key={g.clientId}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
+                  >
+                    <Checkbox
+                      checked={g.selected}
+                      onCheckedChange={(v) =>
+                        setTrackGroups((prev) =>
+                          prev.map((x) => (x.clientId === g.clientId ? { ...x, selected: !!v } : x))
+                        )
+                      }
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{g.clientName}</p>
+                      <p className="text-[11px] text-muted-foreground font-mono">
+                        {formatDuration(g.totalMinutes)} · {sym}{g.totalValue.toFixed(2)}
+                      </p>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+
+          {unassignedCount > 0 && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 text-destructive">
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <p className="text-xs">
+                <span className="font-semibold">{unassignedCount}</span> billable {unassignedCount === 1 ? "session is" : "sessions are"} not assigned to a client and can't be tracked. Assign them in the Timeline tab, then export again.
+              </p>
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleSkipTrack} disabled={trackSubmitting}>
+              {trackGroups.length === 0 ? "Close" : "No thanks"}
+            </AlertDialogCancel>
+            {trackGroups.length > 0 && (
+              <AlertDialogAction
+                onClick={(e) => { e.preventDefault(); handleConfirmTrack(); }}
+                disabled={trackSubmitting || !trackGroups.some((g) => g.selected)}
+              >
+                {trackSubmitting ? "Tracking…" : "Yes, track"}
+              </AlertDialogAction>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };

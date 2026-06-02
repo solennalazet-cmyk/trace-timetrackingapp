@@ -1,0 +1,1 @@
+DELETE FROM public.active_sessions WHERE started_at < now() - interval '4 hours';

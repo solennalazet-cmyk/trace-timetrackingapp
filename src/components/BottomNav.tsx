@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Timer, BarChart3, CheckSquare, Briefcase, Home, Users, Wallet } from "lucide-react";
 import { getStoredColorTheme } from "@/hooks/useColorTheme";
 import { useRole } from "@/contexts/RoleContext";
+import { usePendingReportsCount } from "@/hooks/usePendingReportsCount";
 
 const workerTabs = [
   { path: "/", label: "Start", icon: Timer },
@@ -51,6 +52,7 @@ const BottomNav = () => {
   const colors = getThemeStyles();
   const { activeRole } = useRole();
   const tabs = activeRole === "employer" ? employerTabs : workerTabs;
+  const pendingCount = usePendingReportsCount();
 
   return (
     <nav
@@ -68,6 +70,7 @@ const BottomNav = () => {
       <div className="flex items-center justify-around h-16">
         {tabs.map(({ path, label, icon: Icon }) => {
           const isActive = location.pathname === path;
+          const showBadge = path === "/employer" && pendingCount > 0;
           return (
             <Link
               key={path}
@@ -78,7 +81,17 @@ const BottomNav = () => {
               }}
               aria-label={label}
             >
-              <Icon className="w-5 h-5" />
+              <span className="relative">
+                <Icon className="w-5 h-5" />
+                {showBadge && (
+                  <span
+                    className="absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center"
+                    style={{ backgroundColor: colors.active, color: "hsl(0 0% 10%)" }}
+                  >
+                    {pendingCount > 9 ? "9+" : pendingCount}
+                  </span>
+                )}
+              </span>
               <span className="text-[11px] font-medium">{label}</span>
             </Link>
           );

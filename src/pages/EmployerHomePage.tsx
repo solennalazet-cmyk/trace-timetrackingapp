@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Inbox, Wallet, Activity, ChevronRight } from "lucide-react";
+import { Inbox, Wallet, Activity, ChevronRight, Check, X, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import SubmittedReportSheet, { type SubmittedReport } from "@/components/SubmittedReportSheet";
@@ -12,6 +12,17 @@ const formatPeriod = (start: string, end: string) => {
   const e = new Date(end + "T00:00:00");
   const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" };
   return `${s.toLocaleDateString("en-GB", opts)} – ${e.toLocaleDateString("en-GB", opts)}`;
+};
+
+const formatRelative = (iso: string) => {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.round(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.round(hrs / 24);
+  return `${days}d ago`;
 };
 
 const EmployerHomePage = () => {

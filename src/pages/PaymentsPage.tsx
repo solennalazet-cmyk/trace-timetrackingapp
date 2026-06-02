@@ -264,7 +264,21 @@ const PaymentsPage = () => {
             </p>
           </Card>
         ) : (
-          <div className="space-y-2">{outstanding.map((r) => renderReportCard(r, false))}</div>
+          <div className="space-y-4">
+            {Array.from(
+              outstanding.reduce((m, r) => {
+                const name = partyNames.get(r.id) ?? (isEmployer ? "Worker" : "Client");
+                if (!m.has(name)) m.set(name, []);
+                m.get(name)!.push(r);
+                return m;
+              }, new Map<string, ReportRow[]>())
+            ).map(([name, rows]) => (
+              <div key={name} className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">{name}</p>
+                {rows.map((r) => renderReportCard(r, false))}
+              </div>
+            ))}
+          </div>
         )}
       </section>
 

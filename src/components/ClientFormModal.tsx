@@ -288,16 +288,22 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
 
 
           {/* Export settings */}
-          <div className="rounded-xl border border-border overflow-hidden">
+          <div className="rounded-xl border border-primary/30 bg-primary/5 overflow-hidden transition-colors hover:bg-primary/10">
             <button
               type="button"
               onClick={() => setExportOpen((v) => !v)}
-              className="w-full flex items-center justify-between px-4 py-3 text-left"
+              className="w-full flex items-center justify-between px-4 py-3.5 text-left"
               aria-expanded={exportOpen}
             >
-              <span className="text-sm font-semibold text-foreground">Export settings</span>
+              <span className="text-sm font-semibold text-foreground flex items-center gap-2.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                  <FileDown className="h-4 w-4" />
+                </span>
+                Export settings
+              </span>
               <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", exportOpen && "rotate-180")} />
             </button>
+
             {exportOpen && (
               <div className="px-4 pb-4 pt-1 space-y-3">
                 <p className="text-xs text-muted-foreground">

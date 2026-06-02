@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronDown, MapPin, Loader2 } from "lucide-react";
+import { ChevronDown, MapPin, Loader2, UserPlus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +36,10 @@ interface ClientFormData {
   site_lng?: number | null;
   site_radius_m?: number | null;
   geolocation_override?: ClientGeoOverride;
+  /** If set, send a Trace connection invite to this email on save. */
+  invited_trace_email?: string | null;
+  /** Read-only: current connection status of the client row, if any. */
+  connection_status?: string | null;
 }
 
 interface ClientFormModalProps {
@@ -68,10 +72,12 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
     export_columns: resolveExportColumns(null),
     site_address: "", site_lat: null, site_lng: null, site_radius_m: 100,
     geolocation_override: "inherit",
+    invited_trace_email: "",
   });
   const [saving, setSaving] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [siteOpen, setSiteOpen] = useState(false);
+  const [connectOpen, setConnectOpen] = useState(false);
   const [capturingLoc, setCapturingLoc] = useState(false);
 
   useEffect(() => {
@@ -81,9 +87,11 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
         export_columns: resolveExportColumns(null),
         site_address: "", site_lat: null, site_lng: null, site_radius_m: 100,
         geolocation_override: "inherit",
+        invited_trace_email: "",
       });
       setExportOpen(false);
       setSiteOpen(false);
+      setConnectOpen(false);
     }
   }, [open, initial]);
 

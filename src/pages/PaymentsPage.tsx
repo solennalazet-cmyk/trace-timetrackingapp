@@ -284,19 +284,12 @@ const PaymentsPage = () => {
                               step="0.01"
                               min="0"
                               value={draftAmount}
-                              readOnly={!editingAmount}
+                              onFocus={() => setEditingAmount(true)}
                               onChange={(e) => setDraftAmount(e.target.value)}
                               onBlur={() => setEditingAmount(false)}
                               className={`pr-9 font-mono ${editingAmount ? "" : "text-muted-foreground"}`}
                             />
-                            <button
-                              type="button"
-                              onClick={() => setEditingAmount(true)}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                              aria-label="Edit amount"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
+                            <Pencil className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
                           </div>
                           <div className="flex-1 relative">
                             <CalendarIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />

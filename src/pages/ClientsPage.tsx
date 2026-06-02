@@ -557,19 +557,6 @@ const ClientsPage = () => {
       {/* Paywall */}
       <PaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} body={paywallMessage} />
 
-      {/* Payments FAB — centered above bottom nav, always reachable */}
-      <Link
-        to="/payments"
-        aria-label="Payments"
-        className="fixed left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-5 h-12 rounded-full bg-primary text-primary-foreground font-semibold shadow-lg hover:bg-primary/90 transition-colors"
-        style={{
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 80px)",
-          boxShadow: "0 6px 20px rgba(0,0,0,0.18)",
-        }}
-      >
-        <Wallet className="w-5 h-5" />
-        <span className="text-sm">Payments</span>
-      </Link>
     </div>
   );
 };

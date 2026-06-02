@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronDown, MapPin, Loader2, UserPlus, FileDown } from "lucide-react";
+import { ChevronDown, MapPin, Loader2, UserPlus, FileDown, Send } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -198,9 +198,21 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
                   onChange={(e) => setForm({ ...form, invited_trace_email: e.target.value })}
                   disabled={form.connection_status === "accepted"}
                 />
+                {form.connection_status !== "accepted" && (
+                  <Button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={saving || !form.name.trim() || !form.invited_trace_email?.trim()}
+                    className="w-full h-10 rounded-xl gap-2"
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    {form.connection_status === "pending" ? "Resend connection request" : "Send connection request"}
+                  </Button>
+                )}
                 {form.connection_status === "pending" && (
                   <p className="text-[11px] text-muted-foreground">Invite is waiting on the client to respond.</p>
                 )}
+
               </div>
             )}
           </div>

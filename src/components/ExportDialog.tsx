@@ -1,14 +1,19 @@
 import { useState, useMemo } from "react";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Download, FileText, FileSpreadsheet } from "lucide-react";
+import { Download, FileText, FileSpreadsheet, Wallet, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -50,6 +55,21 @@ const ExportDialog = ({
   const [selectedClient, setSelectedClient] = useState(clientFilter || "all");
   const [showBusiness, setShowBusiness] = useState(profile?.show_business_on_export !== false);
 
+  // Post-export tracking prompt state
+  interface TrackGroup {
+    clientId: string;
+    clientName: string;
+    entries: TimeEntry[];
+    totalMinutes: number;
+    totalValue: number;
+    currency: string;
+    selected: boolean;
+  }
+  const [trackPromptOpen, setTrackPromptOpen] = useState(false);
+  const [trackGroups, setTrackGroups] = useState<TrackGroup[]>([]);
+  const [unassignedCount, setUnassignedCount] = useState(0);
+  const [trackSubmitting, setTrackSubmitting] = useState(false);
+
   // Sync dates when dialog opens
   const handleOpenChange = (v: boolean) => {
     if (v) {
@@ -83,6 +103,41 @@ const ExportDialog = ({
     return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   };
 
+  const evaluateTrackingPrompt = () => {
+    const billable = filteredEntries.filter((e) => e.billable);
+    if (billable.length === 0) {
+      onOpenChange(false);
+      return;
+    }
+    let unassigned = 0;
+    const byClient = new Map<string, TimeEntry[]>();
+    for (const e of billable) {
+      if (!e.client_id) { unassigned++; continue; }
+      if (!byClient.has(e.client_id)) byClient.set(e.client_id, []);
+      byClient.get(e.client_id)!.push(e);
+    }
+    const groups: TrackGroup[] = Array.from(byClient.entries()).map(([clientId, es]) => {
+      const { totalMinutes, totalValue } = aggregateWithRounding(es, rounding);
+      const currency = es.find((x) => x.rate_currency)?.rate_currency ?? "EUR";
+      return {
+        clientId,
+        clientName: clients[clientId] ?? "Client",
+        entries: es,
+        totalMinutes,
+        totalValue,
+        currency,
+        selected: true,
+      };
+    });
+    if (groups.length === 0 && unassigned === 0) {
+      onOpenChange(false);
+      return;
+    }
+    setTrackGroups(groups);
+    setUnassignedCount(unassigned);
+    setTrackPromptOpen(true);
+  };
+
   const handleExport = () => {
     if (filteredEntries.length === 0) {
       toast.error("No entries to export for this range.");
@@ -90,6 +145,61 @@ const ExportDialog = ({
     }
     if (format === "csv") exportCSV();
     else exportPDF();
+    // Don't auto-close — show tracking prompt next
+    evaluateTrackingPrompt();
+  };
+
+  const handleConfirmTrack = async () => {
+    if (!user) return;
+    const chosen = trackGroups.filter((g) => g.selected);
+    if (chosen.length === 0) {
+      setTrackPromptOpen(false);
+      onOpenChange(false);
+      return;
+    }
+    setTrackSubmitting(true);
+    try {
+      const clientIdsToCheck = chosen.map((g) => g.clientId);
+      const { data: clientRows } = await supabase
+        .from("clients")
+        .select("id, connected_user_id, connection_status, currency")
+        .in("id", clientIdsToCheck);
+      const cMap = new Map((clientRows ?? []).map((c: any) => [c.id, c]));
+
+      const inserts = chosen.map((g) => {
+        const c = cMap.get(g.clientId);
+        const connected = c?.connection_status === "accepted" ? c?.connected_user_id ?? null : null;
+        return {
+          worker_user_id: user.id,
+          employer_user_id: connected,
+          client_id: g.clientId,
+          period_start: rangeStart,
+          period_end: rangeEnd,
+          total_hours: Number((g.totalMinutes / 60).toFixed(2)),
+          total_amount: Number(g.totalValue.toFixed(2)),
+          currency: g.currency ?? c?.currency ?? "EUR",
+          shared_columns: [] as any,
+          entries_snapshot: g.entries as any,
+          // Connected → 'submitted' (employer can review). Solo → 'approved' (no employer to review).
+          status: connected ? "submitted" : "approved",
+          reviewed_at: connected ? null : new Date().toISOString(),
+        } as any;
+      });
+
+      const { error } = await supabase.from("submitted_reports").insert(inserts);
+      if (error) throw error;
+      toast.success(chosen.length === 1 ? "Tracked in Payments." : `Tracked ${chosen.length} reports in Payments.`);
+      setTrackPromptOpen(false);
+      onOpenChange(false);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Couldn't track in Payments.");
+    } finally {
+      setTrackSubmitting(false);
+    }
+  };
+
+  const handleSkipTrack = () => {
+    setTrackPromptOpen(false);
     onOpenChange(false);
   };
 
@@ -352,6 +462,75 @@ const ExportDialog = ({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Post-export: Track in Payments prompt */}
+      <AlertDialog open={trackPromptOpen} onOpenChange={setTrackPromptOpen}>
+        <AlertDialogContent className="max-w-[420px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Wallet className="w-5 h-5 text-primary" />
+              Track this report in Payments?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {trackGroups.length > 0
+                ? "You can record payments against this report from the Payments tab."
+                : "All sessions in this export are unassigned."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {trackGroups.length > 0 && (
+            <div className="space-y-2 my-2">
+              {trackGroups.map((g) => {
+                const sym = CURRENCY_SYMBOLS[g.currency] ?? "€";
+                return (
+                  <label
+                    key={g.clientId}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
+                  >
+                    <Checkbox
+                      checked={g.selected}
+                      onCheckedChange={(v) =>
+                        setTrackGroups((prev) =>
+                          prev.map((x) => (x.clientId === g.clientId ? { ...x, selected: !!v } : x))
+                        )
+                      }
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{g.clientName}</p>
+                      <p className="text-[11px] text-muted-foreground font-mono">
+                        {formatDuration(g.totalMinutes)} · {sym}{g.totalValue.toFixed(2)}
+                      </p>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+
+          {unassignedCount > 0 && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 text-destructive">
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <p className="text-xs">
+                <span className="font-semibold">{unassignedCount}</span> billable {unassignedCount === 1 ? "session is" : "sessions are"} not assigned to a client and can't be tracked. Assign them in the Timeline tab, then export again.
+              </p>
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleSkipTrack} disabled={trackSubmitting}>
+              {trackGroups.length === 0 ? "Close" : "No thanks"}
+            </AlertDialogCancel>
+            {trackGroups.length > 0 && (
+              <AlertDialogAction
+                onClick={(e) => { e.preventDefault(); handleConfirmTrack(); }}
+                disabled={trackSubmitting || !trackGroups.some((g) => g.selected)}
+              >
+                {trackSubmitting ? "Tracking…" : "Yes, track"}
+              </AlertDialogAction>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };

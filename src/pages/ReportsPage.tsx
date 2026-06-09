@@ -1003,19 +1003,40 @@ const ReportsPage = () => {
                     />
                     <Tooltip
                       contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
-                      formatter={(value: number, name: string) => {
-                        const label = name === "unassigned" ? "Unassigned" : (clients[name] ?? name);
-                        return [`${value.toFixed(1)}h`, label];
+                      content={({ active, payload }: any) => {
+                        if (!active || !payload?.length) return null;
+                        const row = payload[0].payload;
+                        const segs = (row?._segs ?? []) as { hours: number; color: string; kind: "work" | "break"; label: string }[];
+                        // Aggregate by label so the tooltip stays readable
+                        const agg = new Map<string, { hours: number; color: string; kind: "work" | "break" }>();
+                        segs.forEach((s) => {
+                          const cur = agg.get(s.label);
+                          if (cur) cur.hours += s.hours;
+                          else agg.set(s.label, { hours: s.hours, color: s.color, kind: s.kind });
+                        });
+                        return (
+                          <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow-sm">
+                            <div className="font-medium text-foreground mb-1">{row.label} · {row._total.toFixed(1)}h</div>
+                            {[...agg.entries()].map(([label, v]) => (
+                              <div key={label} className="flex items-center gap-2">
+                                <span className="inline-block w-2 h-2 rounded-sm" style={{ background: v.color }} />
+                                <span className="text-muted-foreground">{label}</span>
+                                <span className="ml-auto font-mono text-foreground">{v.hours.toFixed(1)}h</span>
+                              </div>
+                            ))}
+                          </div>
+                        );
                       }}
                     />
-                    {(clientFilter ? [clientFilter] : clientIds).map((cid, i) => (
-                      <Bar key={cid} dataKey={cid} stackId="a" fill={clientColorMap[cid] ?? getClientColor(cid)}
-                        radius={i === (clientFilter ? 0 : clientIds.length - 1) && !hasUnassigned ? [3, 3, 0, 0] : undefined}
-                        name={cid} />
+                    {Array.from({ length: maxSegments }).map((_, i) => (
+                      <Bar key={i} dataKey={`seg${i}`} stackId="a" isAnimationActive={false}
+                        radius={i === maxSegments - 1 ? [3, 3, 0, 0] : 0}>
+                        {stackedChartData.map((row: any, ri) => {
+                          const seg = row._segs?.[i];
+                          return <Cell key={ri} fill={seg?.color ?? "transparent"} />;
+                        })}
+                      </Bar>
                     ))}
-                    {!clientFilter && hasUnassigned && (
-                      <Bar dataKey="unassigned" stackId="a" fill="hsl(240 5% 75%)" radius={[3, 3, 0, 0]} name="unassigned" />
-                    )}
                   </BarChart>
                 </ResponsiveContainer>
               </div>

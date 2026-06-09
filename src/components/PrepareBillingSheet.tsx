@@ -208,8 +208,8 @@ const PrepareBillingSheet = ({
     const optionalHeaders: Record<ExportColumnKey, string> = {
       clock_in: "Clock in",
       clock_out: "Clock out",
-      pause_start: "Pause start",
-      pause_resume: "Pause resume",
+      pause_start: "Pause on",
+      pause_resume: "Pause off",
       pause_total: "Pause total",
       location: "Location",
       project: "Project",
@@ -263,11 +263,13 @@ const PrepareBillingSheet = ({
     };
 
     const cellFor = (e: TimeEntry, key: ExportColumnKey, pause: PauseInfo | null): string => {
+      const realIntervals = Array.isArray((e as any).pause_intervals) ? (e as any).pause_intervals as { paused_at: string; resumed_at: string | null }[] : [];
+      const firstReal = realIntervals.length > 0 ? realIntervals[0] : null;
       switch (key) {
         case "clock_in": return formatClock(e.start_time);
         case "clock_out": return formatClock(e.end_time);
-        case "pause_start": return pause ? formatClock(pause.prevEnd) : "—";
-        case "pause_resume": return pause ? formatClock(pause.thisStart) : "—";
+        case "pause_start": return firstReal ? formatClock(firstReal.paused_at) : (pause ? formatClock(pause.prevEnd) : "—");
+        case "pause_resume": return firstReal ? formatClock(firstReal.resumed_at) : (pause ? formatClock(pause.thisStart) : "—");
         case "pause_total": {
           const interSession = pause?.gapMinutes ?? 0;
           const withinSession = e.break_minutes ?? 0;

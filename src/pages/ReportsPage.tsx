@@ -194,7 +194,7 @@ const ReportsPage = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     if (user) {
-      const entrySelect = "id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, billable_value, client_id, project_id, task_id, billing_status, start_time, end_time, start_lat, start_lng, start_accuracy_m, start_on_site, start_distance_m, end_lat, end_lng, end_accuracy_m, end_on_site, end_distance_m, client:clients(id, name), project:projects(id, name), task:tasks(id, name)";
+      const entrySelect = "id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, billable_value, client_id, project_id, task_id, billing_status, start_time, end_time, pause_intervals, start_lat, start_lng, start_accuracy_m, start_on_site, start_distance_m, end_lat, end_lng, end_accuracy_m, end_on_site, end_distance_m, client:clients(id, name), project:projects(id, name), task:tasks(id, name)";
       const [{ data: re }, { data: c }, { data: p }, { data: t }, { data: inv }] = await Promise.all([
         supabase.from("time_entries").select(entrySelect)
           .eq("user_id", user.id).gte("entry_date", rangeStart).lte("entry_date", rangeEnd).is("deleted_at", null).order("entry_date", { ascending: false }),
@@ -375,15 +375,30 @@ const ReportsPage = () => {
       dayEntries.forEach((e) => {
         const workH = edMins(e) / 60;
         const breakH = (e.break_minutes ?? 0) / 60;
-        const isClock = (e.entry_type ?? "") === "clock";
+        const isShift = (e.entry_type ?? "") === "shift";
         const color = e.client_id ? (clientColorMap[e.client_id] ?? getClientColor(e.client_id)) : "hsl(240 5% 75%)";
         const label = e.client_id ? (clients[e.client_id] ?? "Client") : "Unassigned";
 
-        if (isClock && breakH > 0 && workH > 0) {
-          // Centered break: split work in half around the pause
-          segs.push({ hours: workH / 2, color, kind: "work", label });
-          segs.push({ hours: breakH, color: BREAK_COLOR, kind: "break", label: `${label} · Break` });
-          segs.push({ hours: workH / 2, color, kind: "work", label });
+        // Real pause intervals (clock-in/shift only) — place break proportionately by actual timestamp
+        const realIntervals: { paused_at: string; resumed_at: string | null }[] = Array.isArray((e as any).pause_intervals) ? (e as any).pause_intervals : [];
+        const firstInterval = realIntervals.find((p) => p.paused_at && p.resumed_at);
+        const startMs = e.start_time ? new Date(e.start_time).getTime() : null;
+        const endMs = e.end_time ? new Date(e.end_time).getTime() : null;
+
+        if (isShift && breakH > 0 && workH > 0) {
+          if (firstInterval && startMs != null && endMs != null && endMs > startMs) {
+            // Proportional placement based on real pause start
+            const pauseStartMs = new Date(firstInterval.paused_at).getTime();
+            const beforeFrac = Math.max(0, Math.min(1, (pauseStartMs - startMs) / (endMs - startMs)));
+            segs.push({ hours: workH * beforeFrac, color, kind: "work", label });
+            segs.push({ hours: breakH, color: BREAK_COLOR, kind: "break", label: `${label} · Break` });
+            segs.push({ hours: workH * (1 - beforeFrac), color, kind: "work", label });
+          } else {
+            // Fallback: centered break
+            segs.push({ hours: workH / 2, color, kind: "work", label });
+            segs.push({ hours: breakH, color: BREAK_COLOR, kind: "break", label: `${label} · Break` });
+            segs.push({ hours: workH / 2, color, kind: "work", label });
+          }
         } else if (workH > 0) {
           segs.push({ hours: workH, color, kind: "work", label });
         }

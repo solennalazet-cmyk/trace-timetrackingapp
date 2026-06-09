@@ -1,0 +1,2 @@
+ALTER TABLE public.time_entries ADD COLUMN IF NOT EXISTS pause_intervals jsonb NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE public.active_sessions ADD COLUMN IF NOT EXISTS pause_intervals jsonb NOT NULL DEFAULT '[]'::jsonb;

@@ -8,7 +8,7 @@ import { format, differenceInHours } from "date-fns";
 const BTN = "rounded-[28px] h-14 text-[16px] font-bold";
 
 interface ShiftModeProps {
-  onClockOut: (data: { durationMinutes: number; breakMinutes: number; startedAt: string | null }) => void;
+  onClockOut: (data: { durationMinutes: number; breakMinutes: number; startedAt: string | null; pauseIntervals?: { paused_at: string; resumed_at: string | null }[] }) => void;
 }
 
 const ShiftMode = ({ onClockOut }: ShiftModeProps) => {

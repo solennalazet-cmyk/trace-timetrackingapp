@@ -281,7 +281,7 @@ const StartPage = () => {
 
   // Called when timer stops — opens the assignment modal
   const handleSessionEnd = async (
-    data: { durationMinutes: number; breakMinutes: number; startedAt: string | null },
+    data: { durationMinutes: number; breakMinutes: number; startedAt: string | null; pauseIntervals?: { paused_at: string; resumed_at: string | null }[] },
     entryType: string = "timer"
   ) => {
     console.log(`[StartPage] handleSessionEnd called, entryType=${entryType}, duration=${data.durationMinutes}min`);
@@ -302,7 +302,8 @@ const StartPage = () => {
         billable: false,
         start_time: data.startedAt || null,
         end_time: data.startedAt ? now.toISOString() : null,
-      });
+        pause_intervals: data.pauseIntervals ?? [],
+      } as any);
       toast.success(getCongratsMessage());
       // Clear boost param
       setSearchParams({});
@@ -339,6 +340,7 @@ const StartPage = () => {
       billable_value: hasBillableValue ? assignment?.billableValue : null,
       start_time: session.startedAt || null,
       end_time: session.startedAt ? now.toISOString() : null,
+      pause_intervals: session.pauseIntervals ?? [],
     };
 
     // ── Geolocation capture ──

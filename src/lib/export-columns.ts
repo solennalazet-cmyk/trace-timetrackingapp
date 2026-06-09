@@ -18,8 +18,8 @@ export type ExportColumnKey =
 export const EXPORT_COLUMN_OPTIONS: { key: ExportColumnKey; label: string }[] = [
   { key: "clock_in", label: "Clock in time" },
   { key: "clock_out", label: "Clock out time" },
-  { key: "pause_start", label: "Clock in pause time" },
-  { key: "pause_resume", label: "Clock in pause resume time" },
+  { key: "pause_start", label: "Clock in pause on" },
+  { key: "pause_resume", label: "Clock in pause off" },
   { key: "pause_total", label: "Pause total duration" },
   { key: "location", label: "Location proof" },
   { key: "project", label: "Project name" },

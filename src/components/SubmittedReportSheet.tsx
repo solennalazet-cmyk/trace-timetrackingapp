@@ -91,11 +91,13 @@ const SubmittedReportSheet = ({ open, onOpenChange, report, onReviewed, readOnly
   }, [entries]);
 
   const cellFor = (e: any, key: ExportColumnKey, pause: { prevEnd: string; thisStart: string; gapMinutes: number } | null): string => {
+    const realIntervals = Array.isArray(e.pause_intervals) ? e.pause_intervals as { paused_at: string; resumed_at: string | null }[] : [];
+    const firstReal = realIntervals.length > 0 ? realIntervals[0] : null;
     switch (key) {
       case "clock_in": return formatClock(e.start_time);
       case "clock_out": return formatClock(e.end_time);
-      case "pause_start": return pause ? formatClock(pause.prevEnd) : "—";
-      case "pause_resume": return pause ? formatClock(pause.thisStart) : "—";
+      case "pause_start": return firstReal ? formatClock(firstReal.paused_at) : (pause ? formatClock(pause.prevEnd) : "—");
+      case "pause_resume": return firstReal ? formatClock(firstReal.resumed_at) : (pause ? formatClock(pause.thisStart) : "—");
       case "pause_total": {
         const interSession = pause?.gapMinutes ?? 0;
         const withinSession = e.break_minutes ?? 0;

@@ -8,7 +8,7 @@ import { toast } from "sonner";
 const BTN = "rounded-[28px] h-14 text-[16px] font-bold";
 
 interface StopwatchModeProps {
-  onStop: (data: { durationMinutes: number; breakMinutes: number; startedAt: string | null }) => void;
+  onStop: (data: { durationMinutes: number; breakMinutes: number; startedAt: string | null; pauseIntervals?: { paused_at: string; resumed_at: string | null }[] }) => void;
 }
 
 const StopwatchMode = ({ onStop }: StopwatchModeProps) => {

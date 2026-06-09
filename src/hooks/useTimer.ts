@@ -5,16 +5,23 @@ import { useAuth } from "@/contexts/AuthContext";
 export type TimerMode = "stopwatch" | "focus" | "shift";
 export type TimerStatus = "idle" | "running" | "paused";
 
+export interface PauseInterval {
+  paused_at: string;
+  resumed_at: string | null;
+}
+
 interface TimerState {
   startedAt: string | null;
   pausedAt: string | null;
   totalPausedMs: number;
+  pauseIntervals: PauseInterval[];
 }
 
 export interface StopResult {
   durationMinutes: number;
   breakMinutes: number;
   startedAt: string | null;
+  pauseIntervals: PauseInterval[];
   success: boolean;
   error?: string;
 }
@@ -77,7 +84,7 @@ export function useTimer(mode: TimerMode) {
 
   const initial = readLS(lsKey);
   const [timerState, setTimerState] = useState<TimerState>(
-    initial ?? { startedAt: null, pausedAt: null, totalPausedMs: 0 }
+    initial ?? { startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] }
   );
   const [elapsedMs, setElapsedMs] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -132,7 +139,7 @@ export function useTimer(mode: TimerMode) {
       if (isNaN(startedMs) || startedMs > Date.now() + 60_000) {
         console.warn(`[useTimer] clearing corrupt LS for ${mode} (startedAt=${timerState.startedAt})`);
         clearLS(lsKey);
-        setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+        setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
         setElapsedMs(0);
       }
     }
@@ -150,7 +157,7 @@ export function useTimer(mode: TimerMode) {
       if (lsState?.startedAt) {
         console.warn(`[useTimer] clearing LS ghost timer for ${mode}: no authenticated user`);
         clearLS(lsKey);
-        setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+        setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
         setElapsedMs(0);
       }
       return;
@@ -180,7 +187,7 @@ export function useTimer(mode: TimerMode) {
         if (lsState?.startedAt) {
           console.warn(`[useTimer] clearing stale LS for ${mode}: no Supabase session`);
           clearLS(lsKey);
-          setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+          setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
           setElapsedMs(0);
         }
         return;
@@ -194,7 +201,7 @@ export function useTimer(mode: TimerMode) {
         await supabase.from("active_sessions").delete().eq("user_id", user.id);
         clearLS(LS_KEYS.stopwatch);
         clearLS(LS_KEYS.shift);
-        setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+        setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
         setElapsedMs(0);
         return;
       }
@@ -205,7 +212,7 @@ export function useTimer(mode: TimerMode) {
         if (lsState?.startedAt) {
           console.warn(`[useTimer] clearing stale LS for ${mode}: Supabase has different session_type=${data.session_type}`);
           clearLS(lsKey);
-          setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+          setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
           setElapsedMs(0);
         }
         return;
@@ -219,6 +226,7 @@ export function useTimer(mode: TimerMode) {
         startedAt: data.started_at,
         pausedAt: data.paused_at,
         totalPausedMs: data.total_paused_ms ?? 0,
+        pauseIntervals: Array.isArray((data as any).pause_intervals) ? (data as any).pause_intervals : [],
       };
       setTimerState(supabaseState);
       writeLS(lsKey, supabaseState);
@@ -237,7 +245,7 @@ export function useTimer(mode: TimerMode) {
           console.log(`[useTimer] realtime ${payload.eventType} for ${mode}`, payload);
           if (payload.eventType === "DELETE") {
             clearLS(lsKey);
-            setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+            setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
             setElapsedMs(0);
             return;
           }
@@ -248,7 +256,7 @@ export function useTimer(mode: TimerMode) {
             const lsState = readLS(lsKey);
             if (lsState?.startedAt) {
               clearLS(lsKey);
-              setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+              setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
               setElapsedMs(0);
             }
             return;
@@ -257,6 +265,7 @@ export function useTimer(mode: TimerMode) {
             startedAt: row.started_at,
             pausedAt: row.paused_at,
             totalPausedMs: row.total_paused_ms ?? 0,
+            pauseIntervals: Array.isArray(row.pause_intervals) ? row.pause_intervals : [],
           };
           setTimerState(next);
           writeLS(lsKey, next);
@@ -281,7 +290,7 @@ export function useTimer(mode: TimerMode) {
 
   const start = useCallback(() => {
     const now = new Date().toISOString();
-    const state: TimerState = { startedAt: now, pausedAt: null, totalPausedMs: 0 };
+    const state: TimerState = { startedAt: now, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] };
     writeLS(lsKey, state);
     setTimerState(state);
 
@@ -297,7 +306,7 @@ export function useTimer(mode: TimerMode) {
       supabase
         .from("active_sessions")
         .upsert(
-          { user_id: user.id, session_type: sessionType, started_at: now, paused_at: null, total_paused_ms: 0 },
+          { user_id: user.id, session_type: sessionType, started_at: now, paused_at: null, total_paused_ms: 0, pause_intervals: [] } as any,
           { onConflict: "user_id" }
         )
         .then();
@@ -306,27 +315,36 @@ export function useTimer(mode: TimerMode) {
 
   const pause = useCallback(() => {
     const now = new Date().toISOString();
-    const updated = { ...timerState, pausedAt: now };
+    const nextIntervals: PauseInterval[] = [
+      ...(timerState.pauseIntervals ?? []),
+      { paused_at: now, resumed_at: null },
+    ];
+    const updated: TimerState = { ...timerState, pausedAt: now, pauseIntervals: nextIntervals };
     writeLS(lsKey, updated);
     setTimerState(updated);
 
     if (user) {
-      supabase.from("active_sessions").update({ paused_at: now }).eq("user_id", user.id).then();
+      supabase.from("active_sessions").update({ paused_at: now, pause_intervals: nextIntervals } as any).eq("user_id", user.id).then();
     }
   }, [timerState, lsKey, user]);
 
   const resume = useCallback(() => {
     if (!timerState.pausedAt) return;
+    const now = new Date().toISOString();
     const pauseDuration = Date.now() - new Date(timerState.pausedAt).getTime();
     const newTotal = timerState.totalPausedMs + pauseDuration;
-    const updated: TimerState = { ...timerState, pausedAt: null, totalPausedMs: newTotal };
+    const prev = timerState.pauseIntervals ?? [];
+    const nextIntervals: PauseInterval[] = prev.length > 0 && prev[prev.length - 1].resumed_at == null
+      ? [...prev.slice(0, -1), { ...prev[prev.length - 1], resumed_at: now }]
+      : prev;
+    const updated: TimerState = { ...timerState, pausedAt: null, totalPausedMs: newTotal, pauseIntervals: nextIntervals };
     writeLS(lsKey, updated);
     setTimerState(updated);
 
     if (user) {
       supabase
         .from("active_sessions")
-        .update({ paused_at: null, total_paused_ms: newTotal })
+        .update({ paused_at: null, total_paused_ms: newTotal, pause_intervals: nextIntervals } as any)
         .eq("user_id", user.id)
         .then();
     }
@@ -339,13 +357,19 @@ export function useTimer(mode: TimerMode) {
     const durationMinutes = Math.round(elapsedRef.current / 60000);
     const breakMinutes = Math.round(timerState.totalPausedMs / 60000);
     const startedAt = timerState.startedAt;
+    // If still paused at stop time, close the open interval at now
+    const nowIso = new Date().toISOString();
+    const intervals = timerState.pauseIntervals ?? [];
+    const pauseIntervals: PauseInterval[] = intervals.length > 0 && intervals[intervals.length - 1].resumed_at == null
+      ? [...intervals.slice(0, -1), { ...intervals[intervals.length - 1], resumed_at: nowIso }]
+      : intervals;
 
     // Mark recently stopped BEFORE clearing, survives reloads
     markRecentlyStopped(mode);
 
     // Clear local state immediately
     clearLS(lsKey);
-    setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+    setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
     setElapsedMs(0);
 
     // Await Supabase delete for authenticated users
@@ -373,6 +397,7 @@ export function useTimer(mode: TimerMode) {
               durationMinutes,
               breakMinutes,
               startedAt,
+              pauseIntervals,
               success: false,
               error: "Failed to clean up active session. Please try again.",
             };
@@ -386,6 +411,7 @@ export function useTimer(mode: TimerMode) {
           durationMinutes,
           breakMinutes,
           startedAt,
+          pauseIntervals,
           success: false,
           error: "Network error cleaning up session. Please try again.",
         };
@@ -393,7 +419,7 @@ export function useTimer(mode: TimerMode) {
     }
 
     stoppingRef.current = false;
-    return { durationMinutes, breakMinutes, startedAt, success: true };
+    return { durationMinutes, breakMinutes, startedAt, pauseIntervals, success: true };
   }, [timerState, lsKey, user, mode]);
 
   return {

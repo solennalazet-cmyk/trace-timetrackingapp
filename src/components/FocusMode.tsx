@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { playTimerSound } from "@/lib/timer-sounds";
 
 interface FocusModeProps {
-  onComplete: (data: { durationMinutes: number; breakMinutes: number; startedAt: string | null }) => void;
+  onComplete: (data: { durationMinutes: number; breakMinutes: number; startedAt: string | null; pauseIntervals?: { paused_at: string; resumed_at: string | null }[] }) => void;
   autoStartMinutes?: number;
 }
 

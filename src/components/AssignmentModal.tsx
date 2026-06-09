@@ -41,6 +41,7 @@ export interface SessionData {
   breakMinutes: number;
   startedAt: string | null;
   entryType: string;
+  pauseIntervals?: { paused_at: string; resumed_at: string | null }[];
 }
 
 export interface AssignmentResult {

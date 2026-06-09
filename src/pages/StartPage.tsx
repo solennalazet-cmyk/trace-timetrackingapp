@@ -340,6 +340,7 @@ const StartPage = () => {
       billable_value: hasBillableValue ? assignment?.billableValue : null,
       start_time: session.startedAt || null,
       end_time: session.startedAt ? now.toISOString() : null,
+      pause_intervals: session.pauseIntervals ?? [],
     };
 
     // ── Geolocation capture ──

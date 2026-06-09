@@ -354,32 +354,64 @@ const ReportsPage = () => {
   const totalTurnoverValue = turnoverDonutData.reduce((s, d) => s + d.value, 0);
 
   // ══ STACKED BAR CHART ══
+  // Break color — warm amber, deliberately distinct from any client color (never grey/white)
+  const BREAK_COLOR = "hsl(35 92% 55%)";
+
   const stackedChartData = useMemo(() => {
     const days = getDaysInRange(rangeStart, rangeEnd);
-    const chartClientIds = clientFilter ? [clientFilter] : clientIds;
     const allRows = days.map((day) => {
-      const dayEntries = displayEntries.filter((e) => e.entry_date === day);
+      const dayEntries = displayEntries
+        .filter((e) => e.entry_date === day)
+        .slice()
+        .sort((a, b) => {
+          const ta = a.start_time ? new Date(a.start_time).getTime() : 0;
+          const tb = b.start_time ? new Date(b.start_time).getTime() : 0;
+          return ta - tb;
+        });
+
+      type Seg = { hours: number; color: string; kind: "work" | "break"; label: string };
+      const segs: Seg[] = [];
+
+      dayEntries.forEach((e) => {
+        const workH = edMins(e) / 60;
+        const breakH = (e.break_minutes ?? 0) / 60;
+        const isClock = (e.entry_type ?? "") === "clock";
+        const color = e.client_id ? (clientColorMap[e.client_id] ?? getClientColor(e.client_id)) : "hsl(240 5% 75%)";
+        const label = e.client_id ? (clients[e.client_id] ?? "Client") : "Unassigned";
+
+        if (isClock && breakH > 0 && workH > 0) {
+          // Centered break: split work in half around the pause
+          segs.push({ hours: workH / 2, color, kind: "work", label });
+          segs.push({ hours: breakH, color: BREAK_COLOR, kind: "break", label: `${label} · Break` });
+          segs.push({ hours: workH / 2, color, kind: "work", label });
+        } else if (workH > 0) {
+          segs.push({ hours: workH, color, kind: "work", label });
+        }
+      });
+
       const row: any = {
         date: day,
         label: new Date(day + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }),
-        _total: dayEntries.reduce((s, e) => s + edMins(e) / 60, 0),
+        _total: segs.reduce((s, x) => s + x.hours, 0),
+        _segs: segs,
       };
-      chartClientIds.forEach((cid) => {
-        row[cid] = dayEntries.filter((e) => e.client_id === cid).reduce((s, e) => s + edMins(e) / 60, 0);
-      });
-      if (!clientFilter) {
-        const un = dayEntries.filter((e) => !e.client_id).reduce((s, e) => s + edMins(e) / 60, 0);
-        if (un > 0) row["unassigned"] = un;
-      }
+      segs.forEach((s, i) => { row[`seg${i}`] = s.hours; });
       return row;
     });
+
     // Trim empty days from start and end
     let first = allRows.findIndex((r) => r._total > 0);
     let last = allRows.length - 1;
     while (last > first && allRows[last]._total === 0) last--;
     if (first === -1) return [];
     return allRows.slice(first, last + 1);
-  }, [displayEntries, rangeStart, rangeEnd, clientIds, clientFilter]);
+  }, [displayEntries, rangeStart, rangeEnd, clientColorMap, clients]);
+
+  const maxSegments = useMemo(
+    () => stackedChartData.reduce((m, r) => Math.max(m, (r._segs as any[])?.length ?? 0), 0),
+    [stackedChartData]
+  );
+
 
   // Trash
   const [trashCount, setTrashCount] = useState(0);
@@ -971,19 +1003,40 @@ const ReportsPage = () => {
                     />
                     <Tooltip
                       contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
-                      formatter={(value: number, name: string) => {
-                        const label = name === "unassigned" ? "Unassigned" : (clients[name] ?? name);
-                        return [`${value.toFixed(1)}h`, label];
+                      content={({ active, payload }: any) => {
+                        if (!active || !payload?.length) return null;
+                        const row = payload[0].payload;
+                        const segs = (row?._segs ?? []) as { hours: number; color: string; kind: "work" | "break"; label: string }[];
+                        // Aggregate by label so the tooltip stays readable
+                        const agg = new Map<string, { hours: number; color: string; kind: "work" | "break" }>();
+                        segs.forEach((s) => {
+                          const cur = agg.get(s.label);
+                          if (cur) cur.hours += s.hours;
+                          else agg.set(s.label, { hours: s.hours, color: s.color, kind: s.kind });
+                        });
+                        return (
+                          <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow-sm">
+                            <div className="font-medium text-foreground mb-1">{row.label} · {row._total.toFixed(1)}h</div>
+                            {[...agg.entries()].map(([label, v]) => (
+                              <div key={label} className="flex items-center gap-2">
+                                <span className="inline-block w-2 h-2 rounded-sm" style={{ background: v.color }} />
+                                <span className="text-muted-foreground">{label}</span>
+                                <span className="ml-auto font-mono text-foreground">{v.hours.toFixed(1)}h</span>
+                              </div>
+                            ))}
+                          </div>
+                        );
                       }}
                     />
-                    {(clientFilter ? [clientFilter] : clientIds).map((cid, i) => (
-                      <Bar key={cid} dataKey={cid} stackId="a" fill={clientColorMap[cid] ?? getClientColor(cid)}
-                        radius={i === (clientFilter ? 0 : clientIds.length - 1) && !hasUnassigned ? [3, 3, 0, 0] : undefined}
-                        name={cid} />
+                    {Array.from({ length: maxSegments }).map((_, i) => (
+                      <Bar key={i} dataKey={`seg${i}`} stackId="a" isAnimationActive={false}
+                        radius={i === maxSegments - 1 ? [3, 3, 0, 0] : 0}>
+                        {stackedChartData.map((row: any, ri) => {
+                          const seg = row._segs?.[i];
+                          return <Cell key={ri} fill={seg?.color ?? "transparent"} />;
+                        })}
+                      </Bar>
                     ))}
-                    {!clientFilter && hasUnassigned && (
-                      <Bar dataKey="unassigned" stackId="a" fill="hsl(240 5% 75%)" radius={[3, 3, 0, 0]} name="unassigned" />
-                    )}
                   </BarChart>
                 </ResponsiveContainer>
               </div>

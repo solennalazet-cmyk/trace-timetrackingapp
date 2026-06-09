@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          pause_intervals: Json
           paused_at: string | null
           session_type: string | null
           started_at: string
@@ -27,6 +28,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          pause_intervals?: Json
           paused_at?: string | null
           session_type?: string | null
           started_at: string
@@ -36,6 +38,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          pause_intervals?: Json
           paused_at?: string | null
           session_type?: string | null
           started_at?: string
@@ -438,6 +441,7 @@ export type Database = {
           id: string
           invoice_id: string | null
           notes: string | null
+          pause_intervals: Json
           project_id: string | null
           rate_amount: number | null
           rate_currency: string | null
@@ -472,6 +476,7 @@ export type Database = {
           id?: string
           invoice_id?: string | null
           notes?: string | null
+          pause_intervals?: Json
           project_id?: string | null
           rate_amount?: number | null
           rate_currency?: string | null
@@ -506,6 +511,7 @@ export type Database = {
           id?: string
           invoice_id?: string | null
           notes?: string | null
+          pause_intervals?: Json
           project_id?: string | null
           rate_amount?: number | null
           rate_currency?: string | null

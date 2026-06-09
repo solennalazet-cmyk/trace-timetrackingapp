@@ -375,15 +375,30 @@ const ReportsPage = () => {
       dayEntries.forEach((e) => {
         const workH = edMins(e) / 60;
         const breakH = (e.break_minutes ?? 0) / 60;
-        const isClock = (e.entry_type ?? "") === "clock";
+        const isShift = (e.entry_type ?? "") === "shift";
         const color = e.client_id ? (clientColorMap[e.client_id] ?? getClientColor(e.client_id)) : "hsl(240 5% 75%)";
         const label = e.client_id ? (clients[e.client_id] ?? "Client") : "Unassigned";
 
-        if (isClock && breakH > 0 && workH > 0) {
-          // Centered break: split work in half around the pause
-          segs.push({ hours: workH / 2, color, kind: "work", label });
-          segs.push({ hours: breakH, color: BREAK_COLOR, kind: "break", label: `${label} · Break` });
-          segs.push({ hours: workH / 2, color, kind: "work", label });
+        // Real pause intervals (clock-in/shift only) — place break proportionately by actual timestamp
+        const realIntervals: { paused_at: string; resumed_at: string | null }[] = Array.isArray((e as any).pause_intervals) ? (e as any).pause_intervals : [];
+        const firstInterval = realIntervals.find((p) => p.paused_at && p.resumed_at);
+        const startMs = e.start_time ? new Date(e.start_time).getTime() : null;
+        const endMs = e.end_time ? new Date(e.end_time).getTime() : null;
+
+        if (isShift && breakH > 0 && workH > 0) {
+          if (firstInterval && startMs != null && endMs != null && endMs > startMs) {
+            // Proportional placement based on real pause start
+            const pauseStartMs = new Date(firstInterval.paused_at).getTime();
+            const beforeFrac = Math.max(0, Math.min(1, (pauseStartMs - startMs) / (endMs - startMs)));
+            segs.push({ hours: workH * beforeFrac, color, kind: "work", label });
+            segs.push({ hours: breakH, color: BREAK_COLOR, kind: "break", label: `${label} · Break` });
+            segs.push({ hours: workH * (1 - beforeFrac), color, kind: "work", label });
+          } else {
+            // Fallback: centered break
+            segs.push({ hours: workH / 2, color, kind: "work", label });
+            segs.push({ hours: breakH, color: BREAK_COLOR, kind: "break", label: `${label} · Break` });
+            segs.push({ hours: workH / 2, color, kind: "work", label });
+          }
         } else if (workH > 0) {
           segs.push({ hours: workH, color, kind: "work", label });
         }

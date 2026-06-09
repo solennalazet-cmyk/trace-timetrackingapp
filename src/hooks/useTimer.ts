@@ -357,6 +357,12 @@ export function useTimer(mode: TimerMode) {
     const durationMinutes = Math.round(elapsedRef.current / 60000);
     const breakMinutes = Math.round(timerState.totalPausedMs / 60000);
     const startedAt = timerState.startedAt;
+    // If still paused at stop time, close the open interval at now
+    const nowIso = new Date().toISOString();
+    const intervals = timerState.pauseIntervals ?? [];
+    const pauseIntervals: PauseInterval[] = intervals.length > 0 && intervals[intervals.length - 1].resumed_at == null
+      ? [...intervals.slice(0, -1), { ...intervals[intervals.length - 1], resumed_at: nowIso }]
+      : intervals;
 
     // Mark recently stopped BEFORE clearing, survives reloads
     markRecentlyStopped(mode);
@@ -391,6 +397,7 @@ export function useTimer(mode: TimerMode) {
               durationMinutes,
               breakMinutes,
               startedAt,
+              pauseIntervals,
               success: false,
               error: "Failed to clean up active session. Please try again.",
             };
@@ -404,6 +411,7 @@ export function useTimer(mode: TimerMode) {
           durationMinutes,
           breakMinutes,
           startedAt,
+          pauseIntervals,
           success: false,
           error: "Network error cleaning up session. Please try again.",
         };
@@ -411,7 +419,7 @@ export function useTimer(mode: TimerMode) {
     }
 
     stoppingRef.current = false;
-    return { durationMinutes, breakMinutes, startedAt, success: true };
+    return { durationMinutes, breakMinutes, startedAt, pauseIntervals, success: true };
   }, [timerState, lsKey, user, mode]);
 
   return {

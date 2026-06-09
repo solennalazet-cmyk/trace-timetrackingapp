@@ -84,7 +84,7 @@ export function useTimer(mode: TimerMode) {
 
   const initial = readLS(lsKey);
   const [timerState, setTimerState] = useState<TimerState>(
-    initial ?? { startedAt: null, pausedAt: null, totalPausedMs: 0 }
+    initial ?? { startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] }
   );
   const [elapsedMs, setElapsedMs] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -139,7 +139,7 @@ export function useTimer(mode: TimerMode) {
       if (isNaN(startedMs) || startedMs > Date.now() + 60_000) {
         console.warn(`[useTimer] clearing corrupt LS for ${mode} (startedAt=${timerState.startedAt})`);
         clearLS(lsKey);
-        setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+        setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
         setElapsedMs(0);
       }
     }
@@ -157,7 +157,7 @@ export function useTimer(mode: TimerMode) {
       if (lsState?.startedAt) {
         console.warn(`[useTimer] clearing LS ghost timer for ${mode}: no authenticated user`);
         clearLS(lsKey);
-        setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+        setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
         setElapsedMs(0);
       }
       return;
@@ -187,7 +187,7 @@ export function useTimer(mode: TimerMode) {
         if (lsState?.startedAt) {
           console.warn(`[useTimer] clearing stale LS for ${mode}: no Supabase session`);
           clearLS(lsKey);
-          setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+          setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
           setElapsedMs(0);
         }
         return;
@@ -201,7 +201,7 @@ export function useTimer(mode: TimerMode) {
         await supabase.from("active_sessions").delete().eq("user_id", user.id);
         clearLS(LS_KEYS.stopwatch);
         clearLS(LS_KEYS.shift);
-        setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+        setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
         setElapsedMs(0);
         return;
       }
@@ -212,7 +212,7 @@ export function useTimer(mode: TimerMode) {
         if (lsState?.startedAt) {
           console.warn(`[useTimer] clearing stale LS for ${mode}: Supabase has different session_type=${data.session_type}`);
           clearLS(lsKey);
-          setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+          setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
           setElapsedMs(0);
         }
         return;
@@ -244,7 +244,7 @@ export function useTimer(mode: TimerMode) {
           console.log(`[useTimer] realtime ${payload.eventType} for ${mode}`, payload);
           if (payload.eventType === "DELETE") {
             clearLS(lsKey);
-            setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+            setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
             setElapsedMs(0);
             return;
           }
@@ -255,7 +255,7 @@ export function useTimer(mode: TimerMode) {
             const lsState = readLS(lsKey);
             if (lsState?.startedAt) {
               clearLS(lsKey);
-              setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+              setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
               setElapsedMs(0);
             }
             return;
@@ -352,7 +352,7 @@ export function useTimer(mode: TimerMode) {
 
     // Clear local state immediately
     clearLS(lsKey);
-    setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0 });
+    setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
     setElapsedMs(0);
 
     // Await Supabase delete for authenticated users

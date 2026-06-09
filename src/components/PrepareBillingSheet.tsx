@@ -208,8 +208,8 @@ const PrepareBillingSheet = ({
     const optionalHeaders: Record<ExportColumnKey, string> = {
       clock_in: "Clock in",
       clock_out: "Clock out",
-      pause_start: "Pause start",
-      pause_resume: "Pause resume",
+      pause_start: "Pause on",
+      pause_resume: "Pause off",
       pause_total: "Pause total",
       location: "Location",
       project: "Project",

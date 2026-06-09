@@ -5,16 +5,23 @@ import { useAuth } from "@/contexts/AuthContext";
 export type TimerMode = "stopwatch" | "focus" | "shift";
 export type TimerStatus = "idle" | "running" | "paused";
 
+export interface PauseInterval {
+  paused_at: string;
+  resumed_at: string | null;
+}
+
 interface TimerState {
   startedAt: string | null;
   pausedAt: string | null;
   totalPausedMs: number;
+  pauseIntervals: PauseInterval[];
 }
 
 export interface StopResult {
   durationMinutes: number;
   breakMinutes: number;
   startedAt: string | null;
+  pauseIntervals: PauseInterval[];
   success: boolean;
   error?: string;
 }

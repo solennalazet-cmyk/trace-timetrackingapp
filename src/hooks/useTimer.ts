@@ -226,6 +226,7 @@ export function useTimer(mode: TimerMode) {
         startedAt: data.started_at,
         pausedAt: data.paused_at,
         totalPausedMs: data.total_paused_ms ?? 0,
+        pauseIntervals: Array.isArray((data as any).pause_intervals) ? (data as any).pause_intervals : [],
       };
       setTimerState(supabaseState);
       writeLS(lsKey, supabaseState);

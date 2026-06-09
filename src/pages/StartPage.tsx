@@ -22,8 +22,8 @@ import { saveAnonymousEntry, getAnonymousEntries } from "@/lib/anonymous-store";
 import { toast } from "sonner";
 import { getCongratsMessage } from "@/lib/boost-challenges";
 import GeolocationPrePromptModal from "@/components/GeolocationPrePromptModal";
-import {
 import Seo from "@/components/Seo";
+import {
   requestLocation,
   evaluateOnSite,
   cacheStartLocation,

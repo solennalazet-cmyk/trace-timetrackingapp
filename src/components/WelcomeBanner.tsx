@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Play, Square, CheckCircle2 } from "lucide-react";
 
 const LS_KEY = "trace_visited";
-const AUTO_DISMISS_MS = 6000;
+const AUTO_DISMISS_MS = 12000;
 
 interface WelcomeBannerProps {
   onDismiss: () => void;
@@ -50,8 +50,8 @@ const WelcomeBanner = ({ onDismiss }: WelcomeBannerProps) => {
       aria-modal="true"
     >
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm rounded-3xl p-7 text-center animate-scale-in"
+        onClick={dismiss}
+        className="w-full max-w-sm rounded-3xl p-7 text-center animate-scale-in cursor-pointer"
         style={{
           height: "75vh",
           maxHeight: 560,

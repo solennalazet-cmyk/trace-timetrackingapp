@@ -290,7 +290,7 @@ export function useTimer(mode: TimerMode) {
 
   const start = useCallback(() => {
     const now = new Date().toISOString();
-    const state: TimerState = { startedAt: now, pausedAt: null, totalPausedMs: 0 };
+    const state: TimerState = { startedAt: now, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] };
     writeLS(lsKey, state);
     setTimerState(state);
 
@@ -306,7 +306,7 @@ export function useTimer(mode: TimerMode) {
       supabase
         .from("active_sessions")
         .upsert(
-          { user_id: user.id, session_type: sessionType, started_at: now, paused_at: null, total_paused_ms: 0 },
+          { user_id: user.id, session_type: sessionType, started_at: now, paused_at: null, total_paused_ms: 0, pause_intervals: [] } as any,
           { onConflict: "user_id" }
         )
         .then();
@@ -315,27 +315,36 @@ export function useTimer(mode: TimerMode) {
 
   const pause = useCallback(() => {
     const now = new Date().toISOString();
-    const updated = { ...timerState, pausedAt: now };
+    const nextIntervals: PauseInterval[] = [
+      ...(timerState.pauseIntervals ?? []),
+      { paused_at: now, resumed_at: null },
+    ];
+    const updated: TimerState = { ...timerState, pausedAt: now, pauseIntervals: nextIntervals };
     writeLS(lsKey, updated);
     setTimerState(updated);
 
     if (user) {
-      supabase.from("active_sessions").update({ paused_at: now }).eq("user_id", user.id).then();
+      supabase.from("active_sessions").update({ paused_at: now, pause_intervals: nextIntervals } as any).eq("user_id", user.id).then();
     }
   }, [timerState, lsKey, user]);
 
   const resume = useCallback(() => {
     if (!timerState.pausedAt) return;
+    const now = new Date().toISOString();
     const pauseDuration = Date.now() - new Date(timerState.pausedAt).getTime();
     const newTotal = timerState.totalPausedMs + pauseDuration;
-    const updated: TimerState = { ...timerState, pausedAt: null, totalPausedMs: newTotal };
+    const prev = timerState.pauseIntervals ?? [];
+    const nextIntervals: PauseInterval[] = prev.length > 0 && prev[prev.length - 1].resumed_at == null
+      ? [...prev.slice(0, -1), { ...prev[prev.length - 1], resumed_at: now }]
+      : prev;
+    const updated: TimerState = { ...timerState, pausedAt: null, totalPausedMs: newTotal, pauseIntervals: nextIntervals };
     writeLS(lsKey, updated);
     setTimerState(updated);
 
     if (user) {
       supabase
         .from("active_sessions")
-        .update({ paused_at: null, total_paused_ms: newTotal })
+        .update({ paused_at: null, total_paused_ms: newTotal, pause_intervals: nextIntervals } as any)
         .eq("user_id", user.id)
         .then();
     }

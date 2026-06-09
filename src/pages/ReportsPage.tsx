@@ -948,10 +948,10 @@ const ReportsPage = () => {
           {/* ── 6. Daily Breakdown Stacked Bar ── */}
           {stackedChartData.length > 0 && rangeEntries.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Daily Breakdown</h3>
-              <div className="w-full" style={{ minHeight: 200 }}>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={stackedChartData} barCategoryGap="12%" margin={{ top: 8, right: 0, left: -20, bottom: 0 }}>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Daily Breakdown <span className="normal-case tracking-normal text-[10px] text-muted-foreground/70">(hours per day)</span></h3>
+              <div className="w-full" style={{ minHeight: 220 }}>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={stackedChartData} barCategoryGap="12%" margin={{ top: 8, right: 4, left: -8, bottom: 0 }}>
                     <XAxis
                       dataKey="label"
                       height={44}
@@ -961,7 +961,14 @@ const ReportsPage = () => {
                       tickLine={false}
                       axisLine={false}
                     />
-                    <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={30} tickFormatter={(v) => `${v}h`} />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                      tickLine={false}
+                      axisLine={false}
+                      width={40}
+                      allowDecimals={false}
+                      tickFormatter={(v) => `${v}h`}
+                    />
                     <Tooltip
                       contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
                       formatter={(value: number, name: string) => {

@@ -14,8 +14,8 @@ import PaywallModal from "@/components/PaywallModal";
 import SignInLink from "@/components/SignInLink";
 import ClientPaymentsSection from "@/components/ClientPaymentsSection";
 import { toast } from "sonner";
-import {
 import Seo from "@/components/Seo";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,

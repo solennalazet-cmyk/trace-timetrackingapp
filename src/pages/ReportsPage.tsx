@@ -354,32 +354,64 @@ const ReportsPage = () => {
   const totalTurnoverValue = turnoverDonutData.reduce((s, d) => s + d.value, 0);
 
   // ══ STACKED BAR CHART ══
+  // Break color — warm amber, deliberately distinct from any client color (never grey/white)
+  const BREAK_COLOR = "hsl(35 92% 55%)";
+
   const stackedChartData = useMemo(() => {
     const days = getDaysInRange(rangeStart, rangeEnd);
-    const chartClientIds = clientFilter ? [clientFilter] : clientIds;
     const allRows = days.map((day) => {
-      const dayEntries = displayEntries.filter((e) => e.entry_date === day);
+      const dayEntries = displayEntries
+        .filter((e) => e.entry_date === day)
+        .slice()
+        .sort((a, b) => {
+          const ta = a.start_time ? new Date(a.start_time).getTime() : 0;
+          const tb = b.start_time ? new Date(b.start_time).getTime() : 0;
+          return ta - tb;
+        });
+
+      type Seg = { hours: number; color: string; kind: "work" | "break"; label: string };
+      const segs: Seg[] = [];
+
+      dayEntries.forEach((e) => {
+        const workH = edMins(e) / 60;
+        const breakH = (e.break_minutes ?? 0) / 60;
+        const isClock = (e.entry_type ?? "") === "clock";
+        const color = e.client_id ? (clientColorMap[e.client_id] ?? getClientColor(e.client_id)) : "hsl(240 5% 75%)";
+        const label = e.client_id ? (clients[e.client_id] ?? "Client") : "Unassigned";
+
+        if (isClock && breakH > 0 && workH > 0) {
+          // Centered break: split work in half around the pause
+          segs.push({ hours: workH / 2, color, kind: "work", label });
+          segs.push({ hours: breakH, color: BREAK_COLOR, kind: "break", label: `${label} · Break` });
+          segs.push({ hours: workH / 2, color, kind: "work", label });
+        } else if (workH > 0) {
+          segs.push({ hours: workH, color, kind: "work", label });
+        }
+      });
+
       const row: any = {
         date: day,
         label: new Date(day + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }),
-        _total: dayEntries.reduce((s, e) => s + edMins(e) / 60, 0),
+        _total: segs.reduce((s, x) => s + x.hours, 0),
+        _segs: segs,
       };
-      chartClientIds.forEach((cid) => {
-        row[cid] = dayEntries.filter((e) => e.client_id === cid).reduce((s, e) => s + edMins(e) / 60, 0);
-      });
-      if (!clientFilter) {
-        const un = dayEntries.filter((e) => !e.client_id).reduce((s, e) => s + edMins(e) / 60, 0);
-        if (un > 0) row["unassigned"] = un;
-      }
+      segs.forEach((s, i) => { row[`seg${i}`] = s.hours; });
       return row;
     });
+
     // Trim empty days from start and end
     let first = allRows.findIndex((r) => r._total > 0);
     let last = allRows.length - 1;
     while (last > first && allRows[last]._total === 0) last--;
     if (first === -1) return [];
     return allRows.slice(first, last + 1);
-  }, [displayEntries, rangeStart, rangeEnd, clientIds, clientFilter]);
+  }, [displayEntries, rangeStart, rangeEnd, clientColorMap, clients]);
+
+  const maxSegments = useMemo(
+    () => stackedChartData.reduce((m, r) => Math.max(m, (r._segs as any[])?.length ?? 0), 0),
+    [stackedChartData]
+  );
+
 
   // Trash
   const [trashCount, setTrashCount] = useState(0);

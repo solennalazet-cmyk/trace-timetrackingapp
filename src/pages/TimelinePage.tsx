@@ -110,6 +110,13 @@ const TimelinePage = () => {
   const [editEntry, setEditEntry] = useState<ExistingEntry | null>(null);
   const [editSession, setEditSession] = useState<SessionData | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const rangeStart = toLocalDateKey(from);
   const rangeEnd = toLocalDateKey(to);
@@ -323,13 +330,6 @@ const TimelinePage = () => {
     );
   }
 
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 4);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   return (
     <div className="pb-24">

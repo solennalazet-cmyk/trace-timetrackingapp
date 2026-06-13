@@ -106,6 +106,25 @@ const PaymentsPage = () => {
 
   useEffect(() => { load(); }, [load]);
 
+  // Scroll-based header blur (matches Reports page)
+  useEffect(() => {
+    const header = document.getElementById("app-header");
+    if (!header) return;
+    const onScroll = () => {
+      if (window.scrollY > 8) {
+        header.classList.add("backdrop-blur-md", "bg-background/70");
+      } else {
+        header.classList.remove("backdrop-blur-md", "bg-background/70");
+      }
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      header.classList.remove("backdrop-blur-md", "bg-background/70");
+    };
+  }, []);
+
   const paidByReport = useMemo(() => {
     const m = new Map<string, number>();
     for (const p of payments) m.set(p.submitted_report_id, (m.get(p.submitted_report_id) ?? 0) + Number(p.amount));

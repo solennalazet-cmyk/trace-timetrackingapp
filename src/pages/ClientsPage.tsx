@@ -396,7 +396,7 @@ const ClientsPage = () => {
                     <p className="text-xs text-muted-foreground">
                       {clientProjects.length} {clientProjects.length === 1 ? "project" : "projects"}
                       {stats ? ` · ${stats.hours.toFixed(1)}h this month` : ""}
-                      {stats && stats.value > 0 ? ` · ${sym(client.currency)}${stats.value.toFixed(0)}` : ""}
+                      {stats && stats.value > 0 ? ` · ${sym(client.currency)}${stats.value.toFixed(0)} this month` : ""}
                     </p>
                   </div>
                   {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />}

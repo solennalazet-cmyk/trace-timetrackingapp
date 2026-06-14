@@ -32,6 +32,8 @@ import BoostOverlay from "@/components/BoostOverlay";
 import { Sparkles } from "lucide-react";
 import { markBoostCompleted } from "@/lib/boost-challenges";
 import ExportDialog from "@/components/ExportDialog";
+import DoneCalendar from "@/components/DoneCalendar";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
@@ -524,6 +526,22 @@ const ReportsPage = () => {
   return (
     <div className="pb-24 px-4 overflow-x-hidden">
       <h1 className="text-2xl font-bold tracking-tight mb-3 mt-2">Reports</h1>
+
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="w-full grid grid-cols-2 rounded-full bg-muted/40 h-10 p-1 mb-4">
+          <TabsTrigger value="overview" className="rounded-full text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm">
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="done" className="rounded-full text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm">
+            Done
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="done" className="mt-0">
+          <DoneCalendar />
+        </TabsContent>
+
+        <TabsContent value="overview" className="mt-0">
       {/* ── 1. Date picker ── */}
       <div className="mb-3">
         <DateRangePicker
@@ -533,6 +551,7 @@ const ReportsPage = () => {
           weekStartsOn={weekStartDay as 0 | 1 | 2 | 3 | 4 | 5 | 6}
         />
       </div>
+
 
       {/* ── 2. Client filter chips ── */}
       {clientIds.length > 0 && (
@@ -1327,9 +1346,12 @@ const ReportsPage = () => {
           Export
         </button>
       )}
+        </TabsContent>
+      </Tabs>
 
 
       {/* Modals */}
+
       <EntryDetailSheet entry={selectedEntry} open={detailOpen} onOpenChange={setDetailOpen} onEdit={handleEdit} onDeleted={() => loadData()} />
       <AssignmentModal open={assignOpen} session={editSession} existingEntry={editEntry}
         onSave={handleEditSave} onSkip={() => { setAssignOpen(false); setEditEntry(null); }}

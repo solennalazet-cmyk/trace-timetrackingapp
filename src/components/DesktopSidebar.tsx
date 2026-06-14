@@ -16,7 +16,6 @@ import RoleSwitcher from "./RoleSwitcher";
 const workerNav = [
   { path: "/", label: "Start", icon: Timer },
   { path: "/reports", label: "Reports", icon: BarChart3 },
-  { path: "/timeline", label: "Done", icon: CheckSquare },
   { path: "/clients", label: "Clients", icon: Briefcase },
 ];
 

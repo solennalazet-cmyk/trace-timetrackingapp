@@ -752,7 +752,7 @@ const ReportsPage = () => {
           {displayEntries.length > 0 && (
             <div className="mb-6">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <PieChart className="w-3.5 h-3.5 text-primary" />
+                <PieChartIcon className="w-3.5 h-3.5 text-primary" />
                 Revenue by client
               </h3>
               <ClientBillingSummary

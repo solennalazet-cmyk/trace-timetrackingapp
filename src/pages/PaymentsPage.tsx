@@ -30,7 +30,15 @@ const toLocalDateKey = (d: Date) => {
   return `${y}-${m}-${day}`;
 };
 
-const DEFAULT_NET_DAYS = 30;
+/** Billing cutoffs run on the 1st and 15th of each month. */
+const nextBillingCutoff = (from: Date) => {
+  const d = new Date(from); d.setHours(0, 0, 0, 0);
+  const day = d.getDate();
+  const result = new Date(d);
+  if (day < 15) result.setDate(15);
+  else { result.setMonth(d.getMonth() + 1, 1); }
+  return result;
+};
 
 interface ReportRow extends SubmittedReport {
   reviewed_at: string | null;

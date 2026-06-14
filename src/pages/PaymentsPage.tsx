@@ -332,7 +332,13 @@ const PaymentsPage = () => {
                       <p className="text-[11px] text-muted-foreground mt-0.5">Paid</p>
                     </div>
                     <div>
-                      <p className={`text-base font-mono font-semibold ${overdue ? "text-red-600 dark:text-red-400" : "text-foreground"}`}>
+                      <p className={`text-base font-mono font-semibold ${
+                        overdue
+                          ? "text-red-600 dark:text-red-400"
+                          : t.outstanding > 0.005
+                            ? "text-orange-600 dark:text-orange-400"
+                            : "text-foreground"
+                      }`}>
                         {sym}{t.outstanding.toFixed(2)}
                       </p>
                       <p className="text-[11px] text-muted-foreground mt-0.5">Remaining</p>

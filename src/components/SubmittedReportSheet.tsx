@@ -177,33 +177,71 @@ const SubmittedReportSheet = ({ open, onOpenChange, report, onReviewed, readOnly
               )}
             </div>
 
-            <div className="rounded-xl border border-border overflow-hidden">
-              <div className="grid text-xs font-medium bg-muted/40 px-3 py-2" style={{ gridTemplateColumns: `repeat(${2 + orderedCols.length + 1}, minmax(0,1fr))` }}>
-                <span>Date</span>
-                <span>Time</span>
-                {orderedCols.map((k) => (
-                  <span key={k} className="capitalize">{k.replace(/_/g, " ")}</span>
-                ))}
-                <span className="text-right">Amount</span>
-              </div>
+            {/* Mobile portrait: stacked cards */}
+            <div className="sm:hidden space-y-2">
               {entries.length === 0 ? (
-                <p className="px-3 py-4 text-xs text-muted-foreground text-center">No entries.</p>
+                <p className="rounded-xl border border-border px-3 py-4 text-xs text-muted-foreground text-center">No entries.</p>
               ) : (
                 entries.map((e: any, idx: number) => {
                   const mins = e.duration_minutes ?? 0;
                   const amt = e.billable_value ?? 0;
                   return (
-                    <div key={e.id ?? idx} className="grid text-xs px-3 py-2 border-t border-border" style={{ gridTemplateColumns: `repeat(${2 + orderedCols.length + 1}, minmax(0,1fr))` }}>
-                      <span>{e.entry_date ? new Date(e.entry_date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "—"}</span>
-                      <span className="font-mono">{formatDur(mins)}</span>
-                      {orderedCols.map((k) => (
-                        <span key={k} className="truncate">{cellFor(e, k, pauseInfo[idx])}</span>
-                      ))}
-                      <span className="text-right font-mono">{amt > 0 ? `${sym}${Number(amt).toFixed(2)}` : "—"}</span>
+                    <div key={e.id ?? idx} className="rounded-xl border border-border p-3 space-y-2">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="text-sm font-semibold">
+                          {e.entry_date ? new Date(e.entry_date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "—"}
+                        </span>
+                        <span className="text-xs font-mono text-muted-foreground">{formatDur(mins)}</span>
+                        <span className="text-sm font-mono font-semibold ml-auto">{amt > 0 ? `${sym}${Number(amt).toFixed(2)}` : "—"}</span>
+                      </div>
+                      {orderedCols.length > 0 && (
+                        <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+                          {orderedCols.map((k) => (
+                            <div key={k} className="min-w-0">
+                              <dt className="text-muted-foreground capitalize">{k.replace(/_/g, " ")}</dt>
+                              <dd className="truncate font-medium">{cellFor(e, k, pauseInfo[idx])}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      )}
                     </div>
                   );
                 })
               )}
+            </div>
+
+            {/* Tablet / landscape / desktop: wide table with horizontal scroll fallback */}
+            <div className="hidden sm:block rounded-xl border border-border overflow-hidden">
+              <div className="overflow-x-auto">
+                <div className="min-w-[640px]">
+                  <div className="grid text-xs font-medium bg-muted/40 px-3 py-2" style={{ gridTemplateColumns: `repeat(${2 + orderedCols.length + 1}, minmax(0,1fr))` }}>
+                    <span>Date</span>
+                    <span>Time</span>
+                    {orderedCols.map((k) => (
+                      <span key={k} className="capitalize">{k.replace(/_/g, " ")}</span>
+                    ))}
+                    <span className="text-right">Amount</span>
+                  </div>
+                  {entries.length === 0 ? (
+                    <p className="px-3 py-4 text-xs text-muted-foreground text-center">No entries.</p>
+                  ) : (
+                    entries.map((e: any, idx: number) => {
+                      const mins = e.duration_minutes ?? 0;
+                      const amt = e.billable_value ?? 0;
+                      return (
+                        <div key={e.id ?? idx} className="grid text-xs px-3 py-2 border-t border-border" style={{ gridTemplateColumns: `repeat(${2 + orderedCols.length + 1}, minmax(0,1fr))` }}>
+                          <span>{e.entry_date ? new Date(e.entry_date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "—"}</span>
+                          <span className="font-mono">{formatDur(mins)}</span>
+                          {orderedCols.map((k) => (
+                            <span key={k} className="truncate">{cellFor(e, k, pauseInfo[idx])}</span>
+                          ))}
+                          <span className="text-right font-mono">{amt > 0 ? `${sym}${Number(amt).toFixed(2)}` : "—"}</span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
             </div>
 
             {!readOnly && report.status === "submitted" && (

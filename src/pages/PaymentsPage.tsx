@@ -30,7 +30,15 @@ const toLocalDateKey = (d: Date) => {
   return `${y}-${m}-${day}`;
 };
 
-const DEFAULT_NET_DAYS = 30;
+/** Billing cutoffs run on the 1st and 15th of each month. */
+const nextBillingCutoff = (from: Date) => {
+  const d = new Date(from); d.setHours(0, 0, 0, 0);
+  const day = d.getDate();
+  const result = new Date(d);
+  if (day < 15) result.setDate(15);
+  else { result.setMonth(d.getMonth() + 1, 1); }
+  return result;
+};
 
 interface ReportRow extends SubmittedReport {
   reviewed_at: string | null;
@@ -155,9 +163,9 @@ const PaymentsPage = () => {
       const remaining = Math.max(0, total - p);
       if (remaining > 0) {
         const ref = new Date((r.reviewed_at ?? r.submitted_at));
-        const dueDate = new Date(ref);
-        dueDate.setDate(dueDate.getDate() + DEFAULT_NET_DAYS);
-        if (dueDate < today) overdue += remaining;
+        const dueDate = nextBillingCutoff(ref);
+        const today2 = new Date(); today2.setHours(0, 0, 0, 0);
+        if (dueDate < today2) overdue += remaining;
       }
     }
     return { due, paid, outstanding: Math.max(0, due - paid), overdue, currency };
@@ -324,7 +332,13 @@ const PaymentsPage = () => {
                       <p className="text-[11px] text-muted-foreground mt-0.5">Paid</p>
                     </div>
                     <div>
-                      <p className={`text-base font-mono font-semibold ${overdue ? "text-red-600 dark:text-red-400" : "text-foreground"}`}>
+                      <p className={`text-base font-mono font-semibold ${
+                        overdue
+                          ? "text-red-600 dark:text-red-400"
+                          : t.outstanding > 0.005
+                            ? "text-orange-600 dark:text-orange-400"
+                            : "text-foreground"
+                      }`}>
                         {sym}{t.outstanding.toFixed(2)}
                       </p>
                       <p className="text-[11px] text-muted-foreground mt-0.5">Remaining</p>

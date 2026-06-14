@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ChevronDown, ChevronUp, ArrowRight, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronRight, ArrowRight, Trash2 } from "lucide-react";
 import { type TimeEntry } from "@/components/EntryDetailSheet";
 import { type RoundingSettings, DEFAULT_ROUNDING, aggregateWithRounding, entryDisplayValues } from "@/lib/rounding";
 
@@ -40,43 +40,48 @@ interface ClientSummary {
   entries: TimeEntry[];
 }
 
+const SUNRISE_PALETTE = [
+  "hsl(38 92% 55%)", "hsl(22 88% 55%)", "hsl(340 72% 55%)", "hsl(310 60% 52%)",
+  "hsl(270 58% 58%)", "hsl(220 75% 58%)", "hsl(190 70% 48%)", "hsl(355 68% 52%)",
+  "hsl(50 85% 52%)", "hsl(285 55% 52%)",
+];
+const hashStringToIndex = (str: string, max: number): number => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  return Math.abs(hash) % max;
+};
+const fallbackClientColor = (id: string) => SUNRISE_PALETTE[hashStringToIndex(id, SUNRISE_PALETTE.length)];
+
+const initialsOf = (name: string) =>
+  name.split(/\s+/).filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
+
 const ClientBillingSummary = ({
   allEntries,
   clients,
-  projects,
   isPro,
   clientColorMap,
   rangeStart,
   rangeEnd,
-  rangeLabel,
   onBillClient,
   onOpenUnassigned,
   onEditEntry,
   onDeleteEntry,
   activeClientFilter,
-  onFilterClient,
   rounding = DEFAULT_ROUNDING,
 }: ClientBillingSummaryProps) => {
-  const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const { clientSummaries, unassignedSummary } = useMemo(() => {
     const clientMap: Record<string, ClientSummary> = {};
     const unassignedEntries: TimeEntry[] = [];
 
-    // Group entries by client
     allEntries.forEach((e) => {
-      if (!e.client_id) {
-        unassignedEntries.push(e);
-        return;
-      }
+      if (!e.client_id) { unassignedEntries.push(e); return; }
       if (!clientMap[e.client_id]) {
         clientMap[e.client_id] = {
           id: e.client_id,
           name: clients[e.client_id] ?? "Unknown",
-          totalMins: 0,
-          billableMins: 0,
-          billableValue: 0,
-          outstanding: 0,
+          totalMins: 0, billableMins: 0, billableValue: 0, outstanding: 0,
           currency: e.rate_currency ?? "EUR",
           entries: [],
         };
@@ -84,9 +89,8 @@ const ClientBillingSummary = ({
       clientMap[e.client_id].entries.push(e);
     });
 
-    // Compute scope-aware aggregates per client
     Object.values(clientMap).forEach((c) => {
-      const { totalMinutes, totalValue } = aggregateWithRounding(c.entries, rounding);
+      const { totalMinutes } = aggregateWithRounding(c.entries, rounding);
       c.totalMins = totalMinutes;
       const billableEntries = c.entries.filter((e) => e.billable);
       const { totalMinutes: bMins, totalValue: bVal } = aggregateWithRounding(billableEntries, rounding);
@@ -98,17 +102,15 @@ const ClientBillingSummary = ({
       c.entries.sort((a, b) => (b.entry_date ?? "").localeCompare(a.entry_date ?? ""));
     });
 
-    // Unassigned
     const { totalMinutes: unassignedMins } = aggregateWithRounding(unassignedEntries, rounding);
     unassignedEntries.sort((a, b) => (b.entry_date ?? "").localeCompare(a.entry_date ?? ""));
 
     return {
-      clientSummaries: Object.values(clientMap).sort((a, b) => b.totalMins - a.totalMins),
+      clientSummaries: Object.values(clientMap).sort((a, b) => b.billableValue - a.billableValue || b.totalMins - a.totalMins),
       unassignedSummary: { totalMins: unassignedMins, entries: unassignedEntries },
     };
   }, [allEntries, clients, rounding]);
 
-  // Calculate days in range for avg/day
   const daysInRange = useMemo(() => {
     const [sY, sM, sD] = rangeStart.split("-").map(Number);
     const [eY, eM, eD] = rangeEnd.split("-").map(Number);
@@ -117,131 +119,120 @@ const ClientBillingSummary = ({
     return Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
   }, [rangeStart, rangeEnd]);
 
-  const toggleExpand = (id: string) => {
-    setExpandedClients((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
   if (allEntries.length === 0) {
     return (
-      <div className="mb-4">
-        <div className="text-center py-8">
-          <p className="text-sm text-muted-foreground">No entries for this period.</p>
-          <p className="text-xs text-muted-foreground mt-1">Start tracking to see your billing summary.</p>
-        </div>
+      <div className="text-center py-8">
+        <p className="text-sm text-muted-foreground">No entries for this period.</p>
+        <p className="text-xs text-muted-foreground mt-1">Start tracking to see your billing summary.</p>
       </div>
     );
   }
 
-  const SUNRISE_PALETTE = [
-    "hsl(38 92% 55%)", "hsl(22 88% 55%)", "hsl(340 72% 55%)", "hsl(310 60% 52%)",
-    "hsl(270 58% 58%)", "hsl(220 75% 58%)", "hsl(190 70% 48%)", "hsl(355 68% 52%)",
-    "hsl(50 85% 52%)", "hsl(285 55% 52%)",
-  ];
-  const hashStringToIndex = (str: string, max: number): number => {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
-    return Math.abs(hash) % max;
-  };
-  const getClientColor = (id: string) => SUNRISE_PALETTE[hashStringToIndex(id, SUNRISE_PALETTE.length)];
+  // Max for the bar scaling — use billable value if any client has revenue,
+  // otherwise fall back to total time so the bars still convey relative weight.
+  const maxValue = Math.max(...clientSummaries.map((c) => c.billableValue), 0);
+  const maxMins = Math.max(...clientSummaries.map((c) => c.totalMins), 0);
+  const useValueScale = maxValue > 0;
+
+  const toggle = (id: string) => setExpandedId((prev) => (prev === id ? null : id));
 
   return (
-    <div className="space-y-2">
-      {clientSummaries.map((c, i) => {
+    <div className="rounded-2xl border border-border/60 bg-card overflow-hidden divide-y divide-border/60">
+      {clientSummaries.map((c) => {
         const sym = CURRENCY_SYMBOLS[c.currency] ?? "€";
-        const isExpanded = expandedClients.has(c.id);
-        const avgPerDay = c.totalMins / daysInRange;
-        const color = clientColorMap?.[c.id] ?? getClientColor(c.id);
+        const isExpanded = expandedId === c.id;
+        const color = clientColorMap?.[c.id] ?? fallbackClientColor(c.id);
+        const barPct = useValueScale
+          ? (maxValue > 0 ? (c.billableValue / maxValue) * 100 : 0)
+          : (maxMins > 0 ? (c.totalMins / maxMins) * 100 : 0);
+        const unbillableMins = c.totalMins - c.billableMins;
+        const isActive = activeClientFilter === c.id;
 
         return (
-          <div
-            key={c.id}
-            className={`rounded-2xl border overflow-hidden transition-all ${
-              activeClientFilter === c.id ? "border-primary ring-1 ring-primary/30" : "border-border/60"
-            }`}
-            style={{ background: "hsl(var(--card))" }}
-          >
-            {/* Card header — clickable to expand */}
+          <div key={c.id}>
             <button
-              onClick={() => toggleExpand(c.id)}
-              className="w-full text-left px-4 py-3"
+              onClick={() => toggle(c.id)}
+              className={`w-full text-left px-3 py-3 flex items-center gap-3 transition-colors ${
+                isActive ? "bg-primary/5" : "hover:bg-muted/30"
+              }`}
             >
-              {/* Row 1: Header */}
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-3 h-3 rounded-full shrink-0" style={{ background: color }} />
-                  <span className="text-sm font-semibold text-foreground">{c.name}</span>
+              {/* Avatar with initials */}
+              <div
+                className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-[11px] font-bold text-white"
+                style={{ background: color }}
+              >
+                {initialsOf(c.name)}
+              </div>
+
+              {/* Body: name, sub, bar */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-sm font-semibold text-foreground truncate">{c.name}</span>
+                  <span className="text-sm font-bold font-mono text-foreground tabular-nums shrink-0">
+                    {sym}{c.billableValue.toFixed(2)}
+                  </span>
                 </div>
-                {isExpanded
-                  ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                  : <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                }
+                <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                  {c.billableMins > 0 ? `${formatHM(c.billableMins)} billable` : "0h 00m billable"}
+                  {unbillableMins > 0 ? ` · ${formatHM(unbillableMins)} unbillable` : ""}
+                </div>
+                {/* Progress bar */}
+                <div className="mt-2 h-1.5 rounded-full bg-muted/50 overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{ width: `${Math.max(barPct, 2)}%`, background: color }}
+                  />
+                </div>
               </div>
 
-              {/* Row 2: Primary metrics — time left, amount right */}
-              <div className="flex items-baseline justify-between">
-                <p className="text-base font-semibold font-mono text-foreground">{formatHM(c.totalMins)}</p>
-                <p className="text-base font-semibold font-mono text-foreground">{sym}{c.billableValue.toFixed(2)}</p>
-              </div>
-
-              {/* Row 3: Billable context */}
-              <p className="text-xs text-muted-foreground mt-0.5">{formatHM(c.billableMins)} billable</p>
-
-              {/* Row 4: Unbillable (only if > 0) */}
-              {c.totalMins - c.billableMins > 0 && (
-                <p className="text-xs text-muted-foreground">{formatHM(c.totalMins - c.billableMins)} unbillable</p>
-              )}
+              <ChevronRight
+                className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+              />
             </button>
 
-            {/* Expanded: sessions + billing */}
+            {/* Expanded sessions + actions */}
             {isExpanded && (
-              <div className="border-t border-border">
-                {/* Actions row */}
-                <div className="flex items-center justify-end px-4 py-2 bg-muted/20 gap-3">
+              <div className="border-t border-border/60 bg-muted/10">
+                <div className="flex items-center justify-end px-3 py-2 gap-3">
                   {c.outstanding > 0 && (
                     <span className="text-[11px] text-muted-foreground">{sym}{c.outstanding.toFixed(2)} outstanding</span>
                   )}
                   {isPro && c.billableValue > 0 && (
                     <button
-                      onClick={() => onBillClient(c.id)}
-                      className="text-[11px] font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-primary/15 text-foreground hover:bg-primary/25 transition-colors"
+                      onClick={(e) => { e.stopPropagation(); onBillClient(c.id); }}
+                      className="text-[11px] font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-foreground/10 text-foreground hover:bg-foreground/15 transition-colors"
                     >
                       Send <ArrowRight className="w-3 h-3" />
                     </button>
                   )}
                 </div>
-
-                {/* Session list — expand to show all when a single client is filtered and range ≤ 7 days */}
                 <div className={activeClientFilter && daysInRange <= 7 ? "" : "max-h-60 overflow-y-auto"}>
                   {c.entries.map((entry) => (
                     <button
                       key={entry.id}
                       onClick={() => onEditEntry?.(entry)}
-                      className="w-full flex items-center justify-between px-4 py-2.5 text-sm border-b border-border last:border-b-0 hover:bg-muted/40 transition-colors text-left"
+                      className="w-full flex items-center justify-between px-3 py-2.5 text-sm border-t border-border/60 hover:bg-muted/40 transition-colors text-left"
                     >
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-muted-foreground">
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <span className="text-muted-foreground text-[11px]">
                           {new Date(entry.entry_date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
                         </span>
-                        <span className="text-foreground font-medium">
+                        <span className="text-foreground font-medium text-xs truncate">
                           {entry.project_name ?? "No project"}
                           {entry.task_name ? ` · ${entry.task_name}` : ""}
                         </span>
                       </div>
-                      <div className="flex flex-col items-end gap-0.5">
-                        <span className="font-mono text-foreground">{formatHM(entryDisplayValues(entry, rounding).displayMinutes)}</span>
+                      <div className="flex flex-col items-end gap-0.5 shrink-0 ml-2">
+                        <span className="font-mono text-foreground text-xs">{formatHM(entryDisplayValues(entry, rounding).displayMinutes)}</span>
                         {entry.billable && entryDisplayValues(entry, rounding).displayValue > 0 ? (
-                          <span className="font-mono text-muted-foreground">
+                          <span className="font-mono text-muted-foreground text-[11px]">
                             {sym}{entryDisplayValues(entry, rounding).displayValue.toFixed(2)}
                             {entry.billing_status === "unbilled" && (
                               <span className="ml-1 text-foreground font-medium">unbilled</span>
                             )}
                           </span>
                         ) : (
-                          <span className="text-muted-foreground">—</span>
+                          <span className="text-muted-foreground text-[11px]">—</span>
                         )}
                       </div>
                     </button>
@@ -253,33 +244,39 @@ const ClientBillingSummary = ({
         );
       })}
 
-      {/* Unassigned */}
+      {/* Unassigned row */}
       {unassignedSummary.entries.length > 0 && (
-        <div className="rounded-2xl border border-border bg-card overflow-hidden">
+        <div>
           <button
-            onClick={() => toggleExpand("__unassigned__")}
-            className="w-full text-left p-4"
+            onClick={() => toggle("__unassigned__")}
+            className="w-full text-left px-3 py-3 flex items-center gap-3 hover:bg-muted/30 transition-colors"
           >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2.5">
-                <div className="w-3 h-3 rounded-full shrink-0" style={{ background: "hsl(240 5% 75%)" }} />
-                <span className="text-sm font-semibold text-foreground">Unassigned</span>
-              </div>
-              {expandedClients.has("__unassigned__")
-                ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                : <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              }
+            <div
+              className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-[11px] font-bold text-white"
+              style={{ background: "hsl(240 5% 65%)" }}
+            >
+              NA
             </div>
-            <p className="text-lg font-bold font-mono text-foreground">{formatHM(unassignedSummary.totalMins)}</p>
-            <p className="text-[10px] text-muted-foreground">Not billable</p>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-sm font-semibold text-foreground truncate">Unassigned</span>
+                <span className="text-sm font-bold font-mono text-foreground tabular-nums shrink-0">
+                  {formatHM(unassignedSummary.totalMins)}
+                </span>
+              </div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">Not billable · tap to assign</div>
+            </div>
+            <ChevronRight
+              className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${expandedId === "__unassigned__" ? "rotate-90" : ""}`}
+            />
           </button>
 
-          {expandedClients.has("__unassigned__") && (
-            <div className="border-t border-border">
-              <div className="flex justify-end px-4 py-2.5 bg-muted/20">
+          {expandedId === "__unassigned__" && (
+            <div className="border-t border-border/60 bg-muted/10">
+              <div className="flex justify-end px-3 py-2">
                 <button
                   onClick={onOpenUnassigned}
-                  className="text-[11px] font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-primary/15 text-foreground hover:bg-primary/25 transition-colors"
+                  className="text-[11px] font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-foreground/10 text-foreground hover:bg-foreground/15 transition-colors"
                 >
                   Assign entries <ArrowRight className="w-3 h-3" />
                 </button>
@@ -288,13 +285,13 @@ const ClientBillingSummary = ({
                 {unassignedSummary.entries.map((entry) => (
                   <div
                     key={entry.id}
-                    className="flex items-center justify-between px-4 py-2.5 text-xs border-b border-border last:border-b-0 hover:bg-muted/40 transition-colors"
+                    className="flex items-center justify-between px-3 py-2.5 text-xs border-t border-border/60 hover:bg-muted/40 transition-colors"
                   >
                     <button
                       onClick={() => onEditEntry?.(entry)}
                       className="flex flex-col gap-0.5 text-left flex-1 min-w-0"
                     >
-                      <span className="text-muted-foreground">
+                      <span className="text-muted-foreground text-[11px]">
                         {new Date(entry.entry_date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
                       </span>
                       <span className="text-foreground font-medium truncate">

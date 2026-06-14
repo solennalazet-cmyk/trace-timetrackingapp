@@ -529,10 +529,10 @@ const ReportsPage = () => {
 
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="w-full grid grid-cols-2 rounded-full bg-muted/40 h-10 p-1 mb-4">
-          <TabsTrigger value="overview" className="rounded-full text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm">
+          <TabsTrigger value="overview" className="rounded-full text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-nav-bg data-[state=active]:shadow-sm">
             Overview
           </TabsTrigger>
-          <TabsTrigger value="done" className="rounded-full text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm">
+          <TabsTrigger value="done" className="rounded-full text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-nav-bg data-[state=active]:shadow-sm">
             Done
           </TabsTrigger>
         </TabsList>

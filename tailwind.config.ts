@@ -53,6 +53,7 @@ export default {
           foreground: "hsl(var(--card-foreground))",
         },
         pink: "hsl(var(--pink))",
+        "nav-bg": "hsl(var(--nav-bg))",
         "timer-display": "hsl(var(--timer-display))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",

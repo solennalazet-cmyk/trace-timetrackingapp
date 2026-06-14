@@ -1125,6 +1125,34 @@ const ReportsPage = () => {
         </div>
       </div>
 
+      {/* Sticky Export FAB — sits above bottom nav, hidden behind paywall blur for free */}
+      {!isFree && (
+        <button
+          type="button"
+          onClick={() => {
+            let targetClientId = clientFilter;
+            if (!targetClientId) {
+              const uniqueClients = Array.from(new Set(displayEntries.map((e) => e.client_id).filter(Boolean))) as string[];
+              if (uniqueClients.length === 1) {
+                targetClientId = uniqueClients[0];
+              } else {
+                toast.info("Filter by a single client to send a report.");
+                return;
+              }
+            }
+            setPrepareBillingClientId(targetClientId);
+            setPrepareBillingOpen(true);
+          }}
+          aria-label="Export report"
+          className="fixed right-4 z-40 flex items-center gap-2 h-12 px-5 rounded-full bg-primary text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/30 hover:shadow-xl active:scale-[0.98] transition-all"
+          style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 5rem)" }}
+        >
+          <Download className="w-4 h-4" />
+          Export
+        </button>
+      )}
+
+
       {/* Modals */}
       <EntryDetailSheet entry={selectedEntry} open={detailOpen} onOpenChange={setDetailOpen} onEdit={handleEdit} onDeleted={() => loadData()} />
       <AssignmentModal open={assignOpen} session={editSession} existingEntry={editEntry}

@@ -6,7 +6,7 @@ import {
 } from "recharts";
 import {
   ChevronDown, ChevronUp, Timer, PenLine, Clock, Phone,
-  Crown, Download, Trash2, X, Euro,
+  Crown, Download, Trash2, X, Euro, PieChart as PieChartIcon,
 } from "lucide-react";
 import { startOfWeek } from "date-fns";
 import DateRangePicker from "@/components/DateRangePicker";
@@ -751,7 +751,10 @@ const ReportsPage = () => {
           {/* ── 4. Client Cards ── */}
           {displayEntries.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Clients</h3>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <PieChartIcon className="w-3.5 h-3.5 text-primary" />
+                Revenue by client
+              </h3>
               <ClientBillingSummary
                 allEntries={displayEntries}
                 clients={clients}

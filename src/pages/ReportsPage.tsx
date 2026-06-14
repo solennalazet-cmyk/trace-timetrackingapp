@@ -624,77 +624,101 @@ const ReportsPage = () => {
             };
 
             const sym = "€";
+            const timeStr = `${Math.floor(totalMins / 60)}h ${String(totalMins % 60).padStart(2, "0")}m`;
+            const billableStr = formatHHMM(billableMins).replace(":", "h ") + "m";
+            const nonBillableStr = formatHHMM(nonBillableMins).replace(":", "h ") + "m";
+
+            const Donut = ({ data, dataTotal, centerTop, centerSub, valueColor }: { data: typeof timeDonutData; dataTotal: number; centerTop: string; centerSub: string; valueColor?: string }) => (
+              <div className="relative mx-auto [&_svg]:outline-none [&_svg]:border-none [&_svg_*]:outline-none" style={{ width: 150, height: 150 }}>
+                <ResponsiveContainer width={150} height={150}>
+                  <PieChart>
+                    <Pie
+                      data={data}
+                      innerRadius={38}
+                      outerRadius={62}
+                      dataKey="value"
+                      stroke="none"
+                      paddingAngle={1}
+                      label={(props) => renderInitialsLabel(props, data, dataTotal)}
+                      labelLine={false}
+                      isAnimationActive={false}
+                    >
+                      {data.map((d, i) => <Cell key={i} fill={d.fill} stroke="hsl(var(--background))" strokeWidth={2} />)}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-2 text-center">
+                  <span className="text-sm font-bold font-mono text-foreground leading-tight">{centerTop}</span>
+                  <span className="text-[10px] text-muted-foreground">{centerSub}</span>
+                </div>
+              </div>
+            );
 
             return (
-              <div className="mb-6">
-                <div className="flex justify-center gap-4">
-                  {/* Time donut */}
-                  <div className="relative [&_svg]:outline-none [&_svg]:border-none [&_svg_*]:outline-none" style={{ width: 175, height: 175 }}>
-                    <ResponsiveContainer width={175} height={175}>
-                      <PieChart>
-                        <Pie
-                          data={timeDonutData}
-                          innerRadius={42}
-                          outerRadius={68}
-                          dataKey="value"
-                          stroke="none"
-                          paddingAngle={1}
-                          label={(props) => renderInitialsLabel(props, timeDonutData, total)}
-                          labelLine={false}
-                          isAnimationActive={false}
-                        >
-                          {timeDonutData.map((d, i) => <Cell key={i} fill={d.fill} stroke="hsl(var(--background))" strokeWidth={2} />)}
-                        </Pie>
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                      <span className="text-base font-bold font-mono text-foreground">{`${Math.floor(totalMins / 60)}h${String(totalMins % 60).padStart(2, "0")}`}</span>
-                      <span className="text-xs text-muted-foreground">{clientFilter ? (timeDonutData.some(d => d.name !== "No task" && d.name !== "No project") ? (displayEntries.filter(e => e.project_id).length > 0 && new Set(displayEntries.map(e => e.project_id).filter(Boolean)).size > 1 ? "by project" : "by task") : "time") : "time"}</span>
+              <div className="mb-6 grid grid-cols-2 gap-2.5">
+                {/* TIME TRACKED card */}
+                <div className="rounded-2xl border border-border/60 bg-card p-3 flex flex-col">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <div className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                      <Clock className="w-3.5 h-3.5 text-foreground" />
                     </div>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Time tracked</span>
                   </div>
-
-                  {/* Turnover donut */}
-                  {turnoverDonutData.length > 0 && (
-                    <div className="relative [&_svg]:outline-none [&_svg]:border-none [&_svg_*]:outline-none" style={{ width: 175, height: 175 }}>
-                      <ResponsiveContainer width={175} height={175}>
-                        <PieChart>
-                          <Pie
-                            data={turnoverDonutData}
-                            innerRadius={42}
-                            outerRadius={68}
-                            dataKey="value"
-                            stroke="none"
-                            paddingAngle={1}
-                            label={(props) => renderInitialsLabel(props, turnoverDonutData, totalTurnover)}
-                            labelLine={false}
-                            isAnimationActive={false}
-                          >
-                            {turnoverDonutData.map((d, i) => <Cell key={i} fill={d.fill} stroke="hsl(var(--background))" strokeWidth={2} />)}
-                          </Pie>
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-base font-bold font-mono text-foreground">{sym}{totalTurnoverValue.toFixed(2)}</span>
-                        <span className="text-xs text-muted-foreground">turnover</span>
-                      </div>
+                  <div className="text-xl font-bold tracking-tight text-foreground leading-none mb-1.5">{timeStr}</div>
+                  <div className="space-y-0.5 text-[11px] mb-3">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      <span className="text-muted-foreground">Billable {billableStr}</span>
                     </div>
-                  )}
+                    {nonBillableMins > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50" />
+                        <span className="text-muted-foreground">Non-billable {nonBillableStr}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-auto">
+                    <Donut
+                      data={timeDonutData}
+                      dataTotal={total}
+                      centerTop={timeStr}
+                      centerSub={clientFilter ? (timeDonutData.some(d => d.name !== "No task" && d.name !== "No project") ? (displayEntries.filter(e => e.project_id).length > 0 && new Set(displayEntries.map(e => e.project_id).filter(Boolean)).size > 1 ? "by project" : "by task") : "time") : "time"}
+                    />
+                  </div>
                 </div>
 
-                {/* Billable / Non-billable summary text */}
-                <div className="flex justify-center gap-6 mt-3 text-xs text-muted-foreground">
-                  <span>Billable: {formatHHMM(billableMins)}</span>
-                  {nonBillableMins > 0 && <span>Non-billable: {formatHHMM(nonBillableMins)}</span>}
+                {/* REVENUE EARNED card */}
+                <div className="rounded-2xl border border-border/60 bg-card p-3 flex flex-col">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <div className="w-6 h-6 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0">
+                      <Euro className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Revenue earned</span>
+                  </div>
+                  <div className="text-xl font-bold tracking-tight text-foreground leading-none mb-1.5">{sym}{totalTurnoverValue.toFixed(2)}</div>
+                  <div className="text-[11px] text-muted-foreground mb-3">Billable revenue</div>
+                  <div className="mt-auto">
+                    {turnoverDonutData.length > 0 ? (
+                      <Donut
+                        data={turnoverDonutData}
+                        dataTotal={totalTurnover}
+                        centerTop={`${sym}${totalTurnoverValue.toFixed(0)}`}
+                        centerSub="turnover"
+                      />
+                    ) : (
+                      <div className="h-[150px] flex items-center justify-center text-[11px] text-muted-foreground">No billable revenue</div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Compact ranked breakdown — only shown when filtered (decision-driven mobile read) */}
+                {/* Compact ranked breakdown — only when filtered (spans both columns) */}
                 {clientFilter && timeDonutData.length > 0 && (() => {
                   const sorted = [...timeDonutData].sort((a, b) => b.value - a.value);
                   const top = sorted.slice(0, 4);
                   const restMins = sorted.slice(4).reduce((s, d) => s + d.value, 0);
                   const max = top[0]?.value ?? 1;
                   return (
-                    <div className="mt-4 space-y-1.5 max-w-[360px] mx-auto">
+                    <div className="col-span-2 mt-1 space-y-1.5 max-w-[360px] mx-auto w-full">
                       {top.map((d) => {
                         const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
                         const barPct = max > 0 ? (d.value / max) * 100 : 0;

@@ -1320,7 +1320,7 @@ const ReportsPage = () => {
             setPrepareBillingOpen(true);
           }}
           aria-label="Export report"
-          className="fixed right-4 z-40 flex items-center gap-2 h-12 px-5 rounded-full bg-primary text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/30 hover:shadow-xl active:scale-[0.98] transition-all"
+          className="fixed left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 h-12 px-5 rounded-full bg-primary text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/30 hover:shadow-xl active:scale-[0.98] transition-all"
           style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 5rem)" }}
         >
           <Download className="w-4 h-4" />

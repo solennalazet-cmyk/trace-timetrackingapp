@@ -163,9 +163,9 @@ const PaymentsPage = () => {
       const remaining = Math.max(0, total - p);
       if (remaining > 0) {
         const ref = new Date((r.reviewed_at ?? r.submitted_at));
-        const dueDate = new Date(ref);
-        dueDate.setDate(dueDate.getDate() + DEFAULT_NET_DAYS);
-        if (dueDate < today) overdue += remaining;
+        const dueDate = nextBillingCutoff(ref);
+        const today2 = new Date(); today2.setHours(0, 0, 0, 0);
+        if (dueDate < today2) overdue += remaining;
       }
     }
     return { due, paid, outstanding: Math.max(0, due - paid), overdue, currency };

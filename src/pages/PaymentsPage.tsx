@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Wallet, Check, ChevronDown, Trash2, Pencil, Calendar as CalendarIcon } from "lucide-react";
+import { Wallet, Check, ChevronRight, Trash2, Pencil, Calendar as CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/contexts/RoleContext";
@@ -260,66 +260,94 @@ const PaymentsPage = () => {
             const isOpen = expandedKey === key;
             const fullyPaid = t.outstanding <= 0.005;
 
+            const partial = t.paid > 0.005 && t.outstanding > 0.005;
+            const noInvoices = t.due <= 0.005;
+            const overdue = t.overdue > 0.005;
+
+            const status = noInvoices
+              ? { label: "No invoices", cls: "bg-muted text-muted-foreground" }
+              : fullyPaid
+                ? { label: "Paid", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" }
+                : overdue
+                  ? { label: "Overdue", cls: "bg-red-500/15 text-red-600 dark:text-red-400" }
+                  : partial
+                    ? { label: "Partial payments", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400" }
+                    : { label: "On track", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" };
+
+            const pct = t.due > 0 ? Math.min(100, Math.round((t.paid / t.due) * 100)) : 0;
+            const barCls = noInvoices
+              ? "bg-muted-foreground/20"
+              : overdue
+                ? "bg-red-500"
+                : "bg-emerald-500";
+
+            const initials = name
+              .split(" ")
+              .map((w) => w[0])
+              .filter(Boolean)
+              .slice(0, 2)
+              .join("")
+              .toUpperCase();
+
             return (
-              <Card key={key} className="overflow-hidden">
+              <Card key={key} className="overflow-hidden rounded-2xl shadow-sm">
                 {/* Collapsed header — always visible */}
                 <button
                   type="button"
                   onClick={() => handleExpand(key, t.outstanding)}
                   className="w-full text-left p-4 hover:bg-muted/30 transition-colors"
                 >
-                  <div className="flex items-center gap-2.5 mb-3">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                  <div className="flex items-center gap-3 mb-4">
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
                       style={{ backgroundColor: getClientColor(key) }}
                       aria-hidden
-                    />
+                    >
+                      {initials || "?"}
+                    </div>
                     <h2 className="text-base font-semibold flex-1 truncate">{name}</h2>
-                    <ChevronDown
-                      className={`w-4 h-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`}
+                    <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full ${status.cls}`}>
+                      {status.label}
+                    </span>
+                    <ChevronRight
+                      className={`w-4 h-4 text-muted-foreground transition-transform ${isOpen ? "rotate-90" : ""}`}
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-2 mb-3">
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Amount Due</p>
-                      <p className="text-lg font-mono font-semibold mt-0.5 text-primary-foreground">{sym}{t.outstanding.toFixed(2)}</p>
+                      <p className="text-base font-mono font-semibold text-foreground">{sym}{t.due.toFixed(2)}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Amount Due</p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Amount Paid</p>
-                      <p className="text-lg font-mono font-semibold mt-0.5 text-primary-foreground">{sym}{t.paid.toFixed(2)}</p>
+                      <p className="text-base font-mono font-semibold text-foreground">{sym}{t.paid.toFixed(2)}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Paid</p>
+                    </div>
+                    <div>
+                      <p className={`text-base font-mono font-semibold ${overdue ? "text-red-600 dark:text-red-400" : "text-foreground"}`}>
+                        {sym}{t.outstanding.toFixed(2)}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Remaining</p>
                     </div>
                   </div>
 
-                  {(() => {
-                    const partial = t.paid > 0.005 && t.outstanding > 0.005;
-                    const showOverdue = t.overdue > 0 || partial;
-                    if (!showOverdue && !fullyPaid) return null;
-                    return (
-                      <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
-                        {fullyPaid ? (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                            <Check className="w-3.5 h-3.5" /> Fully paid
-                          </span>
-                        ) : (
-                          <>
-                            <span className="text-xs font-medium text-orange-600 dark:text-orange-400">Overdue</span>
-                            <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 dark:text-orange-400">
-                              {sym}{(t.overdue > 0 ? t.overdue : t.outstanding).toFixed(2)}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })()}
+                  <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={`h-full ${barCls} transition-all`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
                 </button>
 
                 {/* Expanded body */}
                 {isOpen && (
                   <div className="px-4 pb-4 space-y-4 border-t border-border pt-4">
-                    {!fullyPaid && (
-                      <div className="space-y-2">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Record payment</p>
+                    {!fullyPaid && !noInvoices && (
+                      <div className="rounded-xl border border-border bg-muted/40 p-3 space-y-3 shadow-sm">
+                        <div className="flex items-center gap-2">
+                          <Wallet className="w-4 h-4 text-foreground" />
+                          <p className="text-sm font-semibold">Record a payment</p>
+                        </div>
                         <div className="flex gap-2">
                           <div className="flex-1 relative">
                             <Input
@@ -331,7 +359,7 @@ const PaymentsPage = () => {
                               onFocus={() => setEditingAmount(true)}
                               onChange={(e) => setDraftAmount(e.target.value)}
                               onBlur={() => setEditingAmount(false)}
-                              className={`pr-9 font-mono ${editingAmount ? "" : "text-muted-foreground"}`}
+                              className={`pr-9 font-mono bg-background ${editingAmount ? "" : "text-muted-foreground"}`}
                             />
                             <Pencil className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
                           </div>
@@ -341,12 +369,12 @@ const PaymentsPage = () => {
                               type="date"
                               value={draftDate}
                               onChange={(e) => setDraftDate(e.target.value)}
-                              className="pl-8"
+                              className="pl-8 bg-background"
                             />
                           </div>
                         </div>
                         <Button
-                          className="w-full rounded-lg h-11 bg-primary text-primary-foreground hover:bg-primary/90"
+                          className="w-full rounded-lg h-12 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold text-sm shadow-sm"
                           disabled={saving}
                           onClick={() => handleSavePayment(rows)}
                         >
@@ -354,6 +382,13 @@ const PaymentsPage = () => {
                         </Button>
                       </div>
                     )}
+
+                    {fullyPaid && !noInvoices && (
+                      <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400 px-1">
+                        <Check className="w-4 h-4" /> Fully paid
+                      </div>
+                    )}
+
 
                     <div className="space-y-2">
                       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Reports in this period</p>

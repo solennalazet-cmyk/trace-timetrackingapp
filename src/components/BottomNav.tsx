@@ -7,6 +7,7 @@ import { usePendingReportsCount } from "@/hooks/usePendingReportsCount";
 const workerTabs = [
   { path: "/", label: "Start", icon: Timer },
   { path: "/reports", label: "Reports", icon: BarChart3 },
+  { path: "/payments", label: "Payments", icon: Wallet },
   { path: "/clients", label: "Clients", icon: Briefcase },
 ];
 

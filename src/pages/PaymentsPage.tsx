@@ -404,41 +404,6 @@ const PaymentsPage = () => {
                     )}
 
 
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Reports in this period</p>
-                      <div className="space-y-1.5">
-                        {rows.map((r) => {
-                          const paid = paidByReport.get(r.id) ?? 0;
-                          const total = Number(r.total_amount);
-                          const rFullyPaid = paid + 0.005 >= total;
-                          const s = CURRENCY_SYMBOLS[r.currency] ?? "€";
-                          const pending = r.status === "submitted";
-                          return (
-                            <button
-                              key={r.id}
-                              type="button"
-                              onClick={() => setOpenReportId(r.id)}
-                              className="w-full flex items-center gap-2 p-2.5 rounded-lg border border-border bg-muted/30 hover:bg-muted/60 transition-colors text-left"
-                            >
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate">{formatPeriod(r.period_start, r.period_end)}</p>
-                                <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
-                                  {rFullyPaid ? (
-                                    <><Check className="w-3 h-3" /> Paid</>
-                                  ) : pending ? (
-                                    <span>Pending approval</span>
-                                  ) : (
-                                    <span>Approved</span>
-                                  )}
-                                </p>
-                              </div>
-                              <span className="text-sm font-mono font-semibold">{s}{total.toFixed(2)}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
                     {/* Recent payments log */}
                     {(() => {
                       const reportIds = new Set(rows.map((r) => r.id));
@@ -472,6 +437,32 @@ const PaymentsPage = () => {
                         </div>
                       );
                     })()}
+
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Issued reports</p>
+                      <div className="space-y-1.5">
+                        {rows.map((r) => {
+                          const s = CURRENCY_SYMBOLS[r.currency] ?? "€";
+                          const pending = r.status === "submitted";
+                          return (
+                            <button
+                              key={r.id}
+                              type="button"
+                              onClick={() => setOpenReportId(r.id)}
+                              className="w-full flex items-center gap-2 p-2.5 rounded-lg border border-border bg-muted/30 hover:bg-muted/60 transition-colors text-left"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{formatPeriod(r.period_start, r.period_end)}</p>
+                                <p className="text-[11px] text-muted-foreground mt-0.5">
+                                  {pending ? "Pending approval" : "Approved"}
+                                </p>
+                              </div>
+                              <span className="text-sm font-mono font-semibold">{s}{Number(r.total_amount).toFixed(2)}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 )}
               </Card>

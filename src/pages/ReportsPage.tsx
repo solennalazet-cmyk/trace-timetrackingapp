@@ -1346,9 +1346,12 @@ const ReportsPage = () => {
           Export
         </button>
       )}
+        </TabsContent>
+      </Tabs>
 
 
       {/* Modals */}
+
       <EntryDetailSheet entry={selectedEntry} open={detailOpen} onOpenChange={setDetailOpen} onEdit={handleEdit} onDeleted={() => loadData()} />
       <AssignmentModal open={assignOpen} session={editSession} existingEntry={editEntry}
         onSave={handleEditSave} onSkip={() => { setAssignOpen(false); setEditEntry(null); }}

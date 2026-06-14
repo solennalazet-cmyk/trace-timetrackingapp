@@ -82,7 +82,7 @@ const AppInner = () => {
           <Route element={<AppLayout />}>
             <Route path="/" element={<StartPage />} />
             <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/timeline" element={<TimelinePage />} />
+            <Route path="/timeline" element={<Navigate to="/reports" replace />} />
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/employer" element={<EmployerHomePage />} />
             <Route path="/workers" element={<WorkersPage />} />

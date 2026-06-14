@@ -7,6 +7,7 @@ import {
 import {
   ChevronDown, ChevronUp, Timer, PenLine, Clock, Phone,
   Crown, Download, Trash2, X, Euro, PieChart as PieChartIcon,
+  Coffee, Heart, Activity, Pause as PauseIcon, Info,
 } from "lucide-react";
 import { startOfWeek } from "date-fns";
 import DateRangePicker from "@/components/DateRangePicker";
@@ -1019,71 +1020,243 @@ const ReportsPage = () => {
 
 
 
-          {/* ── 6. Daily Breakdown Stacked Bar ── */}
-          {stackedChartData.length > 0 && rangeEntries.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Daily Breakdown <span className="normal-case tracking-normal text-[10px] text-muted-foreground/70">(hours per day)</span></h3>
-              <div className="w-full" style={{ minHeight: 220 }}>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={stackedChartData} barCategoryGap="12%" margin={{ top: 8, right: 4, left: -8, bottom: 0 }}>
-                    <XAxis
-                      dataKey="label"
-                      height={44}
-                      interval={stackedChartData.length > 14 ? Math.ceil(stackedChartData.length / 10) - 1 : 0}
-                      tickMargin={4}
-                      tick={renderCompactDateTick}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                      tickLine={false}
-                      axisLine={false}
-                      width={40}
-                      allowDecimals={false}
-                      tickFormatter={(v) => `${v}h`}
-                    />
-                    <Tooltip
-                      contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
-                      content={({ active, payload }: any) => {
-                        if (!active || !payload?.length) return null;
-                        const row = payload[0].payload;
-                        const segs = (row?._segs ?? []) as { hours: number; color: string; kind: "work" | "break"; label: string }[];
-                        // Aggregate by label so the tooltip stays readable
-                        const agg = new Map<string, { hours: number; color: string; kind: "work" | "break" }>();
-                        segs.forEach((s) => {
-                          const cur = agg.get(s.label);
-                          if (cur) cur.hours += s.hours;
-                          else agg.set(s.label, { hours: s.hours, color: s.color, kind: s.kind });
-                        });
-                        return (
-                          <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow-sm">
-                            <div className="font-medium text-foreground mb-1">{row.label} · {row._total.toFixed(1)}h</div>
-                            {[...agg.entries()].map(([label, v]) => (
-                              <div key={label} className="flex items-center gap-2">
-                                <span className="inline-block w-2 h-2 rounded-sm" style={{ background: v.color }} />
-                                <span className="text-muted-foreground">{label}</span>
-                                <span className="ml-auto font-mono text-foreground">{v.hours.toFixed(1)}h</span>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      }}
-                    />
-                    {Array.from({ length: maxSegments }).map((_, i) => (
-                      <Bar key={i} dataKey={`seg${i}`} stackId="a" isAnimationActive={false}
-                        radius={i === maxSegments - 1 ? [3, 3, 0, 0] : 0}>
-                        {stackedChartData.map((row: any, ri) => {
-                          const seg = row._segs?.[i];
-                          return <Cell key={ri} fill={seg?.color ?? "transparent"} />;
-                        })}
-                      </Bar>
-                    ))}
-                  </BarChart>
-                </ResponsiveContainer>
+          {/* ── 6. Daily Breakdown Stacked Bar (fixed column width + horizontal scroll) ── */}
+          {stackedChartData.length > 0 && rangeEntries.length > 0 && (() => {
+            const COL_W = 56;          // fixed per-day width
+            const Y_AXIS_W = 44;
+            const RIGHT_PAD = 12;
+            const chartWidth = Math.max(
+              stackedChartData.length * COL_W + Y_AXIS_W + RIGHT_PAD,
+              0
+            );
+
+            // ── Break analysis (from displayEntries) ──
+            const totalWorkMins = displayEntries.reduce((s, e) => s + edMins(e), 0);
+            const totalBreakMins = displayEntries.reduce((s, e) => s + (e.break_minutes ?? 0), 0);
+            const entriesWithBreaks = displayEntries.filter((e) => (e.break_minutes ?? 0) > 0);
+            const breakCount = entriesWithBreaks.length;
+            const daysWithActivity = new Set(displayEntries.filter((e) => edMins(e) > 0).map((e) => e.entry_date)).size || 1;
+            const breaksPerDay = breakCount / daysWithActivity;
+            const avgBreakLen = breakCount > 0 ? totalBreakMins / breakCount : 0;
+            const totalCombined = totalWorkMins + totalBreakMins;
+            const breakPct = totalCombined > 0 ? (totalBreakMins / totalCombined) * 100 : 0;
+
+            // Longest individual pause from pause_intervals (fallback to entry break_minutes)
+            let longestPauseMins = 0;
+            let longestPauseDate: string | null = null;
+            displayEntries.forEach((e) => {
+              const intervals: { paused_at: string; resumed_at: string | null }[] = Array.isArray((e as any).pause_intervals) ? (e as any).pause_intervals : [];
+              intervals.forEach((p) => {
+                if (!p.paused_at || !p.resumed_at) return;
+                const mins = (new Date(p.resumed_at).getTime() - new Date(p.paused_at).getTime()) / 60000;
+                if (mins > longestPauseMins) { longestPauseMins = mins; longestPauseDate = e.entry_date; }
+              });
+              if (intervals.length === 0 && (e.break_minutes ?? 0) > longestPauseMins) {
+                longestPauseMins = e.break_minutes ?? 0;
+                longestPauseDate = e.entry_date;
+              }
+            });
+
+            const hasAnyBreaks = totalBreakMins > 0;
+            // Healthy band: 8–20% of tracked time
+            let status: "healthy" | "low" | "high" = "healthy";
+            if (breakPct < 8) status = "low";
+            else if (breakPct > 20) status = "high";
+
+            const statusMap = {
+              healthy: {
+                title: "Healthy",
+                msg: "Great balance — your break time sits in the optimal range for sustained focus.",
+                tone: "text-emerald-600 dark:text-emerald-400",
+                ring: "ring-emerald-500/40",
+                bg: "bg-emerald-500/10",
+                Icon: Heart,
+              },
+              low: {
+                title: "A bit lean on breaks",
+                msg: "You're under the 8% mark. Short pauses every 60–90 min help sustain focus and prevent fatigue.",
+                tone: "text-amber-600 dark:text-amber-400",
+                ring: "ring-amber-500/40",
+                bg: "bg-amber-500/10",
+                Icon: Activity,
+              },
+              high: {
+                title: "Lots of breaks",
+                msg: "Above 20% of tracked time. That's fine on recovery days — worth checking if focus blocks are getting interrupted.",
+                tone: "text-sky-600 dark:text-sky-400",
+                ring: "ring-sky-500/40",
+                bg: "bg-sky-500/10",
+                Icon: Activity,
+              },
+            } as const;
+
+            const fmtMS = (m: number) => {
+              const mm = Math.floor(m);
+              const ss = Math.round((m - mm) * 60);
+              return `${mm}m ${String(ss).padStart(2, "0")}s`;
+            };
+            const fmtMins = (m: number) => m >= 60 ? `${Math.floor(m/60)}h ${Math.round(m%60)}m` : `${Math.round(m)}m`;
+            const dateLabel = longestPauseDate ? new Date(longestPauseDate + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) : "";
+
+            const S = statusMap[status];
+
+            return (
+              <div className="mb-6">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                  Daily Breakdown{" "}
+                  <span className="normal-case tracking-normal text-[10px] text-muted-foreground/70">(hours per day)</span>
+                </h3>
+
+                {/* Legend */}
+                <div className="flex items-center gap-4 mb-2 text-[11px] text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "hsl(var(--primary))" }} />
+                    Focus time
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: BREAK_COLOR }} />
+                    Breaks
+                  </div>
+                </div>
+
+                {/* Horizontal scroll wrapper — bars keep fixed width */}
+                <div className="overflow-x-auto -mx-1 px-1 rounded-xl border border-border/60 bg-card/40">
+                  <div style={{ width: chartWidth, height: 240 }}>
+                    <BarChart
+                      width={chartWidth}
+                      height={240}
+                      data={stackedChartData}
+                      barCategoryGap={8}
+                      barSize={Math.max(18, COL_W - 24)}
+                      margin={{ top: 12, right: RIGHT_PAD, left: 0, bottom: 4 }}
+                    >
+                      <XAxis
+                        dataKey="label"
+                        height={44}
+                        interval={0}
+                        tickMargin={4}
+                        tick={renderCompactDateTick}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                        tickLine={false}
+                        axisLine={false}
+                        width={Y_AXIS_W}
+                        allowDecimals={false}
+                        tickFormatter={(v) => `${v}h`}
+                      />
+                      <Tooltip
+                        contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
+                        content={({ active, payload }: any) => {
+                          if (!active || !payload?.length) return null;
+                          const row = payload[0].payload;
+                          const segs = (row?._segs ?? []) as { hours: number; color: string; kind: "work" | "break"; label: string }[];
+                          const agg = new Map<string, { hours: number; color: string; kind: "work" | "break" }>();
+                          segs.forEach((s) => {
+                            const cur = agg.get(s.label);
+                            if (cur) cur.hours += s.hours;
+                            else agg.set(s.label, { hours: s.hours, color: s.color, kind: s.kind });
+                          });
+                          return (
+                            <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow-sm">
+                              <div className="font-medium text-foreground mb-1">{row.label} · {row._total.toFixed(1)}h</div>
+                              {[...agg.entries()].map(([label, v]) => (
+                                <div key={label} className="flex items-center gap-2">
+                                  <span className="inline-block w-2 h-2 rounded-sm" style={{ background: v.color }} />
+                                  <span className="text-muted-foreground">{label}</span>
+                                  <span className="ml-auto font-mono text-foreground">{v.hours.toFixed(1)}h</span>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        }}
+                      />
+                      {Array.from({ length: maxSegments }).map((_, i) => (
+                        <Bar key={i} dataKey={`seg${i}`} stackId="a" isAnimationActive={false}
+                          radius={i === maxSegments - 1 ? [3, 3, 0, 0] : 0}>
+                          {stackedChartData.map((row: any, ri) => {
+                            const seg = row._segs?.[i];
+                            return <Cell key={ri} fill={seg?.color ?? "transparent"} />;
+                          })}
+                        </Bar>
+                      ))}
+                    </BarChart>
+                  </div>
+                </div>
+
+                {/* Break analysis */}
+                {hasAnyBreaks ? (
+                  <>
+                    <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <div className="rounded-xl border border-border/60 bg-card/60 p-3">
+                        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                          <Coffee className="w-3 h-3" /> Breaks / day
+                        </div>
+                        <p className="text-base font-bold font-mono text-foreground mt-1">{breaksPerDay.toFixed(1)}</p>
+                        <p className="text-[10px] text-muted-foreground">avg</p>
+                      </div>
+                      <div className="rounded-xl border border-border/60 bg-card/60 p-3">
+                        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                          <Clock className="w-3 h-3" /> Avg length
+                        </div>
+                        <p className="text-base font-bold font-mono text-foreground mt-1">{fmtMS(avgBreakLen)}</p>
+                        <p className="text-[10px] text-muted-foreground">avg</p>
+                      </div>
+                      <div className="rounded-xl border border-border/60 bg-card/60 p-3">
+                        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                          <PieChartIcon className="w-3 h-3" /> Break time
+                        </div>
+                        <p className="text-base font-bold font-mono text-foreground mt-1">{breakPct.toFixed(0)}%</p>
+                        <p className="text-[10px] text-muted-foreground">of tracked time</p>
+                      </div>
+                      <div className="rounded-xl border border-border/60 bg-card/60 p-3">
+                        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                          <Activity className="w-3 h-3" /> Longest break
+                        </div>
+                        <p className="text-base font-bold font-mono text-foreground mt-1">{fmtMins(longestPauseMins)}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{longestPauseDate ? `on ${dateLabel}` : "—"}</p>
+                      </div>
+                    </div>
+
+                    {/* Health verdict */}
+                    <div className={`mt-3 rounded-2xl border border-border/60 ${S.bg} p-4 flex items-start gap-3`}>
+                      <div className={`shrink-0 w-12 h-12 rounded-full bg-card flex items-center justify-center ring-2 ${S.ring}`}>
+                        <S.Icon className={`w-6 h-6 ${S.tone}`} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className={`text-base font-bold ${S.tone}`}>{S.title}</p>
+                        <p className="text-xs text-foreground/80 mt-0.5">{S.msg}</p>
+                        <p className="text-[11px] text-muted-foreground mt-1">Ideal range: 8% – 20% of tracked time</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-2 rounded-xl bg-muted/40 p-3 flex items-start gap-2">
+                      <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        <span className="font-medium text-foreground">Why this matters.</span>{" "}
+                        Regular breaks help your brain recharge, improve focus and prevent burnout.
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-3 rounded-2xl border border-border/60 bg-primary/5 p-4 flex items-start gap-3">
+                    <div className="shrink-0 w-12 h-12 rounded-full bg-card flex items-center justify-center ring-2 ring-primary/40">
+                      <PauseIcon className="w-6 h-6 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-base font-bold text-foreground">No breaks tracked yet</p>
+                      <p className="text-xs text-foreground/80 mt-0.5">
+                        Tap <span className="font-semibold">Pause</span> during a session to log your breaks. Trace will then show whether your work-rest balance is in the healthy 8–20% range.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
+
 
           {/* ── Invoice History ── */}
           {invoices.length > 0 && (

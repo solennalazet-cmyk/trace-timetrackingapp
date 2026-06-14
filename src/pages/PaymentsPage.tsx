@@ -343,7 +343,7 @@ const PaymentsPage = () => {
                 {isOpen && (
                   <div className="px-4 pb-4 space-y-4 border-t border-border pt-4">
                     {!fullyPaid && !noInvoices && (
-                      <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-3">
+                      <div className="rounded-xl border border-border bg-muted/40 p-3 space-y-3 shadow-sm">
                         <div className="flex items-center gap-2">
                           <Wallet className="w-4 h-4 text-foreground" />
                           <p className="text-sm font-semibold">Record a payment</p>

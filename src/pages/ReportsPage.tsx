@@ -6,7 +6,7 @@ import {
 } from "recharts";
 import {
   ChevronDown, ChevronUp, Timer, PenLine, Clock, Phone,
-  Crown, Download, Trash2, X, Euro,
+  Crown, Download, Trash2, X, Euro, PieChart as PieChartIcon,
 } from "lucide-react";
 import { startOfWeek } from "date-fns";
 import DateRangePicker from "@/components/DateRangePicker";

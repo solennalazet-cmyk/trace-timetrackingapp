@@ -7,6 +7,7 @@ import {
 import {
   ChevronDown, ChevronUp, Timer, PenLine, Clock, Phone,
   Crown, Download, Trash2, X, Euro, PieChart as PieChartIcon,
+  Coffee, Heart, Activity, Pause as PauseIcon, Info,
 } from "lucide-react";
 import { startOfWeek } from "date-fns";
 import DateRangePicker from "@/components/DateRangePicker";

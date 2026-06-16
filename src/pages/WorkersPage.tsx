@@ -79,14 +79,14 @@ const WorkersPage = () => {
 
   return (
     <div className="pt-6 space-y-4 pb-24">
-      <Seo title={"Workers — Trace for Employers"} description={"Manage your team: roles, contact details, schedules, and documents."} path={"/workers"} />
+      <Seo title={"Freelancers — Trace for Employers"} description={"Manage your team: roles, contact details, schedules, and documents."} path={"/workers"} />
       <header className="flex items-start justify-between gap-3">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">Workers</h1>
-          <p className="text-sm text-muted-foreground">Tap a worker to open their profile.</p>
+          <h1 className="text-2xl font-bold tracking-tight">Freelancers</h1>
+          <p className="text-sm text-muted-foreground">Tap a freelancer to open their profile.</p>
         </div>
         <Button onClick={() => setModalOpen(true)} className="rounded-xl gap-2 h-10">
-          <Plus className="h-4 w-4" /> Add worker
+          <Plus className="h-4 w-4" /> Add freelancer
         </Button>
       </header>
 
@@ -95,9 +95,9 @@ const WorkersPage = () => {
       ) : workers.length === 0 && invites.length === 0 ? (
         <Card className="p-6 text-center">
           <Users className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-          <p className="text-sm font-medium">No workers yet</p>
+          <p className="text-sm font-medium">No freelancers yet</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Tap <span className="font-medium text-foreground">Add worker</span> to invite someone by email.
+            Tap <span className="font-medium text-foreground">Add freelancer</span> to invite someone by email.
           </p>
         </Card>
       ) : (

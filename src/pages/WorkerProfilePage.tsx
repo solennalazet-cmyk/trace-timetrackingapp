@@ -102,10 +102,10 @@ const WorkerProfilePage = () => {
 
   return (
     <div className="pt-4 pb-24 space-y-5">
-      <Seo title={`${name} — Worker profile`} description={`Manage ${name}'s details, role, schedule and documents.`} path={`/workers/${worker.id}`} />
+      <Seo title={`${name} — Freelancer profile`} description={`Manage ${name}'s details, role, schedule and documents.`} path={`/workers/${worker.id}`} />
 
       <button onClick={() => navigate("/workers")} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-        <ArrowLeft className="w-3.5 h-3.5" /> Workers
+        <ArrowLeft className="w-3.5 h-3.5" /> Freelancers
       </button>
 
       <header className="flex items-center gap-4 pt-1">

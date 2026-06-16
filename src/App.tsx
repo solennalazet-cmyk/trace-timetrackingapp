@@ -13,6 +13,7 @@ import TimelinePage from "./pages/TimelinePage";
 import ClientsPage from "./pages/ClientsPage";
 import EmployerHomePage from "./pages/EmployerHomePage";
 import WorkersPage from "./pages/WorkersPage";
+import WorkerProfilePage from "./pages/WorkerProfilePage";
 import PaymentsPage from "./pages/PaymentsPage";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
@@ -86,6 +87,7 @@ const AppInner = () => {
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/employer" element={<EmployerHomePage />} />
             <Route path="/workers" element={<WorkersPage />} />
+            <Route path="/workers/:id" element={<WorkerProfilePage />} />
             <Route path="/payments" element={<PaymentsPage />} />
           </Route>
           <Route path="/reset-password" element={<ResetPassword />} />

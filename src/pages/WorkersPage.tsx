@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Users, Mail, X, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Users, Mail, X, Clock, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import WorkerInviteModal from "@/components/WorkerInviteModal";
-import WorkerDetailsSection from "@/components/WorkerDetailsSection";
 import Seo from "@/components/Seo";
 
 interface WorkerInvite {
@@ -18,19 +18,19 @@ interface WorkerInvite {
 }
 
 interface ConnectedWorker {
-  id: string; // clients row id
+  id: string;
   name: string;
-  email: string | null;
-  user_id: string; // worker user id (owner of the clients row)
+  role: string | null;
+  user_id: string;
 }
 
 const WorkersPage = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [invites, setInvites] = useState<WorkerInvite[]>([]);
   const [workers, setWorkers] = useState<ConnectedWorker[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -44,69 +44,49 @@ const WorkersPage = () => {
         .order("invited_at", { ascending: false }),
       supabase
         .from("clients")
-        .select("id, name, email, user_id")
+        .select("id, name, role, user_id")
         .eq("connected_user_id", user.id)
         .eq("connection_status", "accepted"),
     ]);
     if (invitesRes.error) toast.error(invitesRes.error.message);
     else setInvites(invitesRes.data ?? []);
     if (workersRes.error) toast.error(workersRes.error.message);
-    else setWorkers(workersRes.data ?? []);
+    else setWorkers((workersRes.data ?? []) as ConnectedWorker[]);
     setLoading(false);
   }, [user]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
   const handleInvite = async ({ email, name }: { email: string; name?: string }) => {
     if (!user) return;
     const trimmed = email.trim().toLowerCase();
-
-    // Prevent duplicate pending invite
     const existing = invites.find((i) => i.invited_email.toLowerCase() === trimmed);
-    if (existing) {
-      toast.error("Already invited — invite is still pending.");
-      return;
-    }
-
+    if (existing) { toast.error("Already invited — invite is still pending."); return; }
     const { error } = await supabase.from("worker_invites").insert({
-      employer_user_id: user.id,
-      invited_email: trimmed,
-      invited_name: name ?? null,
+      employer_user_id: user.id, invited_email: trimmed, invited_name: name ?? null,
     });
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
+    if (error) { toast.error(error.message); return; }
     toast.success("Invite sent. They'll be connected when they sign up.");
     setModalOpen(false);
     await load();
   };
 
   const handleCancel = async (id: string) => {
-    const { error } = await supabase
-      .from("worker_invites")
-      .update({ status: "cancelled" })
-      .eq("id", id);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
+    const { error } = await supabase.from("worker_invites").update({ status: "cancelled" }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
     setInvites((prev) => prev.filter((i) => i.id !== id));
   };
 
   return (
     <div className="pt-6 space-y-4 pb-24">
-      <Seo title={"Workers — Trace for Employers"} description={"Invite team members and manage their hourly rates, schedules, and reporting permissions."} path={"/workers"} />
+      <Seo title={"Workers — Trace for Employers"} description={"Manage your team: roles, contact details, schedules, and documents."} path={"/workers"} />
       <header className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight">Workers</h1>
-          <p className="text-sm text-muted-foreground">People who submit reports to you.</p>
+          <p className="text-sm text-muted-foreground">Tap a worker to open their profile.</p>
         </div>
         <Button onClick={() => setModalOpen(true)} className="rounded-xl gap-2 h-10">
-          <Plus className="h-4 w-4" />
-          Add worker
+          <Plus className="h-4 w-4" /> Add worker
         </Button>
       </header>
 
@@ -121,36 +101,27 @@ const WorkersPage = () => {
           </p>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {workers.map((w) => {
-            const expanded = expandedId === w.id;
-            return (
-              <Card key={w.id} className="overflow-hidden">
-                <button
-                  className="w-full p-4 flex items-center gap-3 text-left"
-                  onClick={() => setExpandedId(expanded ? null : w.id)}
-                >
-                  <div className="h-10 w-10 rounded-full bg-foreground/10 text-foreground flex items-center justify-center font-semibold shrink-0">
-                    {w.name.slice(0, 1).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold truncate">{w.name}</p>
-                    {w.email && <p className="text-xs text-muted-foreground truncate">{w.email}</p>}
-                  </div>
-                  {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-                </button>
-                {expanded && user && (
-                  <div className="px-4 pb-4 border-t border-border pt-3">
-                    <WorkerDetailsSection workerUserId={w.user_id} employerUserId={user.id} clientId={w.id} />
-                  </div>
-                )}
+        <div className="space-y-2.5">
+          {workers.map((w) => (
+            <button key={w.id} className="w-full text-left" onClick={() => navigate(`/workers/${w.id}`)}>
+              <Card className="p-4 flex items-center gap-3 hover:bg-muted/40 transition-colors">
+                <div className="h-11 w-11 rounded-full bg-foreground/10 text-foreground flex items-center justify-center font-semibold shrink-0">
+                  {w.name.slice(0, 1).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold truncate">{w.name}</p>
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    {w.role?.trim() || "Role not set"}
+                  </p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
               </Card>
-            );
-          })}
+            </button>
+          ))}
 
           {invites.map((i) => (
             <Card key={i.id} className="p-4 flex items-center gap-3 bg-secondary">
-              <div className="h-10 w-10 rounded-full bg-muted text-muted-foreground flex items-center justify-center">
+              <div className="h-11 w-11 rounded-full bg-muted text-muted-foreground flex items-center justify-center">
                 <Mail className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
@@ -159,13 +130,7 @@ const WorkersPage = () => {
                   <Clock className="h-3 w-3" /> Pending · {i.invited_email}
                 </p>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full"
-                onClick={() => handleCancel(i.id)}
-                aria-label="Cancel invite"
-              >
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleCancel(i.id)} aria-label="Cancel invite">
                 <X className="h-4 w-4" />
               </Button>
             </Card>

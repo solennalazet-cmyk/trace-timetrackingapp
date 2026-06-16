@@ -208,6 +208,15 @@ const EmployerHomePage = () => {
         <p className="text-sm text-muted-foreground">Your dashboard.</p>
       </header>
 
+      <EmployerDashboardSection refreshKey={refreshing ? 1 : 0} />
+
+      {/* To-date status divider */}
+      <div className="flex items-center gap-2 pt-2 px-1">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">To-date status</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
       {/* Pending reports */}
       <section className="space-y-2">
         <div className="flex items-center gap-2 px-1">

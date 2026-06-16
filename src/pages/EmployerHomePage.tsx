@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import SubmittedReportSheet, { type SubmittedReport } from "@/components/SubmittedReportSheet";
 import RejectReportDialog from "@/components/RejectReportDialog";
 import Seo from "@/components/Seo";
+import EmployerDashboardSection from "@/components/EmployerDashboardSection";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
@@ -206,6 +207,15 @@ const EmployerHomePage = () => {
         <h1 className="sr-only">Employer Dashboard</h1>
         <p className="text-sm text-muted-foreground">Your dashboard.</p>
       </header>
+
+      <EmployerDashboardSection refreshKey={refreshing ? 1 : 0} />
+
+      {/* To-date status divider */}
+      <div className="flex items-center gap-2 pt-2 px-1">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">To-date status</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
 
       {/* Pending reports */}
       <section className="space-y-2">

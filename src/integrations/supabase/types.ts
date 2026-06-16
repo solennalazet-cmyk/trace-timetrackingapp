@@ -57,6 +57,8 @@ export type Database = {
           connection_status: string
           created_at: string | null
           currency: string | null
+          cv_url: string | null
+          date_of_birth: string | null
           default_rate: number | null
           email: string | null
           engagement_end_date: string | null
@@ -70,6 +72,7 @@ export type Database = {
           name: string
           nif: string | null
           phone: string | null
+          role: string | null
           site_address: string | null
           site_lat: number | null
           site_lng: number | null
@@ -85,6 +88,8 @@ export type Database = {
           connection_status?: string
           created_at?: string | null
           currency?: string | null
+          cv_url?: string | null
+          date_of_birth?: string | null
           default_rate?: number | null
           email?: string | null
           engagement_end_date?: string | null
@@ -98,6 +103,7 @@ export type Database = {
           name: string
           nif?: string | null
           phone?: string | null
+          role?: string | null
           site_address?: string | null
           site_lat?: number | null
           site_lng?: number | null
@@ -113,6 +119,8 @@ export type Database = {
           connection_status?: string
           created_at?: string | null
           currency?: string | null
+          cv_url?: string | null
+          date_of_birth?: string | null
           default_rate?: number | null
           email?: string | null
           engagement_end_date?: string | null
@@ -126,6 +134,7 @@ export type Database = {
           name?: string
           nif?: string | null
           phone?: string | null
+          role?: string | null
           site_address?: string | null
           site_lat?: number | null
           site_lng?: number | null

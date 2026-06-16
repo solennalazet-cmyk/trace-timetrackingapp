@@ -34,6 +34,7 @@ interface ReportRow {
 
 interface Props {
   refreshKey?: number;
+  breaksDefaultOpen?: boolean;
 }
 
 const HEALTHY_MIN = 25;
@@ -48,7 +49,7 @@ const fmtHm = (mins: number) => {
   return `${h}h${String(m).padStart(2, "0")}`;
 };
 
-const EmployerDashboardSection = ({ refreshKey }: Props) => {
+const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Props) => {
   const { user } = useAuth();
   const [from, setFrom] = useState<Date>(() => { const d = new Date(); d.setDate(d.getDate() - 29); d.setHours(0,0,0,0); return d; });
   const [to, setTo] = useState<Date>(() => { const d = new Date(); d.setHours(0,0,0,0); return d; });
@@ -56,7 +57,7 @@ const EmployerDashboardSection = ({ refreshKey }: Props) => {
   const [paidByReport, setPaidByReport] = useState<Map<string, number>>(new Map());
   const [workerNames, setWorkerNames] = useState<Map<string, string>>(new Map());
   const [selectedWorker, setSelectedWorker] = useState<string | "all">("all");
-  const [breaksOpen, setBreaksOpen] = useState(false);
+  const [breaksOpen, setBreaksOpen] = useState(breaksDefaultOpen);
   const [expandedWorker, setExpandedWorker] = useState<string | null>(null);
 
   useEffect(() => {

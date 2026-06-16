@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Wallet, Check, Clock, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import RecordPaymentSheet from "./RecordPaymentSheet";
+import WorkerEditForm from "./WorkerEditForm";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
@@ -27,9 +28,10 @@ interface Report {
 interface Props {
   workerUserId: string;
   employerUserId: string;
+  clientId: string;
 }
 
-const WorkerDetailsSection = ({ workerUserId, employerUserId }: Props) => {
+const WorkerDetailsSection = ({ workerUserId, employerUserId, clientId }: Props) => {
   const [reports, setReports] = useState<Report[]>([]);
   const [paidMap, setPaidMap] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -65,13 +67,19 @@ const WorkerDetailsSection = ({ workerUserId, employerUserId }: Props) => {
   useEffect(() => { load(); }, [load]);
 
   if (loading) return <p className="text-xs text-muted-foreground">Loading…</p>;
-  if (reports.length === 0) return <p className="text-xs text-muted-foreground">No reports yet.</p>;
+  if (reports.length === 0) return (
+    <div className="space-y-3">
+      <WorkerEditForm clientId={clientId} />
+      <p className="text-xs text-muted-foreground text-center">No reports yet.</p>
+    </div>
+  );
 
   const pending = reports.filter((r) => r.status === "submitted");
   const approved = reports.filter((r) => r.status === "approved");
 
   return (
     <div className="space-y-4">
+      <WorkerEditForm clientId={clientId} />
       {pending.length > 0 && (
         <div>
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">

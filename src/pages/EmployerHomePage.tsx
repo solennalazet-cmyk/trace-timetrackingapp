@@ -50,6 +50,7 @@ const EmployerHomePage = () => {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [view, setView] = useState<"status" | "dashboard">("status");
 
   // Pull-to-refresh state
   const [pullY, setPullY] = useState(0);
@@ -208,14 +209,29 @@ const EmployerHomePage = () => {
         <p className="text-sm text-muted-foreground">Your dashboard.</p>
       </header>
 
-      <EmployerDashboardSection refreshKey={refreshing ? 1 : 0} />
-
-      {/* To-date status divider */}
-      <div className="flex items-center gap-2 pt-2 px-1">
-        <div className="h-px flex-1 bg-border" />
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">To-date status</span>
-        <div className="h-px flex-1 bg-border" />
+      {/* View toggle */}
+      <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-muted">
+        <button
+          onClick={() => setView("status")}
+          className={`h-9 rounded-lg text-xs font-semibold transition-colors ${view === "status" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+        >
+          Status to date
+        </button>
+        <button
+          onClick={() => setView("dashboard")}
+          className={`h-9 rounded-lg text-xs font-semibold transition-colors ${view === "dashboard" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+        >
+          Dashboard
+        </button>
       </div>
+
+      {view === "dashboard" && (
+        <EmployerDashboardSection refreshKey={refreshing ? 1 : 0} breaksDefaultOpen />
+      )}
+
+      {view === "status" && (
+        <>
+
 
       {/* Pending reports */}
       <section className="space-y-2">
@@ -358,6 +374,10 @@ const EmployerHomePage = () => {
           </Card>
         )}
       </section>
+        </>
+      )}
+
+
 
       <SubmittedReportSheet
         open={sheetOpen}

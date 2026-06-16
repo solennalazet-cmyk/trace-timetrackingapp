@@ -141,7 +141,7 @@ const WorkersPage = () => {
                 </button>
                 {expanded && user && (
                   <div className="px-4 pb-4 border-t border-border pt-3">
-                    <WorkerDetailsSection workerUserId={w.user_id} employerUserId={user.id} />
+                    <WorkerDetailsSection workerUserId={w.user_id} employerUserId={user.id} clientId={w.id} />
                   </div>
                 )}
               </Card>

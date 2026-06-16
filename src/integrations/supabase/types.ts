@@ -49,6 +49,9 @@ export type Database = {
       }
       clients: {
         Row: {
+          agreed_daily_hours: number | null
+          agreed_end_time: string | null
+          agreed_start_time: string | null
           connected_user_id: string | null
           connection_initiated_by: string | null
           connection_status: string
@@ -56,6 +59,8 @@ export type Database = {
           currency: string | null
           default_rate: number | null
           email: string | null
+          engagement_end_date: string | null
+          engagement_start_date: string | null
           export_columns: string[] | null
           geolocation_override: string | null
           id: string
@@ -64,6 +69,7 @@ export type Database = {
           invited_email: string | null
           name: string
           nif: string | null
+          phone: string | null
           site_address: string | null
           site_lat: number | null
           site_lng: number | null
@@ -71,6 +77,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          agreed_daily_hours?: number | null
+          agreed_end_time?: string | null
+          agreed_start_time?: string | null
           connected_user_id?: string | null
           connection_initiated_by?: string | null
           connection_status?: string
@@ -78,6 +87,8 @@ export type Database = {
           currency?: string | null
           default_rate?: number | null
           email?: string | null
+          engagement_end_date?: string | null
+          engagement_start_date?: string | null
           export_columns?: string[] | null
           geolocation_override?: string | null
           id?: string
@@ -86,6 +97,7 @@ export type Database = {
           invited_email?: string | null
           name: string
           nif?: string | null
+          phone?: string | null
           site_address?: string | null
           site_lat?: number | null
           site_lng?: number | null
@@ -93,6 +105,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          agreed_daily_hours?: number | null
+          agreed_end_time?: string | null
+          agreed_start_time?: string | null
           connected_user_id?: string | null
           connection_initiated_by?: string | null
           connection_status?: string
@@ -100,6 +115,8 @@ export type Database = {
           currency?: string | null
           default_rate?: number | null
           email?: string | null
+          engagement_end_date?: string | null
+          engagement_start_date?: string | null
           export_columns?: string[] | null
           geolocation_override?: string | null
           id?: string
@@ -108,6 +125,7 @@ export type Database = {
           invited_email?: string | null
           name?: string
           nif?: string | null
+          phone?: string | null
           site_address?: string | null
           site_lat?: number | null
           site_lng?: number | null

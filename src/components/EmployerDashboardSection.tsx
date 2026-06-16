@@ -166,7 +166,7 @@ const EmployerDashboardSection = ({ refreshKey }: Props) => {
       {/* Range + worker pills */}
       <div className="space-y-2">
         <DateRangePicker from={from} to={to} onChange={(f, t) => { setFrom(f); setTo(t); }} />
-        <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-1 no-scrollbar">
+        <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-1 scrollbar-hide">
           <button
             onClick={() => setSelectedWorker("all")}
             className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${selectedWorker === "all" ? "bg-foreground text-background border-foreground" : "bg-background text-foreground border-border"}`}

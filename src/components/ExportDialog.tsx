@@ -468,7 +468,7 @@ const ExportDialog = ({
         <AlertDialogContent className="max-w-[420px]">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <Wallet className="w-5 h-5 text-primary" />
+              <Wallet className="w-5 h-5 text-nav-bg" />
               Track this report in Payments?
             </AlertDialogTitle>
             <AlertDialogDescription>

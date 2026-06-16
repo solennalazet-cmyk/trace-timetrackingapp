@@ -622,7 +622,7 @@ const PrepareBillingSheet = ({
         <AlertDialogContent className="rounded-2xl max-w-[360px]">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-primary" />
+              <CheckCircle2 className="w-5 h-5 text-nav-bg" />
               Add to Track Payments?
             </AlertDialogTitle>
             <AlertDialogDescription>
@@ -643,7 +643,7 @@ const PrepareBillingSheet = ({
         <AlertDialogContent className="rounded-2xl max-w-[360px]">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <Send className="w-5 h-5 text-primary" />
+              <Send className="w-5 h-5 text-nav-bg" />
               Submit report?
             </AlertDialogTitle>
             <AlertDialogDescription asChild>

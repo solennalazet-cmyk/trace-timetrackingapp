@@ -67,7 +67,12 @@ const WorkerDetailsSection = ({ workerUserId, employerUserId, clientId }: Props)
   useEffect(() => { load(); }, [load]);
 
   if (loading) return <p className="text-xs text-muted-foreground">Loading…</p>;
-  if (reports.length === 0) return <p className="text-xs text-muted-foreground">No reports yet.</p>;
+  if (reports.length === 0) return (
+    <div className="space-y-3">
+      <WorkerEditForm clientId={clientId} />
+      <p className="text-xs text-muted-foreground text-center">No reports yet.</p>
+    </div>
+  );
 
   const pending = reports.filter((r) => r.status === "submitted");
   const approved = reports.filter((r) => r.status === "approved");

@@ -205,21 +205,27 @@ const EmployerHomePage = () => {
         </div>
       )}
       <header className="space-y-1">
-        <h1 className="sr-only">Employer Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Your dashboard.</p>
+        <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
+        <p className="text-sm text-muted-foreground">
+          {view === "status" ? "What needs your attention right now." : "Wages and break patterns across a date range."}
+        </p>
       </header>
 
-      {/* View toggle */}
-      <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-muted">
+      {/* View toggle — pill segmented control, distinct from content cards below */}
+      <div role="tablist" aria-label="Overview view" className="inline-flex w-full p-1 rounded-full bg-foreground/5 border border-border/40">
         <button
+          role="tab"
+          aria-selected={view === "status"}
           onClick={() => setView("status")}
-          className={`h-9 rounded-lg text-xs font-semibold transition-colors ${view === "status" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+          className={`flex-1 h-9 rounded-full text-xs font-semibold transition-colors ${view === "status" ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
         >
           Status to date
         </button>
         <button
+          role="tab"
+          aria-selected={view === "dashboard"}
           onClick={() => setView("dashboard")}
-          className={`h-9 rounded-lg text-xs font-semibold transition-colors ${view === "dashboard" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+          className={`flex-1 h-9 rounded-full text-xs font-semibold transition-colors ${view === "dashboard" ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
         >
           Dashboard
         </button>

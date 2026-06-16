@@ -772,7 +772,7 @@ const ReportsPage = () => {
           {displayEntries.length > 0 && (
             <div className="mb-6">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <PieChartIcon className="w-3.5 h-3.5 text-primary" />
+                <PieChartIcon className="w-3.5 h-3.5 text-nav-bg" />
                 Revenue by client
               </h3>
               <ClientBillingSummary
@@ -1260,9 +1260,9 @@ const ReportsPage = () => {
                     </div>
                   </>
                 ) : (
-                  <div className="mt-3 rounded-2xl border border-border/60 bg-primary/5 p-4 flex items-start gap-3">
-                    <div className="shrink-0 w-12 h-12 rounded-full bg-card flex items-center justify-center ring-2 ring-primary/40">
-                      <PauseIcon className="w-6 h-6 text-primary" />
+                  <div className="mt-3 rounded-2xl border border-border/60 bg-nav-bg/5 p-4 flex items-start gap-3">
+                    <div className="shrink-0 w-12 h-12 rounded-full bg-card flex items-center justify-center ring-2 ring-nav-bg/30">
+                      <PauseIcon className="w-6 h-6 text-nav-bg" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-base font-bold text-foreground">No breaks tracked yet</p>

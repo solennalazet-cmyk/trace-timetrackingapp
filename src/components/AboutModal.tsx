@@ -24,7 +24,7 @@ const AboutModal = ({ open, onOpenChange }: AboutModalProps) => {
           <p className="text-xs text-muted-foreground mt-4">Made with care for independent professionals.</p>
           <Link
             to="/privacy"
-            className="text-xs text-primary underline mt-2 inline-block"
+            className="text-xs text-nav-bg underline mt-2 inline-block"
             onClick={() => onOpenChange(false)}
           >
             Privacy Policy

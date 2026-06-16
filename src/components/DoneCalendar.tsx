@@ -217,7 +217,7 @@ const DoneCalendar = () => {
                   isSelected
                     ? "bg-primary text-primary-foreground font-semibold"
                     : today
-                      ? "text-primary font-semibold"
+                      ? "text-nav-bg font-bold ring-2 ring-nav-bg/30 rounded-full"
                       : inMonth
                         ? "text-foreground"
                         : "text-muted-foreground/40"

@@ -168,7 +168,8 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
               aria-expanded={connectOpen}
             >
               <span className="text-sm font-semibold text-secondary-foreground flex items-center gap-2.5">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-nav-bg/10 text-nav-bg">
+
                   <UserPlus className="h-4 w-4" />
                 </span>
                 Connect Trace user
@@ -176,7 +177,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
                   <span className="text-[10px] font-normal text-muted-foreground">· pending</span>
                 )}
                 {form.connection_status === "accepted" && (
-                  <span className="text-[10px] font-normal text-primary">· connected</span>
+                  <span className="text-[10px] font-normal text-nav-bg">· connected</span>
                 )}
                 {form.connection_status === "rejected" && (
                   <span className="text-[10px] font-normal text-destructive">· declined</span>
@@ -226,7 +227,8 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
               aria-expanded={siteOpen}
             >
               <span className="text-sm font-semibold text-secondary-foreground flex items-center gap-2.5">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-nav-bg/10 text-nav-bg">
+
                   <MapPin className="h-4 w-4" />
                 </span>
                 Place of work
@@ -308,7 +310,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
               aria-expanded={exportOpen}
             >
               <span className="text-sm font-semibold text-secondary-foreground flex items-center gap-2.5">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-nav-bg/10 text-nav-bg">
                   <FileDown className="h-4 w-4" />
                 </span>
                 Shared report settings

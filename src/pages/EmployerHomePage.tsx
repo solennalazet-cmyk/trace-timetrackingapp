@@ -256,7 +256,7 @@ const EmployerHomePage = () => {
                     <button
                       onClick={(e) => handleQuickApprove(r, e)}
                       disabled={isApproving}
-                      className="flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                      className="flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
                     >
                       {isApproving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                       {isApproving ? "Approving…" : "Approve"}

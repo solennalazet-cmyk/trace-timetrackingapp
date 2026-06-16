@@ -27,9 +27,10 @@ interface Report {
 interface Props {
   workerUserId: string;
   employerUserId: string;
+  clientId: string;
 }
 
-const WorkerDetailsSection = ({ workerUserId, employerUserId }: Props) => {
+const WorkerDetailsSection = ({ workerUserId, employerUserId, clientId }: Props) => {
   const [reports, setReports] = useState<Report[]>([]);
   const [paidMap, setPaidMap] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);

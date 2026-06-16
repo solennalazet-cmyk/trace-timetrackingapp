@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Wallet, Check, Clock, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import RecordPaymentSheet from "./RecordPaymentSheet";
+import WorkerEditForm from "./WorkerEditForm";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 

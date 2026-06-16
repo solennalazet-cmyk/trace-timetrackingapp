@@ -373,6 +373,10 @@ const EmployerHomePage = () => {
           </Card>
         )}
       </section>
+        </>
+      )}
+
+
 
       <SubmittedReportSheet
         open={sheetOpen}

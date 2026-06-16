@@ -36,7 +36,7 @@ const ExportColumnsPicker = ({ value, onChange, className }: ExportColumnsPicker
             >
               {active && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
             </span>
-            <span className="text-sm text-foreground leading-tight">{label}</span>
+            <span className="text-sm text-secondary-foreground leading-tight">{label}</span>
           </button>
         );
       })}

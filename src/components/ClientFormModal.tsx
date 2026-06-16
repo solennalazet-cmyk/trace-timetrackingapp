@@ -318,7 +318,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
 
             {exportOpen && (
               <div className="px-4 pb-4 pt-1 space-y-3">
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-secondary-foreground/80">
                   Columns to include when exporting, sharing, or submitting reports for this client. Date, duration and amount are always included.
                 </p>
                 <ExportColumnsPicker

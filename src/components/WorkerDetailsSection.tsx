@@ -74,6 +74,7 @@ const WorkerDetailsSection = ({ workerUserId, employerUserId, clientId }: Props)
 
   return (
     <div className="space-y-4">
+      <WorkerEditForm clientId={clientId} />
       {pending.length > 0 && (
         <div>
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">

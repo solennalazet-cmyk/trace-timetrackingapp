@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import SubmittedReportSheet, { type SubmittedReport } from "@/components/SubmittedReportSheet";
 import RejectReportDialog from "@/components/RejectReportDialog";
 import Seo from "@/components/Seo";
+import EmployerDashboardSection from "@/components/EmployerDashboardSection";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 

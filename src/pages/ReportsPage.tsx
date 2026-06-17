@@ -1388,6 +1388,7 @@ const ReportsPage = () => {
           setAssignOpen(true);
         }}
         onCountChange={() => {}}
+        onBatchAssigned={loadData}
       />
       <BoostOverlay
         open={boostOpen}

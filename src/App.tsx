@@ -16,6 +16,7 @@ import EmployerCalendarPage from "./pages/EmployerCalendarPage";
 import WorkersPage from "./pages/WorkersPage";
 import WorkerProfilePage from "./pages/WorkerProfilePage";
 import PaymentsPage from "./pages/PaymentsPage";
+import AccountPage from "./pages/AccountPage";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import PrivacyPage from "./pages/PrivacyPage";
@@ -91,6 +92,7 @@ const AppInner = () => {
             <Route path="/workers" element={<WorkersPage />} />
             <Route path="/workers/:id" element={<WorkerProfilePage />} />
             <Route path="/payments" element={<PaymentsPage />} />
+            <Route path="/account" element={<AccountPage />} />
           </Route>
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/privacy" element={<PrivacyPage />} />

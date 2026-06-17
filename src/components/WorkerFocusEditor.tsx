@@ -76,6 +76,7 @@ const FIELDS: Record<EditorKind, { title: string; subtitle: string; fields: Edit
 const WorkerFocusEditor = ({ open, kind, clientId, initial, onClose, onSaved }: Props) => {
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [kbInset, setKbInset] = useState(0);
 
   useEffect(() => {
     if (!open || !kind) return;
@@ -86,6 +87,23 @@ const WorkerFocusEditor = ({ open, kind, clientId, initial, onClose, onSaved }: 
     }
     setValues(v);
   }, [open, kind, initial]);
+
+  useEffect(() => {
+    if (!open) { setKbInset(0); return; }
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKbInset(inset);
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, [open]);
 
   if (!kind) return null;
   const cfg = FIELDS[kind];
@@ -107,15 +125,25 @@ const WorkerFocusEditor = ({ open, kind, clientId, initial, onClose, onSaved }: 
     onSaved();
   };
 
+  const focusScroll = (e: React.FocusEvent<HTMLInputElement>) => {
+    setTimeout(() => {
+      e.target.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 250);
+  };
+
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <SheetContent side="bottom" className="rounded-t-3xl px-5 pt-4 pb-6 max-h-[92vh] overflow-y-auto">
-        <SheetHeader className="text-left mb-4">
+      <SheetContent
+        side="bottom"
+        className="rounded-t-3xl p-0 flex flex-col"
+        style={{ maxHeight: `calc(100dvh - ${kbInset}px)`, height: `calc(100dvh - ${kbInset}px - 2rem)` }}
+      >
+        <SheetHeader className="text-left px-5 pt-4 pb-3 shrink-0">
           <SheetTitle className="text-lg">{cfg.title}</SheetTitle>
           <p className="text-xs text-muted-foreground">{cfg.subtitle}</p>
         </SheetHeader>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 px-5 overflow-y-auto flex-1" style={{ paddingBottom: 16 }}>
           {cfg.fields.map((f) => (
             <div key={f.key} className={`space-y-1.5 ${f.half ? "col-span-1" : "col-span-2"}`}>
               <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">{f.label}</Label>
@@ -126,6 +154,7 @@ const WorkerFocusEditor = ({ open, kind, clientId, initial, onClose, onSaved }: 
                 step={f.step}
                 min={f.min}
                 max={f.max}
+                onFocus={focusScroll}
                 onChange={(e) => set(f.key, e.target.value)}
                 className="h-11 text-sm rounded-xl"
               />
@@ -133,7 +162,7 @@ const WorkerFocusEditor = ({ open, kind, clientId, initial, onClose, onSaved }: 
           ))}
         </div>
 
-        <div className="flex gap-2 pt-5">
+        <div className="flex gap-2 px-5 py-4 border-t border-border bg-card shrink-0">
           <Button variant="ghost" className="flex-1 h-11 rounded-xl" onClick={onClose} disabled={saving}>
             Cancel
           </Button>

@@ -211,6 +211,7 @@ const ClientsPage = () => {
           ...siteFields,
           ...connectionFields,
           user_id: user.id,
+          kind: "account",
         } as any);
         toast.success(isNewInvite ? "Account added. Invite sent." : "Account added.");
       }

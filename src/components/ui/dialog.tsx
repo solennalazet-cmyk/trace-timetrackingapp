@@ -86,8 +86,17 @@ interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof Dialo
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, position = "sheet", style, ...props }, ref) => {
+>(({ className, children, position = "sheet", style, onFocusCapture, ...props }, ref) => {
   const viewportStyle = useVisualViewportStyle(true, position);
+
+  const handleFocusCapture = (event: React.FocusEvent<HTMLDivElement>) => {
+    onFocusCapture?.(event);
+    const target = event.target as HTMLElement;
+    if (!target.matches("input, textarea, select, [role='combobox'], [contenteditable='true']")) return;
+    window.setTimeout(() => {
+      target.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 320);
+  };
 
   return (
     <DialogPortal>
@@ -102,6 +111,7 @@ const DialogContent = React.forwardRef<
           className,
         )}
         style={{ WebkitOverflowScrolling: "touch", ...viewportStyle, ...style }}
+        onFocusCapture={handleFocusCapture}
         {...props}
       >
         {children}

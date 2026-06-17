@@ -52,9 +52,12 @@ export type Database = {
           agreed_daily_hours: number | null
           agreed_end_time: string | null
           agreed_start_time: string | null
+          billing_notes: string | null
+          business_address: string | null
           connected_user_id: string | null
           connection_initiated_by: string | null
           connection_status: string
+          contract_url: string | null
           created_at: string | null
           currency: string | null
           cv_url: string | null
@@ -72,6 +75,7 @@ export type Database = {
           kind: string
           name: string
           nif: string | null
+          payment_terms_days: number | null
           phone: string | null
           role: string | null
           site_address: string | null
@@ -84,9 +88,12 @@ export type Database = {
           agreed_daily_hours?: number | null
           agreed_end_time?: string | null
           agreed_start_time?: string | null
+          billing_notes?: string | null
+          business_address?: string | null
           connected_user_id?: string | null
           connection_initiated_by?: string | null
           connection_status?: string
+          contract_url?: string | null
           created_at?: string | null
           currency?: string | null
           cv_url?: string | null
@@ -104,6 +111,7 @@ export type Database = {
           kind?: string
           name: string
           nif?: string | null
+          payment_terms_days?: number | null
           phone?: string | null
           role?: string | null
           site_address?: string | null
@@ -116,9 +124,12 @@ export type Database = {
           agreed_daily_hours?: number | null
           agreed_end_time?: string | null
           agreed_start_time?: string | null
+          billing_notes?: string | null
+          business_address?: string | null
           connected_user_id?: string | null
           connection_initiated_by?: string | null
           connection_status?: string
+          contract_url?: string | null
           created_at?: string | null
           currency?: string | null
           cv_url?: string | null
@@ -136,6 +147,7 @@ export type Database = {
           kind?: string
           name?: string
           nif?: string | null
+          payment_terms_days?: number | null
           phone?: string | null
           role?: string | null
           site_address?: string | null

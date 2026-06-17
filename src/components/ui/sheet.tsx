@@ -89,8 +89,17 @@ interface SheetContentProps
     VariantProps<typeof sheetVariants> {}
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
-  ({ side = "right", className, children, style, ...props }, ref) => {
+  ({ side = "right", className, children, style, onFocusCapture, ...props }, ref) => {
     const viewportStyle = useBottomSheetViewportStyle(side === "bottom");
+
+    const handleFocusCapture = (event: React.FocusEvent<HTMLDivElement>) => {
+      onFocusCapture?.(event);
+      const target = event.target as HTMLElement;
+      if (!target.matches("input, textarea, select, [role='combobox'], [contenteditable='true']")) return;
+      window.setTimeout(() => {
+        target.scrollIntoView({ block: "center", behavior: "smooth" });
+      }, 320);
+    };
 
     return (
     <SheetPortal>
@@ -99,6 +108,7 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
         ref={ref}
         className={cn(sheetVariants({ side }), "overscroll-contain", className)}
         style={{ WebkitOverflowScrolling: "touch", ...viewportStyle, ...style }}
+        onFocusCapture={handleFocusCapture}
         {...props}
       >
         {children}

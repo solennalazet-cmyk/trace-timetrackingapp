@@ -48,6 +48,7 @@ interface UnassignedPanelProps {
   onOpenChange: (open: boolean) => void;
   onAssignEntry: (entry: UnassignedEntry) => void;
   onCountChange: (count: number) => void;
+  onBatchAssigned?: () => void;
 }
 
 const entryTypeIcon = (type: string | null) => {

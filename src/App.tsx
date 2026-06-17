@@ -12,6 +12,7 @@ import ReportsPage from "./pages/ReportsPage";
 import TimelinePage from "./pages/TimelinePage";
 import ClientsPage from "./pages/ClientsPage";
 import EmployerHomePage from "./pages/EmployerHomePage";
+import EmployerCalendarPage from "./pages/EmployerCalendarPage";
 import WorkersPage from "./pages/WorkersPage";
 import WorkerProfilePage from "./pages/WorkerProfilePage";
 import PaymentsPage from "./pages/PaymentsPage";
@@ -86,6 +87,7 @@ const AppInner = () => {
             <Route path="/timeline" element={<Navigate to="/reports" replace />} />
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/employer" element={<EmployerHomePage />} />
+            <Route path="/employer/calendar" element={<EmployerCalendarPage />} />
             <Route path="/workers" element={<WorkersPage />} />
             <Route path="/workers/:id" element={<WorkerProfilePage />} />
             <Route path="/payments" element={<PaymentsPage />} />

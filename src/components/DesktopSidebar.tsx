@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Timer, BarChart3, CheckSquare, Briefcase, Settings, CreditCard, LogOut, LogIn, Info, MessageSquare, Sparkles, User, ChevronDown, Home, Users, Wallet } from "lucide-react";
+import { Timer, BarChart3, CheckSquare, Briefcase, Settings, CreditCard, LogOut, LogIn, Info, MessageSquare, Sparkles, User, ChevronDown, Home, Users, Wallet, CalendarDays } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/contexts/RoleContext";
 import logo from "@/assets/logo.png";
@@ -22,7 +22,8 @@ const workerNav = [
 
 const employerNav = [
   { path: "/employer", label: "Home", icon: Home },
-  { path: "/workers", label: "Freelancers", icon: Users },
+  { path: "/employer/calendar", label: "Calendar", icon: CalendarDays },
+  { path: "/workers", label: "Contractors", icon: Users },
   { path: "/payments", label: "Payments", icon: Wallet },
 ];
 

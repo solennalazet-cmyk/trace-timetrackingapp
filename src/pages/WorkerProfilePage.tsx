@@ -58,7 +58,7 @@ const WorkerProfilePage = () => {
     setWorker(data as WorkerRow | null);
     setLoading(false);
 
-    // Check pending invite for this freelancer's email
+    // Check pending invite for this contractor's email
     if (data?.email && user) {
       const { data: inv } = await supabase
         .from("worker_invites")
@@ -82,7 +82,7 @@ const WorkerProfilePage = () => {
       employer_user_id: user.id, invited_email: trimmed, invited_name: name ?? worker?.name ?? null,
     });
     if (error) { toast.error(error.message); return; }
-    // Keep the freelancer's email in sync if not already set
+    // Keep the contractor's email in sync if not already set
     if (worker && !worker.email) {
       await supabase.from("clients").update({ email: trimmed }).eq("id", worker.id);
     }
@@ -95,10 +95,10 @@ const WorkerProfilePage = () => {
     return <div className="pt-6 pb-24 text-sm text-muted-foreground">Loading…</div>;
   }
   if (!worker) {
-    return <div className="pt-6 pb-24 text-sm text-muted-foreground">Freelancer not found.</div>;
+    return <div className="pt-6 pb-24 text-sm text-muted-foreground">Contractor not found.</div>;
   }
 
-  const name = worker.name?.trim() || "Unnamed freelancer";
+  const name = worker.name?.trim() || "Unnamed contractor";
   const role = worker.role?.trim() || "Role not set";
   const connected = !!worker.connected_user_id;
 
@@ -135,10 +135,10 @@ const WorkerProfilePage = () => {
 
   return (
     <div className="pt-4 pb-24 space-y-5">
-      <Seo title={`${name} — Freelancer profile`} description={`Manage ${name}'s details, role, schedule and documents.`} path={`/workers/${worker.id}`} />
+      <Seo title={`${name} — Contractor profile`} description={`Manage ${name}'s details, role, schedule and documents.`} path={`/workers/${worker.id}`} />
 
       <button onClick={() => navigate("/workers")} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-        <ArrowLeft className="w-3.5 h-3.5" /> Freelancers
+        <ArrowLeft className="w-3.5 h-3.5" /> Contractors
       </button>
 
       <header className="flex items-center gap-4 pt-1">

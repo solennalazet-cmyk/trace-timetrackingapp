@@ -58,7 +58,7 @@ const REVENUE_CHALLENGES: Record<string, string[]> = {
     "You're close! Send a proposal to your warmest lead this week.",
     "Share a client success story publicly — it attracts similar clients.",
     "Review your pricing. Are you charging what your expertise is worth?",
-    "Reach out to a complementary freelancer for a collaboration opportunity.",
+    "Reach out to a complementary contractor for a collaboration opportunity.",
     "Post a behind-the-scenes look at your process. Authenticity builds trust.",
   ],
   done: [

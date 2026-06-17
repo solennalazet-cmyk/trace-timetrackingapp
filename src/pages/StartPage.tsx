@@ -510,7 +510,7 @@ const StartPage = () => {
 
   return (
     <div className="flex flex-col items-center pt-4">
-      <Seo title={"Trace — Time Tracker for Freelancers"} description={"Start a timer in one tap and assign work to clients later. Trace is the timer-first time tracking app for freelancers."} path={"/"} />
+      <Seo title={"Trace — Time Tracker for Contractors"} description={"Start a timer in one tap and assign work to clients later. Trace is the timer-first time tracking app for contractors."} path={"/"} />
       <h1 className="sr-only">Time Tracker</h1>
       {/* Mode toggle */}
       <div

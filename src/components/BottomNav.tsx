@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Timer, BarChart3, CheckSquare, Briefcase, Home, Users, Wallet } from "lucide-react";
+import { Timer, BarChart3, CheckSquare, Briefcase, Home, Users, Wallet, CalendarDays } from "lucide-react";
 import { getStoredColorTheme } from "@/hooks/useColorTheme";
 import { useRole } from "@/contexts/RoleContext";
 import { usePendingReportsCount } from "@/hooks/usePendingReportsCount";
@@ -13,7 +13,8 @@ const workerTabs = [
 
 const employerTabs = [
   { path: "/employer", label: "Home", icon: Home },
-  { path: "/workers", label: "Freelancers", icon: Users },
+  { path: "/employer/calendar", label: "Calendar", icon: CalendarDays },
+  { path: "/workers", label: "Contractors", icon: Users },
   { path: "/payments", label: "Payments", icon: Wallet },
 ];
 

@@ -38,16 +38,16 @@ const WorkerInviteModal = ({ open, onOpenChange, onInvite }: WorkerInviteModalPr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[calc(100vw-3rem)] max-w-[400px] rounded-2xl p-6">
         <DialogHeader>
-          <DialogTitle>Invite a freelancer</DialogTitle>
+          <DialogTitle>Invite a contractor</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <p className="text-sm text-muted-foreground">
             They'll be connected automatically once they sign up with this email. If they're already on Trace, they'll see the invite next time they sign in.
           </p>
           <div className="space-y-1.5">
-            <Label htmlFor="freelancer-email">Freelancer email</Label>
+            <Label htmlFor="contractor-email">Contractor email</Label>
             <Input
-              id="freelancer-email"
+              id="contractor-email"
               type="email"
               placeholder="name@example.com"
               className="h-11 rounded-xl"
@@ -57,9 +57,9 @@ const WorkerInviteModal = ({ open, onOpenChange, onInvite }: WorkerInviteModalPr
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="freelancer-name">Name (optional)</Label>
+            <Label htmlFor="contractor-name">Name (optional)</Label>
             <Input
-              id="freelancer-name"
+              id="contractor-name"
               type="text"
               placeholder="e.g. Jacqueline"
               className="h-11 rounded-xl"

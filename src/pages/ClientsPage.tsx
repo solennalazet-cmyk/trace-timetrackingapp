@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Search, Plus, Briefcase, ChevronDown, ChevronUp, Mail, Hash, Pencil, Trash2, Wallet } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -75,6 +75,7 @@ const getAvatarColor = (name: string) => {
 
 const ClientsPage = () => {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -391,12 +392,13 @@ const ClientsPage = () => {
                   else if (dx > 40) setSwipedId((cur) => (cur === client.id ? null : cur));
                 }}
               >
-                {/* Collapsed header */}
+                {/* Tappable row → opens dedicated profile page */}
                 <button
                   className="flex items-center w-full px-4 py-3 text-left gap-3"
                   onClick={() => {
                     if (swipedId === client.id) { setSwipedId(null); return; }
-                    setExpandedId(expanded ? null : client.id);
+                    if (user) navigate(`/clients/${client.id}`);
+                    else { setEditingClient(client); setClientFormOpen(true); }
                   }}
                 >
                   <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${getAvatarColor(client.name)}`}>
@@ -404,95 +406,13 @@ const ClientsPage = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm text-foreground truncate">{client.name}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground truncate">
                       {clientProjects.length} {clientProjects.length === 1 ? "project" : "projects"}
-                      {stats ? ` · ${stats.hours.toFixed(1)}h this month` : ""}
-                      {stats && stats.value > 0 ? ` · ${sym(client.currency)}${stats.value.toFixed(0)} this month` : ""}
+                      {client.default_rate != null ? ` · ${sym(client.currency)}${client.default_rate}/h` : ""}
                     </p>
                   </div>
-                  {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />}
+                  <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 -rotate-90" />
                 </button>
-
-                {/* Expanded content */}
-                {expanded && (
-                  <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
-                    {/* Contact info */}
-                    {client.email && (
-                      <a href={`mailto:${client.email}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-                        <Mail className="w-3.5 h-3.5" /> {client.email}
-                      </a>
-                    )}
-                    {client.nif && (
-                      <button
-                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-                        onClick={() => { navigator.clipboard.writeText(client.nif!); toast.success("NIF copied."); }}
-                      >
-                        <Hash className="w-3.5 h-3.5" /> NIF: {client.nif}
-                      </button>
-                    )}
-                    {client.default_rate != null && (
-                      <p className="text-sm text-muted-foreground">
-                        Default rate: {sym(client.currency)}{client.default_rate}/hour
-                      </p>
-                    )}
-
-                    {/* Projects */}
-                    {clientProjects.length > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Projects</p>
-                        <div className="space-y-2">
-                          {clientProjects.map((project) => {
-                            const ps = getProjectStats(project.id);
-                            const rateDisplay = project.rate
-                              ? `${sym(project.currency ?? client.currency)}${project.rate}/hour`
-                              : client.default_rate
-                                ? `Inherits ${sym(client.currency)}${client.default_rate}/hour`
-                                : "No rate";
-
-                            return (
-                              <div
-                                key={project.id}
-                                className="p-3 rounded-lg border border-border bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
-                                onClick={() => {
-                                  setEditingProject(project);
-                                  setProjectParentClient(client);
-                                  setProjectFormOpen(true);
-                                }}
-                              >
-                                <p className="font-medium text-sm text-foreground">{project.name}</p>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                  {rateDisplay}
-                                  {ps ? ` · ${ps.hours.toFixed(1)}h` : ""}
-                                  {ps && ps.value > 0 ? ` · ${sym(project.currency ?? client.currency)}${ps.value.toFixed(0)}` : ""}
-                                </p>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    <Button variant="outline" size="sm" className="gap-1 rounded-lg" onClick={() => handleAddProjectClick(client)}>
-                      <Plus className="w-3.5 h-3.5" /> Add Project
-                    </Button>
-
-                    {user && (
-                      <ClientPaymentsSection clientId={client.id} workerUserId={user.id} />
-                    )}
-
-
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1 rounded-lg flex-1"
-                        onClick={() => { setEditingClient(client); setClientFormOpen(true); }}
-                      >
-                        <Pencil className="w-3.5 h-3.5" /> Edit client
-                      </Button>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           );

@@ -10,7 +10,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import AddFreelancerModal from "@/components/AddFreelancerModal";
+import AddFreelancerModal, { type NewContractorPayload } from "@/components/AddFreelancerModal";
 import SwipeToDeleteRow from "@/components/SwipeToDeleteRow";
 import Seo from "@/components/Seo";
 

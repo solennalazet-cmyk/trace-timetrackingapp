@@ -85,8 +85,8 @@ interface AssignmentModalProps {
   open: boolean;
   session: SessionData | null;
   existingEntry?: ExistingEntry | null;
-  onSave: (session: SessionData, assignment: AssignmentResult) => void;
-  onSaveMulti?: (session: SessionData, assignments: AssignmentResult[]) => void;
+  onSave: (session: SessionData, assignment: AssignmentResult) => void | Promise<void>;
+  onSaveMulti?: (session: SessionData, assignments: AssignmentResult[]) => void | Promise<void>;
   onSkip: (session: SessionData) => void;
   onDelete?: (entryId: string) => void;
 }
@@ -176,6 +176,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
   useEffect(() => {
     if (!open) return;
+    setSaving(false);
 
     if (existingEntry) {
       setClientId(existingEntry.client_id ?? "");
@@ -402,10 +403,10 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
             _durationMinutes: dur,
           } as AssignmentResult & { _durationMinutes: number };
         });
-        onSaveMulti(session, assignments);
+        await onSaveMulti(session, assignments);
       } else {
         const billableValue = calcBillableValue();
-        onSave(session, {
+        await onSave(session, {
           ...baseAssignment,
           taskId: taskId || null,
           taskName,
@@ -418,7 +419,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
       setSaving(false);
       return;
     }
-    setSaving(false);
+    // Intentionally leave `saving` true on success — modal will unmount/close.
   };
 
   const handleSkipOrDismiss = () => onSkip(session);

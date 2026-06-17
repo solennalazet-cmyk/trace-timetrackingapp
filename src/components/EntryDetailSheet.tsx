@@ -153,7 +153,7 @@ const EntryDetailSheet = ({ entry, open, onOpenChange, onEdit, onDeleted }: Entr
 
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Client</span>
+                <span className="text-muted-foreground">Account</span>
                 <span className="font-medium">{entry.client_name || "—"}</span>
               </div>
               <div className="flex justify-between">

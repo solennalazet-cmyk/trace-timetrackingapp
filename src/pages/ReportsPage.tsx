@@ -1331,7 +1331,7 @@ const ReportsPage = () => {
               if (uniqueClients.length === 1) {
                 targetClientId = uniqueClients[0];
               } else {
-                toast.info("Filter by a single client to send a report.");
+                toast.info("Filter by a single account to send a report.");
                 return;
               }
             }

@@ -28,6 +28,43 @@ const SheetOverlay = React.forwardRef<
 ));
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 
+const useBottomSheetViewportStyle = (enabled: boolean) => {
+  const [viewportStyle, setViewportStyle] = React.useState<React.CSSProperties>({});
+
+  React.useEffect(() => {
+    if (!enabled || typeof window === "undefined" || !window.visualViewport) {
+      setViewportStyle({});
+      return;
+    }
+
+    const visualViewport = window.visualViewport;
+    const updateViewportStyle = () => {
+      const keyboardOffset = Math.max(0, window.innerHeight - visualViewport.offsetTop - visualViewport.height);
+      if (keyboardOffset > 0) {
+        setViewportStyle({
+          bottom: `${keyboardOffset}px`,
+          maxHeight: `${Math.max(260, visualViewport.height - 8)}px`,
+        });
+      } else {
+        setViewportStyle({});
+      }
+    };
+
+    updateViewportStyle();
+    visualViewport.addEventListener("resize", updateViewportStyle);
+    visualViewport.addEventListener("scroll", updateViewportStyle);
+    window.addEventListener("orientationchange", updateViewportStyle);
+
+    return () => {
+      visualViewport.removeEventListener("resize", updateViewportStyle);
+      visualViewport.removeEventListener("scroll", updateViewportStyle);
+      window.removeEventListener("orientationchange", updateViewportStyle);
+    };
+  }, [enabled]);
+
+  return viewportStyle;
+};
+
 const sheetVariants = cva(
   "fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
   {
@@ -52,10 +89,28 @@ interface SheetContentProps
     VariantProps<typeof sheetVariants> {}
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
-  ({ side = "right", className, children, ...props }, ref) => (
+  ({ side = "right", className, children, style, onFocusCapture, ...props }, ref) => {
+    const viewportStyle = useBottomSheetViewportStyle(side === "bottom");
+
+    const handleFocusCapture = (event: React.FocusEvent<HTMLDivElement>) => {
+      onFocusCapture?.(event);
+      const target = event.target as HTMLElement;
+      if (!target.matches("input, textarea, select, [role='combobox'], [contenteditable='true']")) return;
+      window.setTimeout(() => {
+        target.scrollIntoView({ block: "center", behavior: "auto" });
+      }, 320);
+    };
+
+    return (
     <SheetPortal>
       <SheetOverlay />
-      <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
+      <SheetPrimitive.Content
+        ref={ref}
+        className={cn(sheetVariants({ side }), "overscroll-contain", className)}
+        style={{ WebkitOverflowScrolling: "touch", ...viewportStyle, ...style }}
+        onFocusCapture={handleFocusCapture}
+        {...props}
+      >
         {children}
         <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-secondary hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
           <X className="h-4 w-4" />
@@ -63,7 +118,8 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>
     </SheetPortal>
-  ),
+    );
+  },
 );
 SheetContent.displayName = SheetPrimitive.Content.displayName;
 

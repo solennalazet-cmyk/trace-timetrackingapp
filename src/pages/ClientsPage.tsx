@@ -30,9 +30,13 @@ interface Client {
   id: string;
   name: string;
   email: string | null;
+  phone: string | null;
   nif: string | null;
+  business_address: string | null;
   currency: string | null;
   default_rate: number | null;
+  payment_terms_days: number | null;
+  billing_notes: string | null;
   export_columns: string[] | null;
   invited_email?: string | null;
   connection_status?: string | null;
@@ -103,7 +107,7 @@ const ClientsPage = () => {
     setLoading(true);
     if (user) {
       const [{ data: c }, { data: p }] = await Promise.all([
-        supabase.from("clients").select("id, name, email, nif, currency, default_rate, export_columns, site_address, site_lat, site_lng, site_radius_m, geolocation_override, invited_email, connection_status").eq("user_id", user.id).in("kind", ["account", "both"]).order("name"),
+        supabase.from("clients").select("id, name, email, phone, nif, business_address, currency, default_rate, payment_terms_days, billing_notes, export_columns, site_address, site_lat, site_lng, site_radius_m, geolocation_override, invited_email, connection_status").eq("user_id", user.id).in("kind", ["account", "both"]).order("name"),
         supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", user.id),
       ]);
       setClients((c ?? []) as Client[]);
@@ -134,7 +138,7 @@ const ClientsPage = () => {
       setProjectStats(Object.entries(projStatsMap).map(([projectId, s]) => ({ projectId, ...s })));
     } else {
       const ac = getAnonymousClients();
-      setClients(ac.map((c: any) => ({ id: c.id, name: c.name, email: c.email ?? null, nif: c.nif ?? null, currency: c.currency ?? "EUR", default_rate: c.default_rate ?? null, export_columns: null })));
+      setClients(ac.map((c: any) => ({ id: c.id, name: c.name, email: c.email ?? null, phone: c.phone ?? null, nif: c.nif ?? null, business_address: c.business_address ?? null, currency: c.currency ?? "EUR", default_rate: c.default_rate ?? null, payment_terms_days: c.payment_terms_days ?? null, billing_notes: c.billing_notes ?? null, export_columns: null })));
       const ap = getAnonymousProjects();
       setProjects(ap.map((p: any) => ({ id: p.id, name: p.name, client_id: p.client_id ?? null, rate: p.rate ?? null, currency: p.currency ?? null })));
       setMonthlyStats([]);
@@ -197,8 +201,11 @@ const ClientsPage = () => {
     if (user) {
       if (editingClient) {
         await supabase.from("clients").update({
-          name: data.name, email: data.email || null, nif: data.nif || null,
+          name: data.name, email: data.email || null, phone: data.phone || null, nif: data.nif || null,
+          business_address: data.business_address || null,
           currency: data.currency, default_rate: data.default_rate ? parseFloat(data.default_rate) : null,
+          payment_terms_days: data.payment_terms_days ? parseInt(data.payment_terms_days, 10) : null,
+          billing_notes: data.billing_notes || null,
           export_columns: data.export_columns ?? null,
           ...siteFields,
           ...connectionFields,
@@ -206,8 +213,11 @@ const ClientsPage = () => {
         toast.success(isNewInvite ? "Client updated. Invite sent." : "Client updated.");
       } else {
         await supabase.from("clients").insert({
-          name: data.name, email: data.email || null, nif: data.nif || null,
+          name: data.name, email: data.email || null, phone: data.phone || null, nif: data.nif || null,
+          business_address: data.business_address || null,
           currency: data.currency, default_rate: data.default_rate ? parseFloat(data.default_rate) : null,
+          payment_terms_days: data.payment_terms_days ? parseInt(data.payment_terms_days, 10) : null,
+          billing_notes: data.billing_notes || null,
           export_columns: data.export_columns ?? null,
           ...siteFields,
           ...connectionFields,
@@ -218,7 +228,7 @@ const ClientsPage = () => {
       }
     } else {
       const id = editingClient?.id ?? `local-${Date.now()}`;
-      saveAnonymousClient({ id, name: data.name, email: data.email, nif: data.nif, currency: data.currency, default_rate: data.default_rate ? parseFloat(data.default_rate) : null });
+      saveAnonymousClient({ id, name: data.name, email: data.email, phone: data.phone, nif: data.nif, business_address: data.business_address, currency: data.currency, default_rate: data.default_rate ? parseFloat(data.default_rate) : null, payment_terms_days: data.payment_terms_days ? parseInt(data.payment_terms_days, 10) : null, billing_notes: data.billing_notes });
       toast.success(editingClient ? "Client updated." : "Client added.");
     }
     setClientFormOpen(false);
@@ -329,8 +339,7 @@ const ClientsPage = () => {
 
       {/* Add Client */}
       <Button
-        variant="outline"
-        className="w-full mb-4 gap-2 rounded-xl"
+        className="w-full mb-4 gap-2 rounded-xl h-10"
         onClick={handleAddClientClick}
       >
         <Plus className="w-4 h-4" /> Add client
@@ -426,9 +435,11 @@ const ClientsPage = () => {
         onSave={handleSaveClient}
         onDelete={editingClient ? () => setDeleteClientId(editingClient.id) : undefined}
         initial={editingClient ? {
-          name: editingClient.name, email: editingClient.email ?? "",
-          nif: editingClient.nif ?? "", currency: editingClient.currency ?? "EUR",
+          name: editingClient.name, email: editingClient.email ?? "", phone: editingClient.phone ?? "",
+          nif: editingClient.nif ?? "", business_address: editingClient.business_address ?? "", currency: editingClient.currency ?? "EUR",
           default_rate: editingClient.default_rate != null ? String(editingClient.default_rate) : "",
+          payment_terms_days: editingClient.payment_terms_days != null ? String(editingClient.payment_terms_days) : "",
+          billing_notes: editingClient.billing_notes ?? "",
           rate_unit: "hour",
           export_columns: resolveExportColumns(editingClient.export_columns),
           site_address: (editingClient as any).site_address ?? "",

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronDown, MapPin, Loader2, UserPlus, FileDown, Send } from "lucide-react";
+import { Building2, ChevronDown, Handshake, Mail, MapPin, Loader2, UserPlus, FileDown, Send } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -26,9 +27,13 @@ import { cn } from "@/lib/utils";
 interface ClientFormData {
   name: string;
   email: string;
+  phone?: string | null;
   nif: string;
+  business_address?: string | null;
   currency: string;
   default_rate: string;
+  payment_terms_days?: string | null;
+  billing_notes?: string | null;
   rate_unit: string;
   export_columns?: ExportColumnKey[];
   site_address?: string | null;
@@ -66,9 +71,25 @@ const RATE_UNITS = [
   { value: "project", label: "Per project" },
 ];
 
+const SectionLabel = ({ icon: Icon, children }: { icon: any; children: React.ReactNode }) => (
+  <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground pt-1">
+    <Icon className="h-3.5 w-3.5" />
+    {children}
+  </div>
+);
+
+const Field = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
+  <div className="space-y-1.5">
+    <Label className="text-xs font-medium text-foreground/80">
+      {label} {hint && <span className="text-muted-foreground/70 font-normal">({hint})</span>}
+    </Label>
+    {children}
+  </div>
+);
+
 const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title = "Add client" }: ClientFormModalProps) => {
   const [form, setForm] = useState<ClientFormData>({
-    name: "", email: "", nif: "", currency: "EUR", default_rate: "", rate_unit: "hour",
+    name: "", email: "", phone: "", nif: "", business_address: "", currency: "EUR", default_rate: "", payment_terms_days: "", billing_notes: "", rate_unit: "hour",
     export_columns: resolveExportColumns(null),
     site_address: "", site_lat: null, site_lng: null, site_radius_m: 100,
     geolocation_override: "inherit",
@@ -83,7 +104,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
   useEffect(() => {
     if (open) {
       setForm(initial ?? {
-        name: "", email: "", nif: "", currency: "EUR", default_rate: "", rate_unit: "hour",
+        name: "", email: "", phone: "", nif: "", business_address: "", currency: "EUR", default_rate: "", payment_terms_days: "", billing_notes: "", rate_unit: "hour",
         export_columns: resolveExportColumns(null),
         site_address: "", site_lat: null, site_lng: null, site_radius_m: 100,
         geolocation_override: "inherit",
@@ -115,49 +136,84 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
     setSaving(false);
   };
 
+  const focusScroll = (e: React.FocusEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (!target.matches("input, textarea, [role='combobox']")) return;
+    setTimeout(() => target.scrollIntoView({ block: "center", behavior: "auto" }), 320);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[400px] rounded-2xl p-0 max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="px-6 pt-6 pb-0">
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        <div className="px-6 space-y-4">
-          <div className="space-y-1.5">
-            <Label className="text-sm">Organisation name *</Label>
-            <Input className="h-10 rounded-xl" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Client name" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-sm">Contact email</Label>
-            <Input className="h-10 rounded-xl" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="contact@example.com" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-sm">NIF / Tax number</Label>
-            <Input className="h-10 rounded-xl" value={form.nif} onChange={(e) => setForm({ ...form, nif: e.target.value })} placeholder="PT123456789" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-sm">Currency</Label>
-            <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
-              <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {CURRENCIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex gap-3">
-            <div className="flex-1 space-y-1.5">
-              <Label className="text-sm">Default billing rate</Label>
-              <Input className="h-10 rounded-xl" type="number" placeholder="0.00" value={form.default_rate} onChange={(e) => setForm({ ...form, default_rate: e.target.value })} />
+      <DialogContent
+        className="w-[calc(100vw-2rem)] max-w-[440px] rounded-3xl p-0 overflow-hidden gap-0 flex flex-col"
+        onInteractOutside={(e) => e.preventDefault()}
+        position="centered"
+      >
+        <DialogHeader className="px-6 pt-6 pb-4 space-y-2 bg-gradient-to-b from-primary/10 to-transparent">
+          <div className="flex items-center gap-3 pr-7">
+            <div className="h-11 w-11 rounded-2xl bg-primary/20 text-foreground flex items-center justify-center shrink-0">
+              <Building2 className="h-5 w-5" />
             </div>
-            <div className="w-32 space-y-1.5">
-              <Label className="text-sm">Unit</Label>
+            <div className="space-y-0.5 min-w-0">
+              <DialogTitle className="text-lg">{title}</DialogTitle>
+              <p className="text-xs text-muted-foreground leading-snug">
+                Only the client name is required — add any contact, commercial or business details you already have.
+              </p>
+            </div>
+          </div>
+        </DialogHeader>
+        <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1 min-h-0 scroll-pb-32" onFocusCapture={focusScroll}>
+          <SectionLabel icon={Mail}>Contact</SectionLabel>
+          <Field label="Client name" hint="required">
+            <Input autoFocus className="h-11 rounded-xl" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Acme Ltd." />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Email">
+              <Input className="h-11 rounded-xl" type="email" inputMode="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="billing@…" />
+            </Field>
+            <Field label="Phone">
+              <Input className="h-11 rounded-xl" type="tel" inputMode="tel" value={form.phone ?? ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+33…" />
+            </Field>
+          </div>
+
+          <SectionLabel icon={Handshake}>Commercial agreement</SectionLabel>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Default rate">
+              <Input className="h-11 rounded-xl" type="number" inputMode="decimal" placeholder="0.00" value={form.default_rate} onChange={(e) => setForm({ ...form, default_rate: e.target.value })} />
+            </Field>
+            <Field label="Currency">
+              <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
+                <SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CURRENCIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Payment terms">
+              <Input className="h-11 rounded-xl" type="number" inputMode="numeric" min="0" step="1" placeholder="30 days" value={form.payment_terms_days ?? ""} onChange={(e) => setForm({ ...form, payment_terms_days: e.target.value })} />
+            </Field>
+            <Field label="Unit">
               <Select value={form.rate_unit} onValueChange={(v) => setForm({ ...form, rate_unit: v })}>
-                <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {RATE_UNITS.map((u) => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
           </div>
+          <Field label="Billing notes">
+            <Textarea className="min-h-[5.5rem] rounded-xl resize-none" value={form.billing_notes ?? ""} onChange={(e) => setForm({ ...form, billing_notes: e.target.value })} placeholder="PO required, invoicing contact, special terms…" />
+          </Field>
+
+          <SectionLabel icon={Building2}>Business details</SectionLabel>
+          <Field label="NIF / VAT number">
+            <Input className="h-11 rounded-xl" value={form.nif} onChange={(e) => setForm({ ...form, nif: e.target.value })} placeholder="PT123456789" />
+          </Field>
+          <Field label="Registered address">
+            <Textarea className="min-h-[6.5rem] rounded-xl resize-none" value={form.business_address ?? ""} onChange={(e) => setForm({ ...form, business_address: e.target.value })} placeholder="Street, city, postcode, country" />
+          </Field>
 
           {/* Connect Trace user */}
           <div className="rounded-xl bg-secondary overflow-hidden shadow-sm transition-colors hover:bg-secondary/80">
@@ -331,9 +387,9 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
             )}
           </div>
         </div>
-        <div className="flex gap-3 px-6 pt-2">
-          <Button variant="outline" className="flex-1 rounded-[28px] h-12 font-bold" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-12 font-bold" onClick={handleSave} disabled={!form.name.trim() || saving}>
+        <div className="flex gap-2.5 px-6 py-4 border-t border-border bg-card shrink-0">
+          <Button variant="outline" className="flex-1 rounded-xl h-11" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button className="flex-1 rounded-xl h-11" onClick={handleSave} disabled={!form.name.trim() || saving}>
             {initial ? "Save changes" : "Save client"}
           </Button>
         </div>

@@ -30,14 +30,13 @@ const useVisualViewportStyle = (enabled: boolean, mode: "centered" | "sheet" = "
           top: `${visualViewport.offsetTop + visualViewport.height / 2}px`,
         });
       } else {
-        // sheet: only adjust when keyboard is visible (visualViewport shrinks).
         const keyboardOffset = Math.max(
           0,
           window.innerHeight - visualViewport.offsetTop - visualViewport.height
         );
         if (keyboardOffset > 0) {
           setViewportStyle({
-            maxHeight: `${visualViewport.height - 8}px`,
+            maxHeight: `${Math.max(260, visualViewport.height - 8)}px`,
             bottom: `${keyboardOffset}px`,
           });
         } else {
@@ -86,8 +85,17 @@ interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof Dialo
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, position = "sheet", style, ...props }, ref) => {
+>(({ className, children, position = "sheet", style, onFocusCapture, ...props }, ref) => {
   const viewportStyle = useVisualViewportStyle(true, position);
+
+  const handleFocusCapture = (event: React.FocusEvent<HTMLDivElement>) => {
+    onFocusCapture?.(event);
+    const target = event.target as HTMLElement;
+    if (!target.matches("input, textarea, select, [role='combobox'], [contenteditable='true']")) return;
+    window.setTimeout(() => {
+      target.scrollIntoView({ block: "center", behavior: "auto" });
+    }, 320);
+  };
 
   return (
     <DialogPortal>
@@ -102,6 +110,7 @@ const DialogContent = React.forwardRef<
           className,
         )}
         style={{ WebkitOverflowScrolling: "touch", ...viewportStyle, ...style }}
+        onFocusCapture={handleFocusCapture}
         {...props}
       >
         {children}

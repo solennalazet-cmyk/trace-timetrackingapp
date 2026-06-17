@@ -1,14 +1,14 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, User, Briefcase, CalendarClock, FileText, ChevronRight } from "lucide-react";
+import { ArrowLeft, User, Briefcase, CalendarClock, ChevronRight, Send, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import Seo from "@/components/Seo";
-import WorkerFocusEditor, { type EditorField, type EditorKind } from "@/components/WorkerFocusEditor";
+import WorkerFocusEditor, { type EditorKind } from "@/components/WorkerFocusEditor";
 import WorkerCvCard from "@/components/WorkerCvCard";
+import WorkerInviteModal from "@/components/WorkerInviteModal";
 
 interface WorkerRow {
   id: string;
@@ -43,6 +43,8 @@ const WorkerProfilePage = () => {
   const [worker, setWorker] = useState<WorkerRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [editorOpen, setEditorOpen] = useState<EditorKind | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [invitePending, setInvitePending] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -55,19 +57,50 @@ const WorkerProfilePage = () => {
     if (error) toast.error(error.message);
     setWorker(data as WorkerRow | null);
     setLoading(false);
-  }, [id]);
+
+    // Check pending invite for this freelancer's email
+    if (data?.email && user) {
+      const { data: inv } = await supabase
+        .from("worker_invites")
+        .select("id")
+        .eq("employer_user_id", user.id)
+        .eq("invited_email", data.email.toLowerCase())
+        .eq("status", "pending")
+        .maybeSingle();
+      setInvitePending(!!inv);
+    } else {
+      setInvitePending(false);
+    }
+  }, [id, user]);
 
   useEffect(() => { load(); }, [load]);
+
+  const handleInvite = async ({ email, name }: { email: string; name?: string }) => {
+    if (!user) return;
+    const trimmed = email.trim().toLowerCase();
+    const { error } = await supabase.from("worker_invites").insert({
+      employer_user_id: user.id, invited_email: trimmed, invited_name: name ?? worker?.name ?? null,
+    });
+    if (error) { toast.error(error.message); return; }
+    // Keep the freelancer's email in sync if not already set
+    if (worker && !worker.email) {
+      await supabase.from("clients").update({ email: trimmed }).eq("id", worker.id);
+    }
+    toast.success("Invite sent. They'll be connected when they sign up.");
+    setInviteOpen(false);
+    await load();
+  };
 
   if (loading) {
     return <div className="pt-6 pb-24 text-sm text-muted-foreground">Loading…</div>;
   }
   if (!worker) {
-    return <div className="pt-6 pb-24 text-sm text-muted-foreground">Worker not found.</div>;
+    return <div className="pt-6 pb-24 text-sm text-muted-foreground">Freelancer not found.</div>;
   }
 
-  const name = worker.name?.trim() || "Unnamed worker";
+  const name = worker.name?.trim() || "Unnamed freelancer";
   const role = worker.role?.trim() || "Role not set";
+  const connected = !!worker.connected_user_id;
 
   const shift = worker.agreed_start_time && worker.agreed_end_time
     ? `${worker.agreed_start_time} – ${worker.agreed_end_time}`
@@ -76,17 +109,17 @@ const WorkerProfilePage = () => {
   type CardDef = { kind: EditorKind; Icon: typeof User; title: string; summary: string };
   const cards: CardDef[] = [
     {
+      kind: "role",
+      Icon: Briefcase,
+      title: "Role",
+      summary: worker.role?.trim() ? worker.role : "Set their job title",
+    },
+    {
       kind: "identity",
       Icon: User,
       title: "Identity & contact",
       summary: [worker.email, worker.phone, worker.date_of_birth ? `Born ${fmtDate(worker.date_of_birth)}` : null]
         .filter(Boolean).join(" · ") || "Add email, phone, date of birth",
-    },
-    {
-      kind: "role",
-      Icon: Briefcase,
-      title: "Role",
-      summary: worker.role?.trim() ? worker.role : "Set their job title",
     },
     {
       kind: "engagement",
@@ -146,6 +179,34 @@ const WorkerProfilePage = () => {
           cvUrl={worker.cv_url}
           onChange={load}
         />
+
+        {/* Connection / invite card */}
+        <button
+          className="w-full text-left"
+          onClick={() => { if (!connected) setInviteOpen(true); }}
+          disabled={connected}
+        >
+          <Card className="p-4 hover:bg-muted/40 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-foreground/10 flex items-center justify-center shrink-0">
+                {connected ? <CheckCircle2 className="w-4 h-4 text-foreground" /> : <Send className="w-4 h-4 text-foreground" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold">
+                  {connected ? "Connected on Trace" : invitePending ? "Invite pending" : "Invite to Trace"}
+                </p>
+                <p className="text-xs text-muted-foreground truncate mt-0.5">
+                  {connected
+                    ? "They can log time and submit reports to you."
+                    : invitePending
+                      ? `Waiting for ${worker.email ?? "them"} to sign up.`
+                      : "Send them an email to connect their account."}
+                </p>
+              </div>
+              {!connected && <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
+            </div>
+          </Card>
+        </button>
       </div>
 
       <WorkerFocusEditor
@@ -155,6 +216,12 @@ const WorkerProfilePage = () => {
         initial={worker}
         onClose={() => setEditorOpen(null)}
         onSaved={() => { setEditorOpen(null); load(); }}
+      />
+
+      <WorkerInviteModal
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+        onInvite={handleInvite}
       />
     </div>
   );

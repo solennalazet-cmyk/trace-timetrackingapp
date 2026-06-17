@@ -6,10 +6,10 @@ import { Plus, Users, Mail, X, Clock, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import WorkerInviteModal from "@/components/WorkerInviteModal";
+import AddFreelancerModal from "@/components/AddFreelancerModal";
 import Seo from "@/components/Seo";
 
-interface WorkerInvite {
+interface FreelancerInvite {
   id: string;
   invited_email: string;
   invited_name: string | null;
@@ -17,7 +17,7 @@ interface WorkerInvite {
   invited_at: string;
 }
 
-interface ConnectedWorker {
+interface ConnectedFreelancer {
   id: string;
   name: string;
   role: string | null;
@@ -27,15 +27,15 @@ interface ConnectedWorker {
 const WorkersPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [invites, setInvites] = useState<WorkerInvite[]>([]);
-  const [workers, setWorkers] = useState<ConnectedWorker[]>([]);
+  const [invites, setInvites] = useState<FreelancerInvite[]>([]);
+  const [freelancers, setFreelancers] = useState<ConnectedFreelancer[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const [invitesRes, workersRes] = await Promise.all([
+    const [invitesRes, listRes] = await Promise.all([
       supabase
         .from("worker_invites")
         .select("id, invited_email, invited_name, status, invited_at")
@@ -44,31 +44,29 @@ const WorkersPage = () => {
         .order("invited_at", { ascending: false }),
       supabase
         .from("clients")
-        .select("id, name, role, user_id")
-        .eq("connected_user_id", user.id)
-        .eq("connection_status", "accepted"),
+        .select("id, name, role, user_id, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false }),
     ]);
     if (invitesRes.error) toast.error(invitesRes.error.message);
     else setInvites(invitesRes.data ?? []);
-    if (workersRes.error) toast.error(workersRes.error.message);
-    else setWorkers((workersRes.data ?? []) as ConnectedWorker[]);
+    if (listRes.error) toast.error(listRes.error.message);
+    else setFreelancers((listRes.data ?? []) as ConnectedFreelancer[]);
     setLoading(false);
   }, [user]);
 
   useEffect(() => { load(); }, [load]);
 
-  const handleInvite = async ({ email, name }: { email: string; name?: string }) => {
+  const handleCreate = async (firstName: string) => {
     if (!user) return;
-    const trimmed = email.trim().toLowerCase();
-    const existing = invites.find((i) => i.invited_email.toLowerCase() === trimmed);
-    if (existing) { toast.error("Already invited — invite is still pending."); return; }
-    const { error } = await supabase.from("worker_invites").insert({
-      employer_user_id: user.id, invited_email: trimmed, invited_name: name ?? null,
-    });
+    const { data, error } = await supabase
+      .from("clients")
+      .insert({ user_id: user.id, name: firstName })
+      .select("id")
+      .single();
     if (error) { toast.error(error.message); return; }
-    toast.success("Invite sent. They'll be connected when they sign up.");
     setModalOpen(false);
-    await load();
+    navigate(`/workers/${data.id}`);
   };
 
   const handleCancel = async (id: string) => {
@@ -92,17 +90,17 @@ const WorkersPage = () => {
 
       {loading ? (
         <Card className="p-6 text-center text-sm text-muted-foreground">Loading…</Card>
-      ) : workers.length === 0 && invites.length === 0 ? (
+      ) : freelancers.length === 0 && invites.length === 0 ? (
         <Card className="p-6 text-center">
           <Users className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
           <p className="text-sm font-medium">No freelancers yet</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Tap <span className="font-medium text-foreground">Add freelancer</span> to invite someone by email.
+            Tap <span className="font-medium text-foreground">Add freelancer</span> to create their profile.
           </p>
         </Card>
       ) : (
         <div className="space-y-2.5">
-          {workers.map((w) => (
+          {freelancers.map((w) => (
             <button key={w.id} className="w-full text-left" onClick={() => navigate(`/workers/${w.id}`)}>
               <Card className="p-4 flex items-center gap-3 hover:bg-muted/40 transition-colors">
                 <div className="h-11 w-11 rounded-full bg-foreground/10 text-foreground flex items-center justify-center font-semibold shrink-0">
@@ -138,7 +136,7 @@ const WorkersPage = () => {
         </div>
       )}
 
-      <WorkerInviteModal open={modalOpen} onOpenChange={setModalOpen} onInvite={handleInvite} />
+      <AddFreelancerModal open={modalOpen} onOpenChange={setModalOpen} onCreate={handleCreate} />
     </div>
   );
 };

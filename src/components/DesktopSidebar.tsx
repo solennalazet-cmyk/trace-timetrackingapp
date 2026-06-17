@@ -17,12 +17,12 @@ const workerNav = [
   { path: "/", label: "Start", icon: Timer },
   { path: "/reports", label: "Reports", icon: BarChart3 },
   { path: "/payments", label: "Payments", icon: Wallet },
-  { path: "/clients", label: "Clients", icon: Briefcase },
+  { path: "/clients", label: "Accounts", icon: Briefcase },
 ];
 
 const employerNav = [
   { path: "/employer", label: "Home", icon: Home },
-  { path: "/workers", label: "Workers", icon: Users },
+  { path: "/workers", label: "Freelancers", icon: Users },
   { path: "/payments", label: "Payments", icon: Wallet },
 ];
 

@@ -335,6 +335,15 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
             {!loading && entries.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">No unassigned entries.</p>
             )}
+            {user && entries.length > 1 && (
+              <Button
+                onClick={() => setBatchOpen(true)}
+                className="w-full mb-2 rounded-[28px] h-11 font-semibold bg-foreground text-background hover:bg-foreground/90"
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Assign all {entries.length} entries to an account
+              </Button>
+            )}
             {entries.map((entry) => (
               <SwipeDeleteRow key={entry.id} onSwipeLeft={() => softDelete(entry.id)}>
                 <div className="flex items-center w-full px-3 py-3 rounded-lg hover:bg-muted/50 transition-colors">
@@ -364,8 +373,44 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
           </div>
         )}
       </SheetContent>
+
+      <AlertDialog open={batchOpen} onOpenChange={(v) => { setBatchOpen(v); if (!v) setBatchClientId(""); }}>
+        <AlertDialogContent className="w-[calc(100vw-2rem)] max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Assign {entries.length} {entries.length === 1 ? "entry" : "entries"} to an account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              All other info (date, duration, project, notes) will be kept exactly as entered. Only the account will be set.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2">
+            <Select value={batchClientId} onValueChange={setBatchClientId}>
+              <SelectTrigger className="h-11">
+                <SelectValue placeholder="Choose an account…" />
+              </SelectTrigger>
+              <SelectContent>
+                {clients.length === 0 && (
+                  <div className="px-3 py-2 text-sm text-muted-foreground">No accounts yet. Add one from the Accounts tab.</div>
+                )}
+                {clients.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={batching}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); runBatchAssign(); }}
+              disabled={!batchClientId || batching}
+            >
+              {batching ? "Assigning…" : "Assign all"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 };
+
 
 export default UnassignedPanel;

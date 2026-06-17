@@ -88,7 +88,7 @@ const AddFreelancerModal = ({ open, onOpenChange, onCreate }: Props) => {
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!busy) onOpenChange(o); }}>
       <DialogContent
-        className="w-[calc(100vw-2rem)] max-w-[440px] rounded-3xl p-0 overflow-hidden gap-0 max-h-[88vh] flex flex-col"
+        className="w-[calc(100vw-2rem)] max-w-[440px] rounded-3xl p-0 overflow-hidden gap-0 flex flex-col"
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader className="px-6 pt-6 pb-4 space-y-2 bg-gradient-to-b from-primary/10 to-transparent">
@@ -105,7 +105,7 @@ const AddFreelancerModal = ({ open, onOpenChange, onCreate }: Props) => {
           </div>
         </DialogHeader>
 
-        <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1" onFocusCapture={focusScroll}>
+        <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1 min-h-0 scroll-pb-32" onFocusCapture={focusScroll}>
           <Field label="First name" hint="required">
             <Input
               autoFocus

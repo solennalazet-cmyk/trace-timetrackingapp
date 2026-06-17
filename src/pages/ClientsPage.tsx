@@ -227,14 +227,24 @@ const ClientsPage = () => {
   const handleDeleteClient = async () => {
     if (!deleteClientId) return;
     if (user) {
-      // Delete all time entries assigned to this client OR to its projects
-      const clientProjects = projects.filter((p) => p.client_id === deleteClientId).map((p) => p.id);
-      await supabase.from("time_entries").delete().eq("client_id", deleteClientId);
-      if (clientProjects.length > 0) {
-        await supabase.from("time_entries").delete().in("project_id", clientProjects);
+      // If this row also appears in the Contractors view (kind = 'both'),
+      // downgrade to 'contractor' so it stays there. Otherwise hard delete.
+      const { data: row } = await supabase
+        .from("clients")
+        .select("kind")
+        .eq("id", deleteClientId)
+        .maybeSingle();
+      if ((row as any)?.kind === "both") {
+        await supabase.from("clients").update({ kind: "contractor" }).eq("id", deleteClientId);
+      } else {
+        const clientProjects = projects.filter((p) => p.client_id === deleteClientId).map((p) => p.id);
+        await supabase.from("time_entries").delete().eq("client_id", deleteClientId);
+        if (clientProjects.length > 0) {
+          await supabase.from("time_entries").delete().in("project_id", clientProjects);
+        }
+        await supabase.from("projects").delete().eq("client_id", deleteClientId);
+        await supabase.from("clients").delete().eq("id", deleteClientId);
       }
-      await supabase.from("projects").delete().eq("client_id", deleteClientId);
-      await supabase.from("clients").delete().eq("id", deleteClientId);
     } else {
       deleteAnonymousClient(deleteClientId);
     }

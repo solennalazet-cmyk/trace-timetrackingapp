@@ -152,12 +152,16 @@ const SwipeDeleteRow = ({
   );
 };
 
-const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: UnassignedPanelProps) => {
+const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onBatchAssigned }: UnassignedPanelProps) => {
   const { user } = useAuth();
   
   const [entries, setEntries] = useState<UnassignedEntry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<UnassignedEntry | null>(null);
   const [loading, setLoading] = useState(false);
+  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
+  const [batchOpen, setBatchOpen] = useState(false);
+  const [batchClientId, setBatchClientId] = useState<string>("");
+  const [batching, setBatching] = useState(false);
 
   const loadEntries = async () => {
     setLoading(true);
@@ -172,6 +176,13 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
         .order("entry_date", { ascending: false });
       setEntries((data ?? []) as UnassignedEntry[]);
       onCountChange((data ?? []).length);
+
+      const { data: cs } = await supabase
+        .from("clients")
+        .select("id, name")
+        .eq("user_id", user.id)
+        .order("name", { ascending: true });
+      setClients((cs ?? []) as { id: string; name: string }[]);
     } else {
       const all = getAnonymousEntries();
       const unassigned = all.filter((e: any) => !e.client_id && !e.project_id)
@@ -188,6 +199,30 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
       setSelectedEntry(null);
     }
   }, [open, user]);
+
+  const runBatchAssign = async () => {
+    if (!user || !batchClientId || entries.length === 0) return;
+    setBatching(true);
+    const ids = entries.map((e) => e.id);
+    const { error } = await supabase
+      .from("time_entries")
+      .update({ client_id: batchClientId })
+      .in("id", ids)
+      .eq("user_id", user.id);
+    setBatching(false);
+    if (error) {
+      toast.error("Couldn't assign entries", { description: error.message });
+      return;
+    }
+    const clientName = clients.find((c) => c.id === batchClientId)?.name ?? "account";
+    toast.success(`${ids.length} ${ids.length === 1 ? "entry" : "entries"} assigned to ${clientName}`);
+    setBatchOpen(false);
+    setBatchClientId("");
+    onCountChange(0);
+    onBatchAssigned?.();
+    onOpenChange(false);
+  };
+
 
   const softDelete = async (id: string) => {
     // Remove from list immediately

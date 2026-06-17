@@ -108,7 +108,7 @@ const AccountFocusEditor = ({ open, kind, clientId, initial, onClose, onSaved }:
 
   const focusScroll = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setTimeout(() => {
-      e.target.scrollIntoView({ block: "center", behavior: "smooth" });
+      e.target.scrollIntoView({ block: "center", behavior: "auto" });
     }, 320);
   };
 

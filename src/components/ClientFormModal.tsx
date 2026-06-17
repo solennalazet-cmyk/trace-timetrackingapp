@@ -280,7 +280,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
                     value={[form.site_radius_m ?? 100]}
                     onValueChange={([v]) => setForm({ ...form, site_radius_m: v })}
                   />
-                  <p className="text-[11px] text-muted-foreground">Workers within this distance count as On-site.</p>
+                  <p className="text-[11px] text-muted-foreground">Freelancers within this distance count as On-site.</p>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Location capture for this client</Label>

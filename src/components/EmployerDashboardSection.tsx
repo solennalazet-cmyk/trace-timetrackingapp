@@ -103,7 +103,7 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
   const workers = useMemo(() => {
     const m = new Map<string, { id: string; name: string }>();
     for (const r of reports) {
-      if (!m.has(r.client_id)) m.set(r.client_id, { id: r.client_id, name: workerNames.get(r.client_id) ?? "Worker" });
+      if (!m.has(r.client_id)) m.set(r.client_id, { id: r.client_id, name: workerNames.get(r.client_id) ?? "Freelancer" });
     }
     return Array.from(m.values());
   }, [reports, workerNames]);
@@ -152,7 +152,7 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
       if (selectedWorker !== "all" && r.client_id !== selectedWorker) continue;
       let w = byWorker.get(r.client_id);
       if (!w) {
-        w = { id: r.client_id, name: workerNames.get(r.client_id) ?? "Worker", perDay: new Map() };
+        w = { id: r.client_id, name: workerNames.get(r.client_id) ?? "Freelancer", perDay: new Map() };
         byWorker.set(r.client_id, w);
       }
       const snap = Array.isArray(r.entries_snapshot) ? r.entries_snapshot : [];

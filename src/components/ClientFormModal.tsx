@@ -139,7 +139,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
   const focusScroll = (e: React.FocusEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     if (!target.matches("input, textarea, [role='combobox']")) return;
-    setTimeout(() => target.scrollIntoView({ block: "center", behavior: "smooth" }), 320);
+    setTimeout(() => target.scrollIntoView({ block: "center", behavior: "auto" }), 320);
   };
 
   return (
@@ -147,6 +147,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
       <DialogContent
         className="w-[calc(100vw-2rem)] max-w-[440px] rounded-3xl p-0 overflow-hidden gap-0 flex flex-col"
         onInteractOutside={(e) => e.preventDefault()}
+        position="centered"
       >
         <DialogHeader className="px-6 pt-6 pb-4 space-y-2 bg-gradient-to-b from-primary/10 to-transparent">
           <div className="flex items-center gap-3 pr-7">

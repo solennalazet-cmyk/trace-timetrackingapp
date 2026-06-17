@@ -76,7 +76,7 @@ const renderCompactDateTick = ({ x, y, payload }: any) => {
   const dateStr = parts.slice(1).join(" ");
   return (
     <g transform={`translate(${x},${y})`}>
-      <Seo title={"Reports — Trace Time Tracking"} description={"Review billable hours, rounding, and earnings by client and project. Export PDF invoices and time reports."} path={"/reports"} />
+      <Seo title={"Reports — Trace Time Tracking"} description={"Review billable hours, rounding, and earnings by account and project. Export PDF invoices and time reports."} path={"/reports"} />
       <text x={0} y={0} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize="10">
         <tspan x={0} dy={10}>{weekday}</tspan>
         <tspan x={0} dy={11}>{dateStr}</tspan>
@@ -564,7 +564,7 @@ const ReportsPage = () => {
                 : "border-border text-muted-foreground hover:bg-muted/30"
             }`}
           >
-            All clients
+            All accounts
           </button>
           {clientIds.map((id, i) => (
             <button
@@ -773,7 +773,7 @@ const ReportsPage = () => {
             <div className="mb-6">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
                 <PieChartIcon className="w-3.5 h-3.5 text-nav-bg" />
-                Revenue by client
+                Revenue by account
               </h3>
               <ClientBillingSummary
                 allEntries={displayEntries}

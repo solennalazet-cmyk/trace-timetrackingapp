@@ -116,14 +116,14 @@ const AccountFocusEditor = ({ open, kind, clientId, initial, onClose, onSaved }:
     <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <SheetContent
         side="bottom"
-        className="rounded-t-3xl p-0 flex flex-col max-h-[min(calc(100dvh-1rem),34rem)]"
+        className="rounded-t-3xl p-0 flex flex-col max-h-[calc(100dvh-1rem)]"
       >
         <SheetHeader className="text-left px-5 pt-4 pb-3 shrink-0">
           <SheetTitle className="text-lg">{cfg.title}</SheetTitle>
           <p className="text-xs text-muted-foreground">{cfg.subtitle}</p>
         </SheetHeader>
 
-        <div className="grid grid-cols-2 gap-3 px-5 overflow-y-auto flex-1" style={{ paddingBottom: 16 }}>
+        <div className="grid grid-cols-2 gap-3 px-5 overflow-y-auto flex-1 min-h-0 scroll-pb-32" style={{ paddingBottom: 16 }}>
           {cfg.fields.map((f) => (
             <div key={f.key} className={`space-y-1.5 ${f.half ? "col-span-1" : "col-span-2"}`}>
               <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">{f.label}</Label>

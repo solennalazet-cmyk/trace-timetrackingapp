@@ -134,12 +134,6 @@ const WorkerProfilePage = () => {
   type CardDef = { kind: EditorKind; Icon: typeof User; title: string; summary: string };
   const cards: CardDef[] = [
     {
-      kind: "role",
-      Icon: Briefcase,
-      title: "Role",
-      summary: worker.role?.trim() ? worker.role : "Set their job title",
-    },
-    {
       kind: "identity",
       Icon: User,
       title: "Identity & contact",

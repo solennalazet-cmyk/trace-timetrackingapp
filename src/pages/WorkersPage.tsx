@@ -69,7 +69,7 @@ const WorkersPage = () => {
     if (!user) return;
     const { data, error } = await supabase
       .from("clients")
-      .insert({ user_id: user.id, name: firstName })
+      .insert({ user_id: user.id, name: firstName, kind: "contractor" })
       .select("id")
       .single();
     if (error) { toast.error(error.message); return; }

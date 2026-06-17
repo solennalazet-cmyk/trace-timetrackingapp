@@ -85,8 +85,8 @@ interface AssignmentModalProps {
   open: boolean;
   session: SessionData | null;
   existingEntry?: ExistingEntry | null;
-  onSave: (session: SessionData, assignment: AssignmentResult) => void;
-  onSaveMulti?: (session: SessionData, assignments: AssignmentResult[]) => void;
+  onSave: (session: SessionData, assignment: AssignmentResult) => void | Promise<void>;
+  onSaveMulti?: (session: SessionData, assignments: AssignmentResult[]) => void | Promise<void>;
   onSkip: (session: SessionData) => void;
   onDelete?: (entryId: string) => void;
 }

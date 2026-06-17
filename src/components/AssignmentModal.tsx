@@ -176,6 +176,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
   useEffect(() => {
     if (!open) return;
+    setSaving(false);
 
     if (existingEntry) {
       setClientId(existingEntry.client_id ?? "");

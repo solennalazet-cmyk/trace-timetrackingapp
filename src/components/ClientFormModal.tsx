@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronDown, MapPin, Loader2, UserPlus, FileDown, Send } from "lucide-react";
+import { Building2, ChevronDown, Handshake, Mail, MapPin, Loader2, UserPlus, FileDown, Send } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -26,9 +27,13 @@ import { cn } from "@/lib/utils";
 interface ClientFormData {
   name: string;
   email: string;
+  phone?: string | null;
   nif: string;
+  business_address?: string | null;
   currency: string;
   default_rate: string;
+  payment_terms_days?: string | null;
+  billing_notes?: string | null;
   rate_unit: string;
   export_columns?: ExportColumnKey[];
   site_address?: string | null;
@@ -66,9 +71,25 @@ const RATE_UNITS = [
   { value: "project", label: "Per project" },
 ];
 
+const SectionLabel = ({ icon: Icon, children }: { icon: any; children: React.ReactNode }) => (
+  <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground pt-1">
+    <Icon className="h-3.5 w-3.5" />
+    {children}
+  </div>
+);
+
+const Field = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
+  <div className="space-y-1.5">
+    <Label className="text-xs font-medium text-foreground/80">
+      {label} {hint && <span className="text-muted-foreground/70 font-normal">({hint})</span>}
+    </Label>
+    {children}
+  </div>
+);
+
 const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title = "Add client" }: ClientFormModalProps) => {
   const [form, setForm] = useState<ClientFormData>({
-    name: "", email: "", nif: "", currency: "EUR", default_rate: "", rate_unit: "hour",
+    name: "", email: "", phone: "", nif: "", business_address: "", currency: "EUR", default_rate: "", payment_terms_days: "", billing_notes: "", rate_unit: "hour",
     export_columns: resolveExportColumns(null),
     site_address: "", site_lat: null, site_lng: null, site_radius_m: 100,
     geolocation_override: "inherit",
@@ -83,7 +104,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
   useEffect(() => {
     if (open) {
       setForm(initial ?? {
-        name: "", email: "", nif: "", currency: "EUR", default_rate: "", rate_unit: "hour",
+        name: "", email: "", phone: "", nif: "", business_address: "", currency: "EUR", default_rate: "", payment_terms_days: "", billing_notes: "", rate_unit: "hour",
         export_columns: resolveExportColumns(null),
         site_address: "", site_lat: null, site_lng: null, site_radius_m: 100,
         geolocation_override: "inherit",
@@ -113,6 +134,12 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
     setSaving(true);
     await onSave(form);
     setSaving(false);
+  };
+
+  const focusScroll = (e: React.FocusEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (!target.matches("input, textarea, [role='combobox']")) return;
+    setTimeout(() => target.scrollIntoView({ block: "center", behavior: "smooth" }), 320);
   };
 
   return (

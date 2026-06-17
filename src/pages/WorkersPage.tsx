@@ -53,6 +53,7 @@ const WorkersPage = () => {
         .from("clients")
         .select("id, name, role, user_id, created_at")
         .eq("user_id", user.id)
+        .in("kind", ["contractor", "both"])
         .order("created_at", { ascending: false }),
     ]);
     if (invitesRes.error) toast.error(invitesRes.error.message);

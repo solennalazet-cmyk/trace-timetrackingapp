@@ -79,6 +79,12 @@ const AddFreelancerModal = ({ open, onOpenChange, onCreate }: Props) => {
     } finally { setBusy(false); }
   };
 
+  const focusScroll = (e: React.FocusEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (!target.matches("input, textarea, [role='combobox']")) return;
+    setTimeout(() => target.scrollIntoView({ block: "center", behavior: "smooth" }), 320);
+  };
+
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!busy) onOpenChange(o); }}>
       <DialogContent
@@ -99,7 +105,7 @@ const AddFreelancerModal = ({ open, onOpenChange, onCreate }: Props) => {
           </div>
         </DialogHeader>
 
-        <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
+        <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1" onFocusCapture={focusScroll}>
           <Field label="First name" hint="required">
             <Input
               autoFocus

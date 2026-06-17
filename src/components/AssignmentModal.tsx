@@ -403,10 +403,10 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
             _durationMinutes: dur,
           } as AssignmentResult & { _durationMinutes: number };
         });
-        onSaveMulti(session, assignments);
+        await onSaveMulti(session, assignments);
       } else {
         const billableValue = calcBillableValue();
-        onSave(session, {
+        await onSave(session, {
           ...baseAssignment,
           taskId: taskId || null,
           taskName,
@@ -419,7 +419,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
       setSaving(false);
       return;
     }
-    setSaving(false);
+    // Intentionally leave `saving` true on success — modal will unmount/close.
   };
 
   const handleSkipOrDismiss = () => onSkip(session);

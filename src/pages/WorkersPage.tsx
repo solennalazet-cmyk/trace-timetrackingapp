@@ -84,7 +84,7 @@ const WorkersPage = () => {
           <p className="text-sm text-muted-foreground">Tap a contractor to open their profile.</p>
         </div>
         <Button onClick={() => setModalOpen(true)} className="rounded-xl gap-2 h-10">
-          <Plus className="h-4 w-4" /> Add freelancer
+          <Plus className="h-4 w-4" /> Add contractor
         </Button>
       </header>
 

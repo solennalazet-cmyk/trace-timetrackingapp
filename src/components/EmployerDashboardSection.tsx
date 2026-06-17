@@ -196,7 +196,7 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
             onClick={() => setSelectedWorker("all")}
             className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors ${selectedWorker === "all" ? "bg-foreground text-background border-foreground" : "bg-background text-foreground border-border"}`}
           >
-            All freelancers
+            All contractors
           </button>
           {workers.map((w) => {
             const color = getClientColor(w.id);

@@ -138,7 +138,7 @@ const WorkerProfilePage = () => {
       <Seo title={`${name} — Contractor profile`} description={`Manage ${name}'s details, role, schedule and documents.`} path={`/workers/${worker.id}`} />
 
       <button onClick={() => navigate("/workers")} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-        <ArrowLeft className="w-3.5 h-3.5" /> Freelancers
+        <ArrowLeft className="w-3.5 h-3.5" /> Contractors
       </button>
 
       <header className="flex items-center gap-4 pt-1">

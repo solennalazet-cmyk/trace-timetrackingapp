@@ -58,7 +58,7 @@ const RejectReportDialog = ({ open, onOpenChange, reportId, onRejected }: Props)
         <AlertDialogHeader>
           <AlertDialogTitle>Reject report</AlertDialogTitle>
           <AlertDialogDescription>
-            The freelancer will be notified with your reason and can edit and resubmit.
+            The contractor will be notified with your reason and can edit and resubmit.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-3">

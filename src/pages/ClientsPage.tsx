@@ -339,8 +339,7 @@ const ClientsPage = () => {
 
       {/* Add Client */}
       <Button
-        variant="outline"
-        className="w-full mb-4 gap-2 rounded-xl"
+        className="w-full mb-4 gap-2 rounded-xl h-10"
         onClick={handleAddClientClick}
       >
         <Plus className="w-4 h-4" /> Add client
@@ -436,9 +435,11 @@ const ClientsPage = () => {
         onSave={handleSaveClient}
         onDelete={editingClient ? () => setDeleteClientId(editingClient.id) : undefined}
         initial={editingClient ? {
-          name: editingClient.name, email: editingClient.email ?? "",
-          nif: editingClient.nif ?? "", currency: editingClient.currency ?? "EUR",
+          name: editingClient.name, email: editingClient.email ?? "", phone: editingClient.phone ?? "",
+          nif: editingClient.nif ?? "", business_address: editingClient.business_address ?? "", currency: editingClient.currency ?? "EUR",
           default_rate: editingClient.default_rate != null ? String(editingClient.default_rate) : "",
+          payment_terms_days: editingClient.payment_terms_days != null ? String(editingClient.payment_terms_days) : "",
+          billing_notes: editingClient.billing_notes ?? "",
           rate_unit: "hour",
           export_columns: resolveExportColumns(editingClient.export_columns),
           site_address: (editingClient as any).site_address ?? "",

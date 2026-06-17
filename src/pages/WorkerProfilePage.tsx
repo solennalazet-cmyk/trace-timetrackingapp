@@ -231,6 +231,17 @@ const WorkerProfilePage = () => {
             </div>
           </Card>
         </button>
+
+        {/* Danger zone */}
+        <div className="pt-4">
+          <Button
+            variant="ghost"
+            className="w-full h-11 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10 gap-2"
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 className="w-4 h-4" /> Delete contractor
+          </Button>
+        </div>
       </div>
 
       <WorkerFocusEditor
@@ -247,6 +258,27 @@ const WorkerProfilePage = () => {
         onOpenChange={setInviteOpen}
         onInvite={handleInvite}
       />
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent className="max-w-[380px] w-[calc(100vw-2rem)] rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              All data associated with this contractor — profile details, schedule, documents and pending invites — will be permanently lost. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Deleting…" : "Proceed"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

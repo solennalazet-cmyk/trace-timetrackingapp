@@ -5,8 +5,19 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Timer, PenLine, Clock, Phone, X, ArrowRight } from "lucide-react";
+import { Timer, PenLine, Clock, Phone, X, ArrowRight, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getAnonymousEntries } from "@/lib/anonymous-store";
@@ -37,6 +48,7 @@ interface UnassignedPanelProps {
   onOpenChange: (open: boolean) => void;
   onAssignEntry: (entry: UnassignedEntry) => void;
   onCountChange: (count: number) => void;
+  onBatchAssigned?: () => void;
 }
 
 const entryTypeIcon = (type: string | null) => {
@@ -140,12 +152,16 @@ const SwipeDeleteRow = ({
   );
 };
 
-const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: UnassignedPanelProps) => {
+const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onBatchAssigned }: UnassignedPanelProps) => {
   const { user } = useAuth();
   
   const [entries, setEntries] = useState<UnassignedEntry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<UnassignedEntry | null>(null);
   const [loading, setLoading] = useState(false);
+  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
+  const [batchOpen, setBatchOpen] = useState(false);
+  const [batchClientId, setBatchClientId] = useState<string>("");
+  const [batching, setBatching] = useState(false);
 
   const loadEntries = async () => {
     setLoading(true);
@@ -160,6 +176,13 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
         .order("entry_date", { ascending: false });
       setEntries((data ?? []) as UnassignedEntry[]);
       onCountChange((data ?? []).length);
+
+      const { data: cs } = await supabase
+        .from("clients")
+        .select("id, name")
+        .eq("user_id", user.id)
+        .order("name", { ascending: true });
+      setClients((cs ?? []) as { id: string; name: string }[]);
     } else {
       const all = getAnonymousEntries();
       const unassigned = all.filter((e: any) => !e.client_id && !e.project_id)
@@ -176,6 +199,30 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
       setSelectedEntry(null);
     }
   }, [open, user]);
+
+  const runBatchAssign = async () => {
+    if (!user || !batchClientId || entries.length === 0) return;
+    setBatching(true);
+    const ids = entries.map((e) => e.id);
+    const { error } = await supabase
+      .from("time_entries")
+      .update({ client_id: batchClientId })
+      .in("id", ids)
+      .eq("user_id", user.id);
+    setBatching(false);
+    if (error) {
+      toast.error("Couldn't assign entries", { description: error.message });
+      return;
+    }
+    const clientName = clients.find((c) => c.id === batchClientId)?.name ?? "account";
+    toast.success(`${ids.length} ${ids.length === 1 ? "entry" : "entries"} assigned to ${clientName}`);
+    setBatchOpen(false);
+    setBatchClientId("");
+    onCountChange(0);
+    onBatchAssigned?.();
+    onOpenChange(false);
+  };
+
 
   const softDelete = async (id: string) => {
     // Remove from list immediately
@@ -288,6 +335,15 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
             {!loading && entries.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">No unassigned entries.</p>
             )}
+            {user && entries.length > 1 && (
+              <Button
+                onClick={() => setBatchOpen(true)}
+                className="w-full mb-2 rounded-[28px] h-11 font-semibold bg-foreground text-background hover:bg-foreground/90"
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Assign all {entries.length} entries to an account
+              </Button>
+            )}
             {entries.map((entry) => (
               <SwipeDeleteRow key={entry.id} onSwipeLeft={() => softDelete(entry.id)}>
                 <div className="flex items-center w-full px-3 py-3 rounded-lg hover:bg-muted/50 transition-colors">
@@ -317,8 +373,44 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange }: U
           </div>
         )}
       </SheetContent>
+
+      <AlertDialog open={batchOpen} onOpenChange={(v) => { setBatchOpen(v); if (!v) setBatchClientId(""); }}>
+        <AlertDialogContent className="w-[calc(100vw-2rem)] max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Assign {entries.length} {entries.length === 1 ? "entry" : "entries"} to an account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              All other info (date, duration, project, notes) will be kept exactly as entered. Only the account will be set.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2">
+            <Select value={batchClientId} onValueChange={setBatchClientId}>
+              <SelectTrigger className="h-11">
+                <SelectValue placeholder="Choose an account…" />
+              </SelectTrigger>
+              <SelectContent>
+                {clients.length === 0 && (
+                  <div className="px-3 py-2 text-sm text-muted-foreground">No accounts yet. Add one from the Accounts tab.</div>
+                )}
+                {clients.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={batching}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); runBatchAssign(); }}
+              disabled={!batchClientId || batching}
+            >
+              {batching ? "Assigning…" : "Assign all"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 };
+
 
 export default UnassignedPanel;

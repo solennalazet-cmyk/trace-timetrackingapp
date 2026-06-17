@@ -69,6 +69,7 @@ export type Database = {
           invite_token: string | null
           invited_at: string | null
           invited_email: string | null
+          kind: string
           name: string
           nif: string | null
           phone: string | null
@@ -100,6 +101,7 @@ export type Database = {
           invite_token?: string | null
           invited_at?: string | null
           invited_email?: string | null
+          kind?: string
           name: string
           nif?: string | null
           phone?: string | null
@@ -131,6 +133,7 @@ export type Database = {
           invite_token?: string | null
           invited_at?: string | null
           invited_email?: string | null
+          kind?: string
           name?: string
           nif?: string | null
           phone?: string | null

@@ -53,6 +53,7 @@ const WorkersPage = () => {
         .from("clients")
         .select("id, name, role, user_id, created_at")
         .eq("user_id", user.id)
+        .in("kind", ["contractor", "both"])
         .order("created_at", { ascending: false }),
     ]);
     if (invitesRes.error) toast.error(invitesRes.error.message);
@@ -68,7 +69,7 @@ const WorkersPage = () => {
     if (!user) return;
     const { data, error } = await supabase
       .from("clients")
-      .insert({ user_id: user.id, name: firstName })
+      .insert({ user_id: user.id, name: firstName, kind: "contractor" })
       .select("id")
       .single();
     if (error) { toast.error(error.message); return; }
@@ -85,10 +86,22 @@ const WorkersPage = () => {
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
-    const { error } = await supabase.from("clients").delete().eq("id", deleteTarget.id);
+    // Check if this row also exists in the Accounts view (kind = 'both').
+    // If so, downgrade to 'account' to preserve it there; otherwise hard delete.
+    const { data: row } = await supabase
+      .from("clients")
+      .select("kind")
+      .eq("id", deleteTarget.id)
+      .maybeSingle();
+    let error;
+    if (row?.kind === "both") {
+      ({ error } = await supabase.from("clients").update({ kind: "account" }).eq("id", deleteTarget.id));
+    } else {
+      ({ error } = await supabase.from("clients").delete().eq("id", deleteTarget.id));
+    }
     setDeleting(false);
     if (error) { toast.error(error.message); return; }
-    toast.success(`${deleteTarget.name} deleted.`);
+    toast.success(`${deleteTarget.name} removed from Contractors.`);
     setDeleteTarget(null);
     load();
   };

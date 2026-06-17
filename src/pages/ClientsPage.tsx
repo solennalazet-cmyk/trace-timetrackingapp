@@ -102,7 +102,7 @@ const ClientsPage = () => {
     setLoading(true);
     if (user) {
       const [{ data: c }, { data: p }] = await Promise.all([
-        supabase.from("clients").select("id, name, email, nif, currency, default_rate, export_columns, site_address, site_lat, site_lng, site_radius_m, geolocation_override, invited_email, connection_status").eq("user_id", user.id).order("name"),
+        supabase.from("clients").select("id, name, email, nif, currency, default_rate, export_columns, site_address, site_lat, site_lng, site_radius_m, geolocation_override, invited_email, connection_status").eq("user_id", user.id).in("kind", ["account", "both"]).order("name"),
         supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", user.id),
       ]);
       setClients((c ?? []) as Client[]);
@@ -211,6 +211,7 @@ const ClientsPage = () => {
           ...siteFields,
           ...connectionFields,
           user_id: user.id,
+          kind: "account",
         } as any);
         toast.success(isNewInvite ? "Account added. Invite sent." : "Account added.");
       }
@@ -226,14 +227,24 @@ const ClientsPage = () => {
   const handleDeleteClient = async () => {
     if (!deleteClientId) return;
     if (user) {
-      // Delete all time entries assigned to this client OR to its projects
-      const clientProjects = projects.filter((p) => p.client_id === deleteClientId).map((p) => p.id);
-      await supabase.from("time_entries").delete().eq("client_id", deleteClientId);
-      if (clientProjects.length > 0) {
-        await supabase.from("time_entries").delete().in("project_id", clientProjects);
+      // If this row also appears in the Contractors view (kind = 'both'),
+      // downgrade to 'contractor' so it stays there. Otherwise hard delete.
+      const { data: row } = await supabase
+        .from("clients")
+        .select("kind")
+        .eq("id", deleteClientId)
+        .maybeSingle();
+      if ((row as any)?.kind === "both") {
+        await supabase.from("clients").update({ kind: "contractor" }).eq("id", deleteClientId);
+      } else {
+        const clientProjects = projects.filter((p) => p.client_id === deleteClientId).map((p) => p.id);
+        await supabase.from("time_entries").delete().eq("client_id", deleteClientId);
+        if (clientProjects.length > 0) {
+          await supabase.from("time_entries").delete().in("project_id", clientProjects);
+        }
+        await supabase.from("projects").delete().eq("client_id", deleteClientId);
+        await supabase.from("clients").delete().eq("id", deleteClientId);
       }
-      await supabase.from("projects").delete().eq("client_id", deleteClientId);
-      await supabase.from("clients").delete().eq("id", deleteClientId);
     } else {
       deleteAnonymousClient(deleteClientId);
     }

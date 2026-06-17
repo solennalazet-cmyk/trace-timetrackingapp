@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/contexts/RoleContext";
 import HowTraceWorksModal from "./HowTraceWorksModal";
 import AboutModal from "./AboutModal";
 import AuthModal from "./AuthModal";
@@ -21,6 +22,7 @@ import RoleSwitcher from "./RoleSwitcher";
 
 const HeaderMenu = () => {
   const { user, profile, signOut } = useAuth();
+  const { activeRole } = useRole();
   const navigate = useNavigate();
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -117,7 +119,13 @@ const HeaderMenu = () => {
                 <Settings className="w-4 h-4 mr-2" />
                 Settings
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setAccountOpen(true)} className="cursor-pointer">
+              <DropdownMenuItem
+                onClick={() => {
+                  if (activeRole === "worker") navigate("/account");
+                  else setAccountOpen(true);
+                }}
+                className="cursor-pointer"
+              >
                 <CreditCard className="w-4 h-4 mr-2" />
                 Account & Subscription
               </DropdownMenuItem>

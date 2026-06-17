@@ -508,7 +508,7 @@ const ClientsPage = () => {
           invited_trace_email: (editingClient as any).invited_email ?? "",
           connection_status: (editingClient as any).connection_status ?? null,
         } : null}
-        title={editingClient ? "Edit Client" : "Add Client"}
+        title={editingClient ? "Edit account" : "Add account"}
       />
 
       {/* Project Form Modal */}

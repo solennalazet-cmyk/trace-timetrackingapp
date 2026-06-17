@@ -609,6 +609,7 @@ const StartPage = () => {
         onOpenChange={setUnassignedOpen}
         onAssignEntry={handleAssignFromPanel}
         onCountChange={setUnassignedCount}
+        onBatchAssigned={fetchSummary}
       />
 
       {/* Today's Entries Sheet */}

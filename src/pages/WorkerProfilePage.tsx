@@ -66,7 +66,7 @@ const WorkerProfilePage = () => {
     setWorker(data as WorkerRow | null);
     setLoading(false);
 
-    // Check pending invite for this contractor's email
+    // Check pending invite for this freelancer's email
     if (data?.email && user) {
       const { data: inv } = await supabase
         .from("worker_invites")
@@ -96,7 +96,7 @@ const WorkerProfilePage = () => {
       .select("invite_token")
       .single();
     if (error) { toast.error(error.message); return null; }
-    // Keep the contractor's email in sync if not already set
+    // Keep the freelancer's email in sync if not already set
     if (worker && !worker.email) {
       await supabase.from("clients").update({ email: trimmed }).eq("id", worker.id);
     }
@@ -111,7 +111,7 @@ const WorkerProfilePage = () => {
     const { error } = await supabase.from("clients").delete().eq("id", worker.id);
     setDeleting(false);
     if (error) { toast.error(error.message); return; }
-    toast.success("Contractor deleted.");
+    toast.success("Freelancer deleted.");
     setDeleteOpen(false);
     navigate("/workers");
   };
@@ -120,10 +120,10 @@ const WorkerProfilePage = () => {
     return <div className="pt-6 pb-24 text-sm text-muted-foreground">Loading…</div>;
   }
   if (!worker) {
-    return <div className="pt-6 pb-24 text-sm text-muted-foreground">Contractor not found.</div>;
+    return <div className="pt-6 pb-24 text-sm text-muted-foreground">Freelancer not found.</div>;
   }
 
-  const name = worker.name?.trim() || "Unnamed contractor";
+  const name = worker.name?.trim() || "Unnamed freelancer";
   const role = worker.role?.trim() || "Role not set";
   const connected = !!worker.connected_user_id;
 
@@ -154,10 +154,10 @@ const WorkerProfilePage = () => {
 
   return (
     <div className="pt-4 pb-24 space-y-5">
-      <Seo title={`${name} — Contractor profile`} description={`Manage ${name}'s details, role, schedule and documents.`} path={`/workers/${worker.id}`} />
+      <Seo title={`${name} — Freelancer profile`} description={`Manage ${name}'s details, role, schedule and documents.`} path={`/workers/${worker.id}`} />
 
       <button onClick={() => navigate("/workers")} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-        <ArrowLeft className="w-3.5 h-3.5" /> Contractors
+        <ArrowLeft className="w-3.5 h-3.5" /> Freelancers
       </button>
 
       <button onClick={() => setEditorOpen("role")} className="w-full text-left">
@@ -241,7 +241,7 @@ const WorkerProfilePage = () => {
             className="w-full h-11 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10 gap-2"
             onClick={() => setDeleteOpen(true)}
           >
-            <Trash2 className="w-4 h-4" /> Delete contractor
+            <Trash2 className="w-4 h-4" /> Delete freelancer
           </Button>
         </div>
       </div>
@@ -266,7 +266,7 @@ const WorkerProfilePage = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              All data associated with this contractor — profile details, schedule, documents and pending invites — will be permanently lost. This cannot be undone.
+              All data associated with this freelancer — profile details, schedule, documents and pending invites — will be permanently lost. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

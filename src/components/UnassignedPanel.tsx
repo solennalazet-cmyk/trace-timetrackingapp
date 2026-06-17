@@ -341,7 +341,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
                 className="w-full mb-2 rounded-[28px] h-11 font-semibold bg-foreground text-background hover:bg-foreground/90"
               >
                 <Users className="w-4 h-4 mr-2" />
-                Assign all {entries.length} entries to an account
+                Assign all {entries.length} entries to an client
               </Button>
             )}
             {entries.map((entry) => (
@@ -377,19 +377,19 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
       <AlertDialog open={batchOpen} onOpenChange={(v) => { setBatchOpen(v); if (!v) setBatchClientId(""); }}>
         <AlertDialogContent className="w-[calc(100vw-2rem)] max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Assign {entries.length} {entries.length === 1 ? "entry" : "entries"} to an account?</AlertDialogTitle>
+            <AlertDialogTitle>Assign {entries.length} {entries.length === 1 ? "entry" : "entries"} to an client?</AlertDialogTitle>
             <AlertDialogDescription>
-              All other info (date, duration, project, notes) will be kept exactly as entered. Only the account will be set.
+              All other info (date, duration, project, notes) will be kept exactly as entered. Only the client will be set.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">
             <Select value={batchClientId} onValueChange={setBatchClientId}>
               <SelectTrigger className="h-11">
-                <SelectValue placeholder="Choose an account…" />
+                <SelectValue placeholder="Choose an client…" />
               </SelectTrigger>
               <SelectContent>
                 {clients.length === 0 && (
-                  <div className="px-3 py-2 text-sm text-muted-foreground">No accounts yet. Add one from the Accounts tab.</div>
+                  <div className="px-3 py-2 text-sm text-muted-foreground">No clients yet. Add one from the Clients tab.</div>
                 )}
                 {clients.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>

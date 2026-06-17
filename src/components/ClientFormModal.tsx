@@ -66,7 +66,7 @@ const RATE_UNITS = [
   { value: "project", label: "Per project" },
 ];
 
-const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title = "Add account" }: ClientFormModalProps) => {
+const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title = "Add client" }: ClientFormModalProps) => {
   const [form, setForm] = useState<ClientFormData>({
     name: "", email: "", nif: "", currency: "EUR", default_rate: "", rate_unit: "hour",
     export_columns: resolveExportColumns(null),
@@ -124,7 +124,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
         <div className="px-6 space-y-4">
           <div className="space-y-1.5">
             <Label className="text-sm">Organisation name *</Label>
-            <Input className="h-10 rounded-xl" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Account name" />
+            <Input className="h-10 rounded-xl" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Client name" />
           </div>
           <div className="space-y-1.5">
             <Label className="text-sm">Contact email</Label>
@@ -189,7 +189,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
             {connectOpen && (
               <div className="px-4 pb-4 pt-1 space-y-2">
                 <p className="text-xs text-muted-foreground">
-                  Invite this account to Trace so you can submit reports directly. They'll see an invite next time they sign in.
+                  Invite this client to Trace so you can submit reports directly. They'll see an invite next time they sign in.
                 </p>
                 <Input
                   className="h-10 rounded-xl"
@@ -211,7 +211,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
                   </Button>
                 )}
                 {form.connection_status === "pending" && (
-                  <p className="text-[11px] text-muted-foreground">Invite is waiting on the account to respond.</p>
+                  <p className="text-[11px] text-muted-foreground">Invite is waiting on the client to respond.</p>
                 )}
 
               </div>
@@ -280,10 +280,10 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
                     value={[form.site_radius_m ?? 100]}
                     onValueChange={([v]) => setForm({ ...form, site_radius_m: v })}
                   />
-                  <p className="text-[11px] text-muted-foreground">Contractors within this distance count as On-site.</p>
+                  <p className="text-[11px] text-muted-foreground">Freelancers within this distance count as On-site.</p>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Location capture for this account</Label>
+                  <Label className="text-xs">Location capture for this client</Label>
                   <Select
                     value={form.geolocation_override ?? "inherit"}
                     onValueChange={(v: ClientGeoOverride) => setForm({ ...form, geolocation_override: v })}
@@ -321,7 +321,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
             {exportOpen && (
               <div className="px-4 pb-4 pt-1 space-y-3">
                 <p className="text-xs text-secondary-foreground/80">
-                  Columns to include when exporting, sharing, or submitting reports for this account. Date, duration and amount are always included.
+                  Columns to include when exporting, sharing, or submitting reports for this client. Date, duration and amount are always included.
                 </p>
                 <ExportColumnsPicker
                   value={form.export_columns ?? resolveExportColumns(null)}
@@ -334,12 +334,12 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
         <div className="flex gap-3 px-6 pt-2">
           <Button variant="outline" className="flex-1 rounded-[28px] h-12 font-bold" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-12 font-bold" onClick={handleSave} disabled={!form.name.trim() || saving}>
-            {initial ? "Save changes" : "Save account"}
+            {initial ? "Save changes" : "Save client"}
           </Button>
         </div>
         {onDelete && initial && (
           <button className="w-full text-center text-sm text-destructive hover:underline px-6 pb-6 pt-3" onClick={onDelete}>
-            Delete account
+            Delete client
           </button>
         )}
         {!(onDelete && initial) && <div className="pb-6" />}

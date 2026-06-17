@@ -57,7 +57,7 @@ const WorkerDocumentsCard = ({ clientId, employerUserId }: Props) => {
 
   const pick = () => {
     if (docs.length >= MAX_FILES) {
-      toast.error(`Maximum ${MAX_FILES} documents per contractor.`);
+      toast.error(`Maximum ${MAX_FILES} documents per freelancer.`);
       return;
     }
     inputRef.current?.click();

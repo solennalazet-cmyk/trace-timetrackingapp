@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, UserPlus, Briefcase, User2, CalendarClock } from "lucide-react";
 
-export interface NewContractorPayload {
+export interface NewFreelancerPayload {
   name: string;
   role?: string | null;
   email?: string | null;
@@ -21,7 +21,7 @@ export interface NewContractorPayload {
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (payload: NewContractorPayload) => Promise<void>;
+  onCreate: (payload: NewFreelancerPayload) => Promise<void>;
 }
 
 const empty = {
@@ -91,7 +91,7 @@ const AddFreelancerModal = ({ open, onOpenChange, onCreate }: Props) => {
               <UserPlus className="h-5 w-5" />
             </div>
             <div className="space-y-0.5">
-              <DialogTitle className="text-lg">Add a contractor</DialogTitle>
+              <DialogTitle className="text-lg">Add a freelancer</DialogTitle>
               <p className="text-xs text-muted-foreground leading-snug">
                 Only a first name is required — fill anything else you have, or skip and complete later.
               </p>

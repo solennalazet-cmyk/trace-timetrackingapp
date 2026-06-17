@@ -75,7 +75,6 @@ const FIELDS: Record<AccountEditorKind, { title: string; subtitle: string; field
 const AccountFocusEditor = ({ open, kind, clientId, initial, onClose, onSaved }: Props) => {
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
-  const [kbInset, setKbInset] = useState(0);
 
   useEffect(() => {
     if (!open || !kind) return;
@@ -86,23 +85,6 @@ const AccountFocusEditor = ({ open, kind, clientId, initial, onClose, onSaved }:
     }
     setValues(v);
   }, [open, kind, initial]);
-
-  useEffect(() => {
-    if (!open) { setKbInset(0); return; }
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const update = () => {
-      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      setKbInset(inset);
-    };
-    update();
-    vv.addEventListener("resize", update);
-    vv.addEventListener("scroll", update);
-    return () => {
-      vv.removeEventListener("resize", update);
-      vv.removeEventListener("scroll", update);
-    };
-  }, [open]);
 
   if (!kind) return null;
   const cfg = FIELDS[kind];
@@ -127,15 +109,14 @@ const AccountFocusEditor = ({ open, kind, clientId, initial, onClose, onSaved }:
   const focusScroll = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setTimeout(() => {
       e.target.scrollIntoView({ block: "center", behavior: "smooth" });
-    }, 250);
+    }, 320);
   };
 
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <SheetContent
         side="bottom"
-        className="rounded-t-3xl p-0 flex flex-col"
-        style={{ maxHeight: `calc(100dvh - ${kbInset}px)`, height: `calc(100dvh - ${kbInset}px - 2rem)` }}
+        className="rounded-t-3xl p-0 flex flex-col max-h-[min(calc(100dvh-1rem),34rem)]"
       >
         <SheetHeader className="text-left px-5 pt-4 pb-3 shrink-0">
           <SheetTitle className="text-lg">{cfg.title}</SheetTitle>

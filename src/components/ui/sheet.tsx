@@ -97,7 +97,7 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
       const target = event.target as HTMLElement;
       if (!target.matches("input, textarea, select, [role='combobox'], [contenteditable='true']")) return;
       window.setTimeout(() => {
-        target.scrollIntoView({ block: "center", behavior: "smooth" });
+        target.scrollIntoView({ block: "center", behavior: "auto" });
       }, 320);
     };
 

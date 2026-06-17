@@ -142,7 +142,7 @@ const SubmittedReportSheet = ({ open, onOpenChange, report, onReviewed, readOnly
       .eq("id", report.id);
     setWorking(false);
     if (error) { toast.error(error.message); return; }
-    toast.success("Report rejected. The contractor has been notified.");
+    toast.success("Report rejected. The freelancer has been notified.");
     setRejectOpen(false);
     setNote("");
     setReason("missing_session");
@@ -272,7 +272,7 @@ const SubmittedReportSheet = ({ open, onOpenChange, report, onReviewed, readOnly
           <AlertDialogHeader>
             <AlertDialogTitle>Reject report</AlertDialogTitle>
             <AlertDialogDescription>
-              The contractor will be notified with your reason and can edit and resubmit.
+              The freelancer will be notified with your reason and can edit and resubmit.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-3">
@@ -285,7 +285,7 @@ const SubmittedReportSheet = ({ open, onOpenChange, report, onReviewed, readOnly
               ))}
             </RadioGroup>
             <Textarea
-              placeholder={reason === "other" ? "Required — describe the issue" : "Optional note for the contractor"}
+              placeholder={reason === "other" ? "Required — describe the issue" : "Optional note for the freelancer"}
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={3}

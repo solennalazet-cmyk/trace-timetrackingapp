@@ -20,7 +20,7 @@ const WhatsNewModal = ({ open, onOpenChange }: WhatsNewModalProps) => {
         <div className="px-6 pb-6 pt-4 space-y-3">
           <div className="text-sm text-muted-foreground">
             <p className="font-medium text-foreground">v1.0.0</p>
-            <p>Initial release of Trace — timer-first time tracking for contractors.</p>
+            <p>Initial release of Trace — timer-first time tracking for freelancers.</p>
           </div>
         </div>
       </DialogContent>

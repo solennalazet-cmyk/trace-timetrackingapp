@@ -20,7 +20,7 @@ const AboutModal = ({ open, onOpenChange }: AboutModalProps) => {
         </DialogHeader>
         <div className="px-6 pb-6 pt-4 space-y-2 text-center">
           <p className="text-sm text-muted-foreground">Version 1.0.0</p>
-          <p className="text-sm text-foreground">Timer-first time tracking for contractors.</p>
+          <p className="text-sm text-foreground">Timer-first time tracking for freelancers.</p>
           <p className="text-xs text-muted-foreground mt-4">Made with care for independent professionals.</p>
           <Link
             to="/privacy"

@@ -101,21 +101,21 @@ const WorkersPage = () => {
     }
     setDeleting(false);
     if (error) { toast.error(error.message); return; }
-    toast.success(`${deleteTarget.name} removed from Contractors.`);
+    toast.success(`${deleteTarget.name} removed from Freelancers.`);
     setDeleteTarget(null);
     load();
   };
 
   return (
     <div className="pt-6 space-y-4 pb-24">
-      <Seo title={"Contractors — Trace for Employers"} description={"Manage your team: roles, contact details, schedules, and documents."} path={"/workers"} />
+      <Seo title={"Freelancers — Trace for Employers"} description={"Manage your team: roles, contact details, schedules, and documents."} path={"/workers"} />
       <header className="flex items-start justify-between gap-3">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">Contractors</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Freelancers</h1>
           <p className="text-sm text-muted-foreground">Tap to open · swipe left to delete.</p>
         </div>
         <Button onClick={() => setModalOpen(true)} className="rounded-xl gap-2 h-10">
-          <Plus className="h-4 w-4" /> Add contractor
+          <Plus className="h-4 w-4" /> Add freelancer
         </Button>
       </header>
 
@@ -124,9 +124,9 @@ const WorkersPage = () => {
       ) : freelancers.length === 0 && invites.length === 0 ? (
         <Card className="p-6 text-center">
           <Users className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-          <p className="text-sm font-medium">No contractors yet</p>
+          <p className="text-sm font-medium">No freelancers yet</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Tap <span className="font-medium text-foreground">Add contractor</span> to create their profile.
+            Tap <span className="font-medium text-foreground">Add freelancer</span> to create their profile.
           </p>
         </Card>
       ) : (
@@ -176,7 +176,7 @@ const WorkersPage = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {deleteTarget?.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              All data associated with this contractor — profile details, schedule, documents and pending invites — will be permanently lost. This cannot be undone.
+              All data associated with this freelancer — profile details, schedule, documents and pending invites — will be permanently lost. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

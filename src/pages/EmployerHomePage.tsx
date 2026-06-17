@@ -97,7 +97,7 @@ const EmployerHomePage = () => {
         .in("id", clientIds);
       nameMap = new Map((clientRows ?? []).map((c: any) => [c.id, c.name]));
     }
-    const mapRow = (r: any): SubmittedReport => ({ ...r, client_name: nameMap.get(r.client_id) ?? "Contractor" });
+    const mapRow = (r: any): SubmittedReport => ({ ...r, client_name: nameMap.get(r.client_id) ?? "Freelancer" });
     setPending(((pRes.data ?? []) as any[]).map(mapRow));
     setApproved(((aRes.data ?? []) as any[]).map(mapRow));
 
@@ -107,7 +107,7 @@ const EmployerHomePage = () => {
         id: `s-${r.id}`,
         ts: r.submitted_at,
         type: "submitted",
-        clientName: nameMap.get(r.client_id) ?? "Contractor",
+        clientName: nameMap.get(r.client_id) ?? "Freelancer",
         amount: Number(r.total_amount),
         currency: r.currency,
       });
@@ -116,7 +116,7 @@ const EmployerHomePage = () => {
           id: `rv-${r.id}`,
           ts: r.reviewed_at,
           type: r.status,
-          clientName: nameMap.get(r.client_id) ?? "Contractor",
+          clientName: nameMap.get(r.client_id) ?? "Freelancer",
           amount: Number(r.total_amount),
           currency: r.currency,
         });
@@ -136,7 +136,7 @@ const EmployerHomePage = () => {
         id: `p-${p.id}`,
         ts: p.created_at,
         type: "payment",
-        clientName: (cid && nameMap.get(cid)) || "Contractor",
+        clientName: (cid && nameMap.get(cid)) || "Freelancer",
         amount: Number(p.amount),
         currency: p.currency,
       });
@@ -261,7 +261,7 @@ const EmployerHomePage = () => {
               const isApproving = approvingId === r.id;
               return (
                 <Card key={r.id} className="overflow-hidden">
-                  <Seo title={"Team Dashboard — Trace for Employers"} description={"Approve contractor time reports, review payments, and monitor team activity at a glance."} path={"/employer"} />
+                  <Seo title={"Team Dashboard — Trace for Employers"} description={"Approve freelancer time reports, review payments, and monitor team activity at a glance."} path={"/employer"} />
                   <button
                     onClick={() => openReport(r)}
                     className="w-full text-left p-4 hover:bg-muted/40 transition-colors"

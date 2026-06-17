@@ -99,7 +99,7 @@ const EmployerCalendarPage = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  // Build per-day contractor breakdown from all reports' entries_snapshot
+  // Build per-day freelancer breakdown from all reports' entries_snapshot
   const byDay = useMemo(() => {
     const m = new Map<string, Map<string, DayContractor>>();
     for (const r of reports) {
@@ -113,7 +113,7 @@ const EmployerCalendarPage = () => {
         if (!dc) {
           dc = {
             clientId: r.client_id,
-            name: names.get(r.client_id) ?? "Contractor",
+            name: names.get(r.client_id) ?? "Freelancer",
             color: getClientColor(r.client_id),
             workMin: 0, breakMin: 0,
             firstStart: null, lastEnd: null,
@@ -147,7 +147,7 @@ const EmployerCalendarPage = () => {
 
   return (
     <div className="pt-6 pb-24 space-y-4">
-      <Seo title={"Calendar — Trace for Employers"} description={"See which contractors were on the job each day at a glance."} path={"/employer/calendar"} />
+      <Seo title={"Calendar — Trace for Employers"} description={"See which freelancers were on the job each day at a glance."} path={"/employer/calendar"} />
 
       <header className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight">Calendar</h1>
@@ -193,8 +193,8 @@ const EmployerCalendarPage = () => {
             const isToday = key === todayKey;
             const isSelected = selectedDay === key;
             const dayMap = byDay.get(key);
-            const contractors = dayMap ? Array.from(dayMap.values()) : [];
-            const hasData = contractors.length > 0;
+            const freelancers = dayMap ? Array.from(dayMap.values()) : [];
+            const hasData = freelancers.length > 0;
 
             return (
               <button
@@ -212,15 +212,15 @@ const EmployerCalendarPage = () => {
                 </span>
                 {hasData && (
                   <div className="flex flex-wrap gap-0.5 justify-center mt-auto mb-1.5 max-w-full">
-                    {contractors.slice(0, 4).map((c) => (
+                    {freelancers.slice(0, 4).map((c) => (
                       <span
                         key={c.clientId}
                         className="w-1.5 h-1.5 rounded-full"
                         style={{ backgroundColor: isSelected ? "#fff" : c.color }}
                       />
                     ))}
-                    {contractors.length > 4 && (
-                      <span className={`text-[8px] leading-none ${isSelected ? "text-background" : "text-muted-foreground"}`}>+{contractors.length - 4}</span>
+                    {freelancers.length > 4 && (
+                      <span className={`text-[8px] leading-none ${isSelected ? "text-background" : "text-muted-foreground"}`}>+{freelancers.length - 4}</span>
                     )}
                   </div>
                 )}
@@ -239,7 +239,7 @@ const EmployerCalendarPage = () => {
           <SheetHeader className="text-left mb-3">
             <SheetTitle className="text-lg">{selectedDay ? fmtDayHeader(selectedDay) : ""}</SheetTitle>
             <p className="text-xs text-muted-foreground">
-              {selectedContractors.length} {selectedContractors.length === 1 ? "contractor" : "contractors"} on the job
+              {selectedContractors.length} {selectedContractors.length === 1 ? "contractor" : "freelancers"} on the job
             </p>
           </SheetHeader>
 

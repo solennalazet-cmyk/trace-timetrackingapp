@@ -186,7 +186,7 @@ const AccountProfilePage = () => {
             <AlertDialogTitle>Delete {account.name}?</AlertDialogTitle>
             <AlertDialogDescription>
               {account.kind === "both"
-                ? "This account also exists as a contractor. It will be removed from Accounts but kept in your Contractors view."
+                ? "This account also exists as a freelancer. It will be removed from Accounts but kept in your Freelancers view."
                 : "All data associated with this account — contact, commercial terms, business details and contract — will be permanently lost. This cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>

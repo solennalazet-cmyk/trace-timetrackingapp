@@ -74,7 +74,7 @@ const WorkerInviteModal = ({ open, onOpenChange, onInvite }: WorkerInviteModalPr
       <DialogContent className="w-[calc(100vw-3rem)] max-w-[400px] rounded-2xl p-6">
         <DialogHeader>
           <DialogTitle>
-            {token ? "Share the invite" : "Invite a contractor"}
+            {token ? "Share the invite" : "Invite a freelancer"}
           </DialogTitle>
         </DialogHeader>
 
@@ -84,9 +84,9 @@ const WorkerInviteModal = ({ open, onOpenChange, onInvite }: WorkerInviteModalPr
               We'll save the invite. They'll be connected automatically once they sign up with this email.
             </p>
             <div className="space-y-1.5">
-              <Label htmlFor="contractor-email">Contractor email</Label>
+              <Label htmlFor="freelancer-email">Freelancer email</Label>
               <Input
-                id="contractor-email"
+                id="freelancer-email"
                 type="email"
                 placeholder="name@example.com"
                 className="h-11 rounded-xl"
@@ -96,9 +96,9 @@ const WorkerInviteModal = ({ open, onOpenChange, onInvite }: WorkerInviteModalPr
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="contractor-name">Name (optional)</Label>
+              <Label htmlFor="freelancer-name">Name (optional)</Label>
               <Input
-                id="contractor-name"
+                id="freelancer-name"
                 type="text"
                 placeholder="e.g. Jacqueline"
                 className="h-11 rounded-xl"

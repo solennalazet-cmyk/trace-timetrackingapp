@@ -91,7 +91,7 @@ const AddFreelancerModal = ({ open, onOpenChange, onCreate }: Props) => {
               <UserPlus className="h-5 w-5" />
             </div>
             <div className="space-y-0.5">
-              <DialogTitle className="text-lg">Add a contractor</DialogTitle>
+              <DialogTitle className="text-lg">Add a freelancer</DialogTitle>
               <p className="text-xs text-muted-foreground leading-snug">
                 Only a first name is required — fill anything else you have, or skip and complete later.
               </p>

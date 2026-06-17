@@ -23,7 +23,7 @@ const workerNav = [
 const employerNav = [
   { path: "/employer", label: "Home", icon: Home },
   { path: "/employer/calendar", label: "Calendar", icon: CalendarDays },
-  { path: "/workers", label: "Contractors", icon: Users },
+  { path: "/workers", label: "Freelancers", icon: Users },
   { path: "/payments", label: "Payments", icon: Wallet },
 ];
 

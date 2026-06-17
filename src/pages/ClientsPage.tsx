@@ -228,7 +228,7 @@ const ClientsPage = () => {
   const handleDeleteClient = async () => {
     if (!deleteClientId) return;
     if (user) {
-      // If this row also appears in the Contractors view (kind = 'both'),
+      // If this row also appears in the Freelancers view (kind = 'both'),
       // downgrade to 'contractor' so it stays there. Otherwise hard delete.
       const { data: row } = await supabase
         .from("clients")

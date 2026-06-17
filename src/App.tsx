@@ -11,6 +11,7 @@ import StartPage from "./pages/StartPage";
 import ReportsPage from "./pages/ReportsPage";
 import TimelinePage from "./pages/TimelinePage";
 import ClientsPage from "./pages/ClientsPage";
+import AccountProfilePage from "./pages/AccountProfilePage";
 import EmployerHomePage from "./pages/EmployerHomePage";
 import EmployerCalendarPage from "./pages/EmployerCalendarPage";
 import WorkersPage from "./pages/WorkersPage";
@@ -87,6 +88,7 @@ const AppInner = () => {
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/timeline" element={<Navigate to="/reports" replace />} />
             <Route path="/clients" element={<ClientsPage />} />
+            <Route path="/clients/:id" element={<AccountProfilePage />} />
             <Route path="/employer" element={<EmployerHomePage />} />
             <Route path="/employer/calendar" element={<EmployerCalendarPage />} />
             <Route path="/workers" element={<WorkersPage />} />

@@ -34,10 +34,14 @@ const useVisualViewportStyle = (enabled: boolean, mode: "centered" | "sheet" = "
           0,
           window.innerHeight - visualViewport.offsetTop - visualViewport.height
         );
-        setViewportStyle({
-          maxHeight: `${Math.max(260, visualViewport.height - 8)}px`,
-          bottom: `${keyboardOffset}px`,
-        });
+        if (keyboardOffset > 0) {
+          setViewportStyle({
+            maxHeight: `${Math.max(260, visualViewport.height - 8)}px`,
+            bottom: `${keyboardOffset}px`,
+          });
+        } else {
+          setViewportStyle({});
+        }
       }
     };
 

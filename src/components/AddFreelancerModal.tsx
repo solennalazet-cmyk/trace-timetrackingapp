@@ -28,7 +28,7 @@ const AddFreelancerModal = ({ open, onOpenChange, onCreate }: Props) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[calc(100vw-3rem)] max-w-[400px] rounded-2xl p-6">
         <DialogHeader className="space-y-1.5">
-          <DialogTitle>Add a freelancer</DialogTitle>
+          <DialogTitle>Add a contractor</DialogTitle>
           <p className="text-xs text-muted-foreground">Just a first name to get started. You can fill the rest from their profile.</p>
         </DialogHeader>
         <div className="space-y-4 pt-2">

@@ -45,7 +45,7 @@ const RejectReportDialog = ({ open, onOpenChange, reportId, onRejected }: Props)
       .eq("id", reportId);
     setWorking(false);
     if (error) { toast.error(error.message); return; }
-    toast.success("Report rejected. The freelancer has been notified.");
+    toast.success("Report rejected. The contractor has been notified.");
     setNote("");
     setReason("missing_session");
     onOpenChange(false);
@@ -71,7 +71,7 @@ const RejectReportDialog = ({ open, onOpenChange, reportId, onRejected }: Props)
             ))}
           </RadioGroup>
           <Textarea
-            placeholder={reason === "other" ? "Required — describe the issue" : "Optional note for the freelancer"}
+            placeholder={reason === "other" ? "Required — describe the issue" : "Optional note for the contractor"}
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={3}

@@ -21,7 +21,7 @@ const RoleSwitcher = ({ variant = "full", className }: Props) => {
   };
 
   const options: { role: AppRole; label: string; icon: typeof Briefcase }[] = [
-    { role: "worker", label: "Freelancer", icon: HardHat },
+    { role: "worker", label: "Contractor", icon: HardHat },
     { role: "employer", label: "Employer", icon: Briefcase },
   ];
 

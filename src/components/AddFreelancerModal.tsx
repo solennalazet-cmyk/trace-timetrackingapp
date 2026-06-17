@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, UserPlus, Briefcase, User2, CalendarClock } from "lucide-react";
 
-export interface NewContractorPayload {
+export interface NewFreelancerPayload {
   name: string;
   role?: string | null;
   email?: string | null;
@@ -21,7 +21,7 @@ export interface NewContractorPayload {
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (payload: NewContractorPayload) => Promise<void>;
+  onCreate: (payload: NewFreelancerPayload) => Promise<void>;
 }
 
 const empty = {

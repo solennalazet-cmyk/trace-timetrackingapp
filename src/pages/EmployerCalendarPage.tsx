@@ -14,7 +14,7 @@ interface ReportRow {
   entries_snapshot: any;
 }
 
-interface DayContractor {
+interface DayFreelancer {
   clientId: string;
   name: string;
   color: string;
@@ -101,7 +101,7 @@ const EmployerCalendarPage = () => {
 
   // Build per-day freelancer breakdown from all reports' entries_snapshot
   const byDay = useMemo(() => {
-    const m = new Map<string, Map<string, DayContractor>>();
+    const m = new Map<string, Map<string, DayFreelancer>>();
     for (const r of reports) {
       const snap = Array.isArray(r.entries_snapshot) ? r.entries_snapshot : [];
       for (const e of snap) {
@@ -137,7 +137,7 @@ const EmployerCalendarPage = () => {
     return Array.from({ length: 7 }, (_, i) => base[(weekStart + i) % 7]);
   }, [weekStart]);
 
-  const selectedContractors = selectedDay ? Array.from(byDay.get(selectedDay)?.values() ?? []) : [];
+  const selectedFreelancers = selectedDay ? Array.from(byDay.get(selectedDay)?.values() ?? []) : [];
 
   const goMonth = (delta: number) => {
     setCursor((c) => {
@@ -239,12 +239,12 @@ const EmployerCalendarPage = () => {
           <SheetHeader className="text-left mb-3">
             <SheetTitle className="text-lg">{selectedDay ? fmtDayHeader(selectedDay) : ""}</SheetTitle>
             <p className="text-xs text-muted-foreground">
-              {selectedContractors.length} {selectedContractors.length === 1 ? "contractor" : "freelancers"} on the job
+              {selectedFreelancers.length} {selectedFreelancers.length === 1 ? "freelancer" : "freelancers"} on the job
             </p>
           </SheetHeader>
 
           <div className="space-y-2.5">
-            {selectedContractors
+            {selectedFreelancers
               .sort((a, b) => b.workMin - a.workMin)
               .map((c) => {
                 const total = c.workMin + c.breakMin;

@@ -45,9 +45,9 @@ interface Props {
 const FIELDS: Record<AccountEditorKind, { title: string; subtitle: string; fields: EditorField[] }> = {
   contact: {
     title: "Contact",
-    subtitle: "How to reach this account.",
+    subtitle: "How to reach this client.",
     fields: [
-      { key: "name", label: "Account name", type: "text", placeholder: "Acme Ltd." },
+      { key: "name", label: "Client name", type: "text", placeholder: "Acme Ltd." },
       { key: "email", label: "Email", type: "email", placeholder: "billing@acme.com" },
       { key: "phone", label: "Phone", type: "tel", placeholder: "+33 …" },
     ],

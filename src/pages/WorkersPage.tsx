@@ -86,7 +86,7 @@ const WorkersPage = () => {
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
-    // Check if this row also exists in the Accounts view (kind = 'both').
+    // Check if this row also exists in the Clients view (kind = 'both').
     // If so, downgrade to 'account' to preserve it there; otherwise hard delete.
     const { data: row } = await supabase
       .from("clients")

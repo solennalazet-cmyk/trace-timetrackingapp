@@ -121,7 +121,7 @@ const HeaderMenu = () => {
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
-                  if (activeRole === "worker") navigate("/account");
+                  if (activeRole === "worker") navigate("/client");
                   else setAccountOpen(true);
                 }}
                 className="cursor-pointer"

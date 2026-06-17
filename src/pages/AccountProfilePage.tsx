@@ -40,7 +40,7 @@ const AccountProfilePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [account, setAccount] = useState<AccountRow | null>(null);
+  const [client, setAccount] = useState<AccountRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [editorOpen, setEditorOpen] = useState<AccountEditorKind | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -62,17 +62,17 @@ const AccountProfilePage = () => {
   useEffect(() => { load(); }, [load]);
 
   const handleDelete = async () => {
-    if (!account) return;
+    if (!client) return;
     setDeleting(true);
     let error;
-    if (account.kind === "both") {
-      ({ error } = await supabase.from("clients").update({ kind: "contractor" }).eq("id", account.id));
+    if (client.kind === "both") {
+      ({ error } = await supabase.from("clients").update({ kind: "contractor" }).eq("id", client.id));
     } else {
-      ({ error } = await supabase.from("clients").delete().eq("id", account.id));
+      ({ error } = await supabase.from("clients").delete().eq("id", client.id));
     }
     setDeleting(false);
     if (error) { toast.error(error.message); return; }
-    toast.success("Account deleted.");
+    toast.success("Client deleted.");
     setDeleteOpen(false);
     navigate("/clients");
   };
@@ -80,11 +80,11 @@ const AccountProfilePage = () => {
   if (loading) {
     return <div className="pt-6 pb-24 text-sm text-muted-foreground px-4">Loading…</div>;
   }
-  if (!account) {
-    return <div className="pt-6 pb-24 text-sm text-muted-foreground px-4">Account not found.</div>;
+  if (!client) {
+    return <div className="pt-6 pb-24 text-sm text-muted-foreground px-4">Client not found.</div>;
   }
 
-  const sym = CURRENCY_SYMBOLS[account.currency ?? "EUR"] ?? "€";
+  const sym = CURRENCY_SYMBOLS[client.currency ?? "EUR"] ?? "€";
 
   type CardDef = { kind: AccountEditorKind; Icon: typeof Mail; title: string; summary: string };
   const cards: CardDef[] = [
@@ -92,16 +92,16 @@ const AccountProfilePage = () => {
       kind: "contact",
       Icon: Mail,
       title: "Contact",
-      summary: [account.email, account.phone].filter(Boolean).join(" · ") || "Add email and phone",
+      summary: [client.email, client.phone].filter(Boolean).join(" · ") || "Add email and phone",
     },
     {
       kind: "commercial",
       Icon: Handshake,
       title: "Commercial agreement",
       summary: [
-        account.default_rate != null ? `${sym}${account.default_rate}/h` : null,
-        account.payment_terms_days != null ? `Net ${account.payment_terms_days}d` : null,
-        account.billing_notes ? "Notes set" : null,
+        client.default_rate != null ? `${sym}${client.default_rate}/h` : null,
+        client.payment_terms_days != null ? `Net ${client.payment_terms_days}d` : null,
+        client.billing_notes ? "Notes set" : null,
       ].filter(Boolean).join(" · ") || "Set rate, currency, payment terms",
     },
     {
@@ -109,28 +109,28 @@ const AccountProfilePage = () => {
       Icon: Building2,
       title: "Business details",
       summary: [
-        account.nif ? `NIF ${account.nif}` : null,
-        account.business_address ? account.business_address.split("\n")[0] : null,
+        client.nif ? `NIF ${client.nif}` : null,
+        client.business_address ? client.business_address.split("\n")[0] : null,
       ].filter(Boolean).join(" · ") || "Add NIF / VAT and registered address",
     },
   ];
 
   return (
     <div className="pt-4 pb-24 px-4 space-y-5">
-      <Seo title={`${account.name} — Account profile`} description={`Manage ${account.name}: contact, commercial agreement, business details and contract.`} path={`/clients/${account.id}`} />
+      <Seo title={`${client.name} — Client profile`} description={`Manage ${client.name}: contact, commercial agreement, business details and contract.`} path={`/clients/${client.id}`} />
 
       <button onClick={() => navigate("/clients")} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-        <ArrowLeft className="w-3.5 h-3.5" /> Accounts
+        <ArrowLeft className="w-3.5 h-3.5" /> Clients
       </button>
 
       <header className="flex items-center gap-4 pt-1">
         <div className="h-16 w-16 rounded-full bg-foreground/10 text-foreground flex items-center justify-center text-2xl font-semibold shrink-0">
-          {initials(account.name)}
+          {initials(client.name)}
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-bold tracking-tight truncate">{account.name}</h1>
+          <h1 className="text-xl font-bold tracking-tight truncate">{client.name}</h1>
           <p className="text-sm text-muted-foreground truncate">
-            {account.default_rate != null ? `${sym}${account.default_rate}/hour` : "Rate not set"}
+            {client.default_rate != null ? `${sym}${client.default_rate}/hour` : "Rate not set"}
           </p>
         </div>
       </header>
@@ -154,9 +154,9 @@ const AccountProfilePage = () => {
         ))}
 
         <AccountContractCard
-          clientId={account.id}
+          clientId={client.id}
           ownerUserId={user?.id ?? ""}
-          contractUrl={account.contract_url}
+          contractUrl={client.contract_url}
           onChange={load}
         />
 
@@ -166,7 +166,7 @@ const AccountProfilePage = () => {
             className="w-full h-11 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10 gap-2"
             onClick={() => setDeleteOpen(true)}
           >
-            <Trash2 className="w-4 h-4" /> Delete account
+            <Trash2 className="w-4 h-4" /> Delete client
           </Button>
         </div>
       </div>
@@ -174,8 +174,8 @@ const AccountProfilePage = () => {
       <AccountFocusEditor
         open={editorOpen !== null}
         kind={editorOpen}
-        clientId={account.id}
-        initial={account}
+        clientId={client.id}
+        initial={client}
         onClose={() => setEditorOpen(null)}
         onSaved={() => { setEditorOpen(null); load(); }}
       />
@@ -183,11 +183,11 @@ const AccountProfilePage = () => {
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent className="max-w-[380px] w-[calc(100vw-2rem)] rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {account.name}?</AlertDialogTitle>
+            <AlertDialogTitle>Delete {client.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              {account.kind === "both"
-                ? "This account also exists as a freelancer. It will be removed from Accounts but kept in your Freelancers view."
-                : "All data associated with this account — contact, commercial terms, business details and contract — will be permanently lost. This cannot be undone."}
+              {client.kind === "both"
+                ? "This client also exists as a freelancer. It will be removed from Clients but kept in your Freelancers view."
+                : "All data associated with this client — contact, commercial terms, business details and contract — will be permanently lost. This cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -23,7 +23,7 @@ const steps = [
   {
     icon: FolderOpen,
     title: "Assign later",
-    description: "Add account, project, notes after the session.",
+    description: "Add client, project, notes after the session.",
   },
   {
     icon: BarChart3,

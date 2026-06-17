@@ -421,15 +421,15 @@ const ExportDialog = ({
             />
           </div>
 
-          {/* Account */}
+          {/* Client */}
           <div>
-            <Label className="text-xs text-muted-foreground mb-2 block">Account</Label>
+            <Label className="text-xs text-muted-foreground mb-2 block">Client</Label>
             <Select value={selectedClient} onValueChange={setSelectedClient}>
               <SelectTrigger className="rounded-xl">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All accounts</SelectItem>
+                <SelectItem value="all">All clients</SelectItem>
                 {clientIds.map((id) => (
                   <SelectItem key={id} value={id}>{clients[id] ?? "Unknown"}</SelectItem>
                 ))}

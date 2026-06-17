@@ -505,13 +505,13 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
         >
           <div className="space-y-3 text-foreground">
             <div>
-              <Label className="text-foreground">Account</Label>
+              <Label className="text-foreground">Client</Label>
               <AdaptiveCombobox
                 items={clients}
                 value={clientId}
                 displayValue={clientName}
-                placeholder="Select account (optional)"
-                label="Account"
+                placeholder="Select client (optional)"
+                label="Client"
                 scrollContainerRef={scrollAreaRef}
                 onSelect={(id, name) => {
                   handleClientSelection(id, name);

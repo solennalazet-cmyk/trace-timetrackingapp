@@ -164,7 +164,7 @@ const ClientsPage = () => {
   // --- CRUD handlers ---
   const handleAddClientClick = () => {
     if (isFree && clients.length >= 1) {
-      setPaywallMessage("You've reached the 1-account limit on the free plan. Upgrade to Pro for unlimited accounts.");
+      setPaywallMessage("You've reached the 1-client limit on the free plan. Upgrade to Pro for unlimited clients.");
       setPaywallOpen(true);
       return;
     }
@@ -203,7 +203,7 @@ const ClientsPage = () => {
           ...siteFields,
           ...connectionFields,
         } as any).eq("id", editingClient.id);
-        toast.success(isNewInvite ? "Account updated. Invite sent." : "Account updated.");
+        toast.success(isNewInvite ? "Client updated. Invite sent." : "Client updated.");
       } else {
         await supabase.from("clients").insert({
           name: data.name, email: data.email || null, nif: data.nif || null,
@@ -214,12 +214,12 @@ const ClientsPage = () => {
           user_id: user.id,
           kind: "account",
         } as any);
-        toast.success(isNewInvite ? "Account added. Invite sent." : "Account added.");
+        toast.success(isNewInvite ? "Client added. Invite sent." : "Client added.");
       }
     } else {
       const id = editingClient?.id ?? `local-${Date.now()}`;
       saveAnonymousClient({ id, name: data.name, email: data.email, nif: data.nif, currency: data.currency, default_rate: data.default_rate ? parseFloat(data.default_rate) : null });
-      toast.success(editingClient ? "Account updated." : "Account added.");
+      toast.success(editingClient ? "Client updated." : "Client added.");
     }
     setClientFormOpen(false);
     loadData();
@@ -253,7 +253,7 @@ const ClientsPage = () => {
     setClientFormOpen(false);
     setExpandedId(null);
     setSwipedId(null);
-    toast.success("Account deleted.");
+    toast.success("Client deleted.");
     loadData();
   };
 
@@ -313,27 +313,27 @@ const ClientsPage = () => {
 
   return (
     <div className="pb-24 px-4">
-      <Seo title={"Accounts & Projects — Trace"} description={"Manage your accounts, nested projects, hourly rates and budgets for accurate freelance time tracking."} path={"/clients"} />
-      <h1 className="text-2xl font-bold tracking-tight mb-3 mt-2">Accounts</h1>
+      <Seo title={"Clients & Projects — Trace"} description={"Manage your clients, nested projects, hourly rates and budgets for accurate freelance time tracking."} path={"/clients"} />
+      <h1 className="text-2xl font-bold tracking-tight mb-3 mt-2">Clients</h1>
       {/* Search */}
       <div className="relative mb-3">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           className="pl-9"
-          placeholder="Search accounts, projects..."
-          aria-label="Search accounts and projects"
+          placeholder="Search clients, projects..."
+          aria-label="Search clients and projects"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
 
-      {/* Add Account */}
+      {/* Add Client */}
       <Button
         variant="outline"
         className="w-full mb-4 gap-2 rounded-xl"
         onClick={handleAddClientClick}
       >
-        <Plus className="w-4 h-4" /> Add account
+        <Plus className="w-4 h-4" /> Add client
       </Button>
 
       {/* Empty state */}
@@ -341,10 +341,10 @@ const ClientsPage = () => {
         <div className="flex flex-col items-center justify-center py-16 gap-3">
           <Briefcase className="w-12 h-12 text-muted-foreground opacity-30" />
           <p className="text-muted-foreground text-sm text-center">
-            No accounts yet.<br />Add your first account to start tracking billable work.
+            No clients yet.<br />Add your first client to start tracking billable work.
           </p>
           <Button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-12 px-6 font-bold" onClick={handleAddClientClick}>
-            <Plus className="w-4 h-4 mr-2" /> Add account
+            <Plus className="w-4 h-4 mr-2" /> Add client
           </Button>
           <SignInLink />
         </div>
@@ -439,7 +439,7 @@ const ClientsPage = () => {
           invited_trace_email: (editingClient as any).invited_email ?? "",
           connection_status: (editingClient as any).connection_status ?? null,
         } : null}
-        title={editingClient ? "Edit account" : "Add account"}
+        title={editingClient ? "Edit client" : "Add client"}
       />
 
       {/* Project Form Modal */}

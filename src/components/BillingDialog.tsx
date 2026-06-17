@@ -189,12 +189,12 @@ const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUN
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[420px] rounded-2xl max-h-[85vh] overflow-y-auto p-0">
         <DialogHeader className="px-6 pt-6 pb-0">
-          <DialogTitle>{isPreselected && selected.length === 1 ? `Bill ${selected[0].name}` : "Bill accounts"}</DialogTitle>
+          <DialogTitle>{isPreselected && selected.length === 1 ? `Bill ${selected[0].name}` : "Bill clients"}</DialogTitle>
         </DialogHeader>
 
         {step === 1 && !isPreselected && (
           <div className="px-6 pb-6 pt-4 space-y-3">
-            <p className="text-sm text-muted-foreground">Select accounts to bill</p>
+            <p className="text-sm text-muted-foreground">Select clients to bill</p>
             {clientsData.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">No unbilled entries.</p>}
             {clientsData.map((c) => (
               <label key={c.id} className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/30 cursor-pointer">

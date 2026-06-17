@@ -713,6 +713,47 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_documents: {
+        Row: {
+          client_id: string
+          content_type: string | null
+          created_at: string
+          employer_user_id: string
+          filename: string
+          id: string
+          size_bytes: number | null
+          storage_path: string
+        }
+        Insert: {
+          client_id: string
+          content_type?: string | null
+          created_at?: string
+          employer_user_id: string
+          filename: string
+          id?: string
+          size_bytes?: number | null
+          storage_path: string
+        }
+        Update: {
+          client_id?: string
+          content_type?: string | null
+          created_at?: string
+          employer_user_id?: string
+          filename?: string
+          id?: string
+          size_bytes?: number | null
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_documents_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_invites: {
         Row: {
           created_at: string

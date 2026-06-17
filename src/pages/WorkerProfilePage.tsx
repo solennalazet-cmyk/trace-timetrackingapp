@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import Seo from "@/components/Seo";
 import WorkerFocusEditor, { type EditorKind } from "@/components/WorkerFocusEditor";
 import WorkerCvCard from "@/components/WorkerCvCard";
+import WorkerDocumentsCard from "@/components/WorkerDocumentsCard";
 import WorkerInviteModal from "@/components/WorkerInviteModal";
 
 interface WorkerRow {

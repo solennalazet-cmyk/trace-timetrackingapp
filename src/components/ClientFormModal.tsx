@@ -144,47 +144,75 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[400px] rounded-2xl p-0 max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="px-6 pt-6 pb-0">
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        <div className="px-6 space-y-4">
-          <div className="space-y-1.5">
-            <Label className="text-sm">Organisation name *</Label>
-            <Input className="h-10 rounded-xl" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Client name" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-sm">Contact email</Label>
-            <Input className="h-10 rounded-xl" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="contact@example.com" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-sm">NIF / Tax number</Label>
-            <Input className="h-10 rounded-xl" value={form.nif} onChange={(e) => setForm({ ...form, nif: e.target.value })} placeholder="PT123456789" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-sm">Currency</Label>
-            <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
-              <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {CURRENCIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex gap-3">
-            <div className="flex-1 space-y-1.5">
-              <Label className="text-sm">Default billing rate</Label>
-              <Input className="h-10 rounded-xl" type="number" placeholder="0.00" value={form.default_rate} onChange={(e) => setForm({ ...form, default_rate: e.target.value })} />
+      <DialogContent
+        className="w-[calc(100vw-2rem)] max-w-[440px] rounded-3xl p-0 overflow-hidden gap-0 max-h-[88vh] flex flex-col"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <DialogHeader className="px-6 pt-6 pb-4 space-y-2 bg-gradient-to-b from-primary/10 to-transparent">
+          <div className="flex items-center gap-3 pr-7">
+            <div className="h-11 w-11 rounded-2xl bg-primary/20 text-foreground flex items-center justify-center shrink-0">
+              <Building2 className="h-5 w-5" />
             </div>
-            <div className="w-32 space-y-1.5">
-              <Label className="text-sm">Unit</Label>
+            <div className="space-y-0.5 min-w-0">
+              <DialogTitle className="text-lg">{title}</DialogTitle>
+              <p className="text-xs text-muted-foreground leading-snug">
+                Only the client name is required — add any contact, commercial or business details you already have.
+              </p>
+            </div>
+          </div>
+        </DialogHeader>
+        <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1" onFocusCapture={focusScroll}>
+          <SectionLabel icon={Mail}>Contact</SectionLabel>
+          <Field label="Client name" hint="required">
+            <Input autoFocus className="h-11 rounded-xl" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Acme Ltd." />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Email">
+              <Input className="h-11 rounded-xl" type="email" inputMode="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="billing@…" />
+            </Field>
+            <Field label="Phone">
+              <Input className="h-11 rounded-xl" type="tel" inputMode="tel" value={form.phone ?? ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+33…" />
+            </Field>
+          </div>
+
+          <SectionLabel icon={Handshake}>Commercial agreement</SectionLabel>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Default rate">
+              <Input className="h-11 rounded-xl" type="number" inputMode="decimal" placeholder="0.00" value={form.default_rate} onChange={(e) => setForm({ ...form, default_rate: e.target.value })} />
+            </Field>
+            <Field label="Currency">
+              <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
+                <SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CURRENCIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Payment terms">
+              <Input className="h-11 rounded-xl" type="number" inputMode="numeric" min="0" step="1" placeholder="30 days" value={form.payment_terms_days ?? ""} onChange={(e) => setForm({ ...form, payment_terms_days: e.target.value })} />
+            </Field>
+            <Field label="Unit">
               <Select value={form.rate_unit} onValueChange={(v) => setForm({ ...form, rate_unit: v })}>
-                <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {RATE_UNITS.map((u) => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
           </div>
+          <Field label="Billing notes">
+            <Textarea className="min-h-[5.5rem] rounded-xl resize-none" value={form.billing_notes ?? ""} onChange={(e) => setForm({ ...form, billing_notes: e.target.value })} placeholder="PO required, invoicing contact, special terms…" />
+          </Field>
+
+          <SectionLabel icon={Building2}>Business details</SectionLabel>
+          <Field label="NIF / VAT number">
+            <Input className="h-11 rounded-xl" value={form.nif} onChange={(e) => setForm({ ...form, nif: e.target.value })} placeholder="PT123456789" />
+          </Field>
+          <Field label="Registered address">
+            <Textarea className="min-h-[6.5rem] rounded-xl resize-none" value={form.business_address ?? ""} onChange={(e) => setForm({ ...form, business_address: e.target.value })} placeholder="Street, city, postcode, country" />
+          </Field>
 
           {/* Connect Trace user */}
           <div className="rounded-xl bg-secondary overflow-hidden shadow-sm transition-colors hover:bg-secondary/80">

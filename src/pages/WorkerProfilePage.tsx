@@ -1,9 +1,14 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, User, Briefcase, CalendarClock, ChevronRight, Send, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, User, Briefcase, CalendarClock, ChevronRight, Send, CheckCircle2, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import Seo from "@/components/Seo";
 import WorkerFocusEditor, { type EditorKind } from "@/components/WorkerFocusEditor";
@@ -45,6 +50,8 @@ const WorkerProfilePage = () => {
   const [editorOpen, setEditorOpen] = useState<EditorKind | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [invitePending, setInvitePending] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -75,20 +82,37 @@ const WorkerProfilePage = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleInvite = async ({ email, name }: { email: string; name?: string }) => {
-    if (!user) return;
+  const handleInvite = async ({ email, name }: { email: string; name?: string }): Promise<string | null> => {
+    if (!user) return null;
     const trimmed = email.trim().toLowerCase();
-    const { error } = await supabase.from("worker_invites").insert({
-      employer_user_id: user.id, invited_email: trimmed, invited_name: name ?? worker?.name ?? null,
-    });
-    if (error) { toast.error(error.message); return; }
+    const { data, error } = await supabase
+      .from("worker_invites")
+      .insert({
+        employer_user_id: user.id,
+        invited_email: trimmed,
+        invited_name: name ?? worker?.name ?? null,
+      })
+      .select("invite_token")
+      .single();
+    if (error) { toast.error(error.message); return null; }
     // Keep the contractor's email in sync if not already set
     if (worker && !worker.email) {
       await supabase.from("clients").update({ email: trimmed }).eq("id", worker.id);
     }
-    toast.success("Invite sent. They'll be connected when they sign up.");
-    setInviteOpen(false);
+    toast.success("Invite saved. Share it now.");
     await load();
+    return (data?.invite_token as string) ?? null;
+  };
+
+  const handleDelete = async () => {
+    if (!worker) return;
+    setDeleting(true);
+    const { error } = await supabase.from("clients").delete().eq("id", worker.id);
+    setDeleting(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Contractor deleted.");
+    setDeleteOpen(false);
+    navigate("/workers");
   };
 
   if (loading) {

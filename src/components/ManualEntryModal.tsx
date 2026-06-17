@@ -365,7 +365,7 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
 
           {/* Client */}
           <div>
-            <Label>Client</Label>
+            <Label>Account</Label>
             <AdaptiveCombobox items={clients} value={clientId} displayValue={clientName} placeholder="Select client (optional)" label="Client" scrollContainerRef={scrollAreaRef}
               onSelect={(id, name) => { setClientId(id); setClientName(name); setProjectId(""); setProjectName(""); setTaskId(""); setTaskName(""); }}
               onCreate={async (name) => { const c = await handleCreateClient(name); if (c) { setClientId(c.id); setClientName(c.name); setProjectId(""); setProjectName(""); setTaskId(""); setTaskName(""); } return c; }}

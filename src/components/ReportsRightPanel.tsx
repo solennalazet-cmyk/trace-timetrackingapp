@@ -216,7 +216,7 @@ const ReportsRightPanel = () => {
 
       {/* Top clients */}
       <div className="rounded-xl border border-border/60 bg-card/60 p-3">
-        <p className="text-xs font-semibold text-foreground mb-2">Top clients</p>
+        <p className="text-xs font-semibold text-foreground mb-2">Top accounts</p>
         {topClients.length === 0 && (
           <p className="text-[11px] text-muted-foreground py-2">No entries this week.</p>
         )}

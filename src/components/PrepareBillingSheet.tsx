@@ -593,9 +593,9 @@ const PrepareBillingSheet = ({
                 className="w-full rounded-xl h-12 gap-2 justify-start font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
                 onClick={() => setSubmitOpen(true)}
                 disabled={reportEntries.length === 0 || !isConnected}
-                title={isConnected ? undefined : "Client isn't a connected Trace user."}
+                title={isConnected ? undefined : "Account isn't a connected Trace user."}
               >
-                <Send className="w-4 h-4" /> Submit to client
+                <Send className="w-4 h-4" /> Submit to account
                 {!isConnected && reportEntries.length > 0 && (
                   <span className="ml-auto text-[10px] font-normal opacity-80">Not connected</span>
                 )}
@@ -638,7 +638,7 @@ const PrepareBillingSheet = ({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Submit to client confirmation */}
+      {/* Submit to account confirmation */}
       <AlertDialog open={submitOpen} onOpenChange={setSubmitOpen}>
         <AlertDialogContent className="rounded-2xl max-w-[360px]">
           <AlertDialogHeader>
@@ -652,7 +652,7 @@ const PrepareBillingSheet = ({
                   This will send the report to {clientName} for review. You can't edit it after submitting.
                 </p>
                 <div className="rounded-lg bg-muted/50 p-3 space-y-1 text-xs">
-                  <div className="flex justify-between"><span className="text-muted-foreground">Client</span><span className="font-medium text-foreground">{clientName}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Account</span><span className="font-medium text-foreground">{clientName}</span></div>
                   {clientEmail && <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span className="font-medium text-foreground truncate ml-2">{clientEmail}</span></div>}
                   <div className="flex justify-between"><span className="text-muted-foreground">Period</span><span className="font-medium text-foreground">{fromLabel} – {toLabel}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Hours</span><span className="font-mono font-medium text-foreground">{formatHM(billableMins)}</span></div>

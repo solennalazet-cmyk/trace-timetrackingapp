@@ -20,7 +20,7 @@ const PaywallModal = ({
   open,
   onOpenChange,
   headline = "This is a Pro feature",
-  body = "Upgrade to Trace Pro to unlock unlimited clients, projects, reports, invoicing, and more.",
+  body = "Upgrade to Trace Pro to unlock unlimited accounts, projects, reports, invoicing, and more.",
 }: PaywallModalProps) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);

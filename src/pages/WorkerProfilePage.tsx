@@ -134,12 +134,6 @@ const WorkerProfilePage = () => {
   type CardDef = { kind: EditorKind; Icon: typeof User; title: string; summary: string };
   const cards: CardDef[] = [
     {
-      kind: "role",
-      Icon: Briefcase,
-      title: "Role",
-      summary: worker.role?.trim() ? worker.role : "Set their job title",
-    },
-    {
       kind: "identity",
       Icon: User,
       title: "Identity & contact",
@@ -166,15 +160,17 @@ const WorkerProfilePage = () => {
         <ArrowLeft className="w-3.5 h-3.5" /> Contractors
       </button>
 
-      <header className="flex items-center gap-4 pt-1">
-        <div className="h-16 w-16 rounded-full bg-foreground/10 text-foreground flex items-center justify-center text-2xl font-semibold shrink-0">
-          {initials(worker.name)}
-        </div>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-bold tracking-tight truncate">{name}</h1>
-          <p className="text-sm text-muted-foreground truncate">{role}</p>
-        </div>
-      </header>
+      <button onClick={() => setEditorOpen("role")} className="w-full text-left">
+        <header className="flex items-center gap-4 pt-1 group">
+          <div className="h-16 w-16 rounded-full bg-foreground/10 text-foreground flex items-center justify-center text-2xl font-semibold shrink-0">
+            {initials(worker.name)}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl font-bold tracking-tight truncate">{name}</h1>
+            <p className="text-sm text-muted-foreground truncate group-hover:text-foreground transition-colors">{role} <span className="text-muted-foreground/60">· tap to edit</span></p>
+          </div>
+        </header>
+      </button>
 
       <div className="space-y-2.5">
         {cards.map(({ kind, Icon, title, summary }) => (

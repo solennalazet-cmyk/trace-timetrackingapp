@@ -205,6 +205,11 @@ const WorkerProfilePage = () => {
           onChange={load}
         />
 
+        <WorkerDocumentsCard
+          clientId={worker.id}
+          employerUserId={user?.id ?? ""}
+        />
+
         {/* Connection / invite card */}
         <button
           className="w-full text-left"

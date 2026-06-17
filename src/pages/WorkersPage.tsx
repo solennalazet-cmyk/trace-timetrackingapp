@@ -10,7 +10,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import AddFreelancerModal from "@/components/AddFreelancerModal";
+import AddFreelancerModal, { type NewContractorPayload } from "@/components/AddFreelancerModal";
 import SwipeToDeleteRow from "@/components/SwipeToDeleteRow";
 import Seo from "@/components/Seo";
 
@@ -65,11 +65,11 @@ const WorkersPage = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleCreate = async (firstName: string) => {
+  const handleCreate = async (payload: NewContractorPayload) => {
     if (!user) return;
     const { data, error } = await supabase
       .from("clients")
-      .insert({ user_id: user.id, name: firstName, kind: "contractor" })
+      .insert({ user_id: user.id, kind: "contractor", ...payload })
       .select("id")
       .single();
     if (error) { toast.error(error.message); return; }

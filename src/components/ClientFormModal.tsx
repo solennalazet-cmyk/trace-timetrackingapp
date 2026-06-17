@@ -145,7 +145,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-[calc(100vw-2rem)] max-w-[440px] rounded-3xl p-0 overflow-hidden gap-0 max-h-[88vh] flex flex-col"
+        className="w-[calc(100vw-2rem)] max-w-[440px] rounded-3xl p-0 overflow-hidden gap-0 flex flex-col"
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader className="px-6 pt-6 pb-4 space-y-2 bg-gradient-to-b from-primary/10 to-transparent">
@@ -161,7 +161,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
             </div>
           </div>
         </DialogHeader>
-        <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1" onFocusCapture={focusScroll}>
+        <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1 min-h-0 scroll-pb-32" onFocusCapture={focusScroll}>
           <SectionLabel icon={Mail}>Contact</SectionLabel>
           <Field label="Client name" hint="required">
             <Input autoFocus className="h-11 rounded-xl" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Acme Ltd." />
@@ -386,9 +386,9 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
             )}
           </div>
         </div>
-        <div className="flex gap-3 px-6 pt-2">
-          <Button variant="outline" className="flex-1 rounded-[28px] h-12 font-bold" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-12 font-bold" onClick={handleSave} disabled={!form.name.trim() || saving}>
+        <div className="flex gap-2.5 px-6 py-4 border-t border-border bg-card shrink-0">
+          <Button variant="outline" className="flex-1 rounded-xl h-11" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button className="flex-1 rounded-xl h-11" onClick={handleSave} disabled={!form.name.trim() || saving}>
             {initial ? "Save changes" : "Save client"}
           </Button>
         </div>

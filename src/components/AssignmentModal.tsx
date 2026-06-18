@@ -42,6 +42,7 @@ export interface SessionData {
   startedAt: string | null;
   entryType: string;
   pauseIntervals?: { paused_at: string; resumed_at: string | null }[];
+  idempotencyKey?: string;
 }
 
 export interface AssignmentResult {

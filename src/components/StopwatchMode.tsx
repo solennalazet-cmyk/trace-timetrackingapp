@@ -8,12 +8,13 @@ import { toast } from "sonner";
 const BTN = "rounded-[28px] h-14 text-[16px] font-bold";
 
 interface StopwatchModeProps {
-  onStop: (data: { durationMinutes: number; breakMinutes: number; startedAt: string | null; pauseIntervals?: { paused_at: string; resumed_at: string | null }[] }) => void;
+  onStop: (data: { durationMinutes: number; breakMinutes: number; startedAt: string | null; pauseIntervals?: { paused_at: string; resumed_at: string | null }[]; idempotencyKey?: string }) => void;
 }
 
 const StopwatchMode = ({ onStop }: StopwatchModeProps) => {
   const { status, elapsedMs, totalPausedMs, start, pause, resume, stop } = useTimer("stopwatch");
   const [pulse, setPulse] = useState(false);
+  const [stopping, setStopping] = useState(false);
 
   useEffect(() => {
     const handler = () => {
@@ -24,10 +25,17 @@ const StopwatchMode = ({ onStop }: StopwatchModeProps) => {
     return () => window.removeEventListener("trace-onboard-pulse-start", handler);
   }, []);
 
+  useEffect(() => {
+    if (status === "idle" || status === "running") setStopping(false);
+  }, [status]);
+
   const handleStop = async () => {
+    if (stopping) return;
+    setStopping(true);
     const result = await stop();
     if (!result.success) {
       toast.error(result.error || "Failed to stop session. Please try again.");
+      setStopping(false);
       return;
     }
     onStop(result);
@@ -77,6 +85,7 @@ const StopwatchMode = ({ onStop }: StopwatchModeProps) => {
             </Button>
             <Button
               onClick={handleStop}
+              disabled={stopping}
               className={`flex-1 bg-primary text-primary-foreground hover:bg-primary/90 ${BTN}`}
             >
               <Square className="w-4 h-4 mr-2" />
@@ -96,6 +105,7 @@ const StopwatchMode = ({ onStop }: StopwatchModeProps) => {
             <Button
               onClick={handleStop}
               variant="outline"
+              disabled={stopping}
               className={`flex-1 border-border bg-transparent text-foreground ${BTN}`}
             >
               <Square className="w-4 h-4 mr-2" />

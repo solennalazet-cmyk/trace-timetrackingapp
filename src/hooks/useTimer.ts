@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { makeTimeEntryIdempotencyKey } from "@/lib/time-entry-idempotency";
 
 export type TimerMode = "stopwatch" | "focus" | "shift";
 export type TimerStatus = "idle" | "running" | "paused";
@@ -22,6 +23,7 @@ export interface StopResult {
   breakMinutes: number;
   startedAt: string | null;
   pauseIntervals: PauseInterval[];
+  idempotencyKey: string;
   success: boolean;
   error?: string;
 }
@@ -351,12 +353,25 @@ export function useTimer(mode: TimerMode) {
   }, [timerState, lsKey, user]);
 
   const stop = useCallback(async (): Promise<StopResult> => {
+    if (stoppingRef.current) {
+      const startedAt = timerState.startedAt;
+      return {
+        durationMinutes: Math.round(elapsedRef.current / 60000),
+        breakMinutes: Math.round(timerState.totalPausedMs / 60000),
+        startedAt,
+        pauseIntervals: timerState.pauseIntervals ?? [],
+        idempotencyKey: makeTimeEntryIdempotencyKey("timer", user?.id ?? "anonymous", mode, startedAt ?? "no-start"),
+        success: false,
+        error: "Stop already in progress.",
+      };
+    }
     console.log(`[useTimer] stop() called for ${mode}`);
     stoppingRef.current = true;
 
     const durationMinutes = Math.round(elapsedRef.current / 60000);
     const breakMinutes = Math.round(timerState.totalPausedMs / 60000);
     const startedAt = timerState.startedAt;
+    const idempotencyKey = makeTimeEntryIdempotencyKey("timer", user?.id ?? "anonymous", mode, startedAt ?? "no-start");
     // If still paused at stop time, close the open interval at now
     const nowIso = new Date().toISOString();
     const intervals = timerState.pauseIntervals ?? [];
@@ -398,6 +413,7 @@ export function useTimer(mode: TimerMode) {
               breakMinutes,
               startedAt,
               pauseIntervals,
+              idempotencyKey,
               success: false,
               error: "Failed to clean up active session. Please try again.",
             };
@@ -412,6 +428,7 @@ export function useTimer(mode: TimerMode) {
           breakMinutes,
           startedAt,
           pauseIntervals,
+          idempotencyKey,
           success: false,
           error: "Network error cleaning up session. Please try again.",
         };
@@ -419,7 +436,7 @@ export function useTimer(mode: TimerMode) {
     }
 
     stoppingRef.current = false;
-    return { durationMinutes, breakMinutes, startedAt, pauseIntervals, success: true };
+    return { durationMinutes, breakMinutes, startedAt, pauseIntervals, idempotencyKey, success: true };
   }, [timerState, lsKey, user, mode]);
 
   return {

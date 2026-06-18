@@ -6,6 +6,7 @@ import {
   getAnonymousTasks,
   getPendingAssignment,
 } from "@/lib/anonymous-store";
+import { makeTimeEntryIdempotencyKey } from "@/lib/time-entry-idempotency";
 
 export const migrateAnonymousData = async (userId: string) => {
   // 1. Migrate clients
@@ -50,24 +51,27 @@ export const migrateAnonymousData = async (userId: string) => {
   // 4. Migrate time entries
   const anonEntries = getAnonymousEntries();
   if (anonEntries.length > 0) {
-    await supabase.from("time_entries").insert(
-      anonEntries.map((e: any) => ({
+    await supabase.from("time_entries").upsert(
+      anonEntries.map((e: any, index: number) => ({
         ...e,
         user_id: userId,
+        idempotency_key: e.idempotency_key ?? makeTimeEntryIdempotencyKey("anonymous-migration", userId, e.entry_type, e.start_time, e.entry_date, e.duration_minutes, index),
         id: undefined, // let DB generate
-      }))
+      })),
+      { onConflict: "user_id,idempotency_key", ignoreDuplicates: true }
     );
   }
 
   // 5. Migrate pending assignment
   const pending = getPendingAssignment();
   if (pending) {
-    await supabase.from("time_entries").insert({
+    await supabase.from("time_entries").upsert({
       ...pending,
       user_id: userId,
+      idempotency_key: pending.idempotency_key ?? makeTimeEntryIdempotencyKey("pending-assignment", userId, pending.entry_type, pending.start_time, pending.entry_date, pending.duration_minutes),
       id: undefined,
       billing_status: "unbilled",
-    });
+    }, { onConflict: "user_id,idempotency_key", ignoreDuplicates: true });
   }
 
   // 6. Clear anonymous data (except active timers)

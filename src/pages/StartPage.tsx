@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { saveAnonymousEntry, getAnonymousEntries } from "@/lib/anonymous-store";
 import { toast } from "sonner";
 import { getCongratsMessage } from "@/lib/boost-challenges";
+import { makeSessionEntryKey, makeTimeEntryIdempotencyKey } from "@/lib/time-entry-idempotency";
 import GeolocationPrePromptModal from "@/components/GeolocationPrePromptModal";
 import Seo from "@/components/Seo";
 import {
@@ -127,7 +128,13 @@ const StartPage = () => {
           // Open assignment modal for this session
           const entryType = conflictActiveMode === "shift" ? "shift" : "timer";
           setEditingEntry(null);
-          setPendingSession({ durationMinutes, breakMinutes, startedAt: parsed.startedAt, entryType });
+          setPendingSession({
+            durationMinutes,
+            breakMinutes,
+            startedAt: parsed.startedAt,
+            entryType,
+            idempotencyKey: makeTimeEntryIdempotencyKey("timer", user?.id ?? "anonymous", conflictActiveMode, parsed.startedAt ?? "no-start"),
+          });
           setAssignModalOpen(true);
         }
       } catch {
@@ -281,7 +288,7 @@ const StartPage = () => {
 
   // Called when timer stops — opens the assignment modal
   const handleSessionEnd = async (
-    data: { durationMinutes: number; breakMinutes: number; startedAt: string | null; pauseIntervals?: { paused_at: string; resumed_at: string | null }[] },
+    data: { durationMinutes: number; breakMinutes: number; startedAt: string | null; pauseIntervals?: { paused_at: string; resumed_at: string | null }[]; idempotencyKey?: string },
     entryType: string = "timer"
   ) => {
     console.log(`[StartPage] handleSessionEnd called, entryType=${entryType}, duration=${data.durationMinutes}min`);
@@ -292,8 +299,9 @@ const StartPage = () => {
     // Boost sessions: auto-save with Growth project and show congrats
     if (isBoost && boostProjectId && user) {
       const now = new Date();
-      await supabase.from("time_entries").insert({
+      await supabase.from("time_entries").upsert({
         user_id: user.id,
+        idempotency_key: data.idempotencyKey ?? makeTimeEntryIdempotencyKey("boost", user.id, data.startedAt ?? "no-start"),
         duration_minutes: data.durationMinutes,
         break_minutes: data.breakMinutes,
         entry_type: "boost",
@@ -303,7 +311,7 @@ const StartPage = () => {
         start_time: data.startedAt || null,
         end_time: data.startedAt ? now.toISOString() : null,
         pause_intervals: data.pauseIntervals ?? [],
-      } as any);
+      } as any, { onConflict: "user_id,idempotency_key", ignoreDuplicates: true });
       toast.success(getCongratsMessage());
       // Clear boost param
       setSearchParams({});
@@ -318,11 +326,13 @@ const StartPage = () => {
   };
 
   // Save entry with assignment data
-  const saveEntry = async (session: SessionData, assignment: AssignmentResult | null) => {
+  const saveEntry = async (session: SessionData, assignment: AssignmentResult | null, segment: string = "single") => {
     const now = new Date();
     const hasRate = assignment?.rateAmount != null;
     const hasBillableValue = assignment?.billableValue != null;
+    const ownerId = user?.id ?? "anonymous";
     const entry: any = {
+      idempotency_key: makeSessionEntryKey(ownerId, session, segment),
       duration_minutes: session.durationMinutes,
       break_minutes: session.breakMinutes,
       entry_type: session.entryType,
@@ -388,7 +398,9 @@ const StartPage = () => {
     }
 
     if (user) {
-      const { error } = await supabase.from("time_entries").insert({ ...entry, user_id: user.id });
+      const { error } = await supabase
+        .from("time_entries")
+        .upsert({ ...entry, user_id: user.id }, { onConflict: "user_id,idempotency_key", ignoreDuplicates: true });
       if (error) throw error;
     } else {
       saveAnonymousEntry(entry);
@@ -459,9 +471,9 @@ const StartPage = () => {
 
   const handleAssignSaveMulti = async (session: SessionData, assignments: AssignmentResult[]) => {
     try {
-      for (const assignment of assignments) {
+      for (const [index, assignment] of assignments.entries()) {
         const dur = (assignment as any)._durationMinutes ?? session.durationMinutes;
-        await saveEntry({ ...session, durationMinutes: dur }, assignment);
+        await saveEntry({ ...session, durationMinutes: dur }, assignment, assignment.taskId ?? `task-${index}`);
       }
       toast.success(`${assignments.length} tasks saved.`);
       setAssignModalOpen(false);

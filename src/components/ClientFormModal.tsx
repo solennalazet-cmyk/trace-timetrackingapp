@@ -223,7 +223,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
               className="w-full flex items-center justify-between px-4 py-3.5 text-left"
               aria-expanded={connectOpen}
             >
-              <span className="text-sm font-semibold text-secondary-foreground flex items-center gap-2.5">
+              <span className="text-sm font-semibold text-foreground flex items-center gap-2.5">
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-nav-bg/10 text-nav-bg">
 
                   <UserPlus className="h-4 w-4" />
@@ -239,7 +239,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
                   <span className="text-[10px] font-normal text-destructive">· declined</span>
                 )}
               </span>
-              <ChevronDown className={cn("h-4 w-4 text-secondary-foreground/70 transition-transform", connectOpen && "rotate-180")} />
+              <ChevronDown className={cn("h-4 w-4 text-foreground/70 transition-transform", connectOpen && "rotate-180")} />
             </button>
 
             {connectOpen && (
@@ -282,7 +282,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
               className="w-full flex items-center justify-between px-4 py-3.5 text-left"
               aria-expanded={siteOpen}
             >
-              <span className="text-sm font-semibold text-secondary-foreground flex items-center gap-2.5">
+              <span className="text-sm font-semibold text-foreground flex items-center gap-2.5">
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-nav-bg/10 text-nav-bg">
 
                   <MapPin className="h-4 w-4" />
@@ -292,7 +292,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
                   <span className="text-[10px] font-normal text-muted-foreground">· set</span>
                 )}
               </span>
-              <ChevronDown className={cn("h-4 w-4 text-secondary-foreground/70 transition-transform", siteOpen && "rotate-180")} />
+              <ChevronDown className={cn("h-4 w-4 text-foreground/70 transition-transform", siteOpen && "rotate-180")} />
             </button>
 
             {siteOpen && (
@@ -365,18 +365,18 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
               className="w-full flex items-center justify-between px-4 py-3.5 text-left"
               aria-expanded={exportOpen}
             >
-              <span className="text-sm font-semibold text-secondary-foreground flex items-center gap-2.5">
+              <span className="text-sm font-semibold text-foreground flex items-center gap-2.5">
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-nav-bg/10 text-nav-bg">
                   <FileDown className="h-4 w-4" />
                 </span>
                 Shared report settings
               </span>
-              <ChevronDown className={cn("h-4 w-4 text-secondary-foreground/70 transition-transform", exportOpen && "rotate-180")} />
+              <ChevronDown className={cn("h-4 w-4 text-foreground/70 transition-transform", exportOpen && "rotate-180")} />
             </button>
 
             {exportOpen && (
               <div className="px-4 pb-4 pt-1 space-y-3">
-                <p className="text-xs text-secondary-foreground/80">
+                <p className="text-xs text-foreground/80">
                   Columns to include when exporting, sharing, or submitting reports for this client. Date, duration and amount are always included.
                 </p>
                 <ExportColumnsPicker

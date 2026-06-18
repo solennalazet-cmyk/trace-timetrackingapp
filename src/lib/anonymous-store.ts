@@ -42,8 +42,20 @@ export function saveAnonymousEntry(entry: any) {
   if (entry.idempotency_key && entries.some((existing: any) => existing.idempotency_key === entry.idempotency_key)) {
     return;
   }
-  entries.push(entry);
+  entries.push({ ...entry, id: entry.id ?? `local-entry-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` });
   setItem(KEYS.entries, entries);
+  window.dispatchEvent(new CustomEvent("trace-entries-changed"));
+}
+export function updateAnonymousEntry(entryId: string, patch: any, idempotencyKey?: string | null) {
+  const entries = getAnonymousEntries();
+  const idx = entries.findIndex((entry: any) =>
+    entry.id === entryId || (!!idempotencyKey && entry.idempotency_key === idempotencyKey)
+  );
+  if (idx < 0) return false;
+  entries[idx] = { ...entries[idx], ...patch, id: entries[idx].id ?? entryId };
+  setItem(KEYS.entries, entries);
+  window.dispatchEvent(new CustomEvent("trace-entries-changed"));
+  return true;
 }
 
 // Clients

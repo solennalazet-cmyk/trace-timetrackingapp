@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Timer, PenLine, Clock, Phone, X, ArrowRight, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { getAnonymousEntries } from "@/lib/anonymous-store";
+import { getAnonymousClients, getAnonymousEntries, updateAnonymousEntry } from "@/lib/anonymous-store";
 import { toast } from "sonner";
 
 
@@ -189,6 +189,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
         .map((e: any, i: number) => ({ ...e, id: e.id ?? `anon-${i}` }));
       setEntries(unassigned);
       onCountChange(unassigned.length);
+      setClients(getAnonymousClients().map((c: any) => ({ id: c.id, name: c.name })));
     }
     setLoading(false);
   };
@@ -201,14 +202,16 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
   }, [open, user]);
 
   const runBatchAssign = async () => {
-    if (!user || !batchClientId || entries.length === 0) return;
+    if (!batchClientId || entries.length === 0) return;
     setBatching(true);
     const ids = entries.map((e) => e.id);
-    const { error } = await supabase
-      .from("time_entries")
-      .update({ client_id: batchClientId })
-      .in("id", ids)
-      .eq("user_id", user.id);
+    const { error } = user
+      ? await supabase
+        .from("time_entries")
+        .update({ client_id: batchClientId, billing_status: "unbilled", invoice_id: null })
+        .in("id", ids)
+        .eq("user_id", user.id)
+      : { error: entries.some((entry) => !updateAnonymousEntry(entry.id, { client_id: batchClientId, billing_status: "unbilled", invoice_id: null }, (entry as any).idempotency_key ?? null)) ? new Error("Some entries could not be assigned") : null };
     setBatching(false);
     if (error) {
       toast.error("Couldn't assign entries", { description: error.message });
@@ -335,13 +338,13 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
             {!loading && entries.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">No unassigned entries.</p>
             )}
-            {user && entries.length > 1 && (
+            {entries.length > 1 && (
               <Button
                 onClick={() => setBatchOpen(true)}
                 className="w-full mb-2 rounded-[28px] h-11 font-semibold bg-foreground text-background hover:bg-foreground/90"
               >
                 <Users className="w-4 h-4 mr-2" />
-                Assign all {entries.length} entries to an client
+                Assign all {entries.length} entries to a client
               </Button>
             )}
             {entries.map((entry) => (
@@ -377,7 +380,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
       <AlertDialog open={batchOpen} onOpenChange={(v) => { setBatchOpen(v); if (!v) setBatchClientId(""); }}>
         <AlertDialogContent className="w-[calc(100vw-2rem)] max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Assign {entries.length} {entries.length === 1 ? "entry" : "entries"} to an client?</AlertDialogTitle>
+            <AlertDialogTitle>Assign {entries.length} {entries.length === 1 ? "entry" : "entries"} to a client?</AlertDialogTitle>
             <AlertDialogDescription>
               All other info (date, duration, project, notes) will be kept exactly as entered. Only the client will be set.
             </AlertDialogDescription>
@@ -403,7 +406,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
               onClick={(e) => { e.preventDefault(); runBatchAssign(); }}
               disabled={!batchClientId || batching}
             >
-              {batching ? "Assigning…" : "Assign all"}
+                {batching ? "Assigning…" : "Assign all"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

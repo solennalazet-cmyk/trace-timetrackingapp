@@ -74,6 +74,7 @@ export interface ExistingEntry {
   break_minutes: number | null;
   entry_type: string | null;
   entry_date: string | null;
+  idempotency_key?: string | null;
 }
 
 interface TaskItem {
@@ -269,8 +270,12 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
   }, [clearResolvedRate]);
 
   const handleProjectSelection = useCallback((id: string, name: string) => {
+    const selectedProject = allProjectsFull.find((project) => project.id === id);
+    const owningClient = selectedProject?.client_id
+      ? clientsFull.find((client) => client.id === selectedProject.client_id)
+      : null;
     console.log("[AssignmentModal] project changed", {
-      selectedClientId: clientId || null,
+      selectedClientId: owningClient?.id ?? (clientId || null),
       selectedProjectId: id || null,
       initialEditSkipActive: false,
     });
@@ -280,9 +285,13 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     setTaskId("");
     setTaskName("");
     setTaskList([]);
+    if (owningClient) {
+      setClientId(owningClient.id);
+      setClientName(owningClient.name);
+    }
     setProjectId(id);
     setProjectName(name);
-  }, [clearResolvedRate, clientId]);
+  }, [allProjectsFull, clientsFull, clearResolvedRate, clientId]);
 
   useAutoResolvedRate({
     enabled: open,

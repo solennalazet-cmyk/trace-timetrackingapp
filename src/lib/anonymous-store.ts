@@ -39,8 +39,14 @@ export function getAnonymousEntries() {
 }
 export function saveAnonymousEntry(entry: any) {
   const entries = getAnonymousEntries();
-  if (entry.idempotency_key && entries.some((existing: any) => existing.idempotency_key === entry.idempotency_key)) {
-    return;
+  if (entry.idempotency_key) {
+    const idx = entries.findIndex((existing: any) => existing.idempotency_key === entry.idempotency_key);
+    if (idx >= 0) {
+      entries[idx] = { ...entries[idx], ...entry, id: entries[idx].id ?? entry.id };
+      setItem(KEYS.entries, entries);
+      window.dispatchEvent(new CustomEvent("trace-entries-changed"));
+      return;
+    }
   }
   entries.push({ ...entry, id: entry.id ?? `local-entry-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` });
   setItem(KEYS.entries, entries);

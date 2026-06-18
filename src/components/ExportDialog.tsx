@@ -153,7 +153,13 @@ const ExportDialog = ({
   };
 
   const handleConfirmTrack = async () => {
-    if (!user) return;
+    if (!user) {
+      // Signed-out users can't write to Payments — close prompt and nudge sign-in.
+      setTrackPromptOpen(false);
+      onOpenChange(false);
+      toast.info("Sign in to track exported reports in Payments.");
+      return;
+    }
     const chosen = trackGroups.filter((g) => g.selected);
     if (chosen.length === 0) {
       setTrackPromptOpen(false);

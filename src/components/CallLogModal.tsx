@@ -80,6 +80,21 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
     ? allProjectsFull.filter((p) => p.client_id === clientId).map((p) => ({ id: p.id, name: p.name }))
     : allProjectsFull.map((p) => ({ id: p.id, name: p.name }));
 
+  const applyProjectSelection = useCallback((id: string, name: string) => {
+    const selectedProject = allProjectsFull.find((project) => project.id === id);
+    const owningClient = selectedProject?.client_id
+      ? clientsFull.find((client) => client.id === selectedProject.client_id)
+      : null;
+    if (owningClient) {
+      setClientId(owningClient.id);
+      setClientName(owningClient.name);
+    }
+    setProjectId(id);
+    setProjectName(name);
+    setTaskId("");
+    setTaskName("");
+  }, [allProjectsFull, clientsFull]);
+
   const loadData = useCallback(async () => {
     if (user) {
       const [{ data: c }, { data: p }, { data: t }] = await Promise.all([
@@ -191,6 +206,7 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
         entry_type: "call", entry_date: toLocalDateKey(new Date()),
         billable, billing_status: "unbilled",
         client_id: clientId || null, project_id: projectId || null,
+        task_id: taskId || null,
         notes: notes || null, tags: null,
         rate_amount: rateNum, rate_currency: rateCurrency,
         rate_unit: rateNum != null ? rateUnit : null, billable_value: billableValue,
@@ -250,8 +266,8 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
 
           {/* Project */}
           <div><Label>Project</Label><AdaptiveCombobox items={filteredProjects} value={projectId} displayValue={projectName} placeholder="Select project (optional)" label="Project" scrollContainerRef={scrollAreaRef}
-            onSelect={(id, name) => { setProjectId(id); setProjectName(name); setTaskId(""); setTaskName(""); }}
-            onCreate={async (name) => { const c = await handleCreateProject(name); if (c) { setProjectId(c.id); setProjectName(c.name); setTaskId(""); setTaskName(""); } return c; }}
+            onSelect={applyProjectSelection}
+            onCreate={async (name) => { const c = await handleCreateProject(name); if (c) applyProjectSelection(c.id, c.name); return c; }}
           /></div>
 
           {/* Task */}

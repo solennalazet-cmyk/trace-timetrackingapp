@@ -4,7 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recha
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toLocalDateKey, getClientColor } from "@/lib/utils";
-import { getAnonymousEntries } from "@/lib/anonymous-store";
+import { getAnonymousClients, getAnonymousEntries } from "@/lib/anonymous-store";
 import { Progress } from "@/components/ui/progress";
 
 interface Entry {
@@ -81,8 +81,13 @@ const ReportsRightPanel = () => {
         }
       } else {
         const all = getAnonymousEntries();
+        const clientMap: Record<string, string> = {};
+        getAnonymousClients().forEach((c: any) => { clientMap[c.id] = c.name; });
         if (!cancelled) {
-          setEntries(all.filter((e: any) => e.entry_date >= fromKey && e.entry_date <= toKey));
+          setEntries(all
+            .filter((e: any) => e.entry_date >= fromKey && e.entry_date <= toKey)
+            .map((e: any) => ({ ...e, client_name: e.client_id ? clientMap[e.client_id] : undefined }))
+          );
         }
       }
       if (!cancelled) { setLoaded(true); isFirst = false; }

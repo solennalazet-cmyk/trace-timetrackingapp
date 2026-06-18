@@ -18,7 +18,7 @@ import SessionConflictDialog from "@/components/SessionConflictDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { toLocalDateKey } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { saveAnonymousEntry, getAnonymousEntries } from "@/lib/anonymous-store";
+import { saveAnonymousEntry, getAnonymousEntries, updateAnonymousEntry } from "@/lib/anonymous-store";
 import { toast } from "sonner";
 import { getCongratsMessage } from "@/lib/boost-challenges";
 import { makeSessionEntryKey, makeTimeEntryIdempotencyKey } from "@/lib/time-entry-idempotency";
@@ -405,6 +405,7 @@ const StartPage = () => {
     } else {
       saveAnonymousEntry(entry);
     }
+    window.dispatchEvent(new CustomEvent("trace-entries-changed"));
   };
 
   const updateEntry = async (entryId: string, assignment: AssignmentResult) => {
@@ -432,6 +433,22 @@ const StartPage = () => {
         ...(shouldResetBilling ? { billing_status: "unbilled", invoice_id: null } : {}),
       }).eq("id", entryId);
       if (error) throw error;
+    } else {
+      const updated = updateAnonymousEntry(entryId, {
+        client_id: assignment.clientId,
+        project_id: assignment.projectId,
+        task_id: assignment.taskId,
+        notes: assignment.notes || null,
+        tags: assignment.tags.length ? assignment.tags : null,
+        billable: assignment.billable,
+        rate_amount: assignment.rateAmount,
+        rate_currency: assignment.rateCurrency,
+        rate_unit: assignment.rateAmount != null ? assignment.rateUnit : null,
+        billable_value: assignment.billableValue,
+        billing_status: "unbilled",
+        invoice_id: null,
+      }, (editingEntry as any)?.idempotency_key ?? null);
+      if (!updated) throw new Error("Entry not found");
     }
   };
 

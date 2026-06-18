@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toLocalDateKey, getClientColor, SUNRISE_PALETTE } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { type RoundingSettings, DEFAULT_ROUNDING, roundDuration, roundAmount, roundedBillableValue, aggregateWithRounding, entryDisplayValues, hasActiveRounding } from "@/lib/rounding";
-import { getAnonymousEntries } from "@/lib/anonymous-store";
+import { getAnonymousClients, getAnonymousEntries, getAnonymousProjects, getAnonymousTasks, updateAnonymousEntry } from "@/lib/anonymous-store";
 import EntryDetailSheet, { type TimeEntry } from "@/components/EntryDetailSheet";
 import AssignmentModal, { type SessionData, type AssignmentResult, type ExistingEntry } from "@/components/AssignmentModal";
 import BillingDialog from "@/components/BillingDialog";
@@ -224,9 +224,20 @@ const ReportsPage = () => {
       setInvoices(inv ?? []);
     } else {
       const all = getAnonymousEntries();
+      const cm: Record<string, string> = {};
+      getAnonymousClients().forEach((x: any) => { cm[x.id] = x.name; });
+      const pm: Record<string, string> = {};
+      getAnonymousProjects().forEach((x: any) => { pm[x.id] = x.name; });
+      const tm: Record<string, string> = {};
+      getAnonymousTasks().forEach((x: any) => { tm[x.id] = x.name; });
       const rangeE = all.filter((e: any) => (e.entry_date ?? "") >= rangeStart && (e.entry_date ?? "") <= rangeEnd).map((e: any, i: number) => ({ ...e, id: e.id ?? `anon-r-${i}` }));
-      setRangeEntries(rangeE);
-      setClients({}); setProjectsMap({}); setTasksMap({}); setInvoices([]);
+      setRangeEntries(rangeE.map((e: any) => ({
+        ...e,
+        client_name: e.client_id ? cm[e.client_id] : undefined,
+        project_name: e.project_id ? pm[e.project_id] : undefined,
+        task_name: e.task_id ? tm[e.task_id] : undefined,
+      })));
+      setClients(cm); setProjectsMap(pm); setTasksMap(tm); setInvoices([]);
     }
     setLoading(false);
   }, [user, rangeStart, rangeEnd]);
@@ -447,7 +458,7 @@ const ReportsPage = () => {
   };
 
   const handleEditSave = async (_s: SessionData, a: AssignmentResult) => {
-    if (!editEntry || !user) return;
+    if (!editEntry) return;
     try {
       const shouldResetBilling =
         editEntry.client_id !== a.clientId ||
@@ -458,7 +469,7 @@ const ReportsPage = () => {
         (editEntry.rate_currency ?? "EUR") !== a.rateCurrency ||
         (editEntry.rate_unit ?? null) !== (a.rateAmount != null ? a.rateUnit : null);
 
-      await supabase.from("time_entries").update({
+      const patch = {
         client_id: a.clientId, project_id: a.projectId,
         task_id: a.taskId,
         notes: a.notes || null, tags: a.tags.length ? a.tags : null,
@@ -466,7 +477,13 @@ const ReportsPage = () => {
         rate_currency: a.rateCurrency, rate_unit: a.rateAmount != null ? a.rateUnit : null,
         billable_value: a.billableValue,
         ...(shouldResetBilling ? { billing_status: "unbilled", invoice_id: null } : {}),
-      }).eq("id", editEntry.id);
+      };
+      if (user) {
+        const { error } = await supabase.from("time_entries").update(patch).eq("id", editEntry.id).eq("user_id", user.id);
+        if (error) throw error;
+      } else if (!updateAnonymousEntry(editEntry.id, patch, (editEntry as any).idempotency_key ?? null)) {
+        throw new Error("Entry not found");
+      }
       toast.success("Entry updated.");
       setAssignOpen(false); setEditEntry(null); loadData();
     } catch { toast.error("Something went wrong."); }

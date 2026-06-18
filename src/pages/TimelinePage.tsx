@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWeekStart } from "@/contexts/WeekStartContext";
 import { toLocalDateKey, getClientColor } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { getAnonymousEntries } from "@/lib/anonymous-store";
+import { getAnonymousClients, getAnonymousEntries, getAnonymousProjects, getAnonymousTasks, updateAnonymousEntry } from "@/lib/anonymous-store";
 import EntryDetailSheet, { type TimeEntry } from "@/components/EntryDetailSheet";
 import AssignmentModal, { type SessionData, type AssignmentResult, type ExistingEntry } from "@/components/AssignmentModal";
 import PaywallModal from "@/components/PaywallModal";
@@ -161,15 +161,23 @@ const TimelinePage = () => {
       })) as TimeEntry[]);
     } else {
       const all = getAnonymousEntries();
+      const clientMap: Record<string, string> = {};
+      getAnonymousClients().forEach((x: any) => { clientMap[x.id] = x.name; });
+      const projectMap: Record<string, string> = {};
+      getAnonymousProjects().forEach((x: any) => { projectMap[x.id] = x.name; });
+      const taskMap: Record<string, string> = {};
+      getAnonymousTasks().forEach((x: any) => { taskMap[x.id] = x.name; });
       const filtered = all.filter((e: any) => {
         const d = e.entry_date ?? "";
         return d >= rangeStart && d <= rangeEnd;
       });
       setEntries(filtered.map((e: any, i: number) => ({
         ...e, id: e.id ?? `anon-${i}`,
-        client_name: undefined, project_name: undefined, task_name: undefined,
+        client_name: e.client_id ? clientMap[e.client_id] : undefined,
+        project_name: e.project_id ? projectMap[e.project_id] : undefined,
+        task_name: e.task_id ? taskMap[e.task_id] : undefined,
       })));
-      setClients({});
+      setClients(clientMap);
     }
     setLoading(false);
   }, [user, rangeStart, rangeEnd]);
@@ -277,7 +285,7 @@ const TimelinePage = () => {
   };
 
   const handleEditSave = async (_session: SessionData, assignment: AssignmentResult) => {
-    if (!editEntry || !user) return;
+    if (!editEntry) return;
     try {
       const shouldResetBilling =
         editEntry.client_id !== assignment.clientId ||
@@ -288,7 +296,7 @@ const TimelinePage = () => {
         (editEntry.rate_currency ?? "EUR") !== assignment.rateCurrency ||
         (editEntry.rate_unit ?? null) !== (assignment.rateAmount != null ? assignment.rateUnit : null);
 
-      await supabase.from("time_entries").update({
+      const patch = {
         client_id: assignment.clientId, project_id: assignment.projectId,
         task_id: assignment.taskId,
         notes: assignment.notes || null, tags: assignment.tags.length ? assignment.tags : null,
@@ -296,7 +304,13 @@ const TimelinePage = () => {
         rate_currency: assignment.rateCurrency, rate_unit: assignment.rateAmount != null ? assignment.rateUnit : null,
         billable_value: assignment.billableValue,
         ...(shouldResetBilling ? { billing_status: "unbilled", invoice_id: null } : {}),
-      }).eq("id", editEntry.id);
+      };
+      if (user) {
+        const { error } = await supabase.from("time_entries").update(patch).eq("id", editEntry.id).eq("user_id", user.id);
+        if (error) throw error;
+      } else if (!updateAnonymousEntry(editEntry.id, patch, (editEntry as any).idempotency_key ?? null)) {
+        throw new Error("Entry not found");
+      }
       toast.success("Entry updated.");
       setAssignOpen(false); setEditEntry(null); setEditSession(null);
       loadData();

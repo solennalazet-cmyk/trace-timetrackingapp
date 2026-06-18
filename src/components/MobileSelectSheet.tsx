@@ -236,7 +236,7 @@ const MobileSelectSheet = ({
               onClick={() => handleSelect(item, item.id)}
             >
               <div className="w-5 h-5 flex items-center justify-center shrink-0">
-                {value === item.id && <Check className="h-4 w-4 text-primary-text" />}
+                {value === item.id && <Check className="h-4 w-4 text-nav-bg" />}
               </div>
               <span className="truncate">{item.name}</span>
             </button>

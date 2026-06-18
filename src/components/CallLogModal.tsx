@@ -32,6 +32,7 @@ import {
 } from "@/lib/anonymous-store";
 import { toast } from "sonner";
 import { useAutoResolvedRate } from "@/hooks/useAutoResolvedRate";
+import { makeTimeEntryIdempotencyKey } from "@/lib/time-entry-idempotency";
 
 interface CallLogModalProps {
   open: boolean;
@@ -52,6 +53,7 @@ const RATE_UNITS = [
 const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
   const { user } = useAuth();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const saveKeyRef = useRef("");
 
   const [pickerHours, setPickerHours] = useState(0);
   const [pickerMinutes, setPickerMinutes] = useState(15);
@@ -101,6 +103,7 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
     setClientId(""); setClientName(""); setProjectId(""); setProjectName("");
     setTaskId(""); setTaskName(""); setNotes("");
     setBillable(true); setRateAmount(""); setRateCurrency("EUR"); setRateUnit("hour");
+    saveKeyRef.current = makeTimeEntryIdempotencyKey("call", user?.id ?? "anonymous", Date.now());
     loadData();
   }, [open, loadData]);
 
@@ -183,6 +186,7 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
       }
 
       const entry: any = {
+        idempotency_key: saveKeyRef.current,
         duration_minutes: durationMinutes, break_minutes: 0,
         entry_type: "call", entry_date: toLocalDateKey(new Date()),
         billable, billing_status: "unbilled",
@@ -193,7 +197,9 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
       };
 
       if (user) {
-        const { error } = await supabase.from("time_entries").insert({ ...entry, user_id: user.id });
+        const { error } = await supabase
+          .from("time_entries")
+          .upsert({ ...entry, user_id: user.id }, { onConflict: "user_id,idempotency_key", ignoreDuplicates: true });
         if (error) throw error;
       } else {
         saveAnonymousEntry(entry);

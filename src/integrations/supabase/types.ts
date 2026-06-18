@@ -481,6 +481,7 @@ export type Database = {
           entry_date: string | null
           entry_type: string | null
           id: string
+          idempotency_key: string | null
           invoice_id: string | null
           notes: string | null
           pause_intervals: Json
@@ -516,6 +517,7 @@ export type Database = {
           entry_date?: string | null
           entry_type?: string | null
           id?: string
+          idempotency_key?: string | null
           invoice_id?: string | null
           notes?: string | null
           pause_intervals?: Json
@@ -551,6 +553,7 @@ export type Database = {
           entry_date?: string | null
           entry_type?: string | null
           id?: string
+          idempotency_key?: string | null
           invoice_id?: string | null
           notes?: string | null
           pause_intervals?: Json

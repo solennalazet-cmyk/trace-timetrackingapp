@@ -6,9 +6,10 @@ import { Pause, Play, Square } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { playTimerSound } from "@/lib/timer-sounds";
+import { makeTimeEntryIdempotencyKey } from "@/lib/time-entry-idempotency";
 
 interface FocusModeProps {
-  onComplete: (data: { durationMinutes: number; breakMinutes: number; startedAt: string | null; pauseIntervals?: { paused_at: string; resumed_at: string | null }[] }) => void;
+  onComplete: (data: { durationMinutes: number; breakMinutes: number; startedAt: string | null; pauseIntervals?: { paused_at: string; resumed_at: string | null }[]; idempotencyKey?: string }) => void;
   autoStartMinutes?: number;
 }
 
@@ -40,7 +41,20 @@ const FocusMode = ({ onComplete, autoStartMinutes }: FocusModeProps) => {
 
   const { user } = useAuth();
   const [timerSound, setTimerSound] = useState("chime");
+  const [finishing, setFinishing] = useState(false);
   const prevStatusRef = useRef(status);
+  const focusRunKeyRef = useRef<string | null>(null);
+
+  const beginFocus = useCallback(() => {
+    const startedAt = new Date().toISOString();
+    focusRunKeyRef.current = makeTimeEntryIdempotencyKey("focus", user?.id ?? "anonymous", startedAt);
+    setFinishing(false);
+    start();
+  }, [start, user?.id]);
+
+  useEffect(() => {
+    if (status === "idle" || status === "running") setFinishing(false);
+  }, [status]);
 
   // Load sound setting
   useEffect(() => {
@@ -72,9 +86,9 @@ const FocusMode = ({ onComplete, autoStartMinutes }: FocusModeProps) => {
       autoStartedRef.current = true;
       setPreset(autoStartMinutes);
       // Small delay to let preset apply
-      setTimeout(() => start(), 50);
+      setTimeout(() => beginFocus(), 50);
     }
-  }, [autoStartMinutes, status, setPreset, start]);
+  }, [autoStartMinutes, status, setPreset, beginFocus]);
 
 
   useEffect(() => {
@@ -170,14 +184,19 @@ const FocusMode = ({ onComplete, autoStartMinutes }: FocusModeProps) => {
   }, []);
 
   const handleStop = () => {
+    if (finishing) return;
+    setFinishing(true);
     const result = stop();
-    onComplete(result);
+    onComplete({ ...result, idempotencyKey: focusRunKeyRef.current ?? makeTimeEntryIdempotencyKey("focus", user?.id ?? "anonymous", result.startedAt ?? "no-start") });
   };
 
   const handleAssign = () => {
+    if (finishing) return;
+    setFinishing(true);
     const durationMinutes = Math.round(totalSeconds / 60);
+    const idempotencyKey = focusRunKeyRef.current ?? makeTimeEntryIdempotencyKey("focus-complete", user?.id ?? "anonymous", totalSeconds, durationMinutes);
     reset();
-    onComplete({ durationMinutes, breakMinutes: 0, startedAt: null });
+    onComplete({ durationMinutes, breakMinutes: 0, startedAt: null, idempotencyKey });
   };
 
   const pauseMinutes = Math.floor(totalPausedMs / 60000);
@@ -230,7 +249,7 @@ const FocusMode = ({ onComplete, autoStartMinutes }: FocusModeProps) => {
             ))}
           </div>
           <Button
-            onClick={start}
+            onClick={beginFocus}
             className={`w-full max-w-[280px] bg-primary text-primary-foreground hover:bg-primary/90 ${BTN}`}
           >
             Start Focus
@@ -254,6 +273,7 @@ const FocusMode = ({ onComplete, autoStartMinutes }: FocusModeProps) => {
           </Button>
           <Button
             onClick={handleStop}
+            disabled={finishing}
             className={`flex-1 bg-primary text-primary-foreground hover:bg-primary/90 ${BTN}`}
           >
             <Square className="w-4 h-4 mr-2" />
@@ -274,6 +294,7 @@ const FocusMode = ({ onComplete, autoStartMinutes }: FocusModeProps) => {
           <Button
             onClick={handleStop}
             variant="outline"
+            disabled={finishing}
             className={`flex-1 text-foreground ${BTN}`}
             style={{
               background: "hsl(var(--card) / 0.85)",
@@ -288,11 +309,12 @@ const FocusMode = ({ onComplete, autoStartMinutes }: FocusModeProps) => {
 
       {status === "completed" && (
         <div className="flex gap-3 w-full max-w-[280px]">
-          <Button onClick={restart} variant="outline" className={`flex-1 ${BTN}`}>
+          <Button onClick={() => { focusRunKeyRef.current = makeTimeEntryIdempotencyKey("focus", user?.id ?? "anonymous", new Date().toISOString()); restart(); }} variant="outline" className={`flex-1 ${BTN}`}>
             Restart
           </Button>
           <Button
             onClick={handleAssign}
+            disabled={finishing}
             className={`flex-1 bg-primary text-primary-foreground hover:bg-primary/90 ${BTN}`}
           >
             Assign Work

@@ -4,15 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Pause, Play, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInHours } from "date-fns";
+import { useEffect, useState } from "react";
 
 const BTN = "rounded-[28px] h-14 text-[16px] font-bold";
 
 interface ShiftModeProps {
-  onClockOut: (data: { durationMinutes: number; breakMinutes: number; startedAt: string | null; pauseIntervals?: { paused_at: string; resumed_at: string | null }[] }) => void;
+  onClockOut: (data: { durationMinutes: number; breakMinutes: number; startedAt: string | null; pauseIntervals?: { paused_at: string; resumed_at: string | null }[]; idempotencyKey?: string }) => void;
 }
 
 const ShiftMode = ({ onClockOut }: ShiftModeProps) => {
   const { status, elapsedMs, startedAt, totalPausedMs, start, pause, resume, stop } = useTimer("shift");
+  const [stopping, setStopping] = useState(false);
 
   const handleClockIn = () => {
     start();
@@ -20,13 +22,20 @@ const ShiftMode = ({ onClockOut }: ShiftModeProps) => {
   };
 
   const handleClockOut = async () => {
+    if (stopping) return;
+    setStopping(true);
     const result = await stop();
     if (!result.success) {
       toast.error(result.error || "Failed to end shift. Please try again.");
+      setStopping(false);
       return;
     }
     onClockOut(result);
   };
+
+  useEffect(() => {
+    if (status === "idle" || status === "running") setStopping(false);
+  }, [status]);
 
   const pauseMinutes = Math.floor(totalPausedMs / 60000);
   const clockInTime = startedAt ? format(new Date(startedAt), "HH:mm") : "";
@@ -70,7 +79,7 @@ const ShiftMode = ({ onClockOut }: ShiftModeProps) => {
           <p className="text-xs text-foreground font-medium">
             Your shift has been running for over 24 hours. Did you forget to clock out?
           </p>
-          <Button size="sm" variant="outline" className="mt-2 rounded-[28px]" onClick={handleClockOut}>
+          <Button size="sm" variant="outline" className="mt-2 rounded-[28px]" onClick={handleClockOut} disabled={stopping}>
             Clock Out
           </Button>
         </div>
@@ -98,7 +107,7 @@ const ShiftMode = ({ onClockOut }: ShiftModeProps) => {
             >
               <Pause className="w-4 h-4 mr-2" /> Pause
             </Button>
-            <Button onClick={handleClockOut} className={`flex-1 bg-primary text-primary-foreground hover:bg-primary/90 ${BTN}`}>
+            <Button onClick={handleClockOut} disabled={stopping} className={`flex-1 bg-primary text-primary-foreground hover:bg-primary/90 ${BTN}`}>
               <LogOut className="w-4 h-4 mr-2" /> Clock Out
             </Button>
           </>
@@ -108,7 +117,7 @@ const ShiftMode = ({ onClockOut }: ShiftModeProps) => {
             <Button onClick={resume} className={`flex-1 bg-primary text-primary-foreground hover:bg-primary/90 ${BTN}`}>
               <Play className="w-4 h-4 mr-2" /> Resume
             </Button>
-            <Button onClick={handleClockOut} variant="outline" className={`flex-1 border-border bg-transparent text-foreground ${BTN}`}>
+            <Button onClick={handleClockOut} disabled={stopping} variant="outline" className={`flex-1 border-border bg-transparent text-foreground ${BTN}`}>
               <LogOut className="w-4 h-4 mr-2" /> Clock Out
             </Button>
           </>

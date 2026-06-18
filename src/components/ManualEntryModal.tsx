@@ -39,6 +39,7 @@ import {
 } from "@/lib/anonymous-store";
 import { toast } from "sonner";
 import { useAutoResolvedRate } from "@/hooks/useAutoResolvedRate";
+import { makeTimeEntryIdempotencyKey } from "@/lib/time-entry-idempotency";
 
 interface ManualEntryModalProps {
   open: boolean;
@@ -60,6 +61,7 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
   const { user } = useAuth();
   const hoursRef = useRef<HTMLInputElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const saveKeyRef = useRef("");
 
   const [date, setDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -122,6 +124,7 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
     setClientId(""); setClientName(""); setProjectId(""); setProjectName("");
     setTaskId(""); setTaskName(""); setNotes(""); setTags([]);
     setBillable(true); setRateAmount(""); setRateCurrency("EUR"); setRateUnit("hour");
+    saveKeyRef.current = makeTimeEntryIdempotencyKey("manual", user?.id ?? "anonymous", Date.now());
     loadData();
   }, [open, loadData]);
 
@@ -230,6 +233,7 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
       }
 
       const entry: any = {
+        idempotency_key: saveKeyRef.current,
         duration_minutes: totalMinutes,
         break_minutes: 0,
         entry_type: "manual",
@@ -249,7 +253,9 @@ const ManualEntryModal = ({ open, onOpenChange, onSaved }: ManualEntryModalProps
       };
 
       if (user) {
-        const { error } = await supabase.from("time_entries").insert({ ...entry, user_id: user.id });
+        const { error } = await supabase
+          .from("time_entries")
+          .upsert({ ...entry, user_id: user.id }, { onConflict: "user_id,idempotency_key", ignoreDuplicates: true });
         if (error) throw error;
       } else {
         saveAnonymousEntry(entry);

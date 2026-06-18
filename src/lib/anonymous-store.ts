@@ -39,6 +39,9 @@ export function getAnonymousEntries() {
 }
 export function saveAnonymousEntry(entry: any) {
   const entries = getAnonymousEntries();
+  if (entry.idempotency_key && entries.some((existing: any) => existing.idempotency_key === entry.idempotency_key)) {
+    return;
+  }
   entries.push(entry);
   setItem(KEYS.entries, entries);
 }

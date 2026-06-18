@@ -186,17 +186,35 @@ const MobileSelectSheet = ({
             </div>
           )}
 
-          {/* Add option */}
+          {/* Add option — singleton button, safe to bypass the keyboard-shift
+              suppression guard (which is there to stop list items from being
+              tapped on the wrong row after a viewport reflow). */}
           {showAddOption && (
             <button
               type="button"
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-primary-text active:bg-accent touch-manipulation select-none"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-nav-bg active:bg-accent touch-manipulation select-none"
               onPointerDown={(e) => {
-                // Capture so pointerup fires on this same button even if
-                // viewport reflows (keyboard collapse) move it under the finger.
-                armAction("create", e.currentTarget, e.pointerId);
+                e.currentTarget.setPointerCapture?.(e.pointerId);
               }}
-              onClick={() => handleCreate("create")}
+              onClick={() => {
+                if (actionLockRef.current || isCreating) return;
+                actionLockRef.current = true;
+                dismissKeyboard();
+                const name = search.trim();
+                if (!name || !onCreate) {
+                  actionLockRef.current = false;
+                  return;
+                }
+                setCreating(true);
+                onCreate(name).then((created) => {
+                  if (created) {
+                    onSelect(created.id, created.name);
+                    onOpenChange(false);
+                  }
+                  setCreating(false);
+                  if (!created) actionLockRef.current = false;
+                });
+              }}
               disabled={isCreating}
             >
               <Plus className="h-5 w-5 shrink-0" />

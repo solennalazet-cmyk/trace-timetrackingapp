@@ -49,10 +49,12 @@ const ExportDialog = ({
 }: ExportDialogProps) => {
   const { user, profile } = useAuth();
 
+  const hadPreFilter = !!clientFilter && clientFilter !== "all";
   const [format, setFormat] = useState<"pdf" | "csv">("pdf");
   const [exportFrom, setExportFrom] = useState(dateFrom);
   const [exportTo, setExportTo] = useState(dateTo);
   const [selectedClient, setSelectedClient] = useState(clientFilter || "all");
+  const [clientChosen, setClientChosen] = useState(hadPreFilter);
   const [showBusiness, setShowBusiness] = useState(profile?.show_business_on_export !== false);
 
   // Post-export tracking prompt state
@@ -76,6 +78,7 @@ const ExportDialog = ({
       setExportFrom(dateFrom);
       setExportTo(dateTo);
       setSelectedClient(clientFilter || "all");
+      setClientChosen(hadPreFilter);
       setShowBusiness(profile?.show_business_on_export !== false);
     }
     onOpenChange(v);
@@ -383,50 +386,15 @@ const ExportDialog = ({
         </DialogHeader>
 
         <div className="px-6 pb-2 space-y-5">
-          {/* Format */}
-          <div>
-            <Label className="text-xs text-muted-foreground mb-2 block">Format</Label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setFormat("pdf")}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-medium transition-colors ${
-                  format === "pdf"
-                    ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border text-muted-foreground hover:bg-muted/30"
-                }`}
-              >
-                <FileText className="w-4 h-4" /> PDF
-              </button>
-              <button
-                onClick={() => setFormat("csv")}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-medium transition-colors ${
-                  format === "csv"
-                    ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border text-muted-foreground hover:bg-muted/30"
-                }`}
-              >
-                <FileSpreadsheet className="w-4 h-4" /> CSV
-              </button>
-            </div>
-          </div>
-
-          {/* Date range */}
-          <div>
-            <Label className="text-xs text-muted-foreground mb-2 block">Date Range</Label>
-            <DateRangePicker
-              from={exportFrom}
-              to={exportTo}
-              onChange={(f, t) => { setExportFrom(f); setExportTo(t); }}
-              weekStartsOn={weekStartsOn}
-            />
-          </div>
-
-          {/* Client */}
+          {/* Client picker — shown first when no pre-filter */}
           <div>
             <Label className="text-xs text-muted-foreground mb-2 block">Client</Label>
-            <Select value={selectedClient} onValueChange={setSelectedClient}>
+            <Select
+              value={clientChosen ? selectedClient : ""}
+              onValueChange={(v) => { setSelectedClient(v); setClientChosen(true); }}
+            >
               <SelectTrigger className="rounded-xl">
-                <SelectValue />
+                <SelectValue placeholder="Select a client…" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All clients</SelectItem>
@@ -435,27 +403,74 @@ const ExportDialog = ({
                 ))}
               </SelectContent>
             </Select>
+            {!clientChosen && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Pick a client (or “All clients”) to continue.
+              </p>
+            )}
           </div>
 
-          {/* Business details toggle (PDF only) */}
-          {format === "pdf" && profile?.business_name && (
-            <div className="flex items-center justify-between">
-              <Label className="text-sm">Include my business details</Label>
-              <Switch checked={showBusiness} onCheckedChange={setShowBusiness} />
-            </div>
-          )}
+          {clientChosen && (
+            <>
+              {/* Format */}
+              <div>
+                <Label className="text-xs text-muted-foreground mb-2 block">Format</Label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setFormat("pdf")}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-medium transition-colors ${
+                      format === "pdf"
+                        ? "border-primary bg-primary/10 text-foreground"
+                        : "border-border text-muted-foreground hover:bg-muted/30"
+                    }`}
+                  >
+                    <FileText className="w-4 h-4" /> PDF
+                  </button>
+                  <button
+                    onClick={() => setFormat("csv")}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-medium transition-colors ${
+                      format === "csv"
+                        ? "border-primary bg-primary/10 text-foreground"
+                        : "border-border text-muted-foreground hover:bg-muted/30"
+                    }`}
+                  >
+                    <FileSpreadsheet className="w-4 h-4" /> CSV
+                  </button>
+                </div>
+              </div>
 
-          {/* Entry count preview */}
-          <p className="text-xs text-muted-foreground">
-            {filteredEntries.length} {filteredEntries.length === 1 ? "entry" : "entries"} in selection
-          </p>
+              {/* Date range */}
+              <div>
+                <Label className="text-xs text-muted-foreground mb-2 block">Date Range</Label>
+                <DateRangePicker
+                  from={exportFrom}
+                  to={exportTo}
+                  onChange={(f, t) => { setExportFrom(f); setExportTo(t); }}
+                  weekStartsOn={weekStartsOn}
+                />
+              </div>
+
+              {/* Business details toggle (PDF only) */}
+              {format === "pdf" && profile?.business_name && (
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Include my business details</Label>
+                  <Switch checked={showBusiness} onCheckedChange={setShowBusiness} />
+                </div>
+              )}
+
+              {/* Entry count preview */}
+              <p className="text-xs text-muted-foreground">
+                {filteredEntries.length} {filteredEntries.length === 1 ? "entry" : "entries"} in selection
+              </p>
+            </>
+          )}
         </div>
 
         <DialogFooter className="px-6 pb-6">
           <Button
             className="w-full rounded-[28px] h-12 font-bold gap-2"
             onClick={handleExport}
-            disabled={filteredEntries.length === 0}
+            disabled={!clientChosen || filteredEntries.length === 0}
           >
             <Download className="w-4 h-4" />
             Export {format.toUpperCase()}

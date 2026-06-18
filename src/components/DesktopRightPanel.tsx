@@ -3,7 +3,7 @@ import { Timer, PenLine, Clock, Phone, CircleDot } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toLocalDateKey } from "@/lib/utils";
-import { getAnonymousEntries } from "@/lib/anonymous-store";
+import { getAnonymousClients, getAnonymousEntries, getAnonymousProjects } from "@/lib/anonymous-store";
 import { formatDuration } from "@/hooks/useTimer";
 
 interface TodayEntry {
@@ -87,8 +87,17 @@ const DesktopRightPanel = () => {
         if (!cancelled) setUnassignedCount(count ?? 0);
       } else {
         const all = getAnonymousEntries();
+        const clientMap: Record<string, string> = {};
+        getAnonymousClients().forEach((c: any) => { clientMap[c.id] = c.name; });
+        const projectMap: Record<string, string> = {};
+        getAnonymousProjects().forEach((p: any) => { projectMap[p.id] = p.name; });
         if (!cancelled) {
-          setEntries(all.filter((e: any) => e.entry_date === today).map((e: any, i: number) => ({ ...e, id: e.id ?? `anon-${i}` })));
+          setEntries(all.filter((e: any) => e.entry_date === today).map((e: any, i: number) => ({
+            ...e,
+            id: e.id ?? `anon-${i}`,
+            client_name: e.client_id ? clientMap[e.client_id] : undefined,
+            project_name: e.project_id ? projectMap[e.project_id] : undefined,
+          })));
           setUnassignedCount(all.filter((e: any) => !e.client_id && !e.project_id).length);
         }
       }

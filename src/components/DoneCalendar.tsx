@@ -64,19 +64,30 @@ const DoneCalendar = () => {
   const load = useCallback(async () => {
     setLoading(true);
     if (user) {
-      const { data } = await supabase
-        .from("time_entries")
-        .select("id, duration_minutes, entry_date, client_id, project_id, task_id, billable, rate_amount, rate_unit, rate_currency, client:clients(name), project:projects(name), task:tasks(name)")
-        .eq("user_id", user.id)
-        .gte("entry_date", fromKey)
-        .lte("entry_date", toKey)
-        .is("deleted_at", null);
+      const [{ data }, { data: clientRows }, { data: projectRows }, { data: taskRows }] = await Promise.all([
+        supabase
+          .from("time_entries")
+          .select("id, duration_minutes, entry_date, client_id, project_id, task_id, billable, rate_amount, rate_unit, rate_currency")
+          .eq("user_id", user.id)
+          .gte("entry_date", fromKey)
+          .lte("entry_date", toKey)
+          .is("deleted_at", null),
+        supabase.from("clients").select("id, name").eq("user_id", user.id),
+        supabase.from("projects").select("id, name").eq("user_id", user.id),
+        supabase.from("tasks").select("id, name").eq("user_id", user.id),
+      ]);
+      const clientMap: Record<string, string> = {};
+      clientRows?.forEach((c) => { clientMap[c.id] = c.name; });
+      const projectMap: Record<string, string> = {};
+      projectRows?.forEach((p) => { projectMap[p.id] = p.name; });
+      const taskMap: Record<string, string> = {};
+      taskRows?.forEach((t) => { taskMap[t.id] = t.name; });
       setEntries(
         (data ?? []).map((e: any) => ({
           ...e,
-          client_name: (e.client as any)?.name,
-          project_name: (e.project as any)?.name,
-          task_name: (e.task as any)?.name,
+          client_name: e.client_id ? clientMap[e.client_id] : undefined,
+          project_name: e.project_id ? projectMap[e.project_id] : undefined,
+          task_name: e.task_id ? taskMap[e.task_id] : undefined,
         }))
       );
     } else {

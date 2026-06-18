@@ -132,7 +132,7 @@ const TimelinePage = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     if (user) {
-      const [{ data: e }, { data: c }] = await Promise.all([
+      const [{ data: e }, { data: c }, { data: p }, { data: t }] = await Promise.all([
         supabase.from("time_entries")
           .select("id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, billable_value, client_id, project_id, task_id, start_time, end_time")
           .eq("user_id", user.id)
@@ -149,8 +149,9 @@ const TimelinePage = () => {
       c?.forEach((x) => { clientMap[x.id] = x.name; });
       setClients(clientMap);
       const projectMap: Record<string, string> = {};
+      p?.forEach((x) => { projectMap[x.id] = x.name; });
       const taskMap: Record<string, string> = {};
-      (arguments as any);
+      t?.forEach((x) => { taskMap[x.id] = x.name; });
 
       setEntries((e ?? []).map((entry: any) => ({
         ...entry,

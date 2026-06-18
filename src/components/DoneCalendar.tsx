@@ -4,7 +4,7 @@ import { format, addMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, ad
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeekStart } from "@/contexts/WeekStartContext";
 import { supabase } from "@/integrations/supabase/client";
-import { getAnonymousEntries } from "@/lib/anonymous-store";
+import { getAnonymousClients, getAnonymousEntries, getAnonymousProjects, getAnonymousTasks } from "@/lib/anonymous-store";
 import { toLocalDateKey, getClientColor, cn } from "@/lib/utils";
 
 interface Entry {
@@ -92,7 +92,21 @@ const DoneCalendar = () => {
       );
     } else {
       const all = getAnonymousEntries();
-      setEntries(all.filter((e: any) => e.entry_date >= fromKey && e.entry_date <= toKey));
+      const clientMap: Record<string, string> = {};
+      getAnonymousClients().forEach((c: any) => { clientMap[c.id] = c.name; });
+      const projectMap: Record<string, string> = {};
+      getAnonymousProjects().forEach((p: any) => { projectMap[p.id] = p.name; });
+      const taskMap: Record<string, string> = {};
+      getAnonymousTasks().forEach((t: any) => { taskMap[t.id] = t.name; });
+      setEntries(all
+        .filter((e: any) => e.entry_date >= fromKey && e.entry_date <= toKey)
+        .map((e: any) => ({
+          ...e,
+          client_name: e.client_id ? clientMap[e.client_id] : undefined,
+          project_name: e.project_id ? projectMap[e.project_id] : undefined,
+          task_name: e.task_id ? taskMap[e.task_id] : undefined,
+        }))
+      );
     }
     setLoading(false);
   }, [user, fromKey, toKey]);

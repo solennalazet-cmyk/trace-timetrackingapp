@@ -65,14 +65,19 @@ const ReportsRightPanel = () => {
       const toKey = toLocalDateKey(to);
 
       if (user) {
-        const { data } = await supabase
-          .from("time_entries")
-          .select("duration_minutes, entry_date, billable, rate_amount, rate_unit, rate_currency, client_id, client:clients(name)")
-          .eq("user_id", user.id)
-          .gte("entry_date", fromKey).lte("entry_date", toKey)
-          .is("deleted_at", null);
+        const [{ data }, { data: clientRows }] = await Promise.all([
+          supabase
+            .from("time_entries")
+            .select("duration_minutes, entry_date, billable, rate_amount, rate_unit, rate_currency, client_id")
+            .eq("user_id", user.id)
+            .gte("entry_date", fromKey).lte("entry_date", toKey)
+            .is("deleted_at", null),
+          supabase.from("clients").select("id, name").eq("user_id", user.id),
+        ]);
+        const clientMap: Record<string, string> = {};
+        clientRows?.forEach((c) => { clientMap[c.id] = c.name; });
         if (!cancelled) {
-          setEntries((data ?? []).map((e: any) => ({ ...e, client_name: (e.client as any)?.name })));
+          setEntries((data ?? []).map((e: any) => ({ ...e, client_name: e.client_id ? clientMap[e.client_id] : undefined })));
         }
       } else {
         const all = getAnonymousEntries();

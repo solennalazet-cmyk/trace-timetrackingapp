@@ -148,19 +148,28 @@ const TodayEntriesSheet = ({ open, onOpenChange, onEntryTap }: TodayEntriesSheet
       setLoading(true);
       const today = toLocalDateKey(new Date());
       if (user) {
-        const { data } = await supabase
-          .from("time_entries")
-          .select("id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, client_id, project_id, task_id, start_time, end_time, client:clients(id, name), project:projects(id, name)")
-          .eq("user_id", user.id)
-          .eq("entry_date", today)
-          .is("deleted_at", null)
-          .order("created_at", { ascending: false });
+        const [{ data }, { data: clientRows }, { data: projectRows }] = await Promise.all([
+          supabase
+            .from("time_entries")
+            .select("id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, client_id, project_id, task_id, start_time, end_time")
+            .eq("user_id", user.id)
+            .eq("entry_date", today)
+            .is("deleted_at", null)
+            .order("created_at", { ascending: false }),
+          supabase.from("clients").select("id, name").eq("user_id", user.id),
+          supabase.from("projects").select("id, name").eq("user_id", user.id),
+        ]);
+
+        const clientMap: Record<string, string> = {};
+        clientRows?.forEach((c) => { clientMap[c.id] = c.name; });
+        const projectMap: Record<string, string> = {};
+        projectRows?.forEach((p) => { projectMap[p.id] = p.name; });
 
         if (data && data.length > 0) {
           setEntries(data.map((e: any) => ({
             ...e,
-            client_name: (e.client as any)?.name ?? undefined,
-            project_name: (e.project as any)?.name ?? undefined,
+            client_name: e.client_id ? clientMap[e.client_id] : undefined,
+            project_name: e.project_id ? projectMap[e.project_id] : undefined,
           })));
         } else {
           setEntries([]);

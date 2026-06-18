@@ -132,26 +132,32 @@ const TimelinePage = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     if (user) {
-      const [{ data: e }, { data: c }] = await Promise.all([
+      const [{ data: e }, { data: c }, { data: p }, { data: t }] = await Promise.all([
         supabase.from("time_entries")
-          .select("id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, billable_value, client_id, project_id, task_id, start_time, end_time, client:clients(id, name), project:projects(id, name), task:tasks(id, name)")
+          .select("id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, billable_value, client_id, project_id, task_id, start_time, end_time")
           .eq("user_id", user.id)
           .gte("entry_date", rangeStart)
           .lte("entry_date", rangeEnd)
           .is("deleted_at", null)
           .order("start_time", { ascending: true }),
         supabase.from("clients").select("id, name").eq("user_id", user.id),
+        supabase.from("projects").select("id, name").eq("user_id", user.id),
+        supabase.from("tasks").select("id, name").eq("user_id", user.id),
       ]);
 
       const clientMap: Record<string, string> = {};
       c?.forEach((x) => { clientMap[x.id] = x.name; });
       setClients(clientMap);
+      const projectMap: Record<string, string> = {};
+      p?.forEach((x) => { projectMap[x.id] = x.name; });
+      const taskMap: Record<string, string> = {};
+      t?.forEach((x) => { taskMap[x.id] = x.name; });
 
       setEntries((e ?? []).map((entry: any) => ({
         ...entry,
-        client_name: (entry.client as any)?.name ?? undefined,
-        project_name: (entry.project as any)?.name ?? undefined,
-        task_name: (entry.task as any)?.name ?? undefined,
+        client_name: entry.client_id ? clientMap[entry.client_id] : undefined,
+        project_name: entry.project_id ? projectMap[entry.project_id] : undefined,
+        task_name: entry.task_id ? taskMap[entry.task_id] : undefined,
       })) as TimeEntry[]);
     } else {
       const all = getAnonymousEntries();

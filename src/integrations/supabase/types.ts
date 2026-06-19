@@ -432,6 +432,7 @@ export type Database = {
       }
       tasks: {
         Row: {
+          client_id: string | null
           created_at: string | null
           id: string
           name: string
@@ -439,6 +440,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          client_id?: string | null
           created_at?: string | null
           id?: string
           name: string
@@ -446,6 +448,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          client_id?: string | null
           created_at?: string | null
           id?: string
           name?: string
@@ -453,6 +456,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_project_id_fkey"
             columns: ["project_id"]

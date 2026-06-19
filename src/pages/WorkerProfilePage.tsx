@@ -105,6 +105,26 @@ const WorkerProfilePage = () => {
     return (data?.invite_token as string) ?? null;
   };
 
+  const handleDisconnect = async () => {
+    if (!worker || !user) return;
+    // Clear the connection link and any pending invite for this freelancer.
+    const { error } = await supabase
+      .from("clients")
+      .update({ connected_user_id: null } as any)
+      .eq("id", worker.id);
+    if (error) { toast.error(error.message); return; }
+    if (worker.email) {
+      await supabase
+        .from("worker_invites")
+        .delete()
+        .eq("employer_user_id", user.id)
+        .eq("invited_email", worker.email.toLowerCase())
+        .eq("status", "pending");
+    }
+    toast.success("Disconnected.");
+    load();
+  };
+
   const handleDelete = async () => {
     if (!worker) return;
     setDeleting(true);

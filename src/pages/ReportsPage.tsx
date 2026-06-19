@@ -17,6 +17,7 @@ import { toLocalDateKey, getClientColor, SUNRISE_PALETTE } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { type RoundingSettings, DEFAULT_ROUNDING, roundDuration, roundAmount, roundedBillableValue, aggregateWithRounding, entryDisplayValues, hasActiveRounding } from "@/lib/rounding";
 import { getAnonymousClients, getAnonymousEntries, getAnonymousProjects, getAnonymousTasks, updateAnonymousEntry } from "@/lib/anonymous-store";
+import { buildProjectClientMap, enrichEntryAssignment } from "@/lib/entry-assignment";
 import EntryDetailSheet, { type TimeEntry } from "@/components/EntryDetailSheet";
 import AssignmentModal, { type SessionData, type AssignmentResult, type ExistingEntry } from "@/components/AssignmentModal";
 import BillingDialog from "@/components/BillingDialog";
@@ -202,7 +203,7 @@ const ReportsPage = () => {
         supabase.from("time_entries").select(entrySelect)
           .eq("user_id", user.id).gte("entry_date", rangeStart).lte("entry_date", rangeEnd).is("deleted_at", null).order("entry_date", { ascending: false }),
         supabase.from("clients").select("id, name").eq("user_id", user.id),
-        supabase.from("projects").select("id, name").eq("user_id", user.id),
+        supabase.from("projects").select("id, name, client_id").eq("user_id", user.id),
         supabase.from("tasks").select("id, name").eq("user_id", user.id),
         supabase.from("invoices").select("id, client_id, total_amount, currency, date_range_start, date_range_end, status, sent_at, paid_at, created_at")
           .eq("user_id", user.id).order("created_at", { ascending: false }).limit(20),
@@ -211,14 +212,10 @@ const ReportsPage = () => {
       const cm: Record<string, string> = {}; c?.forEach((x) => { cm[x.id] = x.name; });
       const pm: Record<string, string> = {}; p?.forEach((x) => { pm[x.id] = x.name; });
       const tm: Record<string, string> = {}; t?.forEach((x) => { tm[x.id] = x.name; });
+      const pcm = buildProjectClientMap((p ?? []) as { id: string; client_id: string | null }[]);
       setClients(cm); setProjectsMap(pm); setTasksMap(tm);
 
-      const enrich = (entries: any[]) => entries.map((e: any) => ({
-        ...e,
-        client_name: e.client_id ? cm[e.client_id] : undefined,
-        project_name: e.project_id ? pm[e.project_id] : undefined,
-        task_name: e.task_id ? tm[e.task_id] : undefined,
-      }));
+      const enrich = (entries: any[]) => entries.map((e: any) => enrichEntryAssignment(e, cm, pm, tm, pcm));
 
       setRangeEntries(enrich(re ?? []) as TimeEntry[]);
       setInvoices(inv ?? []);
@@ -227,16 +224,13 @@ const ReportsPage = () => {
       const cm: Record<string, string> = {};
       getAnonymousClients().forEach((x: any) => { cm[x.id] = x.name; });
       const pm: Record<string, string> = {};
-      getAnonymousProjects().forEach((x: any) => { pm[x.id] = x.name; });
+      const anonProjects = getAnonymousProjects();
+      anonProjects.forEach((x: any) => { pm[x.id] = x.name; });
       const tm: Record<string, string> = {};
       getAnonymousTasks().forEach((x: any) => { tm[x.id] = x.name; });
+      const pcm = buildProjectClientMap(anonProjects);
       const rangeE = all.filter((e: any) => (e.entry_date ?? "") >= rangeStart && (e.entry_date ?? "") <= rangeEnd).map((e: any, i: number) => ({ ...e, id: e.id ?? `anon-r-${i}` }));
-      setRangeEntries(rangeE.map((e: any) => ({
-        ...e,
-        client_name: e.client_id ? cm[e.client_id] : undefined,
-        project_name: e.project_id ? pm[e.project_id] : undefined,
-        task_name: e.task_id ? tm[e.task_id] : undefined,
-      })));
+      setRangeEntries(rangeE.map((e: any) => enrichEntryAssignment(e, cm, pm, tm, pcm)));
       setClients(cm); setProjectsMap(pm); setTasksMap(tm); setInvoices([]);
     }
     setLoading(false);

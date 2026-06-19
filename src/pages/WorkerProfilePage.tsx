@@ -105,6 +105,26 @@ const WorkerProfilePage = () => {
     return (data?.invite_token as string) ?? null;
   };
 
+  const handleDisconnect = async () => {
+    if (!worker || !user) return;
+    // Clear the connection link and any pending invite for this freelancer.
+    const { error } = await supabase
+      .from("clients")
+      .update({ connected_user_id: null } as any)
+      .eq("id", worker.id);
+    if (error) { toast.error(error.message); return; }
+    if (worker.email) {
+      await supabase
+        .from("worker_invites")
+        .delete()
+        .eq("employer_user_id", user.id)
+        .eq("invited_email", worker.email.toLowerCase())
+        .eq("status", "pending");
+    }
+    toast.success("Disconnected.");
+    load();
+  };
+
   const handleDelete = async () => {
     if (!worker) return;
     setDeleting(true);
@@ -160,17 +180,54 @@ const WorkerProfilePage = () => {
         <ArrowLeft className="w-3.5 h-3.5" /> Freelancers
       </button>
 
-      <button onClick={() => setEditorOpen("role")} className="w-full text-left">
-        <header className="flex items-center gap-4 pt-1 group">
-          <div className="h-16 w-16 rounded-full bg-foreground/10 text-foreground flex items-center justify-center text-2xl font-semibold shrink-0">
-            {initials(worker.name)}
-          </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-bold tracking-tight truncate">{name}</h1>
-            <p className="text-sm text-muted-foreground truncate group-hover:text-foreground transition-colors">{role} <span className="text-muted-foreground/60">· tap to edit</span></p>
-          </div>
-        </header>
-      </button>
+      <div className="pt-1">
+        <button onClick={() => setEditorOpen("role")} className="w-full text-left">
+          <header className="flex items-center gap-4 group">
+            <div className="h-16 w-16 rounded-full bg-foreground/10 text-foreground flex items-center justify-center text-2xl font-semibold shrink-0">
+              {initials(worker.name)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl font-bold tracking-tight truncate">{name}</h1>
+              <p className="text-sm text-muted-foreground truncate group-hover:text-foreground transition-colors">{role} <span className="text-muted-foreground/60">· tap to edit</span></p>
+            </div>
+          </header>
+        </button>
+        {/* Discrete Trace-connection CTA */}
+        <div className="mt-2 ml-20 flex items-center gap-1.5 text-[11px] flex-wrap">
+          {connected ? (
+            <>
+              <CheckCircle2 className="w-3 h-3 text-nav-bg shrink-0" />
+              <span className="text-muted-foreground">Connected on Trace</span>
+              <span className="text-muted-foreground/50">·</span>
+              <button
+                onClick={handleDisconnect}
+                className="text-muted-foreground hover:text-destructive underline-offset-2 hover:underline"
+              >
+                Disconnect
+              </button>
+            </>
+          ) : invitePending ? (
+            <>
+              <Send className="w-3 h-3 text-muted-foreground shrink-0" />
+              <span className="text-muted-foreground">Invite pending</span>
+              <span className="text-muted-foreground/50">·</span>
+              <button
+                onClick={() => setInviteOpen(true)}
+                className="text-foreground hover:underline underline-offset-2"
+              >
+                Manage
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setInviteOpen(true)}
+              className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+            >
+              <Send className="w-3 h-3" /> Invite to Trace
+            </button>
+          )}
+        </div>
+      </div>
 
       <div className="space-y-2.5">
         {cards.map(({ kind, Icon, title, summary }) => (
@@ -206,33 +263,8 @@ const WorkerProfilePage = () => {
           employerUserId={user?.id ?? ""}
         />
 
-        {/* Connection / invite card */}
-        <button
-          className="w-full text-left"
-          onClick={() => { if (!connected) setInviteOpen(true); }}
-          disabled={connected}
-        >
-          <Card className="p-4 hover:bg-muted/40 transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-foreground/10 flex items-center justify-center shrink-0">
-                {connected ? <CheckCircle2 className="w-4 h-4 text-foreground" /> : <Send className="w-4 h-4 text-foreground" />}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">
-                  {connected ? "Connected on Trace" : invitePending ? "Invite pending" : "Invite to Trace"}
-                </p>
-                <p className="text-xs text-muted-foreground truncate mt-0.5">
-                  {connected
-                    ? "They can log time and submit reports to you."
-                    : invitePending
-                      ? `Waiting for ${worker.email ?? "them"} to sign up.`
-                      : "Send them an email to connect their account."}
-                </p>
-              </div>
-              {!connected && <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
-            </div>
-          </Card>
-        </button>
+
+
 
         {/* Danger zone */}
         <div className="pt-4">

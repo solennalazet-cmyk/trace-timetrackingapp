@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Timer, FolderOpen, BarChart3, Smartphone, ChevronDown, ShieldCheck } from "lucide-react";
+import { Timer, FolderOpen, BarChart3, Smartphone, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface HowTraceWorksModalProps {
@@ -17,23 +17,18 @@ interface HowTraceWorksModalProps {
 const steps = [
   {
     icon: Timer,
-    title: "Just hit Start — you've got this",
-    description: "No setup, no friction. Capture the work as it happens.",
+    title: "Start instantly",
+    description: "Tap Start to begin. No setup needed.",
   },
   {
     icon: FolderOpen,
-    title: "Tidy up whenever",
-    description: "Assign client, project and notes after the session. Your flow comes first.",
+    title: "Assign later",
+    description: "Add client, project, notes after the session.",
   },
   {
     icon: BarChart3,
-    title: "Turn time into income",
-    description: "Watch your hours add up in Reports and bill with confidence.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Sign up to keep it safe",
-    description: "Create a free account to secure your tracked reports, sync across devices and never lose a minute of work.",
+    title: "Track and bill",
+    description: "See your time in Reports. Invoice when ready.",
   },
 ];
 

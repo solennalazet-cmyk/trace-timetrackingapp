@@ -40,6 +40,8 @@ interface Props {
   initial: Initial;
   onClose: () => void;
   onSaved: () => void;
+  /** Optional override: if provided, called with the field payload instead of writing to Supabase. */
+  onSave?: (payload: Record<string, any>) => Promise<void> | void;
 }
 
 const FIELDS: Record<AccountEditorKind, { title: string; subtitle: string; fields: EditorField[] }> = {

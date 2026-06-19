@@ -243,33 +243,8 @@ const WorkerProfilePage = () => {
           employerUserId={user?.id ?? ""}
         />
 
-        {/* Connection / invite card */}
-        <button
-          className="w-full text-left"
-          onClick={() => { if (!connected) setInviteOpen(true); }}
-          disabled={connected}
-        >
-          <Card className="p-4 hover:bg-muted/40 transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-foreground/10 flex items-center justify-center shrink-0">
-                {connected ? <CheckCircle2 className="w-4 h-4 text-foreground" /> : <Send className="w-4 h-4 text-foreground" />}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">
-                  {connected ? "Connected on Trace" : invitePending ? "Invite pending" : "Invite to Trace"}
-                </p>
-                <p className="text-xs text-muted-foreground truncate mt-0.5">
-                  {connected
-                    ? "They can log time and submit reports to you."
-                    : invitePending
-                      ? `Waiting for ${worker.email ?? "them"} to sign up.`
-                      : "Send them an email to connect their account."}
-                </p>
-              </div>
-              {!connected && <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
-            </div>
-          </Card>
-        </button>
+
+
 
         {/* Danger zone */}
         <div className="pt-4">

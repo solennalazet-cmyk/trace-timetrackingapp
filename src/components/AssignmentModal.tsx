@@ -166,11 +166,11 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
       const [{ data: c }, { data: p }, { data: t }] = await Promise.all([
         supabase.from("clients").select("id, name, default_rate, currency").eq("user_id", user.id),
         supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", user.id),
-        supabase.from("tasks").select("id, name").eq("user_id", user.id),
+        supabase.from("tasks").select("id, name, project_id").eq("user_id", user.id),
       ]);
       setClientsFull((c ?? []) as ClientFull[]);
       setAllProjectsFull((p ?? []) as ProjectFull[]);
-      setTasks((t ?? []).map((x) => ({ id: x.id, name: x.name })));
+      setTasks((t ?? []).map((x: any) => ({ id: x.id, name: x.name, project_id: x.project_id ?? null })));
 
       const { data: tagEntries } = await supabase
         .from("time_entries")

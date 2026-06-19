@@ -440,6 +440,26 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                 )
               ) : (
                 <form onSubmit={handleLogin} className="space-y-3">
+                  {needsConfirmEmail && (
+                    <div className="p-3 rounded-lg bg-primary/10 text-sm text-foreground space-y-2">
+                      <p>
+                        Please confirm your email — we sent a link to{" "}
+                        <span className="font-medium">{needsConfirmEmail}</span>.
+                      </p>
+                      <button
+                        type="button"
+                        className="underline font-medium disabled:opacity-50"
+                        disabled={resending || resendCooldown > 0}
+                        onClick={() => handleResendConfirmation(needsConfirmEmail)}
+                      >
+                        {resending
+                          ? "Resending…"
+                          : resendCooldown > 0
+                            ? `Resend in ${resendCooldown}s`
+                            : "Resend confirmation email"}
+                      </button>
+                    </div>
+                  )}
                   <div>
                     <Label htmlFor="loginEmail">Email</Label>
                     <Input id="loginEmail" type="email" className="h-10 rounded-xl" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />

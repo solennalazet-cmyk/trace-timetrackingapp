@@ -4,7 +4,8 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recha
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toLocalDateKey, getClientColor } from "@/lib/utils";
-import { getAnonymousClients, getAnonymousEntries } from "@/lib/anonymous-store";
+import { getAnonymousClients, getAnonymousEntries, getAnonymousProjects } from "@/lib/anonymous-store";
+import { buildProjectClientMap, resolveEntryClientId } from "@/lib/entry-assignment";
 import { Progress } from "@/components/ui/progress";
 
 interface Entry {
@@ -15,6 +16,7 @@ interface Entry {
   rate_unit: string | null;
   rate_currency: string | null;
   client_id: string | null;
+  project_id: string | null;
   client_name?: string;
 }
 
@@ -65,28 +67,37 @@ const ReportsRightPanel = () => {
       const toKey = toLocalDateKey(to);
 
       if (user) {
-        const [{ data }, { data: clientRows }] = await Promise.all([
+        const [{ data }, { data: clientRows }, { data: projectRows }] = await Promise.all([
           supabase
             .from("time_entries")
-            .select("duration_minutes, entry_date, billable, rate_amount, rate_unit, rate_currency, client_id")
+            .select("duration_minutes, entry_date, billable, rate_amount, rate_unit, rate_currency, client_id, project_id")
             .eq("user_id", user.id)
             .gte("entry_date", fromKey).lte("entry_date", toKey)
             .is("deleted_at", null),
           supabase.from("clients").select("id, name").eq("user_id", user.id),
+          supabase.from("projects").select("id, client_id").eq("user_id", user.id),
         ]);
         const clientMap: Record<string, string> = {};
         clientRows?.forEach((c) => { clientMap[c.id] = c.name; });
+        const projectClientMap = buildProjectClientMap((projectRows ?? []) as { id: string; client_id: string | null }[]);
         if (!cancelled) {
-          setEntries((data ?? []).map((e: any) => ({ ...e, client_name: e.client_id ? clientMap[e.client_id] : undefined })));
+          setEntries((data ?? []).map((e: any) => {
+            const clientId = resolveEntryClientId(e, projectClientMap);
+            return { ...e, client_id: clientId, client_name: clientId ? clientMap[clientId] : undefined };
+          }));
         }
       } else {
         const all = getAnonymousEntries();
         const clientMap: Record<string, string> = {};
         getAnonymousClients().forEach((c: any) => { clientMap[c.id] = c.name; });
+        const projectClientMap = buildProjectClientMap(getAnonymousProjects());
         if (!cancelled) {
           setEntries(all
             .filter((e: any) => e.entry_date >= fromKey && e.entry_date <= toKey)
-            .map((e: any) => ({ ...e, client_name: e.client_id ? clientMap[e.client_id] : undefined }))
+            .map((e: any) => {
+              const clientId = resolveEntryClientId(e, projectClientMap);
+              return { ...e, client_id: clientId, client_name: clientId ? clientMap[clientId] : undefined };
+            })
           );
         }
       }

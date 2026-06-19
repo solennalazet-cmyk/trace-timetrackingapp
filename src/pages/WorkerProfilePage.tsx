@@ -160,17 +160,54 @@ const WorkerProfilePage = () => {
         <ArrowLeft className="w-3.5 h-3.5" /> Freelancers
       </button>
 
-      <button onClick={() => setEditorOpen("role")} className="w-full text-left">
-        <header className="flex items-center gap-4 pt-1 group">
-          <div className="h-16 w-16 rounded-full bg-foreground/10 text-foreground flex items-center justify-center text-2xl font-semibold shrink-0">
-            {initials(worker.name)}
-          </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-bold tracking-tight truncate">{name}</h1>
-            <p className="text-sm text-muted-foreground truncate group-hover:text-foreground transition-colors">{role} <span className="text-muted-foreground/60">· tap to edit</span></p>
-          </div>
-        </header>
-      </button>
+      <div className="pt-1">
+        <button onClick={() => setEditorOpen("role")} className="w-full text-left">
+          <header className="flex items-center gap-4 group">
+            <div className="h-16 w-16 rounded-full bg-foreground/10 text-foreground flex items-center justify-center text-2xl font-semibold shrink-0">
+              {initials(worker.name)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl font-bold tracking-tight truncate">{name}</h1>
+              <p className="text-sm text-muted-foreground truncate group-hover:text-foreground transition-colors">{role} <span className="text-muted-foreground/60">· tap to edit</span></p>
+            </div>
+          </header>
+        </button>
+        {/* Discrete Trace-connection CTA */}
+        <div className="mt-2 ml-20 flex items-center gap-1.5 text-[11px] flex-wrap">
+          {connected ? (
+            <>
+              <CheckCircle2 className="w-3 h-3 text-nav-bg shrink-0" />
+              <span className="text-muted-foreground">Connected on Trace</span>
+              <span className="text-muted-foreground/50">·</span>
+              <button
+                onClick={handleDisconnect}
+                className="text-muted-foreground hover:text-destructive underline-offset-2 hover:underline"
+              >
+                Disconnect
+              </button>
+            </>
+          ) : invitePending ? (
+            <>
+              <Send className="w-3 h-3 text-muted-foreground shrink-0" />
+              <span className="text-muted-foreground">Invite pending</span>
+              <span className="text-muted-foreground/50">·</span>
+              <button
+                onClick={() => setInviteOpen(true)}
+                className="text-foreground hover:underline underline-offset-2"
+              >
+                Manage
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setInviteOpen(true)}
+              className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+            >
+              <Send className="w-3 h-3" /> Invite to Trace
+            </button>
+          )}
+        </div>
+      </div>
 
       <div className="space-y-2.5">
         {cards.map(({ kind, Icon, title, summary }) => (

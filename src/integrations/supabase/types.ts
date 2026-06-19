@@ -827,6 +827,10 @@ export type Database = {
     }
     Functions: {
       can_access_submission: { Args: { _sub_id: string }; Returns: boolean }
+      decline_client_invite: {
+        Args: { _invite_id: string }
+        Returns: undefined
+      }
       email_matches_auth_user: { Args: { _email: string }; Returns: boolean }
     }
     Enums: {

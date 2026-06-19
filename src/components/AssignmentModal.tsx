@@ -132,7 +132,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
   const [clientsFull, setClientsFull] = useState<ClientFull[]>([]);
   const [allProjectsFull, setAllProjectsFull] = useState<ProjectFull[]>([]);
-  const [tasks, setTasks] = useState<Array<ComboboxItem & { project_id: string | null }>>([]);
+  const [tasks, setTasks] = useState<Array<ComboboxItem & { project_id: string | null; client_id: string | null }>>([]);
   const [allTags, setAllTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [taskList, setTaskList] = useState<TaskItem[]>([]);
@@ -146,8 +146,8 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     : allProjectsFull.map((p) => ({ id: p.id, name: p.name }));
 
   // Only suggest tasks already linked to the selected project. If only a client is
-  // selected, suggest tasks linked to any of that client's projects. If neither is
-  // selected, only show legacy/unscoped tasks (project_id = null).
+  // selected, suggest tasks linked to that client directly or to any of its projects.
+  // If neither is selected, only show legacy/unscoped tasks.
   const filteredTasks: ComboboxItem[] = (() => {
     const projectIdsForClient = clientId
       ? new Set(allProjectsFull.filter((p) => p.client_id === clientId).map((p) => p.id))
@@ -155,8 +155,11 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     return tasks
       .filter((t) => {
         if (projectId) return t.project_id === projectId;
-        if (projectIdsForClient) return t.project_id != null && projectIdsForClient.has(t.project_id);
-        return t.project_id == null;
+        if (clientId) {
+          if (t.client_id === clientId) return true;
+          return t.project_id != null && projectIdsForClient!.has(t.project_id);
+        }
+        return t.project_id == null && t.client_id == null;
       })
       .map((t) => ({ id: t.id, name: t.name }));
   })();

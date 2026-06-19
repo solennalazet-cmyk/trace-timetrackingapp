@@ -375,21 +375,30 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
   };
 
   const handleCreateTask = async (name: string): Promise<ComboboxItem | null> => {
+    const scopedProjectId = projectId || null;
     if (user) {
-      const { data: existing } = await supabase.from("tasks").select("id, name")
-        .eq("user_id", user.id).ilike("name", name).maybeSingle();
+      let query = supabase.from("tasks").select("id, name, project_id")
+        .eq("user_id", user.id).ilike("name", name);
+      query = scopedProjectId
+        ? query.eq("project_id", scopedProjectId)
+        : query.is("project_id", null);
+      const { data: existing } = await query.maybeSingle();
       if (existing) {
-        setTasks((prev) => prev.some((t) => t.id === existing.id) ? prev : [...prev, existing]);
+        setTasks((prev) => prev.some((t) => t.id === existing.id)
+          ? prev
+          : [...prev, { id: existing.id, name: existing.name, project_id: (existing as any).project_id ?? null }]);
         return { id: existing.id, name: existing.name };
       }
-      const { data, error } = await supabase.from("tasks").insert({ name, user_id: user.id }).select("id, name").single();
+      const { data, error } = await supabase.from("tasks")
+        .insert({ name, user_id: user.id, project_id: scopedProjectId })
+        .select("id, name, project_id").single();
       if (error || !data) return null;
-      setTasks((prev) => [...prev, { id: data.id, name: data.name }]);
+      setTasks((prev) => [...prev, { id: data.id, name: data.name, project_id: (data as any).project_id ?? null }]);
       return { id: data.id, name: data.name };
     } else {
       const id = `local-${Date.now()}`;
-      saveAnonymousTask({ id, name });
-      setTasks((prev) => [...prev, { id, name }]);
+      saveAnonymousTask({ id, name, project_id: scopedProjectId });
+      setTasks((prev) => [...prev, { id, name, project_id: scopedProjectId }]);
       return { id, name };
     }
   };

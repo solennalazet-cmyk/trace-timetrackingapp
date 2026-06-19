@@ -289,7 +289,47 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
       }}
     >
       <DialogContent className="max-w-[380px] rounded-2xl p-0 overflow-hidden">
-        <Tabs value={tab} onValueChange={(v) => { setTab(v); setError(""); setShowForgot(false); resetTurnstile(); }} className="w-full">
+        {pendingConfirmEmail ? (
+          <div className="px-6 py-8 text-center space-y-4">
+            <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <Mail className="w-6 h-6 text-foreground" />
+            </div>
+            <h2 className="text-lg font-semibold text-foreground">Check your inbox</h2>
+            <p className="text-sm text-muted-foreground">
+              We sent a confirmation link to <span className="font-medium text-foreground">{pendingConfirmEmail}</span>. Click it to activate your account, then come back here to log in.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Your tracked work is safe on this device while you confirm.
+            </p>
+            {renderTurnstile()}
+            <div className="flex flex-col gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="w-full rounded-[28px] h-11"
+                onClick={() => handleResendConfirmation(pendingConfirmEmail)}
+                disabled={resending || resendCooldown > 0 || (hasTurnstile && !turnstileToken)}
+              >
+                {resending
+                  ? "Resending…"
+                  : resendCooldown > 0
+                    ? `Resend in ${resendCooldown}s`
+                    : "Resend confirmation email"}
+              </Button>
+              <button
+                type="button"
+                className="text-sm text-muted-foreground underline"
+                onClick={() => {
+                  setPendingConfirmEmail(null);
+                  setTab("login");
+                  setLoginEmail(pendingConfirmEmail);
+                }}
+              >
+                Back to Log In
+              </button>
+            </div>
+          </div>
+        ) : (
+        <Tabs value={tab} onValueChange={(v) => { setTab(v); setError(""); setShowForgot(false); resetTurnstile(); setNeedsConfirmEmail(null); }} className="w-full">
           <div className="px-6 pt-6">
             <TabsList className="w-full grid grid-cols-2">
               <TabsTrigger value="signup">Sign Up</TabsTrigger>

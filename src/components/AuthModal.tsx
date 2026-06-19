@@ -382,6 +382,9 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
             {/* Sign Up Tab */}
             <TabsContent value="signup" className="mt-0">
               <form onSubmit={handleSignUp} className="space-y-3">
+                <p className="text-xs text-muted-foreground -mt-1">
+                  We'll send a confirmation link to your email — you'll need to click it to activate your account.
+                </p>
                 <div>
                   <Label htmlFor="fullName">Full Name</Label>
                   <Input id="fullName" className="h-10 rounded-xl" value={fullName} onChange={(e) => setFullName(e.target.value)} required />

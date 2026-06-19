@@ -132,7 +132,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
   const [clientsFull, setClientsFull] = useState<ClientFull[]>([]);
   const [allProjectsFull, setAllProjectsFull] = useState<ProjectFull[]>([]);
-  const [tasks, setTasks] = useState<Array<ComboboxItem & { project_id: string | null }>>([]);
+  const [tasks, setTasks] = useState<Array<ComboboxItem & { project_id: string | null; client_id: string | null }>>([]);
   const [allTags, setAllTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [taskList, setTaskList] = useState<TaskItem[]>([]);
@@ -146,8 +146,8 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     : allProjectsFull.map((p) => ({ id: p.id, name: p.name }));
 
   // Only suggest tasks already linked to the selected project. If only a client is
-  // selected, suggest tasks linked to any of that client's projects. If neither is
-  // selected, only show legacy/unscoped tasks (project_id = null).
+  // selected, suggest tasks linked to that client directly or to any of its projects.
+  // If neither is selected, only show legacy/unscoped tasks.
   const filteredTasks: ComboboxItem[] = (() => {
     const projectIdsForClient = clientId
       ? new Set(allProjectsFull.filter((p) => p.client_id === clientId).map((p) => p.id))
@@ -155,8 +155,11 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     return tasks
       .filter((t) => {
         if (projectId) return t.project_id === projectId;
-        if (projectIdsForClient) return t.project_id != null && projectIdsForClient.has(t.project_id);
-        return t.project_id == null;
+        if (clientId) {
+          if (t.client_id === clientId) return true;
+          return t.project_id != null && projectIdsForClient!.has(t.project_id);
+        }
+        return t.project_id == null && t.client_id == null;
       })
       .map((t) => ({ id: t.id, name: t.name }));
   })();
@@ -166,11 +169,11 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
       const [{ data: c }, { data: p }, { data: t }] = await Promise.all([
         supabase.from("clients").select("id, name, default_rate, currency").eq("user_id", user.id),
         supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", user.id),
-        supabase.from("tasks").select("id, name, project_id").eq("user_id", user.id),
+        supabase.from("tasks").select("id, name, project_id, client_id").eq("user_id", user.id),
       ]);
       setClientsFull((c ?? []) as ClientFull[]);
       setAllProjectsFull((p ?? []) as ProjectFull[]);
-      setTasks((t ?? []).map((x: any) => ({ id: x.id, name: x.name, project_id: x.project_id ?? null })));
+      setTasks((t ?? []).map((x: any) => ({ id: x.id, name: x.name, project_id: x.project_id ?? null, client_id: x.client_id ?? null })));
 
       const { data: tagEntries } = await supabase
         .from("time_entries")
@@ -187,7 +190,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
       const ap = getAnonymousProjects();
       setAllProjectsFull(ap.map((p: any) => ({ id: p.id, name: p.name, client_id: p.client_id ?? null, rate: p.rate ?? null, currency: p.currency ?? null })));
       const at = getAnonymousTasks();
-      setTasks(at.map((t: any) => ({ id: t.id, name: t.name, project_id: t.project_id ?? null })));
+      setTasks(at.map((t: any) => ({ id: t.id, name: t.name, project_id: t.project_id ?? null, client_id: t.client_id ?? null })));
       setAllTags([]);
     }
   }, [user]);
@@ -376,29 +379,34 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
   const handleCreateTask = async (name: string): Promise<ComboboxItem | null> => {
     const scopedProjectId = projectId || null;
+    const scopedClientId = scopedProjectId ? null : (clientId || null);
     if (user) {
-      let query = supabase.from("tasks").select("id, name, project_id")
+      let query = supabase.from("tasks").select("id, name, project_id, client_id")
         .eq("user_id", user.id).ilike("name", name);
-      query = scopedProjectId
-        ? query.eq("project_id", scopedProjectId)
-        : query.is("project_id", null);
+      if (scopedProjectId) {
+        query = query.eq("project_id", scopedProjectId);
+      } else if (scopedClientId) {
+        query = query.is("project_id", null).eq("client_id", scopedClientId);
+      } else {
+        query = query.is("project_id", null).is("client_id", null);
+      }
       const { data: existing } = await query.maybeSingle();
       if (existing) {
         setTasks((prev) => prev.some((t) => t.id === existing.id)
           ? prev
-          : [...prev, { id: existing.id, name: existing.name, project_id: (existing as any).project_id ?? null }]);
+          : [...prev, { id: existing.id, name: existing.name, project_id: (existing as any).project_id ?? null, client_id: (existing as any).client_id ?? null }]);
         return { id: existing.id, name: existing.name };
       }
       const { data, error } = await supabase.from("tasks")
-        .insert({ name, user_id: user.id, project_id: scopedProjectId })
-        .select("id, name, project_id").single();
+        .insert({ name, user_id: user.id, project_id: scopedProjectId, client_id: scopedClientId })
+        .select("id, name, project_id, client_id").single();
       if (error || !data) return null;
-      setTasks((prev) => [...prev, { id: data.id, name: data.name, project_id: (data as any).project_id ?? null }]);
+      setTasks((prev) => [...prev, { id: data.id, name: data.name, project_id: (data as any).project_id ?? null, client_id: (data as any).client_id ?? null }]);
       return { id: data.id, name: data.name };
     } else {
       const id = `local-${Date.now()}`;
-      saveAnonymousTask({ id, name, project_id: scopedProjectId });
-      setTasks((prev) => [...prev, { id, name, project_id: scopedProjectId }]);
+      saveAnonymousTask({ id, name, project_id: scopedProjectId, client_id: scopedClientId });
+      setTasks((prev) => [...prev, { id, name, project_id: scopedProjectId, client_id: scopedClientId }]);
       return { id, name };
     }
   };

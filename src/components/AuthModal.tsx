@@ -168,7 +168,7 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
     if (authError) {
       if (authError.message.includes("captcha")) {
         setError("Security check failed. Please try again.");
-      } else if (authError.message.includes("already registered")) {
+      } else if (authError.message.toLowerCase().includes("already registered") || authError.message.toLowerCase().includes("already been registered")) {
         setError("An account with this email exists. Log in instead?");
       } else {
         setError(authError.message);
@@ -177,12 +177,17 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
       return;
     }
 
-    if (data.user) {
+    // If a session is returned, the user is already confirmed (auto-confirm on) — migrate and close.
+    if (data.session && data.user) {
       await migrateAnonymousData(data.user.id);
       toast.success("Welcome to Trace. Your work has been saved.");
       resetFields();
       onOpenChange(false);
       onShowHowItWorks?.();
+    } else {
+      // Email confirmation required. Show pending screen; keep local data intact.
+      setPendingConfirmEmail(signupEmail);
+      startResendCooldown();
     }
     setLoading(false);
   };
@@ -190,6 +195,7 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setNeedsConfirmEmail(null);
     setLoading(true);
 
     const { data, error: authError } = await supabase.auth.signInWithPassword({
@@ -203,8 +209,13 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
     resetTurnstile();
 
     if (authError) {
-      if (authError.message.includes("captcha")) {
+      const msg = authError.message.toLowerCase();
+      const code = (authError as { code?: string }).code;
+      if (msg.includes("captcha")) {
         setError("Security check failed. Please try again.");
+      } else if (code === "email_not_confirmed" || msg.includes("not confirmed") || msg.includes("email not confirmed")) {
+        setNeedsConfirmEmail(loginEmail);
+        setError("");
       } else {
         setError("Incorrect email or password.");
       }

@@ -1,13 +1,5 @@
-import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Timer, FolderOpen, BarChart3, Smartphone, ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Timer, FolderOpen, BarChart3 } from "lucide-react";
+import { cn } from "@lib/utils";
 
 interface HowTraceWorksModalProps {
   open: boolean;

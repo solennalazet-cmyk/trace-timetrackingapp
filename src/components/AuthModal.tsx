@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { migrateAnonymousData } from "@/lib/migrate-anonymous";
@@ -27,6 +27,13 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showForgot, setShowForgot] = useState(false);
+
+  // Email confirmation pending state (post-signup)
+  const [pendingConfirmEmail, setPendingConfirmEmail] = useState<string | null>(null);
+  // Sign-in needs-confirmation state
+  const [needsConfirmEmail, setNeedsConfirmEmail] = useState<string | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resending, setResending] = useState(false);
 
   // Turnstile
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -65,6 +72,40 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
     setShowForgot(false);
     setTurnstileToken(null);
     setTurnstileError(false);
+    setPendingConfirmEmail(null);
+    setNeedsConfirmEmail(null);
+    setResendCooldown(0);
+  };
+
+  const startResendCooldown = () => {
+    setResendCooldown(30);
+    const id = setInterval(() => {
+      setResendCooldown((s) => {
+        if (s <= 1) { clearInterval(id); return 0; }
+        return s - 1;
+      });
+    }, 1000);
+  };
+
+  const handleResendConfirmation = async (email: string) => {
+    if (!email || resendCooldown > 0 || resending) return;
+    setResending(true);
+    const { error: resendError } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: {
+        emailRedirectTo: window.location.origin,
+        ...(hasTurnstile && turnstileToken ? { captchaToken: turnstileToken } : {}),
+      },
+    });
+    resetTurnstile();
+    setResending(false);
+    if (resendError) {
+      toast.error("Couldn't resend. Please try again in a moment.");
+    } else {
+      toast.success("Confirmation email sent. Check your inbox.");
+      startResendCooldown();
+    }
   };
 
   const resetTurnstile = () => {
@@ -127,7 +168,7 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
     if (authError) {
       if (authError.message.includes("captcha")) {
         setError("Security check failed. Please try again.");
-      } else if (authError.message.includes("already registered")) {
+      } else if (authError.message.toLowerCase().includes("already registered") || authError.message.toLowerCase().includes("already been registered")) {
         setError("An account with this email exists. Log in instead?");
       } else {
         setError(authError.message);
@@ -136,12 +177,17 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
       return;
     }
 
-    if (data.user) {
+    // If a session is returned, the user is already confirmed (auto-confirm on) — migrate and close.
+    if (data.session && data.user) {
       await migrateAnonymousData(data.user.id);
       toast.success("Welcome to Trace. Your work has been saved.");
       resetFields();
       onOpenChange(false);
       onShowHowItWorks?.();
+    } else {
+      // Email confirmation required. Show pending screen; keep local data intact.
+      setPendingConfirmEmail(signupEmail);
+      startResendCooldown();
     }
     setLoading(false);
   };
@@ -149,6 +195,7 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setNeedsConfirmEmail(null);
     setLoading(true);
 
     const { data, error: authError } = await supabase.auth.signInWithPassword({
@@ -162,8 +209,13 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
     resetTurnstile();
 
     if (authError) {
-      if (authError.message.includes("captcha")) {
+      const msg = authError.message.toLowerCase();
+      const code = (authError as { code?: string }).code;
+      if (msg.includes("captcha")) {
         setError("Security check failed. Please try again.");
+      } else if (code === "email_not_confirmed" || msg.includes("not confirmed") || msg.includes("email not confirmed")) {
+        setNeedsConfirmEmail(loginEmail);
+        setError("");
       } else {
         setError("Incorrect email or password.");
       }
@@ -237,7 +289,47 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
       }}
     >
       <DialogContent className="max-w-[380px] rounded-2xl p-0 overflow-hidden">
-        <Tabs value={tab} onValueChange={(v) => { setTab(v); setError(""); setShowForgot(false); resetTurnstile(); }} className="w-full">
+        {pendingConfirmEmail ? (
+          <div className="px-6 py-8 text-center space-y-4">
+            <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <Mail className="w-6 h-6 text-foreground" />
+            </div>
+            <h2 className="text-lg font-semibold text-foreground">Check your inbox</h2>
+            <p className="text-sm text-muted-foreground">
+              We sent a confirmation link to <span className="font-medium text-foreground">{pendingConfirmEmail}</span>. Click it to activate your account, then come back here to log in.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Your tracked work is safe on this device while you confirm.
+            </p>
+            {renderTurnstile()}
+            <div className="flex flex-col gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="w-full rounded-[28px] h-11"
+                onClick={() => handleResendConfirmation(pendingConfirmEmail)}
+                disabled={resending || resendCooldown > 0 || (hasTurnstile && !turnstileToken)}
+              >
+                {resending
+                  ? "Resending…"
+                  : resendCooldown > 0
+                    ? `Resend in ${resendCooldown}s`
+                    : "Resend confirmation email"}
+              </Button>
+              <button
+                type="button"
+                className="text-sm text-muted-foreground underline"
+                onClick={() => {
+                  setPendingConfirmEmail(null);
+                  setTab("login");
+                  setLoginEmail(pendingConfirmEmail);
+                }}
+              >
+                Back to Log In
+              </button>
+            </div>
+          </div>
+        ) : (
+        <Tabs value={tab} onValueChange={(v) => { setTab(v); setError(""); setShowForgot(false); resetTurnstile(); setNeedsConfirmEmail(null); }} className="w-full">
           <div className="px-6 pt-6">
             <TabsList className="w-full grid grid-cols-2">
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -290,6 +382,9 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
             {/* Sign Up Tab */}
             <TabsContent value="signup" className="mt-0">
               <form onSubmit={handleSignUp} className="space-y-3">
+                <p className="text-xs text-muted-foreground -mt-1">
+                  We'll send a confirmation link to your email — you'll need to click it to activate your account.
+                </p>
                 <div>
                   <Label htmlFor="fullName">Full Name</Label>
                   <Input id="fullName" className="h-10 rounded-xl" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
@@ -345,6 +440,26 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                 )
               ) : (
                 <form onSubmit={handleLogin} className="space-y-3">
+                  {needsConfirmEmail && (
+                    <div className="p-3 rounded-lg bg-primary/10 text-sm text-foreground space-y-2">
+                      <p>
+                        Please confirm your email — we sent a link to{" "}
+                        <span className="font-medium">{needsConfirmEmail}</span>.
+                      </p>
+                      <button
+                        type="button"
+                        className="underline font-medium disabled:opacity-50"
+                        disabled={resending || resendCooldown > 0}
+                        onClick={() => handleResendConfirmation(needsConfirmEmail)}
+                      >
+                        {resending
+                          ? "Resending…"
+                          : resendCooldown > 0
+                            ? `Resend in ${resendCooldown}s`
+                            : "Resend confirmation email"}
+                      </button>
+                    </div>
+                  )}
                   <div>
                     <Label htmlFor="loginEmail">Email</Label>
                     <Input id="loginEmail" type="email" className="h-10 rounded-xl" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />
@@ -370,6 +485,7 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
             </TabsContent>
           </div>
         </Tabs>
+        )}
       </DialogContent>
     </Dialog>
   );

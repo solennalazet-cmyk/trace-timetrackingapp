@@ -209,40 +209,47 @@ const AccountProfilePage = () => {
           <p className="text-sm text-muted-foreground truncate">
             {client.default_rate != null ? `${sym}${client.default_rate}/hour` : "Rate not set"}
           </p>
+          {/* Discrete Trace-connection CTA */}
+          <div className="mt-1.5 flex items-center gap-1.5 text-[11px] flex-wrap">
+            {connStatus === "accepted" ? (
+              <>
+                <CheckCircle2 className="w-3 h-3 text-nav-bg shrink-0" />
+                <span className="text-muted-foreground">Connected on Trace</span>
+                <span className="text-muted-foreground/50">·</span>
+                <button
+                  onClick={() => setConnectOpen(true)}
+                  className="text-muted-foreground hover:text-destructive underline-offset-2 hover:underline"
+                >
+                  Disconnect
+                </button>
+              </>
+            ) : connStatus === "pending" ? (
+              <>
+                <Clock className="w-3 h-3 text-muted-foreground shrink-0" />
+                <span className="text-muted-foreground">Invite pending</span>
+                <span className="text-muted-foreground/50">·</span>
+                <button
+                  onClick={() => { setConnectEmail(client.invited_email ?? ""); setConnectOpen(true); }}
+                  className="text-foreground hover:underline underline-offset-2"
+                >
+                  Manage
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => {
+                  if (isAnonymous) { toast.info("Sign in to connect with this client on Trace."); return; }
+                  setConnectEmail(client.invited_email ?? client.email ?? "");
+                  setConnectOpen(true);
+                }}
+                className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+              >
+                <UserPlus className="w-3 h-3" /> Connect with Trace user
+              </button>
+            )}
+          </div>
         </div>
       </header>
-
-      {/* Connect with Trace — right under the client name */}
-      <button
-        onClick={() => {
-          if (isAnonymous) { toast.info("Sign in to connect with this client on Trace."); return; }
-          setConnectEmail(client.invited_email ?? client.email ?? "");
-          setConnectOpen(true);
-        }}
-        className="w-full text-left"
-        aria-label="Connect with Trace user"
-      >
-        <Card className="p-3.5 flex items-center gap-3 hover:bg-muted/40 transition-colors">
-          <div className="w-9 h-9 rounded-xl bg-nav-bg/10 flex items-center justify-center shrink-0">
-            {connStatus === "accepted" ? <CheckCircle2 className="w-4 h-4 text-nav-bg" />
-              : connStatus === "pending" ? <Clock className="w-4 h-4 text-nav-bg" />
-              : <UserPlus className="w-4 h-4 text-nav-bg" />}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">
-              {connStatus === "accepted" ? "Connected on Trace"
-                : connStatus === "pending" ? "Invite pending"
-                : "Connect with Trace user"}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">
-              {connStatus === "accepted" ? (client.invited_email ?? "Connected — submit reports directly")
-                : connStatus === "pending" ? `Waiting on ${client.invited_email ?? "client"} to accept`
-                : isAnonymous ? "Sign in to invite this client" : "Send a connection invite to submit reports"}
-            </p>
-          </div>
-          <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-        </Card>
-      </button>
 
       <div className="space-y-2.5">
         {cards.map(({ kind, Icon, title, rows }) => (

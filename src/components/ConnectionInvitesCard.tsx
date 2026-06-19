@@ -67,18 +67,21 @@ const ConnectionInvitesCard = () => {
 
   const handleDecline = async (invite: PendingInvite) => {
     setWorking(invite.id);
-    const { error } = await supabase
-      .from("clients")
-      .update({ connection_status: "rejected" } as any)
-      .eq("id", invite.id);
+    // Optimistically remove the card so the notification clears immediately.
+    setInvites((prev) => prev.filter((i) => i.id !== invite.id));
+    const { error } = await supabase.rpc("decline_client_invite" as any, {
+      _invite_id: invite.id,
+    });
     if (error) {
-      toast.error("Couldn't decline invite. Please try again.");
+      console.error("[decline-invite]", error);
+      toast.error(`Couldn't decline invite: ${error.message}`);
       setWorking(null);
+      load();
       return;
     }
-    toast("Invite declined.");
+    toast.success("Invite declined.");
     setWorking(null);
-    load();
+    window.dispatchEvent(new Event("trace-invites-changed"));
   };
 
   if (!user || invites.length === 0) return null;

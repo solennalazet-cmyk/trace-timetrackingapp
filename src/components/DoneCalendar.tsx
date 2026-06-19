@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWeekStart } from "@/contexts/WeekStartContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getAnonymousClients, getAnonymousEntries, getAnonymousProjects, getAnonymousTasks } from "@/lib/anonymous-store";
+import { buildProjectClientMap, enrichEntryAssignment } from "@/lib/entry-assignment";
 import { toLocalDateKey, getClientColor, cn } from "@/lib/utils";
 
 interface Entry {
@@ -73,7 +74,7 @@ const DoneCalendar = () => {
           .lte("entry_date", toKey)
           .is("deleted_at", null),
         supabase.from("clients").select("id, name").eq("user_id", user.id),
-        supabase.from("projects").select("id, name").eq("user_id", user.id),
+        supabase.from("projects").select("id, name, client_id").eq("user_id", user.id),
         supabase.from("tasks").select("id, name").eq("user_id", user.id),
       ]);
       const clientMap: Record<string, string> = {};
@@ -82,30 +83,23 @@ const DoneCalendar = () => {
       projectRows?.forEach((p) => { projectMap[p.id] = p.name; });
       const taskMap: Record<string, string> = {};
       taskRows?.forEach((t) => { taskMap[t.id] = t.name; });
+      const projectClientMap = buildProjectClientMap((projectRows ?? []) as { id: string; client_id: string | null }[]);
       setEntries(
-        (data ?? []).map((e: any) => ({
-          ...e,
-          client_name: e.client_id ? clientMap[e.client_id] : undefined,
-          project_name: e.project_id ? projectMap[e.project_id] : undefined,
-          task_name: e.task_id ? taskMap[e.task_id] : undefined,
-        }))
+        (data ?? []).map((e: any) => enrichEntryAssignment(e, clientMap, projectMap, taskMap, projectClientMap))
       );
     } else {
       const all = getAnonymousEntries();
       const clientMap: Record<string, string> = {};
       getAnonymousClients().forEach((c: any) => { clientMap[c.id] = c.name; });
       const projectMap: Record<string, string> = {};
-      getAnonymousProjects().forEach((p: any) => { projectMap[p.id] = p.name; });
+      const anonProjects = getAnonymousProjects();
+      anonProjects.forEach((p: any) => { projectMap[p.id] = p.name; });
       const taskMap: Record<string, string> = {};
       getAnonymousTasks().forEach((t: any) => { taskMap[t.id] = t.name; });
+      const projectClientMap = buildProjectClientMap(anonProjects);
       setEntries(all
         .filter((e: any) => e.entry_date >= fromKey && e.entry_date <= toKey)
-        .map((e: any) => ({
-          ...e,
-          client_name: e.client_id ? clientMap[e.client_id] : undefined,
-          project_name: e.project_id ? projectMap[e.project_id] : undefined,
-          task_name: e.task_id ? taskMap[e.task_id] : undefined,
-        }))
+        .map((e: any) => enrichEntryAssignment(e, clientMap, projectMap, taskMap, projectClientMap))
       );
     }
     setLoading(false);

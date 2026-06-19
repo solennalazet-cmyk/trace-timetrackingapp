@@ -591,17 +591,24 @@ const PrepareBillingSheet = ({
               >
                 <Copy className="w-4 h-4" /> Copy payment summary
               </Button>
-              <Button
-                className="w-full rounded-xl h-12 gap-2 justify-start font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
-                onClick={() => setSubmitOpen(true)}
-                disabled={reportEntries.length === 0 || !isConnected}
-                title={isConnected ? undefined : "Client isn't a connected Trace user."}
-              >
-                <Send className="w-4 h-4" /> Submit to client
-                {!isConnected && reportEntries.length > 0 && (
-                  <span className="ml-auto text-[10px] font-normal opacity-80">Not connected</span>
-                )}
-              </Button>
+              {isConnected ? (
+                <Button
+                  className="w-full rounded-xl h-12 gap-2 justify-start font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+                  onClick={() => setSubmitOpen(true)}
+                  disabled={reportEntries.length === 0}
+                >
+                  <Send className="w-4 h-4" /> Submit to client
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="w-full rounded-xl h-12 gap-2 justify-start font-medium"
+                  onClick={() => { onOpenChange(false); navigate(`/clients/${clientId}`); }}
+                >
+                  <UserPlus className="w-4 h-4" /> Connect with client to submit
+                  <span className="ml-auto text-[10px] font-normal text-muted-foreground">Set up →</span>
+                </Button>
+              )}
               {unbilledBillableEntries.length > 0 && (
                 <Button
                   className="w-full rounded-xl h-12 gap-2 justify-start font-medium bg-primary text-primary-foreground hover:bg-primary/90"

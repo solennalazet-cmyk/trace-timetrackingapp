@@ -60,6 +60,7 @@ const PrepareBillingSheet = ({
   entries, rounding, dateFrom, dateTo, onComplete,
 }: PrepareBillingSheetProps) => {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [showBilledPrompt, setShowBilledPrompt] = useState(false);
   const [markingBilled, setMarkingBilled] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);

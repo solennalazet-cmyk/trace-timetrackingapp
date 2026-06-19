@@ -5,10 +5,13 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { Eye, EyeOff } from "lucide-react";
 
 const ResetPassword = () => {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -48,11 +51,21 @@ const ResetPassword = () => {
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
             <Label htmlFor="newPassword">New Password</Label>
-            <Input id="newPassword" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
+            <div className="relative">
+              <Input id="newPassword" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
+              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowPassword(!showPassword)} aria-label="Toggle password visibility">
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
           <div>
             <Label htmlFor="confirmNew">Confirm Password</Label>
-            <Input id="confirmNew" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
+            <div className="relative">
+              <Input id="confirmNew" type={showConfirm ? "text" : "password"} value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
+              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowConfirm(!showConfirm)} aria-label="Toggle confirm password visibility">
+                {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
           <Button type="submit" className="w-full bg-primary text-primary-foreground" disabled={loading}>
             {loading ? "Updating…" : "Update Password"}

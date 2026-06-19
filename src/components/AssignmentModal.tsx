@@ -630,7 +630,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
               <div className="flex gap-2">
                 <div className="flex-1">
                   <AdaptiveCombobox
-                    items={tasks}
+                    items={filteredTasks}
                     value={taskId}
                     displayValue={taskName}
                     placeholder="What were you working on?"

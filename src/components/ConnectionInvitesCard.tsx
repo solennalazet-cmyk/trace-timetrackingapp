@@ -69,11 +69,9 @@ const ConnectionInvitesCard = () => {
     setWorking(invite.id);
     // Optimistically remove the card so the notification clears immediately.
     setInvites((prev) => prev.filter((i) => i.id !== invite.id));
-    const { error } = await supabase
-      .from("clients")
-      .update({ connection_status: "rejected" } as any)
-      .eq("id", invite.id)
-      .select("id");
+    const { error } = await supabase.rpc("decline_client_invite" as any, {
+      _invite_id: invite.id,
+    });
     if (error) {
       console.error("[decline-invite]", error);
       toast.error(`Couldn't decline invite: ${error.message}`);

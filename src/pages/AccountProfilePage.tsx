@@ -362,17 +362,44 @@ const AccountProfilePage = () => {
             )}
           </div>
           <div className="flex gap-2 px-5 py-4 border-t border-border bg-card shrink-0">
-            <Button variant="ghost" className="flex-1 h-11 rounded-xl" onClick={() => setConnectOpen(false)} disabled={sendingInvite}>
-              Cancel
-            </Button>
-            <Button
-              className="flex-1 h-11 rounded-xl gap-2"
-              onClick={sendInvite}
-              disabled={sendingInvite || !connectEmail.trim() || connStatus === "accepted"}
-            >
-              {sendingInvite ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              {connStatus === "pending" ? "Resend invite" : "Send invite"}
-            </Button>
+            {(connStatus === "accepted" || connStatus === "pending") ? (
+              <>
+                <Button variant="ghost" className="flex-1 h-11 rounded-xl" onClick={() => setConnectOpen(false)} disabled={sendingInvite}>
+                  Close
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="flex-1 h-11 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={disconnect}
+                  disabled={sendingInvite}
+                >
+                  {sendingInvite ? <Loader2 className="w-4 h-4 animate-spin" /> : connStatus === "accepted" ? "Disconnect" : "Cancel invite"}
+                </Button>
+                {connStatus === "pending" && (
+                  <Button
+                    className="flex-1 h-11 rounded-xl gap-2"
+                    onClick={sendInvite}
+                    disabled={sendingInvite || !connectEmail.trim()}
+                  >
+                    <Send className="w-4 h-4" /> Resend
+                  </Button>
+                )}
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" className="flex-1 h-11 rounded-xl" onClick={() => setConnectOpen(false)} disabled={sendingInvite}>
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 h-11 rounded-xl gap-2"
+                  onClick={sendInvite}
+                  disabled={sendingInvite || !connectEmail.trim()}
+                >
+                  {sendingInvite ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  Send invite
+                </Button>
+              </>
+            )}
           </div>
         </SheetContent>
       </Sheet>

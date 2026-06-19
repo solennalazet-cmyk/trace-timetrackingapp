@@ -406,8 +406,7 @@ const ClientsPage = () => {
                   className="flex items-center w-full px-4 py-3 text-left gap-3"
                   onClick={() => {
                     if (swipedId === client.id) { setSwipedId(null); return; }
-                    if (user) navigate(`/clients/${client.id}`);
-                    else { setEditingClient(client); setClientFormOpen(true); }
+                    navigate(`/clients/${client.id}`);
                   }}
                 >
                   <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${getAvatarColor(client.name)}`}>

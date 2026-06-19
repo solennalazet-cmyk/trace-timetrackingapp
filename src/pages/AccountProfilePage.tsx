@@ -1,18 +1,23 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Mail, Handshake, Building2, ChevronRight, Trash2 } from "lucide-react";
+import { ArrowLeft, Mail, Handshake, Building2, ChevronRight, Trash2, UserPlus, Send, Loader2, CheckCircle2, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import Seo from "@/components/Seo";
 import AccountFocusEditor, { type AccountEditorKind } from "@/components/AccountFocusEditor";
 import AccountContractCard from "@/components/AccountContractCard";
+import SignInLink from "@/components/SignInLink";
+import { getAnonymousClients, saveAnonymousClient, deleteAnonymousClient } from "@/lib/anonymous-store";
 
 interface AccountRow {
   id: string;
@@ -28,6 +33,8 @@ interface AccountRow {
   contract_url: string | null;
   user_id: string;
   kind: string;
+  invited_email?: string | null;
+  connection_status?: string | null;
 }
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -54,36 +61,91 @@ const AccountProfilePage = () => {
   const [editorOpen, setEditorOpen] = useState<AccountEditorKind | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [connectOpen, setConnectOpen] = useState(false);
+  const [connectEmail, setConnectEmail] = useState("");
+  const [sendingInvite, setSendingInvite] = useState(false);
+
+  const isAnonymous = !user;
 
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    const { data, error } = await supabase
-      .from("clients")
-      .select("id, name, email, phone, default_rate, currency, payment_terms_days, billing_notes, nif, business_address, contract_url, user_id, kind")
-      .eq("id", id)
-      .maybeSingle();
-    if (error) toast.error(error.message);
-    setAccount(data as AccountRow | null);
+    if (user) {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, name, email, phone, default_rate, currency, payment_terms_days, billing_notes, nif, business_address, contract_url, user_id, kind, invited_email, connection_status")
+        .eq("id", id)
+        .maybeSingle();
+      if (error) toast.error(error.message);
+      setAccount(data as AccountRow | null);
+    } else {
+      const c = getAnonymousClients().find((c: any) => c.id === id);
+      setAccount(c ? {
+        id: c.id,
+        name: c.name,
+        email: c.email ?? null,
+        phone: c.phone ?? null,
+        default_rate: c.default_rate ?? null,
+        currency: c.currency ?? "EUR",
+        payment_terms_days: c.payment_terms_days ?? null,
+        billing_notes: c.billing_notes ?? null,
+        nif: c.nif ?? null,
+        business_address: c.business_address ?? null,
+        contract_url: null,
+        user_id: "",
+        kind: "account",
+        invited_email: null,
+        connection_status: null,
+      } : null);
+    }
     setLoading(false);
-  }, [id]);
+  }, [id, user]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleDelete = async () => {
     if (!client) return;
     setDeleting(true);
-    let error;
-    if (client.kind === "both") {
-      ({ error } = await supabase.from("clients").update({ kind: "contractor" }).eq("id", client.id));
+    if (user) {
+      let error;
+      if (client.kind === "both") {
+        ({ error } = await supabase.from("clients").update({ kind: "contractor" }).eq("id", client.id));
+      } else {
+        ({ error } = await supabase.from("clients").delete().eq("id", client.id));
+      }
+      setDeleting(false);
+      if (error) { toast.error(error.message); return; }
     } else {
-      ({ error } = await supabase.from("clients").delete().eq("id", client.id));
+      deleteAnonymousClient(client.id);
+      setDeleting(false);
     }
-    setDeleting(false);
-    if (error) { toast.error(error.message); return; }
     toast.success("Client deleted.");
     setDeleteOpen(false);
     navigate("/clients");
+  };
+
+  // Save handler for the focus editor when in anonymous mode
+  const saveAnonymous = async (payload: Record<string, any>) => {
+    if (!client) return;
+    saveAnonymousClient({ ...client, ...payload, id: client.id });
+  };
+
+  const sendInvite = async () => {
+    if (!client || !user) return;
+    const email = connectEmail.trim().toLowerCase();
+    if (!email) return;
+    setSendingInvite(true);
+    const { error } = await supabase.from("clients").update({
+      invited_email: email,
+      connection_status: "pending",
+      connection_initiated_by: "worker",
+      invited_at: new Date().toISOString(),
+    } as any).eq("id", client.id);
+    setSendingInvite(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Invite sent.");
+    setConnectOpen(false);
+    load();
   };
 
   if (loading) {
@@ -94,6 +156,7 @@ const AccountProfilePage = () => {
   }
 
   const sym = CURRENCY_SYMBOLS[client.currency ?? "EUR"] ?? "€";
+  const connStatus = client.connection_status ?? "none";
 
   type CardDef = { kind: AccountEditorKind; Icon: typeof Mail; title: string; rows: { label: string; value: string | null }[] };
   const cards: CardDef[] = [
@@ -149,6 +212,38 @@ const AccountProfilePage = () => {
         </div>
       </header>
 
+      {/* Connect with Trace — right under the client name */}
+      <button
+        onClick={() => {
+          if (isAnonymous) { toast.info("Sign in to connect with this client on Trace."); return; }
+          setConnectEmail(client.invited_email ?? client.email ?? "");
+          setConnectOpen(true);
+        }}
+        className="w-full text-left"
+        aria-label="Connect with Trace user"
+      >
+        <Card className="p-3.5 flex items-center gap-3 hover:bg-muted/40 transition-colors">
+          <div className="w-9 h-9 rounded-xl bg-nav-bg/10 flex items-center justify-center shrink-0">
+            {connStatus === "accepted" ? <CheckCircle2 className="w-4 h-4 text-nav-bg" />
+              : connStatus === "pending" ? <Clock className="w-4 h-4 text-nav-bg" />
+              : <UserPlus className="w-4 h-4 text-nav-bg" />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">
+              {connStatus === "accepted" ? "Connected on Trace"
+                : connStatus === "pending" ? "Invite pending"
+                : "Connect with Trace user"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5 truncate">
+              {connStatus === "accepted" ? (client.invited_email ?? "Connected — submit reports directly")
+                : connStatus === "pending" ? `Waiting on ${client.invited_email ?? "client"} to accept`
+                : isAnonymous ? "Sign in to invite this client" : "Send a connection invite to submit reports"}
+            </p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+        </Card>
+      </button>
+
       <div className="space-y-2.5">
         {cards.map(({ kind, Icon, title, rows }) => (
           <button key={kind} onClick={() => setEditorOpen(kind)} className="w-full text-left">
@@ -170,12 +265,23 @@ const AccountProfilePage = () => {
           </button>
         ))}
 
-        <AccountContractCard
-          clientId={client.id}
-          ownerUserId={user?.id ?? ""}
-          contractUrl={client.contract_url}
-          onChange={load}
-        />
+        {!isAnonymous && (
+          <AccountContractCard
+            clientId={client.id}
+            ownerUserId={user?.id ?? ""}
+            contractUrl={client.contract_url}
+            onChange={load}
+          />
+        )}
+
+        {isAnonymous && (
+          <Card className="p-4 bg-muted/30">
+            <p className="text-xs text-muted-foreground">
+              Sign in to attach a signed contract, invite this client on Trace, and submit reports.
+            </p>
+            <div className="pt-2"><SignInLink /></div>
+          </Card>
+        )}
 
         <div className="pt-4">
           <Button
@@ -195,7 +301,57 @@ const AccountProfilePage = () => {
         initial={client}
         onClose={() => setEditorOpen(null)}
         onSaved={() => { setEditorOpen(null); load(); }}
+        onSave={isAnonymous ? saveAnonymous : undefined}
       />
+
+      {/* Connect with Trace — invite sheet */}
+      <Sheet open={connectOpen} onOpenChange={(v) => { if (!v) setConnectOpen(false); }}>
+        <SheetContent side="bottom" className="rounded-t-3xl p-0 flex flex-col max-h-[calc(100dvh-1rem)]">
+          <SheetHeader className="text-left px-5 pt-4 pb-3 shrink-0">
+            <SheetTitle className="text-lg flex items-center gap-2">
+              <UserPlus className="w-4 h-4" /> Connect with Trace user
+            </SheetTitle>
+            <p className="text-xs text-muted-foreground">
+              Invite {client.name} to Trace so you can submit reports directly. They'll see your invite the next time they sign in.
+            </p>
+          </SheetHeader>
+          <div className="px-5 pb-4 space-y-3 overflow-y-auto flex-1 min-h-0">
+            <div className="space-y-1.5">
+              <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Client email</Label>
+              <Input
+                type="email"
+                inputMode="email"
+                value={connectEmail}
+                onChange={(e) => setConnectEmail(e.target.value)}
+                placeholder="contact@example.com"
+                className="h-11 rounded-xl"
+                disabled={connStatus === "accepted"}
+              />
+            </div>
+            {connStatus === "pending" && (
+              <p className="text-[11px] text-muted-foreground">
+                Invite previously sent to <span className="font-medium text-foreground">{client.invited_email}</span>. Sending again will resend it.
+              </p>
+            )}
+            {connStatus === "accepted" && (
+              <p className="text-[11px] text-nav-bg">Already connected.</p>
+            )}
+          </div>
+          <div className="flex gap-2 px-5 py-4 border-t border-border bg-card shrink-0">
+            <Button variant="ghost" className="flex-1 h-11 rounded-xl" onClick={() => setConnectOpen(false)} disabled={sendingInvite}>
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 h-11 rounded-xl gap-2"
+              onClick={sendInvite}
+              disabled={sendingInvite || !connectEmail.trim() || connStatus === "accepted"}
+            >
+              {sendingInvite ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              {connStatus === "pending" ? "Resend invite" : "Send invite"}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent className="max-w-[380px] w-[calc(100vw-2rem)] rounded-2xl">

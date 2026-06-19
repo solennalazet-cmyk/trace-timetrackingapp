@@ -148,6 +148,23 @@ const AccountProfilePage = () => {
     load();
   };
 
+  const disconnect = async () => {
+    if (!client || !user) return;
+    setSendingInvite(true);
+    const { error } = await supabase.from("clients").update({
+      invited_email: null,
+      connection_status: null,
+      connection_initiated_by: null,
+      connected_user_id: null,
+      invited_at: null,
+    } as any).eq("id", client.id);
+    setSendingInvite(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Disconnected.");
+    setConnectOpen(false);
+    load();
+  };
+
   if (loading) {
     return <div className="pt-6 pb-24 text-sm text-muted-foreground px-4">Loading…</div>;
   }

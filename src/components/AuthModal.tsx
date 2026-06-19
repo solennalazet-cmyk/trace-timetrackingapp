@@ -28,6 +28,13 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
   const [error, setError] = useState("");
   const [showForgot, setShowForgot] = useState(false);
 
+  // Email confirmation pending state (post-signup)
+  const [pendingConfirmEmail, setPendingConfirmEmail] = useState<string | null>(null);
+  // Sign-in needs-confirmation state
+  const [needsConfirmEmail, setNeedsConfirmEmail] = useState<string | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resending, setResending] = useState(false);
+
   // Turnstile
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileError, setTurnstileError] = useState(false);
@@ -65,6 +72,40 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
     setShowForgot(false);
     setTurnstileToken(null);
     setTurnstileError(false);
+    setPendingConfirmEmail(null);
+    setNeedsConfirmEmail(null);
+    setResendCooldown(0);
+  };
+
+  const startResendCooldown = () => {
+    setResendCooldown(30);
+    const id = setInterval(() => {
+      setResendCooldown((s) => {
+        if (s <= 1) { clearInterval(id); return 0; }
+        return s - 1;
+      });
+    }, 1000);
+  };
+
+  const handleResendConfirmation = async (email: string) => {
+    if (!email || resendCooldown > 0 || resending) return;
+    setResending(true);
+    const { error: resendError } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: {
+        emailRedirectTo: window.location.origin,
+        ...(hasTurnstile && turnstileToken ? { captchaToken: turnstileToken } : {}),
+      },
+    });
+    resetTurnstile();
+    setResending(false);
+    if (resendError) {
+      toast.error("Couldn't resend. Please try again in a moment.");
+    } else {
+      toast.success("Confirmation email sent. Check your inbox.");
+      startResendCooldown();
+    }
   };
 
   const resetTurnstile = () => {

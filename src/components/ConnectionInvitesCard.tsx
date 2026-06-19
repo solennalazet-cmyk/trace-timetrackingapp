@@ -27,12 +27,16 @@ const ConnectionInvitesCard = () => {
 
   const load = useCallback(async () => {
     if (!user) return;
+    const myEmail = (user.email ?? "").toLowerCase();
     const { data } = await supabase
       .from("clients")
       .select("id, name, invited_email, user_id")
       .eq("connection_status", "pending");
-    // RLS already scopes this to invites addressed to the current user.
-    setInvites(((data ?? []) as any) as PendingInvite[]);
+    // Only show invites addressed TO me (not invites I sent myself).
+    const filtered = ((data ?? []) as any[]).filter(
+      (row) => row.user_id !== user.id && (row.invited_email ?? "").toLowerCase() === myEmail,
+    );
+    setInvites(filtered as PendingInvite[]);
   }, [user]);
 
   useEffect(() => {

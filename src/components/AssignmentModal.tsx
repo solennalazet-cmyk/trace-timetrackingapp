@@ -190,7 +190,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
       const ap = getAnonymousProjects();
       setAllProjectsFull(ap.map((p: any) => ({ id: p.id, name: p.name, client_id: p.client_id ?? null, rate: p.rate ?? null, currency: p.currency ?? null })));
       const at = getAnonymousTasks();
-      setTasks(at.map((t: any) => ({ id: t.id, name: t.name, project_id: t.project_id ?? null })));
+      setTasks(at.map((t: any) => ({ id: t.id, name: t.name, project_id: t.project_id ?? null, client_id: t.client_id ?? null })));
       setAllTags([]);
     }
   }, [user]);

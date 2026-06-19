@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Play, Square, CheckCircle2 } from "lucide-react";
+import { Play, Square, CheckCircle2, Cloud } from "lucide-react";
 
 const LS_KEY = "trace_visited";
 const AUTO_DISMISS_MS = 12000;
@@ -86,6 +86,11 @@ const WelcomeBanner = ({ onDismiss }: WelcomeBannerProps) => {
               icon={<CheckCircle2 className="w-5 h-5" />}
               title="Save"
               text="Save your session in one tap."
+            />
+            <Step
+              icon={<Cloud className="w-5 h-5" />}
+              title="Secure"
+              text="Sign up to back up your data and keep it safe across devices."
             />
           </div>
         </div>

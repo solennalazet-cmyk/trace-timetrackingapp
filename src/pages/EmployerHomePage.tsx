@@ -215,19 +215,19 @@ const EmployerHomePage = () => {
       <div role="tablist" aria-label="Overview view" className="inline-flex w-full p-1 rounded-full bg-foreground/5 border border-border/40">
         <button
           role="tab"
-          aria-selected={view === "status"}
-          onClick={() => setView("status")}
-          className={`flex-1 h-9 rounded-full text-xs font-semibold transition-colors ${view === "status" ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-        >
-          Status to date
-        </button>
-        <button
-          role="tab"
           aria-selected={view === "dashboard"}
           onClick={() => setView("dashboard")}
           className={`flex-1 h-9 rounded-full text-xs font-semibold transition-colors ${view === "dashboard" ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
         >
           Dashboard
+        </button>
+        <button
+          role="tab"
+          aria-selected={view === "status"}
+          onClick={() => setView("status")}
+          className={`flex-1 h-9 rounded-full text-xs font-semibold transition-colors ${view === "status" ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          Status to date
         </button>
       </div>
 

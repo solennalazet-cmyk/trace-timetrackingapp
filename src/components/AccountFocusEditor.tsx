@@ -74,7 +74,7 @@ const FIELDS: Record<AccountEditorKind, { title: string; subtitle: string; field
   },
 };
 
-const AccountFocusEditor = ({ open, kind, clientId, initial, onClose, onSaved }: Props) => {
+const AccountFocusEditor = ({ open, kind, clientId, initial, onClose, onSaved, onSave }: Props) => {
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
@@ -100,6 +100,14 @@ const AccountFocusEditor = ({ open, kind, clientId, initial, onClose, onSaved }:
       const v = (values[f.key] ?? "").trim();
       if (f.type === "number") payload[f.key] = v ? Number(v) : null;
       else payload[f.key] = v || null;
+    }
+    if (onSave) {
+      try { await onSave(payload); }
+      catch (e: any) { setSaving(false); toast.error(e?.message ?? "Save failed."); return; }
+      setSaving(false);
+      toast.success("Saved.");
+      onSaved();
+      return;
     }
     const { error } = await supabase.from("clients").update(payload).eq("id", clientId);
     setSaving(false);

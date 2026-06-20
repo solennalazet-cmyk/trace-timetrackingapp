@@ -12,6 +12,7 @@ import { X, Plus, Volume2, VolumeX, Info, MapPin } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/contexts/RoleContext";
 import { supabase } from "@/integrations/supabase/client";
 import ProBadge from "@/components/ProBadge";
 import PaywallModal from "@/components/PaywallModal";
@@ -75,6 +76,7 @@ interface SettingsModalProps {
 
 const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
   const { user, profile } = useAuth();
+  const { activeRole, setActiveRole } = useRole();
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
   const [editingPreset, setEditingPreset] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -204,6 +206,35 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
         </DialogHeader>
 
         <div className="px-5 pb-6 space-y-4 min-w-0 overflow-x-hidden box-border">
+
+          {/* ── Card 0: Default view (role) ── */}
+          {user && (
+            <SettingsCard title="Default view">
+              <CardRow
+                label="Open Trace as"
+                description="Choose which workspace loads when you sign in."
+              >
+                <div className="flex gap-2">
+                  {([
+                    { value: "worker", label: "Freelancer" },
+                    { value: "employer", label: "Employer" },
+                  ] as const).map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setActiveRole(opt.value)}
+                      className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+                        activeRole === opt.value
+                          ? "bg-primary/20 text-foreground ring-1 ring-primary/40"
+                          : "text-muted-foreground hover:bg-muted/40"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </CardRow>
+            </SettingsCard>
+          )}
 
           {/* ── Card 1: Time & Calendar ── */}
           <SettingsCard title="Time & Calendar">

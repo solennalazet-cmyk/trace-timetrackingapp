@@ -7,25 +7,40 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { RoleProvider } from "./contexts/RoleContext";
 import { WeekStartProvider } from "./contexts/WeekStartContext";
 import AppLayout from "./components/AppLayout";
-import StartPage from "./pages/StartPage";
-import ReportsPage from "./pages/ReportsPage";
-import TimelinePage from "./pages/TimelinePage";
-import ClientsPage from "./pages/ClientsPage";
-import AccountProfilePage from "./pages/AccountProfilePage";
-import EmployerHomePage from "./pages/EmployerHomePage";
-import EmployerCalendarPage from "./pages/EmployerCalendarPage";
-import WorkersPage from "./pages/WorkersPage";
-import WorkerProfilePage from "./pages/WorkerProfilePage";
-import PaymentsPage from "./pages/PaymentsPage";
-import AccountPage from "./pages/AccountPage";
-import ResetPassword from "./pages/ResetPassword";
-import NotFound from "./pages/NotFound";
-import PrivacyPage from "./pages/PrivacyPage";
 import RoleChoiceOverlay from "./components/RoleChoiceOverlay";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { applyColorTheme, getStoredColorTheme } from "./hooks/useColorTheme";
 
-const queryClient = new QueryClient();
+// Route-level code splitting — keeps the initial JS payload small for the
+// Android WebView cold start. Each page becomes its own chunk fetched on
+// navigation rather than parsed up front.
+const StartPage = lazy(() => import("./pages/StartPage"));
+const ReportsPage = lazy(() => import("./pages/ReportsPage"));
+const ClientsPage = lazy(() => import("./pages/ClientsPage"));
+const AccountProfilePage = lazy(() => import("./pages/AccountProfilePage"));
+const EmployerHomePage = lazy(() => import("./pages/EmployerHomePage"));
+const EmployerCalendarPage = lazy(() => import("./pages/EmployerCalendarPage"));
+const WorkersPage = lazy(() => import("./pages/WorkersPage"));
+const WorkerProfilePage = lazy(() => import("./pages/WorkerProfilePage"));
+const PaymentsPage = lazy(() => import("./pages/PaymentsPage"));
+const AccountPage = lazy(() => import("./pages/AccountPage"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Mobile networks are flaky and the WebView often re-focuses when the
+      // status bar / keyboard appears. Disable the noisy refetches that fire
+      // on every focus change and keep results fresh for 30s by default.
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      staleTime: 30_000,
+      retry: 1,
+    },
+  },
+});
 
 function useWeekStartFromSettings(): 0 | 1 | 2 | 3 | 4 | 5 | 6 {
   const [weekStart, setWeekStart] = useState<0 | 1 | 2 | 3 | 4 | 5 | 6>(() => {
@@ -40,7 +55,9 @@ function useWeekStartFromSettings(): 0 | 1 | 2 | 3 | 4 | 5 | 6 {
   });
 
   useEffect(() => {
-    // Listen for settings changes (settings modal writes to localStorage)
+    // React to the in-app event the settings modal dispatches on save, plus
+    // cross-tab storage events. No polling — the previous 2s setInterval was
+    // a CPU/battery tax on Android with no observable benefit.
     const handler = () => {
       try {
         const raw = localStorage.getItem("trace_user_settings");
@@ -51,9 +68,11 @@ function useWeekStartFromSettings(): 0 | 1 | 2 | 3 | 4 | 5 | 6 {
       } catch {}
     };
     window.addEventListener("storage", handler);
-    // Also poll on a custom event for same-tab updates
-    const interval = setInterval(handler, 2000);
-    return () => { window.removeEventListener("storage", handler); clearInterval(interval); };
+    window.addEventListener("trace-settings-changed", handler);
+    return () => {
+      window.removeEventListener("storage", handler);
+      window.removeEventListener("trace-settings-changed", handler);
+    };
   }, []);
 
   return weekStart;
@@ -84,24 +103,26 @@ const AppInner = () => {
     <WeekStartProvider value={weekStart}>
       <BrowserRouter>
         <RoleChoiceOverlay />
-        <Routes>
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<StartPage />} />
-            <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/timeline" element={<Navigate to="/reports" replace />} />
-            <Route path="/clients" element={<ClientsPage />} />
-            <Route path="/clients/:id" element={<AccountProfilePage />} />
-            <Route path="/employer" element={<EmployerHomePage />} />
-            <Route path="/employer/calendar" element={<EmployerCalendarPage />} />
-            <Route path="/workers" element={<WorkersPage />} />
-            <Route path="/workers/:id" element={<WorkerProfilePage />} />
-            <Route path="/payments" element={<PaymentsPage />} />
-            <Route path="/account" element={<AccountPage />} />
-          </Route>
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/privacy" element={<PrivacyPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <Suspense fallback={<div className="min-h-screen" aria-hidden />}>
+          <Routes>
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<StartPage />} />
+              <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/timeline" element={<Navigate to="/reports" replace />} />
+              <Route path="/clients" element={<ClientsPage />} />
+              <Route path="/clients/:id" element={<AccountProfilePage />} />
+              <Route path="/employer" element={<EmployerHomePage />} />
+              <Route path="/employer/calendar" element={<EmployerCalendarPage />} />
+              <Route path="/workers" element={<WorkersPage />} />
+              <Route path="/workers/:id" element={<WorkerProfilePage />} />
+              <Route path="/payments" element={<PaymentsPage />} />
+              <Route path="/account" element={<AccountPage />} />
+            </Route>
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </WeekStartProvider>
   );
@@ -137,3 +158,4 @@ const App = () => (
 );
 
 export default App;
+

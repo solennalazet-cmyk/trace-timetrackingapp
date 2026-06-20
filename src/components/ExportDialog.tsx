@@ -21,8 +21,10 @@ import DateRangePicker from "@/components/DateRangePicker";
 import { toLocalDateKey } from "@/lib/utils";
 import { type RoundingSettings, roundDuration, roundedBillableValue, rawBillableValue, hasActiveRounding, describeRounding, aggregateWithRounding, entryDisplayValues } from "@/lib/rounding";
 import type { TimeEntry } from "@/components/EntryDetailSheet";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+// jspdf + jspdf-autotable are loaded on demand (see exportPDF) so they stay
+// out of the initial Android WebView bundle — they only matter once the
+// user actually exports something.
+
 
 interface ExportDialogProps {
   open: boolean;

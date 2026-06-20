@@ -14,8 +14,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { type RoundingSettings, aggregateWithRounding, entryDisplayValues, hasActiveRounding, describeRounding } from "@/lib/rounding";
 import type { TimeEntry } from "@/components/EntryDetailSheet";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+// jspdf + jspdf-autotable are loaded on demand (see buildPDF) — see
+// vite.config manualChunks: they live in the "pdf" chunk.
+
 import ExportColumnsPicker from "@/components/ExportColumnsPicker";
 import { type ExportColumnKey, resolveExportColumns, EXPORT_COLUMN_OPTIONS } from "@/lib/export-columns";
 import { cn } from "@/lib/utils";

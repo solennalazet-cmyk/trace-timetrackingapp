@@ -216,7 +216,7 @@ const SubmittedReportSheet = ({ open, onOpenChange, report, onReviewed, readOnly
                 <div className="min-w-[640px]">
                   <div className="grid text-xs font-medium bg-muted/40 px-3 py-2" style={{ gridTemplateColumns: `repeat(${2 + orderedCols.length + 1}, minmax(0,1fr))` }}>
                     <span>Date</span>
-                    <span>Time</span>
+                    <span>Duration</span>
                     {orderedCols.map((k) => (
                       <span key={k} className="capitalize">{k.replace(/_/g, " ")}</span>
                     ))}

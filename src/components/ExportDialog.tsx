@@ -143,16 +143,17 @@ const ExportDialog = ({
     setTrackPromptOpen(true);
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (filteredEntries.length === 0) {
       toast.error("No entries to export for this range.");
       return;
     }
     if (format === "csv") exportCSV();
-    else exportPDF();
+    else await exportPDF();
     // Don't auto-close — show tracking prompt next
     evaluateTrackingPrompt();
   };
+
 
   const handleConfirmTrack = async () => {
     if (!user) {
@@ -250,8 +251,13 @@ const ExportDialog = ({
     toast.success("CSV exported.");
   };
 
-  const exportPDF = () => {
+  const exportPDF = async () => {
+    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
     const margin = 16;

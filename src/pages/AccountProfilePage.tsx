@@ -171,38 +171,11 @@ const AccountProfilePage = () => {
   const sym = CURRENCY_SYMBOLS[client.currency ?? "EUR"] ?? "€";
   const connStatus = client.connection_status ?? "none";
 
-  type CardDef = { kind: AccountEditorKind; Icon: typeof Mail; title: string; rows: { label: string; value: string | null }[] };
+  type CardDef = { kind: AccountEditorKind; Icon: typeof Mail; title: string };
   const cards: CardDef[] = [
-    {
-      kind: "contact",
-      Icon: Mail,
-      title: "Contact",
-      rows: [
-        { label: "Name", value: client.name },
-        { label: "Email", value: client.email },
-        { label: "Phone", value: client.phone },
-      ],
-    },
-    {
-      kind: "commercial",
-      Icon: Handshake,
-      title: "Commercial agreement",
-      rows: [
-        { label: "Default rate", value: client.default_rate != null ? `${sym}${client.default_rate}/hour` : null },
-        { label: "Currency", value: client.currency ?? "EUR" },
-        { label: "Payment terms", value: client.payment_terms_days != null ? `${client.payment_terms_days} days` : null },
-        { label: "Billing notes", value: client.billing_notes },
-      ],
-    },
-    {
-      kind: "business",
-      Icon: Building2,
-      title: "Business details",
-      rows: [
-        { label: "NIF / VAT", value: client.nif },
-        { label: "Address", value: client.business_address },
-      ],
-    },
+    { kind: "contact", Icon: Mail, title: "Contact" },
+    { kind: "commercial", Icon: Handshake, title: "Commercial agreement" },
+    { kind: "business", Icon: Building2, title: "Business details" },
   ];
 
   return (

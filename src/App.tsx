@@ -83,6 +83,7 @@ const AppInner = () => {
   return (
     <WeekStartProvider value={weekStart}>
       <BrowserRouter>
+        <RoleChoiceOverlay />
         <Routes>
           <Route element={<AppLayout />}>
             <Route path="/" element={<StartPage />} />

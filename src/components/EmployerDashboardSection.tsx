@@ -349,7 +349,7 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
                           <div className="flex items-end gap-0.5 h-12">
                             {(w.series.length > 21 ? w.series.slice(-21) : w.series).map((d) => {
                               const pct = Math.min(100, (d.brk / Y_MAX) * 100);
-                              const cls = zoneClass(d.brk, d.worked);
+                              const cls = zoneClass(d.brk, d.work, d.worked);
                               return (
                                 <div
                                   key={d.date}

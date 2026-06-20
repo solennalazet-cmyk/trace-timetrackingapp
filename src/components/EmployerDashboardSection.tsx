@@ -37,9 +37,52 @@ interface Props {
   breaksDefaultOpen?: boolean;
 }
 
-const HEALTHY_MIN = 25;
-const HEALTHY_MAX = 40;
-const Y_MAX = 60;
+// Break adequacy bands scaled to the day's worked hours.
+// Anchored to Portuguese labour law: a worker doing 6h+ must take a break of
+// at least 1h (and not more than 2h) per Art. 213º CT. Shorter days take
+// proportionally shorter breaks.
+const Y_MAX = 90; // capsule scale cap (m)
+
+type Band = "healthy" | "short" | "long" | "none";
+
+/** Returns the recommended break band for a given day. */
+const breakBand = (breakMins: number, workMins: number): Band => {
+  if (workMins <= 0) return "none";
+  // Under 4h worked: no legal break required, but flag clearly excessive breaks.
+  if (workMins < 240) {
+    if (breakMins > 30) return "long";
+    return "healthy";
+  }
+  // 4h to <6h: recommend a short pause, ~15–45m.
+  if (workMins < 360) {
+    if (breakMins < 15) return "short";
+    if (breakMins > 45) return "long";
+    return "healthy";
+  }
+  // 6h+: legal min 45m–1h, healthy up to ~75m.
+  if (breakMins < 45) return breakMins === 0 ? "none" : "short";
+  if (breakMins > 75) return "long";
+  return "healthy";
+};
+
+const bandClass = (band: Band): string => {
+  switch (band) {
+    case "healthy": return "bg-emerald-500";
+    case "short": return "bg-amber-400";
+    case "long": return "bg-amber-400";
+    case "none": return "bg-red-400";
+  }
+};
+
+const bandLabel = (band: Band): string => {
+  switch (band) {
+    case "healthy": return "Healthy";
+    case "short": return "Too short";
+    case "long": return "Too long";
+    case "none": return "No break";
+  }
+};
+
 
 const fmtHm = (mins: number) => {
   const h = Math.floor(mins / 60);
@@ -178,13 +221,11 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
   const sym = CURRENCY_SYMBOLS[totals.currency] ?? "€";
   const fmtMoney = (n: number) => `${sym}${n.toFixed(0)}`;
 
-  const zoneClass = (mins: number, worked: boolean) => {
+  const zoneClass = (breakMins: number, workMins: number, worked: boolean) => {
     if (!worked) return "bg-muted-foreground/20";
-    if (mins === 0) return "bg-red-400";
-    if (mins < HEALTHY_MIN) return "bg-amber-400";
-    if (mins <= HEALTHY_MAX) return "bg-emerald-500";
-    return "bg-red-400";
+    return bandClass(breakBand(breakMins, workMins));
   };
+
 
   return (
     <section className="space-y-2">
@@ -263,8 +304,10 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
               workerBreaks.map((w) => {
                 const color = getClientColor(w.id);
                 const avg = Math.round(w.avgBreak);
+                const avgWork = w.workedDaysCount > 0 ? w.totalWork / w.workedDaysCount : 0;
                 const isOpen = expandedWorker === w.id;
-                const avgZone = zoneClass(avg, w.workedDaysCount > 0);
+                const avgZone = zoneClass(avg, avgWork, w.workedDaysCount > 0);
+
                 return (
                   <div key={w.id} className="rounded-md bg-muted/30">
                     <button
@@ -306,7 +349,7 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
                           <div className="flex items-end gap-0.5 h-12">
                             {(w.series.length > 21 ? w.series.slice(-21) : w.series).map((d) => {
                               const pct = Math.min(100, (d.brk / Y_MAX) * 100);
-                              const cls = zoneClass(d.brk, d.worked);
+                              const cls = zoneClass(d.brk, d.work, d.worked);
                               return (
                                 <div
                                   key={d.date}
@@ -322,12 +365,12 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
                           </div>
                           <div className="flex justify-between text-[9px] text-muted-foreground mt-1">
                             <span>{w.series.length > 21 ? "last 21 days" : "0m"}</span>
-                            <span>60m</span>
+                            <span>90m</span>
                           </div>
                         </div>
 
                         <p className="text-[10px] text-muted-foreground">
-                          Healthy band 25–40m · short days often = shorter breaks.
+                          Targets adjust to the day's hours: under 4h → up to 30m, 4–6h → 15–45m, 6h+ → 45–75m (PT law: ≥45m at 6h+).
                         </p>
                       </div>
                     )}
@@ -336,10 +379,11 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
               })
             )}
             <div className="flex flex-wrap gap-x-3 gap-y-1 text-[9px] text-muted-foreground pt-1">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-500" /> Healthy 25–40m</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-400" /> Short</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-400" /> None / long</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-500" /> Healthy (varies w/ day length)</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-400" /> Too short / too long</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-400" /> No break on 6h+ day</span>
             </div>
+
           </div>
         )}
       </Card>

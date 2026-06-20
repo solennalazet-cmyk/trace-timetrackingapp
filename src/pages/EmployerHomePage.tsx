@@ -50,7 +50,7 @@ const EmployerHomePage = () => {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
-  const [view, setView] = useState<"status" | "dashboard">("status");
+  const [view, setView] = useState<"status" | "dashboard">("dashboard");
 
   // Pull-to-refresh state
   const [pullY, setPullY] = useState(0);

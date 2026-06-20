@@ -98,7 +98,7 @@ const DesktopSidebar = () => {
 
       {/* Nav */}
       <nav className="flex flex-col gap-1">
-        {navItems.map(({ path, label, icon: Icon }) => {
+        {navItems.map(({ path, label, icon: Icon, beta }) => {
           const isActive = location.pathname === path;
           return (
             <Link
@@ -111,7 +111,14 @@ const DesktopSidebar = () => {
               }}
             >
               <Icon className="w-4 h-4" />
-              {label}
+              <span className="flex items-center gap-1.5">
+                {label}
+                {beta && (
+                  <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-muted text-muted-foreground leading-none">
+                    BETA
+                  </span>
+                )}
+              </span>
             </Link>
           );
         })}

@@ -12,10 +12,10 @@ import CallLogModal from "@/components/CallLogModal";
 import UnassignedPanel from "@/components/UnassignedPanel";
 import TodayEntriesSheet from "@/components/TodayEntriesSheet";
 import WelcomeBanner from "@/components/WelcomeBanner";
-import ConnectionInvitesCard from "@/components/ConnectionInvitesCard";
 import WorkerNotificationsCard from "@/components/WorkerNotificationsCard";
 import SessionConflictDialog from "@/components/SessionConflictDialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/contexts/RoleContext";
 import { toLocalDateKey } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { saveAnonymousEntry, getAnonymousEntries, updateAnonymousEntry } from "@/lib/anonymous-store";
@@ -56,7 +56,8 @@ function getActiveMode(): Mode | null {
 
 const StartPage = () => {
   const [mode, setMode] = useState<Mode>(() => getActiveMode() ?? "stopwatch");
-  const { user } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
+  const { activeRole } = useRole();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -92,6 +93,13 @@ const StartPage = () => {
   const [geoPromptSeen, setGeoPromptSeen] = useState(true);
   const [geoPrePromptOpen, setGeoPrePromptOpen] = useState(false);
   const [pendingGeoStart, setPendingGeoStart] = useState<{ mode: string; startedAt: string } | null>(null);
+  const profileRole = (profile as any)?.active_role;
+
+  useEffect(() => {
+    if (activeRole === "employer" || profileRole === "employer") {
+      navigate("/employer", { replace: true });
+    }
+  }, [activeRole, profileRole, navigate]);
 
   const handleModeSwitch = (target: Mode) => {
     if (target === mode) return;
@@ -537,6 +545,10 @@ const StartPage = () => {
     { key: "shift", label: "Clock In" },
   ];
 
+  if ((user && !profile) || authLoading || activeRole === "employer" || profileRole === "employer") {
+    return <div className="pt-6 pb-24 text-sm text-muted-foreground px-4">Loading…</div>;
+  }
+
   return (
     <div className="flex flex-col items-center pt-4">
       <Seo title={"Trace — Time Tracker for Freelancers"} description={"Start a timer in one tap and assign work to clients later. Trace is the timer-first time tracking app for freelancers."} path={"/"} />
@@ -573,9 +585,6 @@ const StartPage = () => {
 
       {/* Welcome banner (first visit only) */}
       <WelcomeBanner onDismiss={() => {}} />
-
-      {/* Incoming connection invites */}
-      <ConnectionInvitesCard />
 
       {/* Report review and payment notifications */}
       <WorkerNotificationsCard />

@@ -56,6 +56,7 @@ export type Database = {
           business_address: string | null
           connected_user_id: string | null
           connection_initiated_by: string | null
+          connection_requester_name: string | null
           connection_status: string
           contract_url: string | null
           created_at: string | null
@@ -92,6 +93,7 @@ export type Database = {
           business_address?: string | null
           connected_user_id?: string | null
           connection_initiated_by?: string | null
+          connection_requester_name?: string | null
           connection_status?: string
           contract_url?: string | null
           created_at?: string | null
@@ -128,6 +130,7 @@ export type Database = {
           business_address?: string | null
           connected_user_id?: string | null
           connection_initiated_by?: string | null
+          connection_requester_name?: string | null
           connection_status?: string
           contract_url?: string | null
           created_at?: string | null
@@ -827,10 +830,6 @@ export type Database = {
     }
     Functions: {
       can_access_submission: { Args: { _sub_id: string }; Returns: boolean }
-      decline_client_invite: {
-        Args: { _invite_id: string }
-        Returns: undefined
-      }
       email_matches_auth_user: { Args: { _email: string }; Returns: boolean }
     }
     Enums: {

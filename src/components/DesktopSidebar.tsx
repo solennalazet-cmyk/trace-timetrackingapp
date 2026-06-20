@@ -16,7 +16,7 @@ import RoleSwitcher from "./RoleSwitcher";
 const workerNav = [
   { path: "/", label: "Start", icon: Timer },
   { path: "/reports", label: "Reports", icon: BarChart3 },
-  { path: "/payments", label: "Payments", icon: Wallet },
+  { path: "/payments", label: "Payments", icon: Wallet, beta: true },
   { path: "/clients", label: "Accounts", icon: Briefcase },
 ];
 
@@ -24,7 +24,7 @@ const employerNav = [
   { path: "/employer", label: "Home", icon: Home },
   { path: "/employer/calendar", label: "Calendar", icon: CalendarDays },
   { path: "/workers", label: "Freelancers", icon: Users },
-  { path: "/payments", label: "Payments", icon: Wallet },
+  { path: "/payments", label: "Payments", icon: Wallet, beta: true },
 ];
 
 const DesktopSidebar = () => {
@@ -98,7 +98,7 @@ const DesktopSidebar = () => {
 
       {/* Nav */}
       <nav className="flex flex-col gap-1">
-        {navItems.map(({ path, label, icon: Icon }) => {
+        {navItems.map(({ path, label, icon: Icon, beta }) => {
           const isActive = location.pathname === path;
           return (
             <Link
@@ -111,7 +111,14 @@ const DesktopSidebar = () => {
               }}
             >
               <Icon className="w-4 h-4" />
-              {label}
+              <span className="flex items-center gap-1.5">
+                {label}
+                {beta && (
+                  <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-muted text-muted-foreground leading-none">
+                    BETA
+                  </span>
+                )}
+              </span>
             </Link>
           );
         })}

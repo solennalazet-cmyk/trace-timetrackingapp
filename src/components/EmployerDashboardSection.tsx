@@ -304,8 +304,10 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
               workerBreaks.map((w) => {
                 const color = getClientColor(w.id);
                 const avg = Math.round(w.avgBreak);
+                const avgWork = w.workedDaysCount > 0 ? w.totalWork / w.workedDaysCount : 0;
                 const isOpen = expandedWorker === w.id;
-                const avgZone = zoneClass(avg, w.workedDaysCount > 0);
+                const avgZone = zoneClass(avg, avgWork, w.workedDaysCount > 0);
+
                 return (
                   <div key={w.id} className="rounded-md bg-muted/30">
                     <button

@@ -100,22 +100,28 @@ const ConnectionInvitesCard = () => {
   return (
     <div className="space-y-2 mt-4">
       {invites.map((invite) => (
-        <Card key={invite.id} className="p-4 bg-card border-border shadow-sm">
+        <Card
+          key={invite.id}
+          className="p-4 bg-foreground text-background border-0 shadow-lg ring-1 ring-foreground/20 animate-in fade-in slide-in-from-top-2"
+        >
           <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-foreground/10 flex items-center justify-center shrink-0">
-              <UserPlus className="w-4 h-4 text-foreground" />
+            <div className="w-9 h-9 rounded-xl bg-background/15 flex items-center justify-center shrink-0">
+              <UserPlus className="w-4 h-4 text-background" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground">
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-background/60 mb-1">
+                Action needed
+              </p>
+              <p className="text-sm font-semibold text-background">
                 {invite.connection_requester_name || "A Trace user"} wants to connect
               </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-xs text-background/70 mt-0.5">
                 Accepting lets them submit reports to you for review and payment.
               </p>
               <div className="flex gap-2 mt-3">
                 <Button
                   size="sm"
-                  className="rounded-full h-8 px-4 gap-1"
+                  className="rounded-full h-8 px-4 gap-1 bg-primary text-primary-foreground hover:bg-primary/90"
                   onClick={() => handleAccept(invite)}
                   disabled={working === invite.id}
                 >
@@ -124,7 +130,7 @@ const ConnectionInvitesCard = () => {
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="rounded-full h-8 px-4 gap-1 text-muted-foreground"
+                  className="rounded-full h-8 px-4 gap-1 text-background/70 hover:text-background hover:bg-background/10"
                   onClick={() => handleDecline(invite)}
                   disabled={working === invite.id}
                 >
@@ -140,3 +146,4 @@ const ConnectionInvitesCard = () => {
 };
 
 export default ConnectionInvitesCard;
+

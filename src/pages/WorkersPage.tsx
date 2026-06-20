@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import AddFreelancerModal, { type NewFreelancerPayload } from "@/components/AddFreelancerModal";
 import SwipeToDeleteRow from "@/components/SwipeToDeleteRow";
 import Seo from "@/components/Seo";
+import ConnectionInvitesCard from "@/components/ConnectionInvitesCard";
+
 
 interface FreelancerInvite {
   id: string;
@@ -118,6 +120,8 @@ const WorkersPage = () => {
           <Plus className="h-4 w-4" /> Add freelancer
         </Button>
       </header>
+      <ConnectionInvitesCard />
+
 
       {loading ? (
         <Card className="p-6 text-center text-sm text-muted-foreground">Loading…</Card>

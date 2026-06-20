@@ -4,13 +4,17 @@ import Header from "./Header";
 import BottomNav from "./BottomNav";
 import DesktopSidebar from "./DesktopSidebar";
 import DesktopRightPanel from "./DesktopRightPanel";
+import EmployerRightPanel from "./EmployerRightPanel";
 import ReportsRightPanel from "./ReportsRightPanel";
 import AuthModal from "./AuthModal";
+import { useRole } from "@/contexts/RoleContext";
 
 const AppLayout = () => {
   const [authOpen, setAuthOpen] = useState(false);
   const location = useLocation();
+  const { activeRole } = useRole();
   const isReports = location.pathname === "/reports";
+
 
   return (
     <div className="gradient-bg min-h-screen">
@@ -37,7 +41,7 @@ const AppLayout = () => {
           </div>
         </div>
 
-        {isReports ? <ReportsRightPanel /> : <DesktopRightPanel />}
+        {isReports ? <ReportsRightPanel /> : activeRole === "employer" ? <EmployerRightPanel /> : <DesktopRightPanel />}
       </div>
       <AuthModal open={authOpen} onOpenChange={setAuthOpen} />
     </div>

@@ -298,10 +298,7 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
 
         {breaksOpen && (
           <div className="border-t border-border px-3 py-2 space-y-1.5">
-            {(() => {
-              const maxAvgWork = Math.max(1, ...workerBreaks.map((w) => w.workedDaysCount > 0 ? w.totalWork / w.workedDaysCount : 0));
-              return null;
-            })()}
+
             {workerBreaks.length === 0 ? (
               <p className="text-[11px] text-muted-foreground text-center py-2">No freelancer data in this range.</p>
             ) : (

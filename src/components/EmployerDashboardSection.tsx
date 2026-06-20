@@ -282,7 +282,7 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
         </div>
       </Card>
 
-      {/* Break pattern — collapsible to keep To-date status above the fold */}
+      {/* Work pattern — collapsible to keep To-date status above the fold */}
       <Card className="overflow-hidden">
         <button
           onClick={() => setBreaksOpen((v) => !v)}
@@ -290,42 +290,51 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
         >
           <div className="flex items-center gap-2">
             <Coffee className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="text-xs font-semibold">Break pattern</span>
-            <span className="text-[10px] text-muted-foreground">avg per worked day</span>
+            <span className="text-xs font-semibold">Work pattern</span>
+            <span className="text-[10px] text-muted-foreground">avg shift & break per worked day</span>
           </div>
           <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${breaksOpen ? "rotate-180" : ""}`} />
         </button>
 
         {breaksOpen && (
           <div className="border-t border-border px-3 py-2 space-y-1.5">
+            {(() => {
+              const maxAvgWork = Math.max(1, ...workerBreaks.map((w) => w.workedDaysCount > 0 ? w.totalWork / w.workedDaysCount : 0));
+              return null;
+            })()}
             {workerBreaks.length === 0 ? (
               <p className="text-[11px] text-muted-foreground text-center py-2">No freelancer data in this range.</p>
             ) : (
-              workerBreaks.map((w) => {
-                const color = getClientColor(w.id);
-                const avg = Math.round(w.avgBreak);
-                const avgWork = w.workedDaysCount > 0 ? w.totalWork / w.workedDaysCount : 0;
-                const isOpen = expandedWorker === w.id;
-                const avgZone = zoneClass(avg, avgWork, w.workedDaysCount > 0);
+              (() => {
+                const maxAvgWork = Math.max(1, ...workerBreaks.map((w) => w.workedDaysCount > 0 ? w.totalWork / w.workedDaysCount : 0));
+                return workerBreaks.map((w) => {
+                  const color = getClientColor(w.id);
+                  const avg = Math.round(w.avgBreak);
+                  const avgWork = w.workedDaysCount > 0 ? w.totalWork / w.workedDaysCount : 0;
+                  const isOpen = expandedWorker === w.id;
+                  const avgZone = zoneClass(avg, avgWork, w.workedDaysCount > 0);
+                  const workPct = (avgWork / maxAvgWork) * 100;
 
-                return (
-                  <div key={w.id} className="rounded-md bg-muted/30">
-                    <button
-                      onClick={() => setExpandedWorker(isOpen ? null : w.id)}
-                      className="w-full flex items-center gap-2 px-2 py-2"
-                    >
-                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                      <span className="text-xs font-semibold flex-1 text-left truncate">{w.name}</span>
-                      {/* avg capsule: light track + dark fill = avg minutes / 60 */}
-                      <div className="relative w-16 h-2 rounded-full bg-muted overflow-hidden">
-                        <div
-                          className={`absolute inset-y-0 left-0 ${avgZone}`}
-                          style={{ width: `${Math.min(100, (avg / Y_MAX) * 100)}%` }}
-                        />
-                      </div>
-                      <span className="text-[11px] font-mono font-semibold w-9 text-right">{avg}m</span>
-                      <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
-                    </button>
+                  return (
+                    <div key={w.id} className="rounded-md bg-muted/30">
+                      <button
+                        onClick={() => setExpandedWorker(isOpen ? null : w.id)}
+                        className="w-full flex items-center gap-2 px-2 py-2"
+                      >
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                        <span className="text-xs font-semibold flex-1 text-left truncate">{w.name}</span>
+                        {/* Avg-shift bar: length = avg daily worked hours scaled across workers; fill color = break adequacy */}
+                        <div className="relative w-24 h-2 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className={avgZone}
+                            style={{ width: `${Math.max(4, workPct)}%`, height: "100%" }}
+                          />
+                        </div>
+                        <span className="text-[11px] font-mono font-semibold w-12 text-right">{fmtHm(avgWork)}</span>
+                        <span className="text-[10px] font-mono text-muted-foreground w-9 text-right">{avg}m brk</span>
+                        <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                      </button>
+
 
                     {isOpen && (
                       <div className="px-2 pb-2 space-y-2 border-t border-border/50">

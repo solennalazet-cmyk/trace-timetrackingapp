@@ -221,13 +221,11 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
   const sym = CURRENCY_SYMBOLS[totals.currency] ?? "€";
   const fmtMoney = (n: number) => `${sym}${n.toFixed(0)}`;
 
-  const zoneClass = (mins: number, worked: boolean) => {
+  const zoneClass = (breakMins: number, workMins: number, worked: boolean) => {
     if (!worked) return "bg-muted-foreground/20";
-    if (mins === 0) return "bg-red-400";
-    if (mins < HEALTHY_MIN) return "bg-amber-400";
-    if (mins <= HEALTHY_MAX) return "bg-emerald-500";
-    return "bg-red-400";
+    return bandClass(breakBand(breakMins, workMins));
   };
+
 
   return (
     <section className="space-y-2">

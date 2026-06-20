@@ -207,6 +207,35 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
 
         <div className="px-5 pb-6 space-y-4 min-w-0 overflow-x-hidden box-border">
 
+          {/* ── Card 0: Default view (role) ── */}
+          {user && (
+            <SettingsCard title="Default view">
+              <CardRow
+                label="Open Trace as"
+                description="Choose which workspace loads when you sign in."
+              >
+                <div className="flex gap-2">
+                  {([
+                    { value: "worker", label: "Freelancer" },
+                    { value: "employer", label: "Employer" },
+                  ] as const).map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setActiveRole(opt.value)}
+                      className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+                        activeRole === opt.value
+                          ? "bg-primary/20 text-foreground ring-1 ring-primary/40"
+                          : "text-muted-foreground hover:bg-muted/40"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </CardRow>
+            </SettingsCard>
+          )}
+
           {/* ── Card 1: Time & Calendar ── */}
           <SettingsCard title="Time & Calendar">
             <CardRow label="Week starts on">

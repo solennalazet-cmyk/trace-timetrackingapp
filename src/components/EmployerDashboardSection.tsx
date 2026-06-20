@@ -134,11 +134,28 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
         setPaidByReport(new Map());
       }
 
-      const clientIds = Array.from(new Set(rows.map((r) => r.client_id))).filter(Boolean);
-      if (clientIds.length > 0) {
-        const { data: cRows } = await supabase.from("clients").select("id, name").in("id", clientIds);
-        if (!cancelled) setWorkerNames(new Map((cRows ?? []).map((c: any) => [c.id, c.name])));
+      // Resolve worker display names from their profile (not the client card name,
+      // which is the worker's label for the employer).
+      const workerUserIds = Array.from(new Set(rows.map((r) => r.worker_user_id))).filter(Boolean);
+      const nameMap = new Map<string, string>();
+      if (workerUserIds.length > 0) {
+        const { data: pRows } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", workerUserIds);
+        const profileById = new Map((pRows ?? []).map((p: any) => [p.id, p.full_name]));
+        for (const r of rows) {
+          const nm = profileById.get(r.worker_user_id);
+          if (nm) nameMap.set(r.client_id, nm);
+        }
       }
+      // Fallback to client name for any unresolved rows
+      const missingClientIds = Array.from(new Set(rows.map((r) => r.client_id))).filter((id) => id && !nameMap.has(id));
+      if (missingClientIds.length > 0) {
+        const { data: cRows } = await supabase.from("clients").select("id, name").in("id", missingClientIds);
+        for (const c of (cRows ?? []) as any[]) nameMap.set(c.id, c.name);
+      }
+      if (!cancelled) setWorkerNames(nameMap);
     })();
     return () => { cancelled = true; };
   }, [user, from, to, refreshKey]);

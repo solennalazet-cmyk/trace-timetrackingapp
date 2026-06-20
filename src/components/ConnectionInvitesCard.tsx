@@ -12,6 +12,7 @@ interface PendingInvite {
   name: string;
   invited_email: string | null;
   user_id: string;
+  connection_requester_name: string | null;
 }
 
 /**
@@ -21,23 +22,27 @@ interface PendingInvite {
  */
 const ConnectionInvitesCard = () => {
   const { user, profile, refreshProfile } = useAuth();
-  const { setActiveRole } = useRole();
+  const { activeRole, setActiveRole } = useRole();
   const [invites, setInvites] = useState<PendingInvite[]>([]);
   const [working, setWorking] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!user) return;
+    if (!user || activeRole !== "employer") {
+      setInvites([]);
+      return;
+    }
     const myEmail = (user.email ?? "").toLowerCase();
     const { data } = await supabase
       .from("clients")
-      .select("id, name, invited_email, user_id")
-      .eq("connection_status", "pending");
-    // Only show invites addressed TO me (not invites I sent myself).
+      .select("id, name, invited_email, user_id, connection_initiated_by, connection_requester_name")
+      .eq("connection_status", "pending")
+      .eq("connection_initiated_by", "worker");
+    // Only show worker-initiated invites addressed TO this employer (not invites I sent myself).
     const filtered = ((data ?? []) as any[]).filter(
       (row) => row.user_id !== user.id && (row.invited_email ?? "").toLowerCase() === myEmail,
     );
     setInvites(filtered as PendingInvite[]);
-  }, [user]);
+  }, [user, activeRole]);
 
   useEffect(() => {
     load();
@@ -64,7 +69,7 @@ const ConnectionInvitesCard = () => {
     await supabase.from("profiles").update({ available_roles: next, active_role: "employer" } as any).eq("id", user.id);
     await refreshProfile();
     await setActiveRole("employer");
-    toast.success(`Connected with ${invite.name}.`);
+    toast.success(`Connected with ${invite.connection_requester_name || invite.name}.`);
     setWorking(null);
     load();
   };
@@ -73,9 +78,10 @@ const ConnectionInvitesCard = () => {
     setWorking(invite.id);
     // Optimistically remove the card so the notification clears immediately.
     setInvites((prev) => prev.filter((i) => i.id !== invite.id));
-    const { error } = await supabase.rpc("decline_client_invite" as any, {
-      _invite_id: invite.id,
-    });
+    const { error } = await supabase
+      .from("clients")
+      .update({ connection_status: "rejected" } as any)
+      .eq("id", invite.id);
     if (error) {
       console.error("[decline-invite]", error);
       toast.error(`Couldn't decline invite: ${error.message}`);
@@ -100,7 +106,7 @@ const ConnectionInvitesCard = () => {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-foreground">
-                {invite.name} wants to connect
+                {invite.connection_requester_name || "A Trace user"} wants to connect
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Accepting lets them submit reports to you for review and payment.

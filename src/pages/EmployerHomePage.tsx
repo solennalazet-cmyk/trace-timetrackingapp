@@ -90,25 +90,41 @@ const EmployerHomePage = () => {
       ...reviewedRows,
     ];
     const clientIds = Array.from(new Set(allRows.map((r) => r.client_id))).filter(Boolean);
-    let nameMap = new Map<string, string>();
+    const workerIds = Array.from(new Set(allRows.map((r) => r.worker_user_id))).filter(Boolean);
+    let clientNameMap = new Map<string, string>();
+    let workerNameMap = new Map<string, string>();
     if (clientIds.length > 0) {
       const { data: clientRows } = await supabase
         .from("clients")
         .select("id, name")
         .in("id", clientIds);
-      nameMap = new Map((clientRows ?? []).map((c: any) => [c.id, c.name]));
+      clientNameMap = new Map((clientRows ?? []).map((c: any) => [c.id, c.name]));
     }
-    const mapRow = (r: any): SubmittedReport => ({ ...r, client_name: nameMap.get(r.client_id) ?? "Freelancer" });
+    if (workerIds.length > 0) {
+      const { data: profileRows } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", workerIds as string[]);
+      workerNameMap = new Map(
+        (profileRows ?? [])
+          .filter((p: any) => p.full_name && p.full_name.trim())
+          .map((p: any) => [p.id, p.full_name.trim()]),
+      );
+    }
+    const resolveName = (r: any) =>
+      workerNameMap.get(r.worker_user_id) ?? clientNameMap.get(r.client_id) ?? "Freelancer";
+    const mapRow = (r: any): SubmittedReport => ({ ...r, client_name: resolveName(r) });
     setPending(((pRes.data ?? []) as any[]).map(mapRow));
     setApproved(((aRes.data ?? []) as any[]).map(mapRow));
 
     const items: ActivityItem[] = [];
     for (const r of reviewedRows) {
+      const nm = resolveName(r);
       items.push({
         id: `s-${r.id}`,
         ts: r.submitted_at,
         type: "submitted",
-        clientName: nameMap.get(r.client_id) ?? "Freelancer",
+        clientName: nm,
         amount: Number(r.total_amount),
         currency: r.currency,
       });
@@ -117,7 +133,7 @@ const EmployerHomePage = () => {
           id: `rv-${r.id}`,
           ts: r.reviewed_at,
           type: r.status,
-          clientName: nameMap.get(r.client_id) ?? "Freelancer",
+          clientName: nm,
           amount: Number(r.total_amount),
           currency: r.currency,
         });
@@ -130,20 +146,21 @@ const EmployerHomePage = () => {
       .eq("recorded_by_user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(20);
-    const reportLookup = new Map(reviewedRows.map((r) => [r.id, r.client_id]));
+    const reportRowLookup = new Map(reviewedRows.map((r) => [r.id, r]));
     for (const p of (payRows ?? []) as any[]) {
-      const cid = reportLookup.get(p.submitted_report_id);
+      const reportRow = reportRowLookup.get(p.submitted_report_id);
       items.push({
         id: `p-${p.id}`,
         ts: p.created_at,
         type: "payment",
-        clientName: (cid && nameMap.get(cid)) || "Freelancer",
+        clientName: reportRow ? resolveName(reportRow) : "Freelancer",
         amount: Number(p.amount),
         currency: p.currency,
       });
     }
     items.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
     setActivity(items.slice(0, 10));
+
     setLoading(false);
     window.dispatchEvent(new Event("pending-reports-changed"));
   }, [user]);

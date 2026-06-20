@@ -45,15 +45,6 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
 
 const initials = (name: string) => (name?.trim()?.slice(0, 1) ?? "?").toUpperCase();
 
-const FieldLine = ({ label, value }: { label: string; value: string | null }) => (
-  <div className="flex items-start justify-between gap-4 py-2.5 border-t border-border/60 first:border-t-0 first:pt-0 last:pb-0">
-    <span className="text-xs text-muted-foreground shrink-0">{label}</span>
-    <span className="text-xs font-medium text-foreground text-right leading-relaxed whitespace-pre-line break-words min-w-0">
-      {value?.trim() || "—"}
-    </span>
-  </div>
-);
-
 const AccountProfilePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();

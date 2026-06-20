@@ -303,14 +303,20 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
               <p className="text-[11px] text-muted-foreground text-center py-2">No freelancer data in this range.</p>
             ) : (
               (() => {
-                const maxAvgWork = Math.max(1, ...workerBreaks.map((w) => w.workedDaysCount > 0 ? w.totalWork / w.workedDaysCount : 0));
+                const maxAvgTotal = Math.max(
+                  1,
+                  ...workerBreaks.map((w) =>
+                    w.workedDaysCount > 0 ? (w.totalWork / w.workedDaysCount) + w.avgBreak : 0,
+                  ),
+                );
                 return workerBreaks.map((w) => {
                   const color = getClientColor(w.id);
                   const avg = Math.round(w.avgBreak);
                   const avgWork = w.workedDaysCount > 0 ? w.totalWork / w.workedDaysCount : 0;
                   const isOpen = expandedWorker === w.id;
                   const avgZone = zoneClass(avg, avgWork, w.workedDaysCount > 0);
-                  const workPct = (avgWork / maxAvgWork) * 100;
+                  const totalPct = ((avgWork + w.avgBreak) / maxAvgTotal) * 100;
+                  const workShare = avgWork + w.avgBreak > 0 ? avgWork / (avgWork + w.avgBreak) : 1;
 
                   return (
                     <div key={w.id} className="rounded-md bg-muted/30">
@@ -320,12 +326,16 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
                       >
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
                         <span className="text-xs font-semibold flex-1 text-left truncate">{w.name}</span>
-                        {/* Avg-shift bar: length = avg daily worked hours scaled across workers; fill color = break adequacy */}
+                        {/* Avg-shift bar: total length = work + break (scaled across workers).
+                            Left segment = work (break-adequacy color). Right segment = break (slate). */}
                         <div className="relative w-24 h-2 rounded-full bg-muted overflow-hidden">
                           <div
-                            className={avgZone}
-                            style={{ width: `${Math.max(4, workPct)}%`, height: "100%" }}
-                          />
+                            className="flex h-full"
+                            style={{ width: `${Math.max(4, totalPct)}%` }}
+                          >
+                            <div className={avgZone} style={{ width: `${workShare * 100}%` }} />
+                            <div className="bg-slate-400 dark:bg-slate-500" style={{ width: `${(1 - workShare) * 100}%` }} />
+                          </div>
                         </div>
                         <span className="text-[11px] font-mono font-semibold w-12 text-right">{fmtHm(avgWork)}</span>
                         <span className="text-[10px] font-mono text-muted-foreground w-9 text-right">{avg}m brk</span>

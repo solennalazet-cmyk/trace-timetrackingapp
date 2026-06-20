@@ -249,6 +249,13 @@ const PaymentsPage = () => {
         </p>
       </header>
 
+      <div className="px-1">
+        <span className="inline-flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full bg-muted text-muted-foreground">
+          BETA
+          <span className="text-muted-foreground/70">Payment tracking is in beta — let us know if you spot anything off.</span>
+        </span>
+      </div>
+
       {loading ? (
         <Card className="p-4 text-xs text-muted-foreground text-center">Loading…</Card>
       ) : groups.length === 0 ? (

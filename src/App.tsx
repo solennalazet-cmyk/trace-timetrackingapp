@@ -21,6 +21,7 @@ import AccountPage from "./pages/AccountPage";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import PrivacyPage from "./pages/PrivacyPage";
+import RoleChoiceOverlay from "./components/RoleChoiceOverlay";
 import { useEffect, useState } from "react";
 import { applyColorTheme, getStoredColorTheme } from "./hooks/useColorTheme";
 

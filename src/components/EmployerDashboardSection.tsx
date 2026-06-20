@@ -384,9 +384,11 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
                       </div>
                     )}
                   </div>
-                );
-              })
+                  );
+                });
+              })()
             )}
+
             <div className="flex flex-wrap gap-x-3 gap-y-1 text-[9px] text-muted-foreground pt-1">
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-500" /> Healthy (varies w/ day length)</span>
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-400" /> Too short / too long</span>

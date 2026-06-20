@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import AddFreelancerModal, { type NewFreelancerPayload } from "@/components/AddFreelancerModal";
 import SwipeToDeleteRow from "@/components/SwipeToDeleteRow";
 import Seo from "@/components/Seo";
+import ConnectionInvitesCard from "@/components/ConnectionInvitesCard";
+
 
 interface FreelancerInvite {
   id: string;

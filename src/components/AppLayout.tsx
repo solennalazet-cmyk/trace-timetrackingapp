@@ -41,7 +41,7 @@ const AppLayout = () => {
           </div>
         </div>
 
-        {isReports ? <ReportsRightPanel /> : <DesktopRightPanel />}
+        {isReports ? <ReportsRightPanel /> : activeRole === "employer" ? <EmployerRightPanel /> : <DesktopRightPanel />}
       </div>
       <AuthModal open={authOpen} onOpenChange={setAuthOpen} />
     </div>

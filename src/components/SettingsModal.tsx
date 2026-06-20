@@ -76,6 +76,7 @@ interface SettingsModalProps {
 
 const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
   const { user, profile } = useAuth();
+  const { activeRole, setActiveRole } = useRole();
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
   const [editingPreset, setEditingPreset] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");

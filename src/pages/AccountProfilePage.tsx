@@ -274,10 +274,10 @@ const AccountProfilePage = () => {
       </header>
 
       <div className="space-y-2.5">
-        {cards.map(({ kind, Icon, title, rows }) => (
+        {cards.map(({ kind, Icon, title }) => (
           <button key={kind} onClick={() => setEditorOpen(kind)} className="w-full text-left">
             <Card className="p-4 hover:bg-muted/40 transition-colors">
-              <div className="flex items-center gap-3 pb-3">
+              <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-foreground/10 flex items-center justify-center shrink-0">
                   <Icon className="w-4 h-4 text-foreground" />
                 </div>
@@ -286,9 +286,6 @@ const AccountProfilePage = () => {
                   <p className="text-xs text-muted-foreground mt-0.5">Tap to edit</p>
                 </div>
                 <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-              </div>
-              <div className="space-y-0">
-                {rows.map((row) => <FieldLine key={row.label} label={row.label} value={row.value} />)}
               </div>
             </Card>
           </button>

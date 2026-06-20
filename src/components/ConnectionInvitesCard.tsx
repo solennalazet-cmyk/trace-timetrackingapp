@@ -27,22 +27,23 @@ const ConnectionInvitesCard = () => {
   const [working, setWorking] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!user || activeRole !== "employer") {
+    if (!user) {
       setInvites([]);
       return;
     }
     const myEmail = (user.email ?? "").toLowerCase();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("clients")
       .select("id, name, invited_email, user_id, connection_initiated_by, connection_requester_name")
       .eq("connection_status", "pending")
       .eq("connection_initiated_by", "worker");
+    if (error) console.warn("[invites-card]", error);
     // Only show worker-initiated invites addressed TO this employer (not invites I sent myself).
     const filtered = ((data ?? []) as any[]).filter(
       (row) => row.user_id !== user.id && (row.invited_email ?? "").toLowerCase() === myEmail,
     );
     setInvites(filtered as PendingInvite[]);
-  }, [user, activeRole]);
+  }, [user]);
 
   useEffect(() => {
     load();

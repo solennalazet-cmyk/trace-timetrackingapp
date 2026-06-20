@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "./contexts/AuthContext";
-import { RoleProvider } from "./contexts/RoleContext";
+import { RoleProvider, useRole } from "./contexts/RoleContext";
 import { WeekStartProvider } from "./contexts/WeekStartContext";
 import AppLayout from "./components/AppLayout";
 import RoleChoiceOverlay from "./components/RoleChoiceOverlay";
@@ -98,7 +98,18 @@ function useRestoreTheme() {
 
 const AppInner = () => {
   useRestoreTheme();
+  const { activeRole } = useRole();
   const weekStart = useWeekStartFromSettings();
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (activeRole === "employer") {
+      root.classList.add("employer");
+    } else {
+      root.classList.remove("employer");
+    }
+  }, [activeRole]);
+
   return (
     <WeekStartProvider value={weekStart}>
       <BrowserRouter>

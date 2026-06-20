@@ -365,7 +365,7 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
                           </div>
                           <div className="flex justify-between text-[9px] text-muted-foreground mt-1">
                             <span>{w.series.length > 21 ? "last 21 days" : "0m"}</span>
-                            <span>60m</span>
+                            <span>90m</span>
                           </div>
                         </div>
 

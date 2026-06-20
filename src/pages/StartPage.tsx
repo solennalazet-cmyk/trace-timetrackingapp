@@ -93,12 +93,13 @@ const StartPage = () => {
   const [geoPromptSeen, setGeoPromptSeen] = useState(true);
   const [geoPrePromptOpen, setGeoPrePromptOpen] = useState(false);
   const [pendingGeoStart, setPendingGeoStart] = useState<{ mode: string; startedAt: string } | null>(null);
+  const profileRole = (profile as any)?.active_role;
 
   useEffect(() => {
-    if (activeRole === "employer") {
+    if (activeRole === "employer" || profileRole === "employer") {
       navigate("/employer", { replace: true });
     }
-  }, [activeRole, navigate]);
+  }, [activeRole, profileRole, navigate]);
 
   const handleModeSwitch = (target: Mode) => {
     if (target === mode) return;
@@ -544,7 +545,7 @@ const StartPage = () => {
     { key: "shift", label: "Clock In" },
   ];
 
-  if ((user && !profile) || authLoading || activeRole === "employer") {
+  if ((user && !profile) || authLoading || activeRole === "employer" || profileRole === "employer") {
     return <div className="pt-6 pb-24 text-sm text-muted-foreground px-4">Loading…</div>;
   }
 

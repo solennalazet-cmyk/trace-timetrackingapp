@@ -370,7 +370,7 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
                         </div>
 
                         <p className="text-[10px] text-muted-foreground">
-                          Healthy band 25–40m · short days often = shorter breaks.
+                          Targets adjust to the day's hours: under 4h → up to 30m, 4–6h → 15–45m, 6h+ → 45–75m (PT law: ≥45m at 6h+).
                         </p>
                       </div>
                     )}
@@ -379,10 +379,11 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
               })
             )}
             <div className="flex flex-wrap gap-x-3 gap-y-1 text-[9px] text-muted-foreground pt-1">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-500" /> Healthy 25–40m</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-400" /> Short</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-400" /> None / long</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-500" /> Healthy (varies w/ day length)</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-400" /> Too short / too long</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-400" /> No break on 6h+ day</span>
             </div>
+
           </div>
         )}
       </Card>

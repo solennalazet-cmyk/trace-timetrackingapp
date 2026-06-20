@@ -98,7 +98,18 @@ function useRestoreTheme() {
 
 const AppInner = () => {
   useRestoreTheme();
+  const { activeRole } = useRole();
   const weekStart = useWeekStartFromSettings();
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (activeRole === "employer") {
+      root.classList.add("employer");
+    } else {
+      root.classList.remove("employer");
+    }
+  }, [activeRole]);
+
   return (
     <WeekStartProvider value={weekStart}>
       <BrowserRouter>

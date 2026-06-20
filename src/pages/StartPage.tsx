@@ -56,7 +56,7 @@ function getActiveMode(): Mode | null {
 
 const StartPage = () => {
   const [mode, setMode] = useState<Mode>(() => getActiveMode() ?? "stopwatch");
-  const { user } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const { activeRole } = useRole();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -544,7 +544,7 @@ const StartPage = () => {
     { key: "shift", label: "Clock In" },
   ];
 
-  if (activeRole === "employer") {
+  if ((user && !profile) || authLoading || activeRole === "employer") {
     return <div className="pt-6 pb-24 text-sm text-muted-foreground px-4">Loading…</div>;
   }
 

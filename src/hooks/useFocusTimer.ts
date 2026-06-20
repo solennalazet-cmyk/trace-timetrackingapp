@@ -75,7 +75,10 @@ export function useFocusTimer() {
         }
         setRemainingMs(remaining);
       };
-      intervalRef.current = setInterval(tick, 200);
+      // 1s tick is plenty for a countdown display and ~5x cheaper on Android
+      // than the previous 200ms loop (re-renders the timer component each tick).
+      intervalRef.current = setInterval(tick, 1000);
+
 
       // Also check on visibility change (handles screen off / tab switch)
       const onVisibility = () => {

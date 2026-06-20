@@ -14,8 +14,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { type RoundingSettings, aggregateWithRounding, entryDisplayValues, hasActiveRounding, describeRounding } from "@/lib/rounding";
 import type { TimeEntry } from "@/components/EntryDetailSheet";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+// jspdf + jspdf-autotable are loaded on demand (see buildPDF) — see
+// vite.config manualChunks: they live in the "pdf" chunk.
+
 import ExportColumnsPicker from "@/components/ExportColumnsPicker";
 import { type ExportColumnKey, resolveExportColumns, EXPORT_COLUMN_OPTIONS } from "@/lib/export-columns";
 import { cn } from "@/lib/utils";
@@ -127,12 +128,17 @@ const PrepareBillingSheet = ({
   const fromLabel = dateFrom.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
   const toLabel = dateTo.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
-  const buildPDF = () => {
+  const buildPDF = async () => {
     // Auto-landscape when many optional columns selected (always-on: Date, Duration, Amount).
     const totalCols = 3 + selectedColumns.length;
     const orientation: "portrait" | "landscape" = totalCols > 5 ? "landscape" : "portrait";
 
+    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
     const doc = new jsPDF({ orientation, unit: "mm", format: "a4" });
+
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
     const margin = 16;
@@ -408,9 +414,9 @@ const PrepareBillingSheet = ({
     setShowBilledPrompt(false);
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (reportEntries.length === 0) { toast.error("No entries to export."); return; }
-    const doc = buildPDF();
+    const doc = await buildPDF();
     doc.save(`billing-${clientName.replace(/\s+/g, "-")}-${rangeStart}-to-${rangeEnd}.pdf`);
     toast.success("PDF exported.");
     promptMarkBilled();
@@ -418,9 +424,10 @@ const PrepareBillingSheet = ({
 
   const handleSharePDF = async () => {
     if (reportEntries.length === 0) { toast.error("No entries to share."); return; }
-    const doc = buildPDF();
+    const doc = await buildPDF();
     const blob = doc.output("blob");
     const file = new File([blob], `billing-${clientName.replace(/\s+/g, "-")}-${rangeStart}-to-${rangeEnd}.pdf`, { type: "application/pdf" });
+
 
     if (navigator.share && navigator.canShare?.({ files: [file] })) {
       try {

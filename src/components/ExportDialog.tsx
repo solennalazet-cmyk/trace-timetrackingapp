@@ -21,8 +21,10 @@ import DateRangePicker from "@/components/DateRangePicker";
 import { toLocalDateKey } from "@/lib/utils";
 import { type RoundingSettings, roundDuration, roundedBillableValue, rawBillableValue, hasActiveRounding, describeRounding, aggregateWithRounding, entryDisplayValues } from "@/lib/rounding";
 import type { TimeEntry } from "@/components/EntryDetailSheet";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+// jspdf + jspdf-autotable are loaded on demand (see exportPDF) so they stay
+// out of the initial Android WebView bundle — they only matter once the
+// user actually exports something.
+
 
 interface ExportDialogProps {
   open: boolean;
@@ -141,16 +143,17 @@ const ExportDialog = ({
     setTrackPromptOpen(true);
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (filteredEntries.length === 0) {
       toast.error("No entries to export for this range.");
       return;
     }
     if (format === "csv") exportCSV();
-    else exportPDF();
+    else await exportPDF();
     // Don't auto-close — show tracking prompt next
     evaluateTrackingPrompt();
   };
+
 
   const handleConfirmTrack = async () => {
     if (!user) {
@@ -248,8 +251,13 @@ const ExportDialog = ({
     toast.success("CSV exported.");
   };
 
-  const exportPDF = () => {
+  const exportPDF = async () => {
+    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
     const margin = 16;

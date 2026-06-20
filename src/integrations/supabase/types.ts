@@ -832,6 +832,16 @@ export type Database = {
         Returns: undefined
       }
       email_matches_auth_user: { Args: { _email: string }; Returns: boolean }
+      list_incoming_client_invites: {
+        Args: never
+        Returns: {
+          client_name: string
+          id: string
+          invited_email: string
+          requester_name: string
+          requester_user_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

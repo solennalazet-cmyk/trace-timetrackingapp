@@ -66,6 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       async (event, session) => {
         setSession(session);
         if (session?.user) {
+          setProfile((current) => current?.id === session.user.id ? current : null);
           // Use setTimeout to avoid Supabase deadlock
           setTimeout(() => fetchProfile(session.user.id), 0);
         } else {
@@ -78,6 +79,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session?.user) {
+        setProfile((current) => current?.id === session.user.id ? current : null);
         fetchProfile(session.user.id);
         // Auto-delete entries trashed more than 7 days ago
         const sevenDaysAgo = new Date();

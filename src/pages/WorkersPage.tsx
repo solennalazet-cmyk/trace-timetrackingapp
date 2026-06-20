@@ -120,6 +120,8 @@ const WorkersPage = () => {
           <Plus className="h-4 w-4" /> Add freelancer
         </Button>
       </header>
+      <ConnectionInvitesCard />
+
 
       {loading ? (
         <Card className="p-6 text-center text-sm text-muted-foreground">Loading…</Card>

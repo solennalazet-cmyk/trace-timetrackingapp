@@ -8,6 +8,7 @@ import SubmittedReportSheet, { type SubmittedReport } from "@/components/Submitt
 import RejectReportDialog from "@/components/RejectReportDialog";
 import Seo from "@/components/Seo";
 import EmployerDashboardSection from "@/components/EmployerDashboardSection";
+import ConnectionInvitesCard from "@/components/ConnectionInvitesCard";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
@@ -232,7 +233,10 @@ const EmployerHomePage = () => {
       </div>
 
       {view === "dashboard" && (
-        <EmployerDashboardSection refreshKey={refreshing ? 1 : 0} breaksDefaultOpen />
+        <>
+          <ConnectionInvitesCard />
+          <EmployerDashboardSection refreshKey={refreshing ? 1 : 0} breaksDefaultOpen />
+        </>
       )}
 
       {view === "status" && (

@@ -16,7 +16,7 @@ import RoleSwitcher from "./RoleSwitcher";
 const workerNav = [
   { path: "/", label: "Start", icon: Timer },
   { path: "/reports", label: "Reports", icon: BarChart3 },
-  { path: "/payments", label: "Payments", icon: Wallet },
+  { path: "/payments", label: "Payments", icon: Wallet, beta: true },
   { path: "/clients", label: "Accounts", icon: Briefcase },
 ];
 
@@ -24,7 +24,7 @@ const employerNav = [
   { path: "/employer", label: "Home", icon: Home },
   { path: "/employer/calendar", label: "Calendar", icon: CalendarDays },
   { path: "/workers", label: "Freelancers", icon: Users },
-  { path: "/payments", label: "Payments", icon: Wallet },
+  { path: "/payments", label: "Payments", icon: Wallet, beta: true },
 ];
 
 const DesktopSidebar = () => {

@@ -45,15 +45,6 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
 
 const initials = (name: string) => (name?.trim()?.slice(0, 1) ?? "?").toUpperCase();
 
-const FieldLine = ({ label, value }: { label: string; value: string | null }) => (
-  <div className="flex items-start justify-between gap-4 py-2.5 border-t border-border/60 first:border-t-0 first:pt-0 last:pb-0">
-    <span className="text-xs text-muted-foreground shrink-0">{label}</span>
-    <span className="text-xs font-medium text-foreground text-right leading-relaxed whitespace-pre-line break-words min-w-0">
-      {value?.trim() || "—"}
-    </span>
-  </div>
-);
-
 const AccountProfilePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -180,38 +171,11 @@ const AccountProfilePage = () => {
   const sym = CURRENCY_SYMBOLS[client.currency ?? "EUR"] ?? "€";
   const connStatus = client.connection_status ?? "none";
 
-  type CardDef = { kind: AccountEditorKind; Icon: typeof Mail; title: string; rows: { label: string; value: string | null }[] };
+  type CardDef = { kind: AccountEditorKind; Icon: typeof Mail; title: string };
   const cards: CardDef[] = [
-    {
-      kind: "contact",
-      Icon: Mail,
-      title: "Contact",
-      rows: [
-        { label: "Name", value: client.name },
-        { label: "Email", value: client.email },
-        { label: "Phone", value: client.phone },
-      ],
-    },
-    {
-      kind: "commercial",
-      Icon: Handshake,
-      title: "Commercial agreement",
-      rows: [
-        { label: "Default rate", value: client.default_rate != null ? `${sym}${client.default_rate}/hour` : null },
-        { label: "Currency", value: client.currency ?? "EUR" },
-        { label: "Payment terms", value: client.payment_terms_days != null ? `${client.payment_terms_days} days` : null },
-        { label: "Billing notes", value: client.billing_notes },
-      ],
-    },
-    {
-      kind: "business",
-      Icon: Building2,
-      title: "Business details",
-      rows: [
-        { label: "NIF / VAT", value: client.nif },
-        { label: "Address", value: client.business_address },
-      ],
-    },
+    { kind: "contact", Icon: Mail, title: "Contact" },
+    { kind: "commercial", Icon: Handshake, title: "Commercial agreement" },
+    { kind: "business", Icon: Building2, title: "Business details" },
   ];
 
   return (
@@ -274,10 +238,10 @@ const AccountProfilePage = () => {
       </header>
 
       <div className="space-y-2.5">
-        {cards.map(({ kind, Icon, title, rows }) => (
+        {cards.map(({ kind, Icon, title }) => (
           <button key={kind} onClick={() => setEditorOpen(kind)} className="w-full text-left">
             <Card className="p-4 hover:bg-muted/40 transition-colors">
-              <div className="flex items-center gap-3 pb-3">
+              <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-foreground/10 flex items-center justify-center shrink-0">
                   <Icon className="w-4 h-4 text-foreground" />
                 </div>
@@ -286,9 +250,6 @@ const AccountProfilePage = () => {
                   <p className="text-xs text-muted-foreground mt-0.5">Tap to edit</p>
                 </div>
                 <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-              </div>
-              <div className="space-y-0">
-                {rows.map((row) => <FieldLine key={row.label} label={row.label} value={row.value} />)}
               </div>
             </Card>
           </button>

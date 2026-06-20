@@ -12,6 +12,7 @@ import { X, Plus, Volume2, VolumeX, Info, MapPin } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/contexts/RoleContext";
 import { supabase } from "@/integrations/supabase/client";
 import ProBadge from "@/components/ProBadge";
 import PaywallModal from "@/components/PaywallModal";

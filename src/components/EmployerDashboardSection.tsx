@@ -37,9 +37,52 @@ interface Props {
   breaksDefaultOpen?: boolean;
 }
 
-const HEALTHY_MIN = 25;
-const HEALTHY_MAX = 40;
-const Y_MAX = 60;
+// Break adequacy bands scaled to the day's worked hours.
+// Anchored to Portuguese labour law: a worker doing 6h+ must take a break of
+// at least 1h (and not more than 2h) per Art. 213º CT. Shorter days take
+// proportionally shorter breaks.
+const Y_MAX = 90; // capsule scale cap (m)
+
+type Band = "healthy" | "short" | "long" | "none";
+
+/** Returns the recommended break band for a given day. */
+const breakBand = (breakMins: number, workMins: number): Band => {
+  if (workMins <= 0) return "none";
+  // Under 4h worked: no legal break required, but flag clearly excessive breaks.
+  if (workMins < 240) {
+    if (breakMins > 30) return "long";
+    return "healthy";
+  }
+  // 4h to <6h: recommend a short pause, ~15–45m.
+  if (workMins < 360) {
+    if (breakMins < 15) return "short";
+    if (breakMins > 45) return "long";
+    return "healthy";
+  }
+  // 6h+: legal min 45m–1h, healthy up to ~75m.
+  if (breakMins < 45) return breakMins === 0 ? "none" : "short";
+  if (breakMins > 75) return "long";
+  return "healthy";
+};
+
+const bandClass = (band: Band): string => {
+  switch (band) {
+    case "healthy": return "bg-emerald-500";
+    case "short": return "bg-amber-400";
+    case "long": return "bg-amber-400";
+    case "none": return "bg-red-400";
+  }
+};
+
+const bandLabel = (band: Band): string => {
+  switch (band) {
+    case "healthy": return "Healthy";
+    case "short": return "Too short";
+    case "long": return "Too long";
+    case "none": return "No break";
+  }
+};
+
 
 const fmtHm = (mins: number) => {
   const h = Math.floor(mins / 60);

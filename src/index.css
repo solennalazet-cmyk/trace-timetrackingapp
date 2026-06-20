@@ -168,6 +168,17 @@
     --timer-display: 210 14% 92%;
     --timer-ring: 212 18% 28%;
   }
+
+  /* Employer mode: recolour the default light-theme near-black foreground
+     (HSL 240 10% 20%) to a deep purple (HSL 287 44% 22%).
+     Scoped to the default (sunrise) light theme only so dark/stormy themes
+     keep their existing palettes. */
+  html.employer:not(.dark):not(.theme-stormy) {
+    --foreground: 287 44% 22%;
+    --accent-foreground: 287 44% 22%;
+    --card-foreground: 287 44% 22%;
+    --popover-foreground: 287 44% 22%;
+  }
 }
 
 @layer base {

@@ -16,6 +16,7 @@ import ConnectionInvitesCard from "@/components/ConnectionInvitesCard";
 import WorkerNotificationsCard from "@/components/WorkerNotificationsCard";
 import SessionConflictDialog from "@/components/SessionConflictDialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/contexts/RoleContext";
 import { toLocalDateKey } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { saveAnonymousEntry, getAnonymousEntries, updateAnonymousEntry } from "@/lib/anonymous-store";
@@ -57,6 +58,7 @@ function getActiveMode(): Mode | null {
 const StartPage = () => {
   const [mode, setMode] = useState<Mode>(() => getActiveMode() ?? "stopwatch");
   const { user } = useAuth();
+  const { activeRole } = useRole();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -92,6 +94,12 @@ const StartPage = () => {
   const [geoPromptSeen, setGeoPromptSeen] = useState(true);
   const [geoPrePromptOpen, setGeoPrePromptOpen] = useState(false);
   const [pendingGeoStart, setPendingGeoStart] = useState<{ mode: string; startedAt: string } | null>(null);
+
+  useEffect(() => {
+    if (activeRole === "employer") {
+      navigate("/employer", { replace: true });
+    }
+  }, [activeRole, navigate]);
 
   const handleModeSwitch = (target: Mode) => {
     if (target === mode) return;

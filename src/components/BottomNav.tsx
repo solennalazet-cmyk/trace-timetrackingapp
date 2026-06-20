@@ -69,7 +69,7 @@ const BottomNav = () => {
       }}
     >
       <div className="flex items-center justify-around h-16">
-        {tabs.map(({ path, label, icon: Icon }) => {
+        {tabs.map(({ path, label, icon: Icon, beta }) => {
           const isActive = location.pathname === path;
           const showBadge = path === "/employer" && pendingCount > 0;
           return (
@@ -93,7 +93,14 @@ const BottomNav = () => {
                   </span>
                 )}
               </span>
-              <span className="text-[11px] font-medium">{label}</span>
+              <span className="text-[11px] font-medium flex items-center gap-1">
+                {label}
+                {beta && (
+                  <span className="text-[8px] font-bold px-1 py-0 rounded bg-muted text-muted-foreground leading-none">
+                    BETA
+                  </span>
+                )}
+              </span>
             </Link>
           );
         })}

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Mail, Handshake, Building2, ChevronRight, Trash2, UserPlus, Send, Loader2, CheckCircle2, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/contexts/RoleContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,7 @@ interface AccountRow {
   kind: string;
   invited_email?: string | null;
   connection_status?: string | null;
+  connection_requester_name?: string | null;
 }
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -55,7 +57,8 @@ const FieldLine = ({ label, value }: { label: string; value: string | null }) =>
 const AccountProfilePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const { setActiveRole } = useRole();
   const [client, setAccount] = useState<AccountRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [editorOpen, setEditorOpen] = useState<AccountEditorKind | null>(null);
@@ -73,7 +76,7 @@ const AccountProfilePage = () => {
     if (user) {
       const { data, error } = await supabase
         .from("clients")
-        .select("id, name, email, phone, default_rate, currency, payment_terms_days, billing_notes, nif, business_address, contract_url, user_id, kind, invited_email, connection_status")
+        .select("id, name, email, phone, default_rate, currency, payment_terms_days, billing_notes, nif, business_address, contract_url, user_id, kind, invited_email, connection_status, connection_requester_name")
         .eq("id", id)
         .maybeSingle();
       if (error) toast.error(error.message);
@@ -139,11 +142,13 @@ const AccountProfilePage = () => {
       invited_email: email,
       connection_status: "pending",
       connection_initiated_by: "worker",
+      connection_requester_name: profile?.full_name?.trim() || user.email || "A Trace user",
       invited_at: new Date().toISOString(),
     } as any).eq("id", client.id);
     setSendingInvite(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Invite sent.");
+    await setActiveRole("worker");
     setConnectOpen(false);
     load();
   };

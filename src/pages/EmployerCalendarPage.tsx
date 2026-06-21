@@ -93,21 +93,42 @@ const EmployerCalendarPage = () => {
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("submitted_reports")
-      .select("id, client_id, entries_snapshot")
-      .eq("employer_user_id", user.id)
-      .gte("period_end", toLocalDateKey(gridStart))
-      .lte("period_start", toLocalDateKey(gridEnd));
-    const rows = (data ?? []) as any as ReportRow[];
+    const [reportsRes, schedRes] = await Promise.all([
+      supabase
+        .from("submitted_reports")
+        .select("id, client_id, entries_snapshot")
+        .eq("employer_user_id", user.id)
+        .gte("period_end", toLocalDateKey(gridStart))
+        .lte("period_start", toLocalDateKey(gridEnd)),
+      supabase
+        .from("clients")
+        .select("id, name, agreed_start_time, agreed_end_time, engagement_start_date, engagement_end_date, scheduled_days")
+        .eq("user_id", user.id)
+        .in("kind", ["contractor", "both"])
+        .eq("connection_status", "accepted"),
+    ]);
+    const rows = (reportsRes.data ?? []) as any as ReportRow[];
     setReports(rows);
-    const ids = Array.from(new Set(rows.map((r) => r.client_id)));
-    if (ids.length) {
-      const { data: cRows } = await supabase.from("clients").select("id, name").in("id", ids);
-      setNames(new Map((cRows ?? []).map((c: any) => [c.id, c.name as string])));
-    } else {
-      setNames(new Map());
+    const schedRows = (schedRes.data ?? [])
+      .filter((r: any) => r.agreed_start_time && r.agreed_end_time)
+      .map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        start: r.agreed_start_time,
+        end: r.agreed_end_time,
+        engagementStart: r.engagement_start_date,
+        engagementEnd: r.engagement_end_date,
+        scheduledDays: r.scheduled_days ?? [0, 1, 2, 3, 4, 5, 6],
+      })) as ScheduledClient[];
+    setScheduled(schedRows);
+    const nameMap = new Map<string, string>();
+    for (const s of schedRows) nameMap.set(s.id, s.name);
+    const reportIds = Array.from(new Set(rows.map((r) => r.client_id))).filter((id) => !nameMap.has(id));
+    if (reportIds.length) {
+      const { data: cRows } = await supabase.from("clients").select("id, name").in("id", reportIds);
+      for (const c of (cRows ?? []) as any[]) nameMap.set(c.id, c.name);
     }
+    setNames(nameMap);
     setLoading(false);
   }, [user, gridStart, gridEnd]);
 
@@ -116,6 +137,31 @@ const EmployerCalendarPage = () => {
   // Build per-day freelancer breakdown from all reports' entries_snapshot
   const byDay = useMemo(() => {
     const m = new Map<string, Map<string, DayFreelancer>>();
+
+    // Seed with scheduled freelancers for every day in grid window
+    for (let t = new Date(gridStart); t <= gridEnd; t.setDate(t.getDate() + 1)) {
+      const key = toLocalDateKey(t);
+      const dayIndex = t.getDay();
+      for (const s of scheduled) {
+        if (!s.scheduledDays.includes(dayIndex)) continue;
+        if (s.engagementStart && key < s.engagementStart) continue;
+        if (s.engagementEnd && key > s.engagementEnd) continue;
+        let dayMap = m.get(key);
+        if (!dayMap) { dayMap = new Map(); m.set(key, dayMap); }
+        if (!dayMap.has(s.id)) {
+          dayMap.set(s.id, {
+            clientId: s.id,
+            name: s.name,
+            color: getClientColor(s.id),
+            workMin: 0, breakMin: 0,
+            firstStart: null, lastEnd: null,
+            scheduledStart: s.start, scheduledEnd: s.end,
+            scheduledOnly: true,
+          });
+        }
+      }
+    }
+
     for (const r of reports) {
       const snap = Array.isArray(r.entries_snapshot) ? r.entries_snapshot : [];
       for (const e of snap) {
@@ -131,9 +177,12 @@ const EmployerCalendarPage = () => {
             color: getClientColor(r.client_id),
             workMin: 0, breakMin: 0,
             firstStart: null, lastEnd: null,
+            scheduledStart: null, scheduledEnd: null,
+            scheduledOnly: false,
           };
           dayMap.set(r.client_id, dc);
         }
+        dc.scheduledOnly = false;
         dc.workMin += Number(e.duration_minutes) || 0;
         dc.breakMin += Number(e.break_minutes) || 0;
         const st = e.start_time as string | null | undefined;
@@ -143,7 +192,7 @@ const EmployerCalendarPage = () => {
       }
     }
     return m;
-  }, [reports, names]);
+  }, [reports, names, scheduled, gridStart, gridEnd]);
 
   const todayKey = toLocalDateKey(new Date());
   const weekdayLabels = useMemo(() => {

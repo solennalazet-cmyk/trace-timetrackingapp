@@ -20,6 +20,7 @@ interface WorkerFields {
   agreed_end_time: string;
   engagement_start_date: string;
   engagement_end_date: string;
+  scheduled_days: number[];
 }
 
 const empty: WorkerFields = {
@@ -31,6 +32,7 @@ const empty: WorkerFields = {
   agreed_end_time: "",
   engagement_start_date: "",
   engagement_end_date: "",
+  scheduled_days: [1, 2, 3, 4, 5],
 };
 
 const WorkerEditForm = ({ clientId }: Props) => {

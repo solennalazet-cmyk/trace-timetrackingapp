@@ -87,7 +87,42 @@
 </head>
 
   <body>
-    <div id="root"></div>
+    <!-- Inline boot skeleton: rendered by the WebView the moment the HTML
+         arrives, before main.tsx parses or React mounts. Critical for
+         Capacitor Android cold start — without this, users stare at a blank
+         background for 1-3s while the JS bundle parses. Removed from
+         src/main.tsx after React's first paint. -->
+    <style>
+      #boot-skeleton {
+        position: fixed; inset: 0; z-index: 9999;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        background: #f5f4f1;
+        color: #3a3142;
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        transition: opacity 200ms ease;
+      }
+      #boot-skeleton .boot-mark {
+        font-size: 28px; font-weight: 700; letter-spacing: -0.02em;
+        margin-bottom: 24px; opacity: 0.85;
+      }
+      #boot-skeleton .boot-spinner {
+        width: 28px; height: 28px; border-radius: 50%;
+        border: 2.5px solid rgba(122, 63, 134, 0.18);
+        border-top-color: #7a3f86;
+        animation: boot-spin 0.9s linear infinite;
+      }
+      @keyframes boot-spin { to { transform: rotate(360deg); } }
+      @media (prefers-color-scheme: dark) {
+        #boot-skeleton { background: #14101a; color: #f0eaf2; }
+        #boot-skeleton .boot-spinner { border-color: rgba(240, 234, 242, 0.18); border-top-color: #f0eaf2; }
+      }
+    </style>
+    <div id="root">
+      <div id="boot-skeleton" aria-hidden="true">
+        <div class="boot-mark">Trace</div>
+        <div class="boot-spinner"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

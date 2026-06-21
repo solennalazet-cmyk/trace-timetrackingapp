@@ -79,6 +79,7 @@ export type Database = {
           payment_terms_days: number | null
           phone: string | null
           role: string | null
+          scheduled_days: number[] | null
           site_address: string | null
           site_lat: number | null
           site_lng: number | null
@@ -116,6 +117,7 @@ export type Database = {
           payment_terms_days?: number | null
           phone?: string | null
           role?: string | null
+          scheduled_days?: number[] | null
           site_address?: string | null
           site_lat?: number | null
           site_lng?: number | null
@@ -153,6 +155,7 @@ export type Database = {
           payment_terms_days?: number | null
           phone?: string | null
           role?: string | null
+          scheduled_days?: number[] | null
           site_address?: string | null
           site_lat?: number | null
           site_lng?: number | null

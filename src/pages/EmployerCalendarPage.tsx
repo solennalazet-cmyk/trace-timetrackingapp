@@ -22,6 +22,19 @@ interface DayFreelancer {
   breakMin: number;
   firstStart: string | null;
   lastEnd: string | null;
+  scheduledStart: string | null;
+  scheduledEnd: string | null;
+  scheduledOnly: boolean;
+}
+
+interface ScheduledClient {
+  id: string;
+  name: string;
+  start: string;
+  end: string;
+  engagementStart: string | null;
+  engagementEnd: string | null;
+  scheduledDays: number[];
 }
 
 const fmtHm = (mins: number) => {

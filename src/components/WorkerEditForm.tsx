@@ -180,6 +180,37 @@ const WorkerEditForm = ({ clientId }: Props) => {
                   <Input type="time" value={values.agreed_end_time} onChange={(e) => set("agreed_end_time", e.target.value)} className="h-9 text-sm" />
                 </div>
               </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Working days</Label>
+                <div className="grid grid-cols-7 gap-1">
+                  {[
+                    { label: "M", day: 1 },
+                    { label: "T", day: 2 },
+                    { label: "W", day: 3 },
+                    { label: "T", day: 4 },
+                    { label: "F", day: 5 },
+                    { label: "S", day: 6 },
+                    { label: "S", day: 0 },
+                  ].map(({ label, day }) => {
+                    const active = values.scheduled_days.includes(day);
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => toggleDay(day)}
+                        className={`h-9 rounded-lg text-xs font-semibold transition-colors ${
+                          active
+                            ? "bg-foreground text-background"
+                            : "bg-background border border-border text-muted-foreground hover:bg-muted"
+                        }`}
+                        aria-pressed={active}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Start date</Label>

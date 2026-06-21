@@ -152,6 +152,18 @@ const WorkerProfilePage = () => {
     ? `${worker.agreed_start_time} – ${worker.agreed_end_time}`
     : (worker.agreed_start_time || worker.agreed_end_time || "—");
 
+  const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const scheduledSummary = (() => {
+    const days = worker.scheduled_days ?? [0, 1, 2, 3, 4, 5, 6];
+    if (days.length === 7) return "Every day";
+    if (days.length === 0) return "No days set";
+    return days
+      .slice()
+      .sort((a, b) => a - b)
+      .map((d) => dayLabels[d])
+      .join(", ");
+  })();
+
   type CardDef = { kind: EditorKind; Icon: typeof User; title: string; summary: string };
   const cards: CardDef[] = [
     {
@@ -168,8 +180,9 @@ const WorkerProfilePage = () => {
       summary: [
         worker.agreed_daily_hours != null ? `${worker.agreed_daily_hours}h/day` : null,
         shift !== "—" ? shift : null,
+        scheduledSummary,
         worker.engagement_start_date ? `Since ${fmtDate(worker.engagement_start_date)}` : null,
-      ].filter(Boolean).join(" · ") || "Add hours, shift, start date",
+      ].filter(Boolean).join(" · ") || "Add hours, shift, days, start date",
     },
   ];
 

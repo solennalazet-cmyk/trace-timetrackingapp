@@ -25,6 +25,24 @@ const config: CapacitorConfig = {
     // Use the modern WebView contents (matches browser perf characteristics).
     allowMixedContent: false,
   },
+  plugins: {
+    // Native splash screen: shown by the OS the instant the app process
+    // starts, before the WebView even loads. We hide it ourselves from JS
+    // (`launchAutoHide: false`) once React has mounted and painted the first
+    // frame — see `src/main.tsx`. This eliminates the white/black flash
+    // during cold start on Android.
+    SplashScreen: {
+      launchShowDuration: 3000,
+      launchAutoHide: false,
+      backgroundColor: '#f5f4f1',
+      androidScaleType: 'CENTER_CROP',
+      showSpinner: true,
+      androidSpinnerStyle: 'small',
+      spinnerColor: '#7a3f86',
+      splashFullScreen: true,
+      splashImmersive: true,
+    },
+  },
 };
 
 export default config;

@@ -28,6 +28,7 @@ interface WorkerRow {
   agreed_end_time: string | null;
   engagement_start_date: string | null;
   engagement_end_date: string | null;
+  scheduled_days: number[] | null;
   cv_url: string | null;
   user_id: string;
   connected_user_id: string | null;

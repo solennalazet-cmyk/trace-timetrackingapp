@@ -90,8 +90,6 @@ const WorkersWeekSchedule = () => {
       const dayIndex = d.getDay();
       return workers.filter((w) => {
         if (!w.scheduledDays.includes(dayIndex)) return false;
-        if (w.engagementStart && key < w.engagementStart) return false;
-        if (w.engagementEnd && key > w.engagementEnd) return false;
         return true;
       });
     });

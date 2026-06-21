@@ -144,8 +144,6 @@ const EmployerCalendarPage = () => {
       const dayIndex = t.getDay();
       for (const s of scheduled) {
         if (!s.scheduledDays.includes(dayIndex)) continue;
-        if (s.engagementStart && key < s.engagementStart) continue;
-        if (s.engagementEnd && key > s.engagementEnd) continue;
         let dayMap = m.get(key);
         if (!dayMap) { dayMap = new Map(); m.set(key, dayMap); }
         if (!dayMap.has(s.id)) {

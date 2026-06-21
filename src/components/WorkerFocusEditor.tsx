@@ -77,6 +77,7 @@ const FIELDS: Record<EditorKind, { title: string; subtitle: string; fields: Edit
 
 const WorkerFocusEditor = ({ open, kind, clientId, initial, onClose, onSaved }: Props) => {
   const [values, setValues] = useState<Record<string, string>>({});
+  const [scheduledDays, setScheduledDays] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -87,12 +88,21 @@ const WorkerFocusEditor = ({ open, kind, clientId, initial, onClose, onSaved }: 
       v[f.key] = raw == null ? "" : String(raw);
     }
     setValues(v);
+    setScheduledDays(initial.scheduled_days ?? [1, 2, 3, 4, 5]);
   }, [open, kind, initial]);
 
   if (!kind) return null;
   const cfg = FIELDS[kind];
 
   const set = (k: string, v: string) => setValues((p) => ({ ...p, [k]: v }));
+
+  const toggleDay = (day: number) => {
+    setScheduledDays((prev) =>
+      prev.includes(day)
+        ? prev.filter((d) => d !== day)
+        : [...prev, day].sort((a, b) => a - b)
+    );
+  };
 
   const save = async () => {
     setSaving(true);
@@ -101,6 +111,9 @@ const WorkerFocusEditor = ({ open, kind, clientId, initial, onClose, onSaved }: 
       const v = (values[f.key] ?? "").trim();
       if (f.type === "number") payload[f.key] = v ? Number(v) : null;
       else payload[f.key] = v || null;
+    }
+    if (kind === "engagement") {
+      payload.scheduled_days = scheduledDays.length > 0 ? scheduledDays : null;
     }
     const { error } = await supabase.from("clients").update(payload).eq("id", clientId);
     setSaving(false);

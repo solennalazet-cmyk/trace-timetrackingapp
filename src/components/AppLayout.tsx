@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Header from "./Header";
 import BottomNav from "./BottomNav";
 import DesktopSidebar from "./DesktopSidebar";
 import DesktopRightPanel from "./DesktopRightPanel";
 import EmployerRightPanel from "./EmployerRightPanel";
-import ReportsRightPanel from "./ReportsRightPanel";
 import AuthModal from "./AuthModal";
 import { useRole } from "@/contexts/RoleContext";
+
+const ReportsRightPanel = lazy(() => import("./ReportsRightPanel"));
 
 const AppLayout = () => {
   const [authOpen, setAuthOpen] = useState(false);
@@ -41,7 +42,11 @@ const AppLayout = () => {
           </div>
         </div>
 
-        {isReports ? <ReportsRightPanel /> : activeRole === "employer" ? <EmployerRightPanel /> : <DesktopRightPanel />}
+        {isReports ? (
+          <Suspense fallback={<div className="hidden lg:block" aria-hidden />}>
+            <ReportsRightPanel />
+          </Suspense>
+        ) : activeRole === "employer" ? <EmployerRightPanel /> : <DesktopRightPanel />}
       </div>
       <AuthModal open={authOpen} onOpenChange={setAuthOpen} />
     </div>

@@ -22,6 +22,19 @@ interface DayFreelancer {
   breakMin: number;
   firstStart: string | null;
   lastEnd: string | null;
+  scheduledStart: string | null;
+  scheduledEnd: string | null;
+  scheduledOnly: boolean;
+}
+
+interface ScheduledClient {
+  id: string;
+  name: string;
+  start: string;
+  end: string;
+  engagementStart: string | null;
+  engagementEnd: string | null;
+  scheduledDays: number[];
 }
 
 const fmtHm = (mins: number) => {
@@ -50,6 +63,7 @@ const EmployerCalendarPage = () => {
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [names, setNames] = useState<Map<string, string>>(new Map());
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [scheduled, setScheduled] = useState<ScheduledClient[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Visible grid bounds (full weeks containing the month)
@@ -79,21 +93,42 @@ const EmployerCalendarPage = () => {
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("submitted_reports")
-      .select("id, client_id, entries_snapshot")
-      .eq("employer_user_id", user.id)
-      .gte("period_end", toLocalDateKey(gridStart))
-      .lte("period_start", toLocalDateKey(gridEnd));
-    const rows = (data ?? []) as any as ReportRow[];
+    const [reportsRes, schedRes] = await Promise.all([
+      supabase
+        .from("submitted_reports")
+        .select("id, client_id, entries_snapshot")
+        .eq("employer_user_id", user.id)
+        .gte("period_end", toLocalDateKey(gridStart))
+        .lte("period_start", toLocalDateKey(gridEnd)),
+      supabase
+        .from("clients")
+        .select("id, name, agreed_start_time, agreed_end_time, engagement_start_date, engagement_end_date, scheduled_days")
+        .eq("user_id", user.id)
+        .in("kind", ["contractor", "both"])
+        .eq("connection_status", "accepted"),
+    ]);
+    const rows = (reportsRes.data ?? []) as any as ReportRow[];
     setReports(rows);
-    const ids = Array.from(new Set(rows.map((r) => r.client_id)));
-    if (ids.length) {
-      const { data: cRows } = await supabase.from("clients").select("id, name").in("id", ids);
-      setNames(new Map((cRows ?? []).map((c: any) => [c.id, c.name as string])));
-    } else {
-      setNames(new Map());
+    const schedRows = (schedRes.data ?? [])
+      .filter((r: any) => r.agreed_start_time && r.agreed_end_time)
+      .map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        start: r.agreed_start_time,
+        end: r.agreed_end_time,
+        engagementStart: r.engagement_start_date,
+        engagementEnd: r.engagement_end_date,
+        scheduledDays: r.scheduled_days ?? [0, 1, 2, 3, 4, 5, 6],
+      })) as ScheduledClient[];
+    setScheduled(schedRows);
+    const nameMap = new Map<string, string>();
+    for (const s of schedRows) nameMap.set(s.id, s.name);
+    const reportIds = Array.from(new Set(rows.map((r) => r.client_id))).filter((id) => !nameMap.has(id));
+    if (reportIds.length) {
+      const { data: cRows } = await supabase.from("clients").select("id, name").in("id", reportIds);
+      for (const c of (cRows ?? []) as any[]) nameMap.set(c.id, c.name);
     }
+    setNames(nameMap);
     setLoading(false);
   }, [user, gridStart, gridEnd]);
 
@@ -102,6 +137,31 @@ const EmployerCalendarPage = () => {
   // Build per-day freelancer breakdown from all reports' entries_snapshot
   const byDay = useMemo(() => {
     const m = new Map<string, Map<string, DayFreelancer>>();
+
+    // Seed with scheduled freelancers for every day in grid window
+    for (let t = new Date(gridStart); t <= gridEnd; t.setDate(t.getDate() + 1)) {
+      const key = toLocalDateKey(t);
+      const dayIndex = t.getDay();
+      for (const s of scheduled) {
+        if (!s.scheduledDays.includes(dayIndex)) continue;
+        if (s.engagementStart && key < s.engagementStart) continue;
+        if (s.engagementEnd && key > s.engagementEnd) continue;
+        let dayMap = m.get(key);
+        if (!dayMap) { dayMap = new Map(); m.set(key, dayMap); }
+        if (!dayMap.has(s.id)) {
+          dayMap.set(s.id, {
+            clientId: s.id,
+            name: s.name,
+            color: getClientColor(s.id),
+            workMin: 0, breakMin: 0,
+            firstStart: null, lastEnd: null,
+            scheduledStart: s.start, scheduledEnd: s.end,
+            scheduledOnly: true,
+          });
+        }
+      }
+    }
+
     for (const r of reports) {
       const snap = Array.isArray(r.entries_snapshot) ? r.entries_snapshot : [];
       for (const e of snap) {
@@ -117,9 +177,12 @@ const EmployerCalendarPage = () => {
             color: getClientColor(r.client_id),
             workMin: 0, breakMin: 0,
             firstStart: null, lastEnd: null,
+            scheduledStart: null, scheduledEnd: null,
+            scheduledOnly: false,
           };
           dayMap.set(r.client_id, dc);
         }
+        dc.scheduledOnly = false;
         dc.workMin += Number(e.duration_minutes) || 0;
         dc.breakMin += Number(e.break_minutes) || 0;
         const st = e.start_time as string | null | undefined;
@@ -129,7 +192,7 @@ const EmployerCalendarPage = () => {
       }
     }
     return m;
-  }, [reports, names]);
+  }, [reports, names, scheduled, gridStart, gridEnd]);
 
   const todayKey = toLocalDateKey(new Date());
   const weekdayLabels = useMemo(() => {
@@ -245,7 +308,7 @@ const EmployerCalendarPage = () => {
 
           <div className="space-y-2.5">
             {selectedFreelancers
-              .sort((a, b) => b.workMin - a.workMin)
+              .sort((a, b) => (b.workMin - a.workMin) || (a.scheduledOnly === b.scheduledOnly ? 0 : a.scheduledOnly ? 1 : -1))
               .map((c) => {
                 const total = c.workMin + c.breakMin;
                 const workPct = total > 0 ? (c.workMin / total) * 100 : 0;
@@ -254,31 +317,40 @@ const EmployerCalendarPage = () => {
                     <div className="flex items-center gap-2.5 mb-2.5">
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
                       <p className="text-sm font-semibold truncate flex-1">{c.name}</p>
-                      {c.firstStart && c.lastEnd && (
+                      {c.firstStart && c.lastEnd ? (
                         <p className="text-[11px] text-muted-foreground tabular-nums shrink-0">
                           {c.firstStart.slice(0, 5)} – {c.lastEnd.slice(0, 5)}
                         </p>
-                      )}
+                      ) : c.scheduledStart && c.scheduledEnd ? (
+                        <p className="text-[11px] text-muted-foreground tabular-nums shrink-0">
+                          Scheduled {c.scheduledStart.slice(0, 5)} – {c.scheduledEnd.slice(0, 5)}
+                        </p>
+                      ) : null}
                     </div>
 
-                    {/* Work vs break bar */}
-                    <div className="h-2 rounded-full overflow-hidden bg-muted flex">
-                      <div className="h-full" style={{ width: `${workPct}%`, backgroundColor: c.color }} />
-                      <div className="h-full bg-foreground/25" style={{ width: `${100 - workPct}%` }} />
-                    </div>
+                    {c.scheduledOnly ? (
+                      <p className="text-xs text-muted-foreground">No report submitted yet for this day.</p>
+                    ) : (
+                      <>
+                        <div className="h-2 rounded-full overflow-hidden bg-muted flex">
+                          <div className="h-full" style={{ width: `${workPct}%`, backgroundColor: c.color }} />
+                          <div className="h-full bg-foreground/25" style={{ width: `${100 - workPct}%` }} />
+                        </div>
 
-                    <div className="flex items-center justify-between mt-2">
-                      <div className="flex items-center gap-1.5 text-xs">
-                        <Clock3 className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="font-semibold">{fmtHm(c.workMin)}</span>
-                        <span className="text-muted-foreground">worked</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs">
-                        <Coffee className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="font-semibold">{fmtHm(c.breakMin)}</span>
-                        <span className="text-muted-foreground">on break</span>
-                      </div>
-                    </div>
+                        <div className="flex items-center justify-between mt-2">
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <Clock3 className="w-3.5 h-3.5 text-muted-foreground" />
+                            <span className="font-semibold">{fmtHm(c.workMin)}</span>
+                            <span className="text-muted-foreground">worked</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <Coffee className="w-3.5 h-3.5 text-muted-foreground" />
+                            <span className="font-semibold">{fmtHm(c.breakMin)}</span>
+                            <span className="text-muted-foreground">on break</span>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </Card>
                 );
               })}

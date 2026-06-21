@@ -31,6 +31,7 @@ interface Initial {
   agreed_end_time: string | null;
   engagement_start_date: string | null;
   engagement_end_date: string | null;
+  scheduled_days: number[] | null;
 }
 
 interface Props {

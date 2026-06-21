@@ -156,6 +156,41 @@ const WorkerFocusEditor = ({ open, kind, clientId, initial, onClose, onSaved }: 
               />
             </div>
           ))}
+
+          {kind === "engagement" && (
+            <div className="col-span-2 space-y-1.5 pt-1">
+              <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Working days</Label>
+              <div className="grid grid-cols-7 gap-1.5">
+                {[
+                  { label: "Mon", day: 1 },
+                  { label: "Tue", day: 2 },
+                  { label: "Wed", day: 3 },
+                  { label: "Thu", day: 4 },
+                  { label: "Fri", day: 5 },
+                  { label: "Sat", day: 6 },
+                  { label: "Sun", day: 0 },
+                ].map(({ label, day }) => {
+                  const active = scheduledDays.includes(day);
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => toggleDay(day)}
+                      className={cn(
+                        "h-11 rounded-xl text-xs font-semibold transition-colors",
+                        active
+                          ? "bg-foreground text-background"
+                          : "bg-background border border-border text-muted-foreground hover:bg-muted"
+                      )}
+                      aria-pressed={active}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2 px-5 py-4 border-t border-border bg-card shrink-0">

@@ -29,6 +29,10 @@ export default defineConfig(({ mode }) => ({
         // Split heavy / rarely-used deps into their own chunks so the initial
         // route doesn't have to parse them on Android cold start.
         manualChunks: (id) => {
+          // Keep Rollup's CommonJS interop helper out of the charts chunk.
+          // If it lands in charts, react-vendor imports charts while charts
+          // imports react-vendor, causing a production startup TDZ crash.
+          if (id.includes("commonjsHelpers")) return "react-vendor";
           if (!id.includes("node_modules")) return;
           if (id.includes("jspdf") || id.includes("jspdf-autotable")) return "pdf";
           if (id.includes("recharts") || id.includes("d3-")) return "charts";

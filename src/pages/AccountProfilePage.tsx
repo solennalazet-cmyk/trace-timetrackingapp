@@ -64,7 +64,12 @@ const AccountProfilePage = () => {
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    if (user) {
+    // Local/anonymous client ids (e.g. "local-1781828209021") aren't UUIDs and
+    // don't exist in the DB — always read them from the anonymous store, even
+    // after the user signs in. Otherwise Postgres rejects the id with
+    // "invalid input syntax for type uuid" and a misleading toast appears.
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (user && isUuid) {
       const { data, error } = await supabase
         .from("clients")
         .select("id, name, email, phone, default_rate, currency, payment_terms_days, billing_notes, nif, business_address, contract_url, user_id, kind, invited_email, connection_status, connection_requester_name")

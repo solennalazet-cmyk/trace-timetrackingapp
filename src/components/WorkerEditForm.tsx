@@ -47,7 +47,7 @@ const WorkerEditForm = ({ clientId }: Props) => {
     (async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("name, email, phone, agreed_daily_hours, agreed_start_time, agreed_end_time, engagement_start_date, engagement_end_date")
+        .select("name, email, phone, agreed_daily_hours, agreed_start_time, agreed_end_time, engagement_start_date, engagement_end_date, scheduled_days")
         .eq("id", clientId)
         .maybeSingle();
       if (error) { toast.error(error.message); return; }
@@ -61,6 +61,7 @@ const WorkerEditForm = ({ clientId }: Props) => {
           agreed_end_time: (data as any).agreed_end_time ?? "",
           engagement_start_date: (data as any).engagement_start_date ?? "",
           engagement_end_date: (data as any).engagement_end_date ?? "",
+          scheduled_days: (data as any).scheduled_days ?? [1, 2, 3, 4, 5],
         });
       }
       setLoaded(true);
@@ -69,6 +70,15 @@ const WorkerEditForm = ({ clientId }: Props) => {
 
   const set = <K extends keyof WorkerFields>(k: K, v: WorkerFields[K]) =>
     setValues((p) => ({ ...p, [k]: v }));
+
+  const toggleDay = (day: number) => {
+    setValues((p) => ({
+      ...p,
+      scheduled_days: p.scheduled_days.includes(day)
+        ? p.scheduled_days.filter((d) => d !== day)
+        : [...p.scheduled_days, day].sort((a, b) => a - b),
+    }));
+  };
 
   const save = async () => {
     setSaving(true);
@@ -81,12 +91,24 @@ const WorkerEditForm = ({ clientId }: Props) => {
       agreed_end_time: values.agreed_end_time || null,
       engagement_start_date: values.engagement_start_date || null,
       engagement_end_date: values.engagement_end_date || null,
+      scheduled_days: values.scheduled_days.length > 0 ? values.scheduled_days : null,
     };
     const { error } = await supabase.from("clients").update(payload).eq("id", clientId);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Worker details saved.");
     setEditing(false);
+  };
+
+  const formatDays = (days: number[]) => {
+    if (days.length === 0) return "None";
+    if (days.length === 7) return "Every day";
+    const labels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    return days
+      .slice()
+      .sort((a, b) => a - b)
+      .map((d) => labels[d])
+      .join(", ");
   };
 
   const Row = ({ label, value }: { label: string; value: string }) => (

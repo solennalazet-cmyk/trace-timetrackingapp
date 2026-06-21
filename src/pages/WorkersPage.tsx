@@ -14,6 +14,7 @@ import AddFreelancerModal, { type NewFreelancerPayload } from "@/components/AddF
 import SwipeToDeleteRow from "@/components/SwipeToDeleteRow";
 import Seo from "@/components/Seo";
 import ConnectionInvitesCard from "@/components/ConnectionInvitesCard";
+import WorkersWeekSchedule from "@/components/WorkersWeekSchedule";
 
 
 interface FreelancerInvite {
@@ -121,6 +122,8 @@ const WorkersPage = () => {
         </Button>
       </header>
       <ConnectionInvitesCard />
+      <WorkersWeekSchedule />
+
 
 
       {loading ? (

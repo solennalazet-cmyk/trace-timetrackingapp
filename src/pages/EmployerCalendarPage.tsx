@@ -308,7 +308,7 @@ const EmployerCalendarPage = () => {
 
           <div className="space-y-2.5">
             {selectedFreelancers
-              .sort((a, b) => b.workMin - a.workMin)
+              .sort((a, b) => (b.workMin - a.workMin) || (a.scheduledOnly === b.scheduledOnly ? 0 : a.scheduledOnly ? 1 : -1))
               .map((c) => {
                 const total = c.workMin + c.breakMin;
                 const workPct = total > 0 ? (c.workMin / total) * 100 : 0;
@@ -317,31 +317,40 @@ const EmployerCalendarPage = () => {
                     <div className="flex items-center gap-2.5 mb-2.5">
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
                       <p className="text-sm font-semibold truncate flex-1">{c.name}</p>
-                      {c.firstStart && c.lastEnd && (
+                      {c.firstStart && c.lastEnd ? (
                         <p className="text-[11px] text-muted-foreground tabular-nums shrink-0">
                           {c.firstStart.slice(0, 5)} – {c.lastEnd.slice(0, 5)}
                         </p>
-                      )}
+                      ) : c.scheduledStart && c.scheduledEnd ? (
+                        <p className="text-[11px] text-muted-foreground tabular-nums shrink-0">
+                          Scheduled {c.scheduledStart.slice(0, 5)} – {c.scheduledEnd.slice(0, 5)}
+                        </p>
+                      ) : null}
                     </div>
 
-                    {/* Work vs break bar */}
-                    <div className="h-2 rounded-full overflow-hidden bg-muted flex">
-                      <div className="h-full" style={{ width: `${workPct}%`, backgroundColor: c.color }} />
-                      <div className="h-full bg-foreground/25" style={{ width: `${100 - workPct}%` }} />
-                    </div>
+                    {c.scheduledOnly ? (
+                      <p className="text-xs text-muted-foreground">No report submitted yet for this day.</p>
+                    ) : (
+                      <>
+                        <div className="h-2 rounded-full overflow-hidden bg-muted flex">
+                          <div className="h-full" style={{ width: `${workPct}%`, backgroundColor: c.color }} />
+                          <div className="h-full bg-foreground/25" style={{ width: `${100 - workPct}%` }} />
+                        </div>
 
-                    <div className="flex items-center justify-between mt-2">
-                      <div className="flex items-center gap-1.5 text-xs">
-                        <Clock3 className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="font-semibold">{fmtHm(c.workMin)}</span>
-                        <span className="text-muted-foreground">worked</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs">
-                        <Coffee className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="font-semibold">{fmtHm(c.breakMin)}</span>
-                        <span className="text-muted-foreground">on break</span>
-                      </div>
-                    </div>
+                        <div className="flex items-center justify-between mt-2">
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <Clock3 className="w-3.5 h-3.5 text-muted-foreground" />
+                            <span className="font-semibold">{fmtHm(c.workMin)}</span>
+                            <span className="text-muted-foreground">worked</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <Coffee className="w-3.5 h-3.5 text-muted-foreground" />
+                            <span className="font-semibold">{fmtHm(c.breakMin)}</span>
+                            <span className="text-muted-foreground">on break</span>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </Card>
                 );
               })}

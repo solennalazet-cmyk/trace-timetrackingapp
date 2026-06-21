@@ -60,7 +60,7 @@ const WorkerProfilePage = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("clients")
-      .select("id, name, email, phone, role, date_of_birth, agreed_daily_hours, agreed_start_time, agreed_end_time, engagement_start_date, engagement_end_date, cv_url, user_id, connected_user_id")
+      .select("id, name, email, phone, role, date_of_birth, agreed_daily_hours, agreed_start_time, agreed_end_time, engagement_start_date, engagement_end_date, scheduled_days, cv_url, user_id, connected_user_id")
       .eq("id", id)
       .maybeSingle();
     if (error) toast.error(error.message);

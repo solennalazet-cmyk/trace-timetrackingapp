@@ -13,6 +13,7 @@ interface ScheduledWorker {
   end: string;   // HH:MM
   engagementStart: string | null;
   engagementEnd: string | null;
+  scheduledDays: number[];
 }
 
 const DAY_START_HOUR = 7;
@@ -43,7 +44,7 @@ const WorkersWeekSchedule = () => {
     if (!user) return;
     const { data } = await supabase
       .from("clients")
-      .select("id, name, agreed_start_time, agreed_end_time, engagement_start_date, engagement_end_date")
+      .select("id, name, agreed_start_time, agreed_end_time, engagement_start_date, engagement_end_date, scheduled_days")
       .eq("user_id", user.id)
       .in("kind", ["contractor", "both"])
       .eq("connection_status", "accepted");
@@ -56,6 +57,7 @@ const WorkersWeekSchedule = () => {
         end: r.agreed_end_time,
         engagementStart: r.engagement_start_date,
         engagementEnd: r.engagement_end_date,
+        scheduledDays: r.scheduled_days ?? [0, 1, 2, 3, 4, 5, 6],
       }));
     setWorkers(rows);
   }, [user]);
@@ -85,7 +87,9 @@ const WorkersWeekSchedule = () => {
   const workersByDay = useMemo(() => {
     return weekDays.map((d) => {
       const key = toLocalDateKey(d);
+      const dayIndex = d.getDay();
       return workers.filter((w) => {
+        if (!w.scheduledDays.includes(dayIndex)) return false;
         if (w.engagementStart && key < w.engagementStart) return false;
         if (w.engagementEnd && key > w.engagementEnd) return false;
         return true;

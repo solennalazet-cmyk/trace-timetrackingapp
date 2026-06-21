@@ -122,6 +122,8 @@ const WorkersPage = () => {
         </Button>
       </header>
       <ConnectionInvitesCard />
+      <WorkersWeekSchedule />
+
 
 
       {loading ? (

@@ -63,6 +63,7 @@ const EmployerCalendarPage = () => {
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [names, setNames] = useState<Map<string, string>>(new Map());
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [scheduled, setScheduled] = useState<ScheduledClient[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Visible grid bounds (full weeks containing the month)

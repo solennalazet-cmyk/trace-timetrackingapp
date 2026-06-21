@@ -142,6 +142,7 @@ const WorkerEditForm = ({ clientId }: Props) => {
                 <Row label="Phone" value={values.phone} />
                 <Row label="Agreed daily hours" value={values.agreed_daily_hours ? `${values.agreed_daily_hours}h` : ""} />
                 <Row label="Shift" value={values.agreed_start_time && values.agreed_end_time ? `${values.agreed_start_time} – ${values.agreed_end_time}` : (values.agreed_start_time || values.agreed_end_time || "")} />
+                <Row label="Working days" value={formatDays(values.scheduled_days)} />
                 <Row label="Start date" value={values.engagement_start_date} />
                 <Row label="End date" value={values.engagement_end_date} />
               </div>

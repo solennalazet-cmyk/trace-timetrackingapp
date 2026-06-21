@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export type EditorKind = "identity" | "role" | "engagement";
 
@@ -31,6 +32,7 @@ interface Initial {
   agreed_end_time: string | null;
   engagement_start_date: string | null;
   engagement_end_date: string | null;
+  scheduled_days: number[] | null;
 }
 
 interface Props {
@@ -75,6 +77,7 @@ const FIELDS: Record<EditorKind, { title: string; subtitle: string; fields: Edit
 
 const WorkerFocusEditor = ({ open, kind, clientId, initial, onClose, onSaved }: Props) => {
   const [values, setValues] = useState<Record<string, string>>({});
+  const [scheduledDays, setScheduledDays] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -85,12 +88,21 @@ const WorkerFocusEditor = ({ open, kind, clientId, initial, onClose, onSaved }: 
       v[f.key] = raw == null ? "" : String(raw);
     }
     setValues(v);
+    setScheduledDays(initial.scheduled_days ?? [1, 2, 3, 4, 5]);
   }, [open, kind, initial]);
 
   if (!kind) return null;
   const cfg = FIELDS[kind];
 
   const set = (k: string, v: string) => setValues((p) => ({ ...p, [k]: v }));
+
+  const toggleDay = (day: number) => {
+    setScheduledDays((prev) =>
+      prev.includes(day)
+        ? prev.filter((d) => d !== day)
+        : [...prev, day].sort((a, b) => a - b)
+    );
+  };
 
   const save = async () => {
     setSaving(true);
@@ -99,6 +111,9 @@ const WorkerFocusEditor = ({ open, kind, clientId, initial, onClose, onSaved }: 
       const v = (values[f.key] ?? "").trim();
       if (f.type === "number") payload[f.key] = v ? Number(v) : null;
       else payload[f.key] = v || null;
+    }
+    if (kind === "engagement") {
+      payload.scheduled_days = scheduledDays.length > 0 ? scheduledDays : null;
     }
     const { error } = await supabase.from("clients").update(payload).eq("id", clientId);
     setSaving(false);
@@ -141,6 +156,41 @@ const WorkerFocusEditor = ({ open, kind, clientId, initial, onClose, onSaved }: 
               />
             </div>
           ))}
+
+          {kind === "engagement" && (
+            <div className="col-span-2 space-y-1.5 pt-1">
+              <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Working days</Label>
+              <div className="grid grid-cols-7 gap-1.5">
+                {[
+                  { label: "Mon", day: 1 },
+                  { label: "Tue", day: 2 },
+                  { label: "Wed", day: 3 },
+                  { label: "Thu", day: 4 },
+                  { label: "Fri", day: 5 },
+                  { label: "Sat", day: 6 },
+                  { label: "Sun", day: 0 },
+                ].map(({ label, day }) => {
+                  const active = scheduledDays.includes(day);
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => toggleDay(day)}
+                      className={cn(
+                        "h-11 rounded-xl text-xs font-semibold transition-colors",
+                        active
+                          ? "bg-foreground text-background"
+                          : "bg-background border border-border text-muted-foreground hover:bg-muted"
+                      )}
+                      aria-pressed={active}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2 px-5 py-4 border-t border-border bg-card shrink-0">

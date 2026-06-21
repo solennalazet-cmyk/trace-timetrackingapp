@@ -20,6 +20,7 @@ interface WorkerFields {
   agreed_end_time: string;
   engagement_start_date: string;
   engagement_end_date: string;
+  scheduled_days: number[];
 }
 
 const empty: WorkerFields = {
@@ -31,6 +32,7 @@ const empty: WorkerFields = {
   agreed_end_time: "",
   engagement_start_date: "",
   engagement_end_date: "",
+  scheduled_days: [1, 2, 3, 4, 5],
 };
 
 const WorkerEditForm = ({ clientId }: Props) => {
@@ -45,7 +47,7 @@ const WorkerEditForm = ({ clientId }: Props) => {
     (async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("name, email, phone, agreed_daily_hours, agreed_start_time, agreed_end_time, engagement_start_date, engagement_end_date")
+        .select("name, email, phone, agreed_daily_hours, agreed_start_time, agreed_end_time, engagement_start_date, engagement_end_date, scheduled_days")
         .eq("id", clientId)
         .maybeSingle();
       if (error) { toast.error(error.message); return; }
@@ -59,6 +61,7 @@ const WorkerEditForm = ({ clientId }: Props) => {
           agreed_end_time: (data as any).agreed_end_time ?? "",
           engagement_start_date: (data as any).engagement_start_date ?? "",
           engagement_end_date: (data as any).engagement_end_date ?? "",
+          scheduled_days: (data as any).scheduled_days ?? [1, 2, 3, 4, 5],
         });
       }
       setLoaded(true);
@@ -67,6 +70,15 @@ const WorkerEditForm = ({ clientId }: Props) => {
 
   const set = <K extends keyof WorkerFields>(k: K, v: WorkerFields[K]) =>
     setValues((p) => ({ ...p, [k]: v }));
+
+  const toggleDay = (day: number) => {
+    setValues((p) => ({
+      ...p,
+      scheduled_days: p.scheduled_days.includes(day)
+        ? p.scheduled_days.filter((d) => d !== day)
+        : [...p.scheduled_days, day].sort((a, b) => a - b),
+    }));
+  };
 
   const save = async () => {
     setSaving(true);
@@ -79,12 +91,24 @@ const WorkerEditForm = ({ clientId }: Props) => {
       agreed_end_time: values.agreed_end_time || null,
       engagement_start_date: values.engagement_start_date || null,
       engagement_end_date: values.engagement_end_date || null,
+      scheduled_days: values.scheduled_days.length > 0 ? values.scheduled_days : null,
     };
     const { error } = await supabase.from("clients").update(payload).eq("id", clientId);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Worker details saved.");
     setEditing(false);
+  };
+
+  const formatDays = (days: number[]) => {
+    if (days.length === 0) return "None";
+    if (days.length === 7) return "Every day";
+    const labels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    return days
+      .slice()
+      .sort((a, b) => a - b)
+      .map((d) => labels[d])
+      .join(", ");
   };
 
   const Row = ({ label, value }: { label: string; value: string }) => (
@@ -118,6 +142,7 @@ const WorkerEditForm = ({ clientId }: Props) => {
                 <Row label="Phone" value={values.phone} />
                 <Row label="Agreed daily hours" value={values.agreed_daily_hours ? `${values.agreed_daily_hours}h` : ""} />
                 <Row label="Shift" value={values.agreed_start_time && values.agreed_end_time ? `${values.agreed_start_time} – ${values.agreed_end_time}` : (values.agreed_start_time || values.agreed_end_time || "")} />
+                <Row label="Working days" value={formatDays(values.scheduled_days)} />
                 <Row label="Start date" value={values.engagement_start_date} />
                 <Row label="End date" value={values.engagement_end_date} />
               </div>
@@ -153,6 +178,37 @@ const WorkerEditForm = ({ clientId }: Props) => {
                 <div className="space-y-1">
                   <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">End time</Label>
                   <Input type="time" value={values.agreed_end_time} onChange={(e) => set("agreed_end_time", e.target.value)} className="h-9 text-sm" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Working days</Label>
+                <div className="grid grid-cols-7 gap-1">
+                  {[
+                    { label: "M", day: 1 },
+                    { label: "T", day: 2 },
+                    { label: "W", day: 3 },
+                    { label: "T", day: 4 },
+                    { label: "F", day: 5 },
+                    { label: "S", day: 6 },
+                    { label: "S", day: 0 },
+                  ].map(({ label, day }) => {
+                    const active = values.scheduled_days.includes(day);
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => toggleDay(day)}
+                        className={`h-9 rounded-lg text-xs font-semibold transition-colors ${
+                          active
+                            ? "bg-foreground text-background"
+                            : "bg-background border border-border text-muted-foreground hover:bg-muted"
+                        }`}
+                        aria-pressed={active}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">

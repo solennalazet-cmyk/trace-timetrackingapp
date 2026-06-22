@@ -10,9 +10,9 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    // sessionStorage isolates the auth session to a single browser tab so the
-    // same user can be signed into different Trace accounts in parallel tabs.
-    storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
+    // localStorage keeps users signed in across tab closes, reloads, and
+    // navigations away from the app.
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     persistSession: true,
     autoRefreshToken: true,
   }

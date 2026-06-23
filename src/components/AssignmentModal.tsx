@@ -418,6 +418,36 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
       const parsedRate = rateAmount.trim() === "" ? null : Number(rateAmount);
       const normalizedRate = parsedRate != null && Number.isFinite(parsedRate) ? parsedRate : null;
 
+      // Persist the rate on the client so it auto-fills next time.
+      // Only for hourly rates with a real client and user context.
+      if (
+        user?.id &&
+        clientId &&
+        normalizedRate != null &&
+        rateUnit === "hour"
+      ) {
+        const existing = clientsFull.find((c) => c.id === clientId);
+        if (
+          existing &&
+          (existing.default_rate !== normalizedRate ||
+            (existing as any).currency !== rateCurrency)
+        ) {
+          supabase
+            .from("clients")
+            .update({ default_rate: normalizedRate, currency: rateCurrency })
+            .eq("id", clientId)
+            .eq("user_id", user.id)
+            .then(() => {});
+          setClientsFull((prev) =>
+            prev.map((c) =>
+              c.id === clientId
+                ? { ...c, default_rate: normalizedRate, currency: rateCurrency }
+                : c
+            )
+          );
+        }
+      }
+
       const baseAssignment = {
         clientId: clientId || null,
         projectId: projectId || null,
@@ -428,6 +458,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
         rateCurrency,
         rateUnit,
       };
+
 
       // Multi-task: create one entry per task with split durations
       if (taskList.length > 0 && onSaveMulti) {

@@ -134,10 +134,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   const signOut = async () => {
+    const flag = (window as any).__traceExplicitSignOut;
+    if (flag) flag.current = true;
     await supabase.auth.signOut();
     setSession(null);
     setProfile(null);
   };
+
 
   return (
     <AuthContext.Provider

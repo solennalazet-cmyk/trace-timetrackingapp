@@ -61,14 +61,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // Set up listener BEFORE getSession
+    // Track whether the user has explicitly signed out via signOut().
+    // If they haven't, treat a SIGNED_OUT event as a transient token-refresh
+    // failure (network blip, phone sleep) and try to recover the session
+    // instead of dropping the user back to the login screen.
+    const explicitSignOut = { current: false };
+    (window as any).__traceExplicitSignOut = explicitSignOut;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        if (session?.user) {
-          setProfile((current) => current?.id === session.user.id ? current : null);
-          // Use setTimeout to avoid Supabase deadlock
-          setTimeout(() => fetchProfile(session.user.id), 0);
+      async (event, newSession) => {
+        if (event === "SIGNED_OUT" && !explicitSignOut.current) {
+          // Don't immediately clear the UI. Try to recover.
+          const { data } = await supabase.auth.getSession();
+          if (data.session) {
+            setSession(data.session);
+            setLoading(false);
+            return;
+          }
+          // Could not recover — fall through and clear.
+        }
+        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+          explicitSignOut.current = false;
+        }
+        setSession(newSession);
+        if (newSession?.user) {
+          setProfile((current) => current?.id === newSession.user.id ? current : null);
+          setTimeout(() => fetchProfile(newSession.user.id), 0);
         } else {
           setProfile(null);
         }
@@ -81,7 +99,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (session?.user) {
         setProfile((current) => current?.id === session.user.id ? current : null);
         fetchProfile(session.user.id);
-        // Auto-delete entries trashed more than 7 days ago
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         supabase
@@ -95,8 +112,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    // Proactively refresh the session whenever the tab/app comes back to the
+    // foreground. On mobile the JS timers used by autoRefreshToken pause
+    // when the phone sleeps, so the access token can expire silently. Hitting
+    // refreshSession() on resume avoids the "signed out on wake" bug.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        supabase.auth.refreshSession().catch(() => {});
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
   }, []);
+
+
 
   const signOut = async () => {
     await supabase.auth.signOut();

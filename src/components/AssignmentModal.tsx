@@ -431,11 +431,9 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
         rateUnit === "hour"
       ) {
         const existing = clientsFull.find((c) => c.id === clientId);
-        if (
-          existing &&
-          (existing.default_rate !== normalizedRate ||
-            (existing as any).currency !== rateCurrency)
-        ) {
+        // Only auto-populate the client's default rate when none has been set yet.
+        // Never overwrite an existing client rate from the assignment box.
+        if (existing && existing.default_rate == null) {
           supabase
             .from("clients")
             .update({ default_rate: normalizedRate, currency: rateCurrency })

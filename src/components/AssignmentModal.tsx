@@ -201,14 +201,18 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
     if (existingEntry) {
       setClientId(existingEntry.client_id ?? "");
+      setClientName("");
       setProjectId(existingEntry.project_id ?? "");
+      setProjectName("");
       setTaskId(existingEntry.task_id ?? "");
+      setTaskName("");
       setNotes(existingEntry.notes ?? "");
       setTags(existingEntry.tags ?? []);
       setBillable(existingEntry.billable ?? true);
       setRateAmount(existingEntry.rate_amount != null ? String(existingEntry.rate_amount) : "");
       setRateCurrency(existingEntry.rate_currency ?? "EUR");
       setRateUnit(existingEntry.rate_unit ?? "hour");
+      setTaskList([]);
     } else {
       setClientId("");
       setClientName("");

@@ -81,7 +81,7 @@ function isRecentlyStopped(mode: string): boolean {
 }
 
 export function useTimer(mode: TimerMode) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const lsKey = LS_KEYS[mode] || LS_KEYS.stopwatch;
 
   const initial = readLS(lsKey);

@@ -81,7 +81,7 @@ function isRecentlyStopped(mode: string): boolean {
 }
 
 export function useTimer(mode: TimerMode) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const lsKey = LS_KEYS[mode] || LS_KEYS.stopwatch;
 
   const initial = readLS(lsKey);
@@ -151,6 +151,12 @@ export function useTimer(mode: TimerMode) {
   // Sync with Supabase on load + realtime for cross-device consistency
   useEffect(() => {
     if (mode === "focus") return;
+
+    // Auth still resolving → don't touch LS. The LS-restored state is our
+    // optimistic source of truth until we know whether there's a user. Wiping
+    // it here was the cause of the multi-second "appears clocked out" gap on
+    // cold start, because user is null for the first render(s).
+    if (authLoading) return;
 
     // No authenticated user → no remote source of truth.
     // Clear any stale LS so a ghost timer can't survive across refreshes.
@@ -287,7 +293,7 @@ export function useTimer(mode: TimerMode) {
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("focus", reconcile);
     };
-  }, [user, mode, lsKey]);
+  }, [user, authLoading, mode, lsKey]);
 
 
   const start = useCallback(() => {

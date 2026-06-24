@@ -152,6 +152,12 @@ export function useTimer(mode: TimerMode) {
   useEffect(() => {
     if (mode === "focus") return;
 
+    // Auth still resolving → don't touch LS. The LS-restored state is our
+    // optimistic source of truth until we know whether there's a user. Wiping
+    // it here was the cause of the multi-second "appears clocked out" gap on
+    // cold start, because user is null for the first render(s).
+    if (authLoading) return;
+
     // No authenticated user → no remote source of truth.
     // Clear any stale LS so a ghost timer can't survive across refreshes.
     if (!user) {

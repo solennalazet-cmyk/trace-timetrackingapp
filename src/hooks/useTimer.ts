@@ -293,7 +293,7 @@ export function useTimer(mode: TimerMode) {
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("focus", reconcile);
     };
-  }, [user, mode, lsKey]);
+  }, [user, authLoading, mode, lsKey]);
 
 
   const start = useCallback(() => {

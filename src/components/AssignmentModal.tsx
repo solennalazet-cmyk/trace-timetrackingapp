@@ -34,6 +34,7 @@ import {
 } from "@/lib/anonymous-store";
 import { toast } from "sonner";
 import { useAutoResolvedRate } from "@/hooks/useAutoResolvedRate";
+import { parseDecimalInput, parsePositiveDecimalInput, sanitizeDecimalInput } from "@/lib/rate-utils";
 import { Plus, X } from "lucide-react";
 
 export interface SessionData {
@@ -333,8 +334,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
   if (!session) return null;
 
   const calcBillableValue = (): number | null => {
-    const parsedAmount = rateAmount.trim() === "" ? null : Number(rateAmount.replace(",", "."));
-    const amount = parsedAmount != null && Number.isFinite(parsedAmount) ? parsedAmount : null;
+    const amount = parseDecimalInput(rateAmount);
     if (!billable || amount == null) return null;
     if (rateUnit === "hour") return (session.durationMinutes / 60) * amount;
     if (rateUnit === "project") return amount;
@@ -419,8 +419,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     if (saving) return;
     setSaving(true);
     try {
-      const parsedRate = rateAmount.trim() === "" ? null : Number(rateAmount.replace(",", "."));
-      const normalizedRate = parsedRate != null && Number.isFinite(parsedRate) && parsedRate > 0 ? parsedRate : null;
+      const normalizedRate = parsePositiveDecimalInput(rateAmount);
 
 
       // Persist the rate on the client so it auto-fills next time.
@@ -630,9 +629,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                     placeholder="0.00"
                     value={rateAmount}
                     onChange={(e) => {
-                      // Allow digits with a single decimal separator (dot or comma)
-                      const v = e.target.value.replace(/[^0-9.,]/g, "");
-                      setRateAmount(v);
+                      setRateAmount(sanitizeDecimalInput(e.target.value));
                     }}
                   />
                 </div>

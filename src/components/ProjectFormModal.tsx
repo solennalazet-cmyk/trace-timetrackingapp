@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { sanitizeDecimalInput } from "@/lib/rate-utils";
 
 interface ProjectFormData {
   name: string;
@@ -82,7 +83,7 @@ const ProjectFormModal = ({ open, onOpenChange, onSave, onDelete, initial, clien
           <div className="flex gap-3">
             <div className="flex-1 space-y-1.5">
               <Label className="text-sm">Rate {clientRate ? `(default: ${clientRate})` : "(optional)"}</Label>
-              <Input className="h-10 rounded-xl" type="number" placeholder={clientRate ? String(clientRate) : "0.00"} value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} />
+              <Input className="h-10 rounded-xl" type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder={clientRate ? String(clientRate) : "0.00"} value={form.rate} onChange={(e) => setForm({ ...form, rate: sanitizeDecimalInput(e.target.value) })} />
             </div>
             <div className="w-32 space-y-1.5">
               <Label className="text-sm">Unit</Label>

@@ -15,6 +15,7 @@ import SignInLink from "@/components/SignInLink";
 import ClientPaymentsSection from "@/components/ClientPaymentsSection";
 import { toast } from "sonner";
 import Seo from "@/components/Seo";
+import { parsePositiveDecimalInput } from "@/lib/rate-utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -197,12 +198,7 @@ const ClientsPage = () => {
           invited_at: new Date().toISOString(),
         }
       : {};
-    const parsedRate = (() => {
-      const raw = (data.default_rate ?? "").toString().trim().replace(",", ".");
-      if (!raw) return null;
-      const n = parseFloat(raw);
-      return Number.isFinite(n) && n > 0 ? n : null;
-    })();
+    const parsedRate = parsePositiveDecimalInput(data.default_rate);
 
 
     if (user) {
@@ -287,23 +283,24 @@ const ClientsPage = () => {
 
   const handleSaveProject = async (data: any) => {
     if (!projectParentClient) return;
+    const parsedProjectRate = parsePositiveDecimalInput(data.rate);
     if (user) {
       if (editingProject) {
         await supabase.from("projects").update({
-          name: data.name, rate: data.rate ? parseFloat(data.rate) : null, currency: data.currency,
+          name: data.name, rate: parsedProjectRate, currency: data.currency,
         }).eq("id", editingProject.id);
         toast.success("Project updated.");
       } else {
         await supabase.from("projects").insert({
           name: data.name, client_id: projectParentClient.id,
-          rate: data.rate ? parseFloat(data.rate) : null, currency: data.currency,
+          rate: parsedProjectRate, currency: data.currency,
           user_id: user.id,
         });
         toast.success("Project added.");
       }
     } else {
       const id = editingProject?.id ?? `local-${Date.now()}`;
-      saveAnonymousProject({ id, name: data.name, client_id: projectParentClient.id, rate: data.rate ? parseFloat(data.rate) : null, currency: data.currency });
+      saveAnonymousProject({ id, name: data.name, client_id: projectParentClient.id, rate: parsedProjectRate, currency: data.currency });
       toast.success(editingProject ? "Project updated." : "Project added.");
     }
     setProjectFormOpen(false);

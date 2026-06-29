@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -44,6 +44,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const sessionRef = useRef<Session | null>(null);
+  const explicitSignOutRef = useRef(false);
+  const refreshInFlightRef = useRef<Promise<void> | null>(null);
+
+  const applySession = (nextSession: Session | null) => {
+    sessionRef.current = nextSession;
+    setSession(nextSession);
+  };
+
+  const hasLocalActiveTimer = () => {
+    try {
+      return ["trace_active_shift", "trace_active_stopwatch"].some((key) => {
+        const raw = localStorage.getItem(key);
+        if (!raw) return false;
+        return !!JSON.parse(raw)?.startedAt;
+      });
+    } catch {
+      return false;
+    }
+  };
 
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
@@ -65,25 +85,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // If they haven't, treat a SIGNED_OUT event as a transient token-refresh
     // failure (network blip, phone sleep) and try to recover the session
     // instead of dropping the user back to the login screen.
-    const explicitSignOut = { current: false };
-    (window as any).__traceExplicitSignOut = explicitSignOut;
+    (window as any).__traceExplicitSignOut = explicitSignOutRef;
+
+    const recoverSession = async () => {
+      if (!refreshInFlightRef.current) {
+        refreshInFlightRef.current = supabase.auth.refreshSession().then(({ data }) => {
+          if (data.session) {
+            applySession(data.session);
+            setProfile((current) => current?.id === data.session!.user.id ? current : null);
+            setTimeout(() => fetchProfile(data.session!.user.id), 0);
+          }
+        }).finally(() => {
+          refreshInFlightRef.current = null;
+        });
+      }
+      await refreshInFlightRef.current;
+      return sessionRef.current;
+    };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        if (event === "SIGNED_OUT" && !explicitSignOut.current) {
-          // Don't immediately clear the UI. Try to recover.
+        if (event === "SIGNED_OUT" && !explicitSignOutRef.current) {
+          // Don't immediately clear the UI/session. Mobile wake and concurrent
+          // token refreshes can emit a transient SIGNED_OUT even while the user
+          // is still signed in, which used to make active shifts disappear.
           const { data } = await supabase.auth.getSession();
           if (data.session) {
-            setSession(data.session);
+            applySession(data.session);
             setLoading(false);
             return;
           }
-          // Could not recover — fall through and clear.
+          const recovered = await recoverSession().catch(() => null);
+          if (recovered) {
+            setLoading(false);
+            return;
+          }
+          if (sessionRef.current && hasLocalActiveTimer()) {
+            setLoading(false);
+            return;
+          }
+          // Could not recover and there is no previous session — fall through and clear.
         }
         if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-          explicitSignOut.current = false;
+          explicitSignOutRef.current = false;
         }
-        setSession(newSession);
+        applySession(newSession);
         if (newSession?.user) {
           setProfile((current) => current?.id === newSession.user.id ? current : null);
           setTimeout(() => fetchProfile(newSession.user.id), 0);
@@ -95,7 +141,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+      applySession(session);
       if (session?.user) {
         setProfile((current) => current?.id === session.user.id ? current : null);
         fetchProfile(session.user.id);
@@ -118,7 +164,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // refreshSession() on resume avoids the "signed out on wake" bug.
     const onVisible = () => {
       if (document.visibilityState === "visible") {
-        supabase.auth.refreshSession().catch(() => {});
+        if (!refreshInFlightRef.current) {
+          refreshInFlightRef.current = supabase.auth.refreshSession()
+            .then(({ data }) => {
+              if (data.session) applySession(data.session);
+            })
+            .finally(() => {
+              refreshInFlightRef.current = null;
+            });
+        }
+        refreshInFlightRef.current.catch(() => {});
       }
     };
     document.addEventListener("visibilitychange", onVisible);
@@ -137,7 +192,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const flag = (window as any).__traceExplicitSignOut;
     if (flag) flag.current = true;
     await supabase.auth.signOut();
-    setSession(null);
+    applySession(null);
     setProfile(null);
   };
 

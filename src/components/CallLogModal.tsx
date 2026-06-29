@@ -33,6 +33,7 @@ import {
 import { toast } from "sonner";
 import { useAutoResolvedRate } from "@/hooks/useAutoResolvedRate";
 import { makeTimeEntryIdempotencyKey } from "@/lib/time-entry-idempotency";
+import { parsePositiveDecimalInput, sanitizeDecimalInput } from "@/lib/rate-utils";
 
 interface CallLogModalProps {
   open: boolean;
@@ -192,8 +193,7 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
     if (durationMinutes <= 0 || saving) return;
     setSaving(true);
     try {
-      const parsedRate = rateAmount.trim() === "" ? null : Number(rateAmount);
-      const rateNum = parsedRate != null && Number.isFinite(parsedRate) ? parsedRate : null;
+      const rateNum = parsePositiveDecimalInput(rateAmount);
       let billableValue: number | null = null;
       if (billable && rateNum != null) {
         if (rateUnit === "hour") billableValue = (durationMinutes / 60) * rateNum;
@@ -259,7 +259,7 @@ const CallLogModal = ({ open, onOpenChange, onSaved }: CallLogModalProps) => {
           {billable && (
             <div className="flex gap-2">
               <div className="w-20"><Select value={rateCurrency} onValueChange={setRateCurrency}><SelectTrigger className="h-10"><SelectValue /></SelectTrigger><SelectContent>{CURRENCIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
-              <div className="flex-1"><Input type="number" placeholder="0.00" value={rateAmount} onChange={(e) => setRateAmount(e.target.value)} /></div>
+              <div className="flex-1"><Input type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="0.00" value={rateAmount} onChange={(e) => setRateAmount(sanitizeDecimalInput(e.target.value))} /></div>
               <div className="w-28"><Select value={rateUnit} onValueChange={setRateUnit}><SelectTrigger className="h-10"><SelectValue /></SelectTrigger><SelectContent>{RATE_UNITS.map((u) => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}</SelectContent></Select></div>
             </div>
           )}

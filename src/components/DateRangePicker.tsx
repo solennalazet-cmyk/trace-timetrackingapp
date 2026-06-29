@@ -23,34 +23,17 @@ export default function DateRangePicker({ from, to, onChange, weekStartsOn = 1 }
   const [range, setRange] = useState<DateRange | undefined>({ from, to });
 
   useEffect(() => {
-    if (open) setRange({ from, to });
-  }, [open, from, to]);
-
-  const QUICK_RANGES = [
-    { label: "This week", getValue: () => {
-      const now = new Date();
-      const s = startOfWeek(now, { weekStartsOn });
-      const e = new Date(s);
-      e.setDate(e.getDate() + 6);
-      return { from: s, to: e };
-    }},
-    { label: "Last 7 days", getValue: () => {
-      const now = new Date();
-      return { from: new Date(now.getTime() - 6 * 86400000), to: now };
-    }},
-    { label: "Last 30 days", getValue: () => {
-      const now = new Date();
-      return { from: new Date(now.getTime() - 29 * 86400000), to: now };
-    }},
-    { label: "This month", getValue: () => {
-      const now = new Date();
-      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
-    }},
-  ];
+    // Each time the popover opens, clear the selection so the user's next
+    // click is unambiguously the new start date (otherwise react-day-picker
+    // extends the previously completed range and the popover closes
+    // immediately with the wrong end date).
+    if (open) setRange(undefined);
+  }, [open]);
 
   const handleRangeChange = (next: DateRange | undefined) => {
-    // If user clicks again after a complete range, restart selection from that date.
-    if (range?.from && range?.to && next?.from && !next?.to) {
+    // If a complete range already exists and the user clicks again, restart
+    // selection from that date rather than extending the existing range.
+    if (range?.from && range?.to && next?.from) {
       setRange({ from: next.from, to: undefined });
       return;
     }

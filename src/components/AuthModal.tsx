@@ -177,9 +177,14 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
       return;
     }
 
-    // If a session is returned, the user is already confirmed (auto-confirm on) — migrate and close.
+    // If a session is returned, the user is already confirmed (auto-confirm on) — close immediately and migrate in background.
     if (data.session && data.user) {
-      await migrateAnonymousData(data.user.id);
+      const uid = data.user.id;
+      // Run migration in the background so the UI never blocks on slow networks.
+      migrateAnonymousData(uid).catch((err) => {
+        console.error("Anonymous data migration failed", err);
+        toast.error("Some local data couldn't sync. We'll retry on next sign-in.");
+      });
       toast.success("Welcome to Trace. Your work has been saved.");
       resetFields();
       onOpenChange(false);
@@ -190,6 +195,7 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
       startResendCooldown();
     }
     setLoading(false);
+
   };
 
   const handleLogin = async (e: React.FormEvent) => {

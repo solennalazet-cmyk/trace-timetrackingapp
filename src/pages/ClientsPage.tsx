@@ -197,6 +197,13 @@ const ClientsPage = () => {
           invited_at: new Date().toISOString(),
         }
       : {};
+    const parsedRate = (() => {
+      const raw = (data.default_rate ?? "").toString().trim().replace(",", ".");
+      if (!raw) return null;
+      const n = parseFloat(raw);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    })();
+
 
     if (user) {
       if (editingClient) {

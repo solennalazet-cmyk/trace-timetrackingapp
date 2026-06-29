@@ -234,6 +234,23 @@ const PaymentsPage = () => {
     load();
   };
 
+  const handleDeleteGroup = async () => {
+    if (!deleteTarget || !user) return;
+    const groupRows = reports.filter((r) => (isEmployer ? r.worker_user_id : r.client_id) === deleteTarget.key);
+    if (groupRows.length === 0) { setDeleteTarget(null); return; }
+    setDeleting(true);
+    const ids = groupRows.map((r) => r.id);
+    const { error: payErr } = await supabase.from("report_payments").delete().in("submitted_report_id", ids);
+    if (payErr) { setDeleting(false); toast.error(payErr.message); return; }
+    const { error: repErr } = await supabase.from("submitted_reports").delete().in("id", ids);
+    setDeleting(false);
+    if (repErr) { toast.error(repErr.message); return; }
+    toast.success("Removed.");
+    if (expandedKey === deleteTarget.key) setExpandedKey(null);
+    setDeleteTarget(null);
+    load();
+  };
+
   // Sync draft amount when underlying data changes while a group is expanded
   useEffect(() => {
     if (!expandedKey) return;

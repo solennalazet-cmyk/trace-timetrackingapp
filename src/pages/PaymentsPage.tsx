@@ -245,7 +245,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
     let due = 0, paid = 0, overdue = 0;
     let currency = "EUR";
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    for (const r of reports) {
+    for (const r of visibleReports) {
       if (r.status !== "approved") continue;
       currency = r.currency;
       const total = Number(r.total_amount);
@@ -259,7 +259,13 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
       }
     }
     return { due, paid, outstanding: Math.max(0, due - paid), overdue, currency };
-  }, [reports, paidByReport]);
+  }, [visibleReports, paidByReport]);
+
+  // Collapse any open card when the worker filter changes so a hidden group doesn't stay open.
+  useEffect(() => {
+    setExpandedKey(null);
+  }, [selectedWorker]);
+
 
   const handleExpand = (key: string, defaultOutstanding: number) => {
     const next = expandedKey === key ? null : key;

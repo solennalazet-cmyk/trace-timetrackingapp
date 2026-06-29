@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeekStart } from "@/contexts/WeekStartContext";
-import { getClientColor, toLocalDateKey } from "@/lib/utils";
+import { SUNRISE_PALETTE, toLocalDateKey } from "@/lib/utils";
 
 interface ScheduledWorker {
   id: string;
@@ -59,6 +59,7 @@ const WorkersWeekSchedule = () => {
         engagementEnd: r.engagement_end_date,
         scheduledDays: r.scheduled_days ?? [0, 1, 2, 3, 4, 5, 6],
       }));
+    rows.sort((a: ScheduledWorker, b: ScheduledWorker) => a.id.localeCompare(b.id));
     setWorkers(rows);
   }, [user]);
 
@@ -96,6 +97,11 @@ const WorkersWeekSchedule = () => {
   }, [weekDays, workers]);
 
   const hasAny = workersByDay.some((d) => d.length > 0);
+  const colorById = useMemo(() => {
+    const m = new Map<string, string>();
+    workers.forEach((w, i) => m.set(w.id, SUNRISE_PALETTE[i % SUNRISE_PALETTE.length]));
+    return m;
+  }, [workers]);
 
   const goWeek = (delta: number) => {
     setCursor((c) => { const n = new Date(c); n.setDate(c.getDate() + delta * 7); return n; });
@@ -163,7 +169,7 @@ const WorkersWeekSchedule = () => {
 
                   <div
                     className="relative flex-1 rounded-md bg-muted/40 overflow-hidden"
-                    style={{ minHeight: `${rowH * 14 + 6}px` }}
+                    style={{ minHeight: `${rowH * 16 + 6}px` }}
                   >
                     {/* grid lines */}
                     {hourMarks.slice(1, -1).map((_, idx) => (
@@ -181,7 +187,7 @@ const WorkersWeekSchedule = () => {
                       const left = Math.max(0, ((s - DAY_START_HOUR) / HOURS) * 100);
                       const right = Math.min(100, ((e - DAY_START_HOUR) / HOURS) * 100);
                       const width = Math.max(2, right - left);
-                      const color = getClientColor(w.id);
+                      const color = colorById.get(w.id) ?? SUNRISE_PALETTE[0];
                       return (
                         <div
                           key={w.id}
@@ -189,8 +195,8 @@ const WorkersWeekSchedule = () => {
                           style={{
                             left: `${left}%`,
                             width: `${width}%`,
-                            top: `${3 + wi * 14}px`,
-                            height: "11px",
+                            top: `${3 + wi * 16}px`,
+                            height: "13px",
                             backgroundColor: color,
                           }}
                           title={`${w.name} · ${w.start.slice(0,5)}–${w.end.slice(0,5)}`}
@@ -209,7 +215,7 @@ const WorkersWeekSchedule = () => {
           <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-3 pt-3 border-t border-border/50">
             {workers.map((w) => (
               <div key={w.id} className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getClientColor(w.id) }} />
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: colorById.get(w.id) ?? SUNRISE_PALETTE[0] }} />
                 <span className="text-[10px] text-muted-foreground">{w.name}</span>
               </div>
             ))}

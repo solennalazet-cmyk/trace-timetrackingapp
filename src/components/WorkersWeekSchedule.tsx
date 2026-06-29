@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeekStart } from "@/contexts/WeekStartContext";
-import { getClientColor, toLocalDateKey } from "@/lib/utils";
+import { SUNRISE_PALETTE, toLocalDateKey } from "@/lib/utils";
 
 interface ScheduledWorker {
   id: string;

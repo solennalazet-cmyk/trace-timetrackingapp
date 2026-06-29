@@ -101,10 +101,23 @@ const PaymentsPage = () => {
 
       const nameMap = new Map<string, string>();
       if (isEmployer) {
-        const workerIds = Array.from(new Set(list.map((r) => r.worker_user_id)));
-        const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", workerIds);
-        const pm = new Map((profiles ?? []).map((p: any) => [p.id, (p.full_name as string) || "Freelancer"]));
-        for (const id of workerIds) nameMap.set(id, pm.get(id) ?? "Freelancer");
+        // Resolve freelancer names from this employer's own contractor
+        // client rows (same source as the Freelancers page). The `profiles`
+        // table is RLS-restricted, so it returns nothing for the employer
+        // and every card would collapse to a generic "Freelancer" label.
+        const workerIds = Array.from(new Set(list.map((r) => r.worker_user_id))).filter(Boolean);
+        const { data: cRows } = await supabase
+          .from("clients")
+          .select("connected_user_id, name")
+          .eq("user_id", user.id)
+          .in("kind", ["contractor", "both"])
+          .eq("connection_status", "accepted")
+          .in("connected_user_id", workerIds);
+        const byUser = new Map<string, string>();
+        for (const c of (cRows ?? []) as any[]) {
+          if (c.connected_user_id && c.name) byUser.set(c.connected_user_id, c.name);
+        }
+        for (const id of workerIds) nameMap.set(id, byUser.get(id) ?? "Freelancer");
       } else {
         const clientIds = Array.from(new Set(list.map((r) => r.client_id)));
         const { data: clientRows } = await supabase.from("clients").select("id, name").in("id", clientIds);
@@ -357,7 +370,7 @@ const PaymentsPage = () => {
                   <div className="grid grid-cols-3 gap-2 mb-3">
                     <div>
                       <p className="text-base font-mono font-semibold text-foreground">{sym}{t.due.toFixed(2)}</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">Amount Due</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Total wages</p>
                     </div>
                     <div>
                       <p className="text-base font-mono font-semibold text-foreground">{sym}{t.paid.toFixed(2)}</p>

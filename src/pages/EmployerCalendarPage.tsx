@@ -315,14 +315,28 @@ const EmployerCalendarPage = () => {
                   {d.getDate()}
                 </span>
                 {hasData && (
-                  <div className="flex flex-wrap gap-0.5 justify-center mt-auto mb-1.5 max-w-full">
-                    {freelancers.slice(0, 4).map((c) => (
-                      <span
-                        key={c.clientId}
-                        className="w-1.5 h-1.5 rounded-full"
-                        style={{ backgroundColor: isSelected ? "#fff" : c.color }}
-                      />
-                    ))}
+                  <div className="flex flex-wrap gap-0.5 justify-center mt-auto mb-1.5 max-w-full items-center">
+                    {freelancers.slice(0, 4).map((c) => {
+                      const dotColor = isSelected ? "#fff" : c.color;
+                      if (c.status === "missing") {
+                        return (
+                          <span
+                            key={c.clientId}
+                            className="w-1.5 h-1.5 rounded-full border"
+                            style={{ borderColor: dotColor, backgroundColor: "transparent" }}
+                            title="Missing report"
+                          />
+                        );
+                      }
+                      const opacity = c.status === "worked" ? 1 : c.status === "reported_off" ? 0.45 : 0.3;
+                      return (
+                        <span
+                          key={c.clientId}
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ backgroundColor: dotColor, opacity }}
+                        />
+                      );
+                    })}
                     {freelancers.length > 4 && (
                       <span className={`text-[8px] leading-none ${isSelected ? "text-background" : "text-muted-foreground"}`}>+{freelancers.length - 4}</span>
                     )}

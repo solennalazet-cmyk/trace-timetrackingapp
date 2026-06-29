@@ -66,12 +66,14 @@ interface FreelancerPaymentGroup {
 
 interface PaymentsPageProps {
   embedded?: boolean;
+  selectedWorker?: string | "all";
 }
 
-const PaymentsPage = ({ embedded = false }: PaymentsPageProps = {}) => {
+const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPageProps = {}) => {
   const { user } = useAuth();
   const { activeRole } = useRole();
   const isEmployer = activeRole === "employer";
+
 
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [payments, setPayments] = useState<PaymentRow[]>([]);
@@ -181,6 +183,11 @@ const PaymentsPage = ({ embedded = false }: PaymentsPageProps = {}) => {
     return m;
   }, [payments]);
 
+  const visibleReports = useMemo(() => {
+    if (!isEmployer || selectedWorker === "all") return reports;
+    return reports.filter((r) => r.worker_user_id === selectedWorker);
+  }, [reports, isEmployer, selectedWorker]);
+
   // Group reports by client_id (worker view) or worker_user_id (employer view)
   const groups = useMemo(() => {
     const m = new Map<string, ReportRow[]>();
@@ -189,7 +196,7 @@ const PaymentsPage = ({ embedded = false }: PaymentsPageProps = {}) => {
         if (!m.has(freelancer.key)) m.set(freelancer.key, []);
       }
     }
-    for (const r of reports) {
+    for (const r of visibleReports) {
       const key = isEmployer ? r.worker_user_id : r.client_id;
       if (!m.has(key)) m.set(key, []);
       m.get(key)!.push(r);
@@ -199,7 +206,18 @@ const PaymentsPage = ({ embedded = false }: PaymentsPageProps = {}) => {
       const bn = groupNames.get(b[0]) ?? "";
       return an.localeCompare(bn);
     });
-  }, [reports, isEmployer, employerFreelancers, groupNames]);
+  }, [visibleReports, isEmployer, employerFreelancers, groupNames]);
+
+  const filteredGroups = useMemo(() => {
+    if (!isEmployer || selectedWorker === "all") return groups;
+    return groups.filter(([key]) => key === selectedWorker);
+  }, [groups, isEmployer, selectedWorker]);
+
+  const selectedWorkerName = useMemo(() => {
+    if (selectedWorker === "all") return "All freelancers";
+    return groupNames.get(selectedWorker) ?? employerFreelancers.find((f) => f.key === selectedWorker)?.name ?? "Freelancer";
+  }, [selectedWorker, groupNames, employerFreelancers]);
+
 
   const computeGroupTotals = (rows: ReportRow[]) => {
     let due = 0, paid = 0, overdue = 0;
@@ -227,7 +245,7 @@ const PaymentsPage = ({ embedded = false }: PaymentsPageProps = {}) => {
     let due = 0, paid = 0, overdue = 0;
     let currency = "EUR";
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    for (const r of reports) {
+    for (const r of visibleReports) {
       if (r.status !== "approved") continue;
       currency = r.currency;
       const total = Number(r.total_amount);
@@ -241,7 +259,13 @@ const PaymentsPage = ({ embedded = false }: PaymentsPageProps = {}) => {
       }
     }
     return { due, paid, outstanding: Math.max(0, due - paid), overdue, currency };
-  }, [reports, paidByReport]);
+  }, [visibleReports, paidByReport]);
+
+  // Collapse any open card when the worker filter changes so a hidden group doesn't stay open.
+  useEffect(() => {
+    setExpandedKey(null);
+  }, [selectedWorker]);
+
 
   const handleExpand = (key: string, defaultOutstanding: number) => {
     const next = expandedKey === key ? null : key;
@@ -374,7 +398,7 @@ const PaymentsPage = ({ embedded = false }: PaymentsPageProps = {}) => {
                     <p className="text-2xl font-mono font-bold text-foreground mt-1">{totalSym}{overallTotals.due.toFixed(2)}</p>
                   </div>
                   <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
-                    All freelancers
+                    {selectedWorkerName}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
@@ -400,9 +424,9 @@ const PaymentsPage = ({ embedded = false }: PaymentsPageProps = {}) => {
             );
           })()}
 
-          {isEmployer && <h2 className="px-1 text-sm font-semibold">Per freelancer</h2>}
+          {isEmployer && selectedWorker === "all" && <h2 className="px-1 text-sm font-semibold">Per freelancer</h2>}
 
-          {groups.map(([key, rows]) => {
+          {filteredGroups.map(([key, rows]) => {
             const t = computeGroupTotals(rows);
             const sym = CURRENCY_SYMBOLS[t.currency] ?? "€";
             const name = groupNames.get(key) ?? (isEmployer ? "Freelancer" : "Client");

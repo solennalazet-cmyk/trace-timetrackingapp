@@ -329,7 +329,8 @@ const PaymentsPage = () => {
               .toUpperCase();
 
             return (
-              <Card key={key} className="overflow-hidden rounded-2xl shadow-sm">
+              <SwipeToDeleteRow key={key} onDelete={() => setDeleteTarget({ key, name })}>
+              <Card className="overflow-hidden rounded-2xl shadow-sm">
                 {/* Collapsed header — always visible */}
                 <button
                   type="button"

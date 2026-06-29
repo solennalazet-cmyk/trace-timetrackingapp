@@ -89,17 +89,8 @@ const EmployerHomePage = () => {
       ...((aRes.data ?? []) as any[]),
       ...reviewedRows,
     ];
-    const clientIds = Array.from(new Set(allRows.map((r) => r.client_id))).filter(Boolean);
     const workerIds = Array.from(new Set(allRows.map((r) => r.worker_user_id))).filter(Boolean);
-    let clientNameMap = new Map<string, string>();
     let workerNameMap = new Map<string, string>();
-    if (clientIds.length > 0) {
-      const { data: clientRows } = await supabase
-        .from("clients")
-        .select("id, name")
-        .in("id", clientIds);
-      clientNameMap = new Map((clientRows ?? []).map((c: any) => [c.id, c.name]));
-    }
     if (workerIds.length > 0) {
       const { data: contractorRows } = await supabase
         .from("clients")
@@ -114,7 +105,7 @@ const EmployerHomePage = () => {
       );
     }
     const resolveName = (r: any) =>
-      workerNameMap.get(r.worker_user_id) ?? clientNameMap.get(r.client_id) ?? "Freelancer";
+      workerNameMap.get(r.worker_user_id) ?? "Freelancer";
     const mapRow = (r: any): SubmittedReport => ({ ...r, client_name: resolveName(r) });
     setPending(((pRes.data ?? []) as any[]).map(mapRow));
     setApproved(((aRes.data ?? []) as any[]).map(mapRow));

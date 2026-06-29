@@ -3,6 +3,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Wallet, Check, ChevronRight, Trash2, Pencil, Calendar as CalendarIcon } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import SwipeToDeleteRow from "@/components/SwipeToDeleteRow";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/contexts/RoleContext";
@@ -71,6 +76,8 @@ const PaymentsPage = () => {
   const [draftDate, setDraftDate] = useState<string>(toLocalDateKey(new Date()));
   const [editingAmount, setEditingAmount] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ key: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -227,6 +234,23 @@ const PaymentsPage = () => {
     load();
   };
 
+  const handleDeleteGroup = async () => {
+    if (!deleteTarget || !user) return;
+    const groupRows = reports.filter((r) => (isEmployer ? r.worker_user_id : r.client_id) === deleteTarget.key);
+    if (groupRows.length === 0) { setDeleteTarget(null); return; }
+    setDeleting(true);
+    const ids = groupRows.map((r) => r.id);
+    const { error: payErr } = await supabase.from("report_payments").delete().in("submitted_report_id", ids);
+    if (payErr) { setDeleting(false); toast.error(payErr.message); return; }
+    const { error: repErr } = await supabase.from("submitted_reports").delete().in("id", ids);
+    setDeleting(false);
+    if (repErr) { toast.error(repErr.message); return; }
+    toast.success("Removed.");
+    if (expandedKey === deleteTarget.key) setExpandedKey(null);
+    setDeleteTarget(null);
+    load();
+  };
+
   // Sync draft amount when underlying data changes while a group is expanded
   useEffect(() => {
     if (!expandedKey) return;
@@ -305,7 +329,8 @@ const PaymentsPage = () => {
               .toUpperCase();
 
             return (
-              <Card key={key} className="overflow-hidden rounded-2xl shadow-sm">
+              <SwipeToDeleteRow key={key} onDelete={() => setDeleteTarget({ key, name })}>
+              <Card className="overflow-hidden rounded-2xl shadow-sm">
                 {/* Collapsed header — always visible */}
                 <button
                   type="button"
@@ -470,9 +495,18 @@ const PaymentsPage = () => {
                         })}
                       </div>
                     </div>
+
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-lg h-10 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => setDeleteTarget({ key, name })}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" /> Delete
+                    </Button>
                   </div>
                 )}
               </Card>
+              </SwipeToDeleteRow>
             );
           })}
         </div>
@@ -484,6 +518,27 @@ const PaymentsPage = () => {
         onOpenChange={(v) => { if (!v) setOpenReportId(null); }}
         readOnly
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent className="max-w-[380px] w-[calc(100vw-2rem)] rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deleteTarget?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              All submitted reports and recorded payments for this {isEmployer ? "freelancer" : "client"} will be permanently removed. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteGroup}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Deleting…" : "Delete permanently"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

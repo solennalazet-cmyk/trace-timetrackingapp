@@ -230,12 +230,17 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
     }
 
     if (data.user) {
-      await migrateAnonymousData(data.user.id);
+      const uid = data.user.id;
+      // Fire-and-forget — never let migration block the login UI.
+      migrateAnonymousData(uid).catch((err) => {
+        console.error("Anonymous data migration failed", err);
+      });
       toast.success("Welcome back.");
       resetFields();
       onOpenChange(false);
     }
     setLoading(false);
+
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {

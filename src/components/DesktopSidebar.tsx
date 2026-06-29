@@ -13,18 +13,17 @@ import FeedbackModal from "./FeedbackModal";
 import WhatsNewModal from "./WhatsNewModal";
 import RoleSwitcher from "./RoleSwitcher";
 
-const workerNav = [
+const workerNav: { path: string; label: string; icon: typeof Timer; beta?: boolean }[] = [
   { path: "/", label: "Start", icon: Timer },
   { path: "/reports", label: "Reports", icon: BarChart3 },
   { path: "/payments", label: "Payments", icon: Wallet, beta: true },
   { path: "/clients", label: "Accounts", icon: Briefcase },
 ];
 
-const employerNav = [
+const employerNav: { path: string; label: string; icon: typeof Home; beta?: boolean }[] = [
   { path: "/employer", label: "Home", icon: Home },
   { path: "/employer/calendar", label: "Calendar", icon: CalendarDays },
   { path: "/workers", label: "Freelancers", icon: Users },
-  { path: "/payments", label: "Payments", icon: Wallet, beta: true },
 ];
 
 const DesktopSidebar = () => {

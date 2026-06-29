@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { ChevronLeft, ChevronRight, Coffee, Clock3 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Coffee, Clock3, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeekStart } from "@/contexts/WeekStartContext";

@@ -15,13 +15,13 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Timer, PenLine, Clock, Phone, X, ArrowRight, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { getAnonymousClients, getAnonymousEntries, updateAnonymousEntry } from "@/lib/anonymous-store";
+import { getAnonymousClients, saveAnonymousClient, getAnonymousEntries, updateAnonymousEntry } from "@/lib/anonymous-store";
 import { toast } from "sonner";
+import AdaptiveCombobox from "@/components/AdaptiveCombobox";
 
 
 interface UnassignedEntry {
@@ -161,6 +161,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [batchOpen, setBatchOpen] = useState(false);
   const [batchClientId, setBatchClientId] = useState<string>("");
+  const [batchClientName, setBatchClientName] = useState<string>("");
   const [batching, setBatching] = useState(false);
 
   const loadEntries = async () => {
@@ -221,6 +222,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
     toast.success(`${ids.length} ${ids.length === 1 ? "entry" : "entries"} assigned to ${clientName}`);
     setBatchOpen(false);
     setBatchClientId("");
+    setBatchClientName("");
     onCountChange(0);
     onBatchAssigned?.();
     onOpenChange(false);
@@ -377,7 +379,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
         )}
       </SheetContent>
 
-      <AlertDialog open={batchOpen} onOpenChange={(v) => { setBatchOpen(v); if (!v) setBatchClientId(""); }}>
+      <AlertDialog open={batchOpen} onOpenChange={(v) => { setBatchOpen(v); if (!v) { setBatchClientId(""); setBatchClientName(""); } }}>
         <AlertDialogContent className="w-[calc(100vw-2rem)] max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Assign {entries.length} {entries.length === 1 ? "entry" : "entries"} to a client?</AlertDialogTitle>
@@ -386,19 +388,36 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">
-            <Select value={batchClientId} onValueChange={setBatchClientId}>
-              <SelectTrigger className="h-11">
-                <SelectValue placeholder="Choose an client…" />
-              </SelectTrigger>
-              <SelectContent>
-                {clients.length === 0 && (
-                  <div className="px-3 py-2 text-sm text-muted-foreground">No clients yet. Add one from the Clients tab.</div>
-                )}
-                {clients.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <AdaptiveCombobox
+              items={clients}
+              value={batchClientId}
+              displayValue={batchClientName}
+              placeholder="Choose a client…"
+              label="Client"
+              onSelect={(id, name) => { setBatchClientId(id); setBatchClientName(name); }}
+              onCreate={async (name) => {
+                const trimmed = name.trim();
+                if (!trimmed) return null;
+                if (user) {
+                  const { data, error } = await supabase
+                    .from("clients")
+                    .insert({ name: trimmed, user_id: user.id })
+                    .select("id, name")
+                    .single();
+                  if (error || !data) {
+                    toast.error("Couldn't create client", { description: error?.message });
+                    return null;
+                  }
+                  setClients((prev) => [...prev, { id: data.id, name: data.name }].sort((a, b) => a.name.localeCompare(b.name)));
+                  return { id: data.id, name: data.name };
+                } else {
+                  const id = `local-${Date.now()}`;
+                  saveAnonymousClient({ id, name: trimmed, default_rate: null, currency: "EUR" });
+                  setClients((prev) => [...prev, { id, name: trimmed }].sort((a, b) => a.name.localeCompare(b.name)));
+                  return { id, name: trimmed };
+                }
+              }}
+            />
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={batching}>Cancel</AlertDialogCancel>

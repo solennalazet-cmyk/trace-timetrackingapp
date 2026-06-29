@@ -15,13 +15,13 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Timer, PenLine, Clock, Phone, X, ArrowRight, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { getAnonymousClients, getAnonymousEntries, updateAnonymousEntry } from "@/lib/anonymous-store";
+import { getAnonymousClients, saveAnonymousClient, getAnonymousEntries, updateAnonymousEntry } from "@/lib/anonymous-store";
 import { toast } from "sonner";
+import AdaptiveCombobox from "@/components/AdaptiveCombobox";
 
 
 interface UnassignedEntry {

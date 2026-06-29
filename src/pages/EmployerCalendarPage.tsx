@@ -356,23 +356,40 @@ const EmployerCalendarPage = () => {
         <SheetContent side="bottom" className="rounded-t-3xl px-5 pt-4 pb-6 max-h-[80vh] overflow-y-auto">
           <SheetHeader className="text-left mb-3">
             <SheetTitle className="text-lg">{selectedDay ? fmtDayHeader(selectedDay) : ""}</SheetTitle>
-            <p className="text-xs text-muted-foreground">
-              {selectedFreelancers.length} {selectedFreelancers.length === 1 ? "freelancer" : "freelancers"} on the job
-            </p>
+            {(() => {
+              const worked = selectedFreelancers.filter((c) => c.status === "worked").length;
+              const off = selectedFreelancers.filter((c) => c.status === "reported_off").length;
+              const missing = selectedFreelancers.filter((c) => c.status === "missing").length;
+              const parts: string[] = [];
+              if (worked) parts.push(`${worked} worked`);
+              if (off) parts.push(`${off} off`);
+              if (missing) parts.push(`${missing} missing report${missing > 1 ? "s" : ""}`);
+              return (
+                <p className="text-xs text-muted-foreground">
+                  {parts.length ? parts.join(" · ") : `${selectedFreelancers.length} scheduled`}
+                </p>
+              );
+            })()}
           </SheetHeader>
 
           <div className="space-y-2.5">
             {selectedFreelancers
-              .sort((a, b) => (b.workMin - a.workMin) || (a.scheduledOnly === b.scheduledOnly ? 0 : a.scheduledOnly ? 1 : -1))
+              .sort((a, b) => {
+                const rank = (s: DayStatus) => s === "missing" ? 0 : s === "worked" ? 1 : s === "reported_off" ? 2 : 3;
+                const r = rank(a.status) - rank(b.status);
+                if (r !== 0) return r;
+                return b.workMin - a.workMin;
+              })
               .map((c) => {
                 const total = c.workMin + c.breakMin;
                 const workPct = total > 0 ? (c.workMin / total) * 100 : 0;
+                const isMissing = c.status === "missing";
                 return (
-                  <Card key={c.clientId} className="p-3.5">
+                  <Card key={c.clientId} className={`p-3.5 ${isMissing ? "border-destructive/40 bg-destructive/5" : ""}`}>
                     <div className="flex items-center gap-2.5 mb-2.5">
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
                       <p className="text-sm font-semibold truncate flex-1">{c.name}</p>
-                      {c.firstStart && c.lastEnd ? (
+                      {c.status === "worked" && c.firstStart && c.lastEnd ? (
                         <p className="text-[11px] text-muted-foreground tabular-nums shrink-0">
                           {c.firstStart.slice(0, 5)} – {c.lastEnd.slice(0, 5)}
                         </p>
@@ -383,9 +400,7 @@ const EmployerCalendarPage = () => {
                       ) : null}
                     </div>
 
-                    {c.scheduledOnly ? (
-                      <p className="text-xs text-muted-foreground">No report submitted yet for this day.</p>
-                    ) : (
+                    {c.status === "worked" ? (
                       <>
                         <div className="h-2 rounded-full overflow-hidden bg-muted flex">
                           <div className="h-full" style={{ width: `${workPct}%`, backgroundColor: c.color }} />
@@ -405,6 +420,15 @@ const EmployerCalendarPage = () => {
                           </div>
                         </div>
                       </>
+                    ) : c.status === "reported_off" ? (
+                      <p className="text-xs text-muted-foreground">Did not work — report submitted with no hours for this day.</p>
+                    ) : c.status === "missing" ? (
+                      <div className="flex items-start gap-2 text-xs text-destructive">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <p>Scheduled but no report submitted for this day.</p>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Scheduled — not yet reported.</p>
                     )}
                   </Card>
                 );

@@ -77,7 +77,7 @@ const EmployerHomePage = () => {
         .limit(20),
       supabase
         .from("submitted_reports")
-        .select("id, client_id, status, reviewed_at, submitted_at, total_amount, currency")
+        .select("id, client_id, worker_user_id, status, reviewed_at, submitted_at, total_amount, currency")
         .eq("employer_user_id", user.id)
         .order("submitted_at", { ascending: false })
         .limit(20),
@@ -89,30 +89,23 @@ const EmployerHomePage = () => {
       ...((aRes.data ?? []) as any[]),
       ...reviewedRows,
     ];
-    const clientIds = Array.from(new Set(allRows.map((r) => r.client_id))).filter(Boolean);
     const workerIds = Array.from(new Set(allRows.map((r) => r.worker_user_id))).filter(Boolean);
-    let clientNameMap = new Map<string, string>();
     let workerNameMap = new Map<string, string>();
-    if (clientIds.length > 0) {
-      const { data: clientRows } = await supabase
-        .from("clients")
-        .select("id, name")
-        .in("id", clientIds);
-      clientNameMap = new Map((clientRows ?? []).map((c: any) => [c.id, c.name]));
-    }
     if (workerIds.length > 0) {
-      const { data: profileRows } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", workerIds as string[]);
+      const { data: contractorRows } = await supabase
+        .from("clients")
+        .select("connected_user_id, name")
+        .eq("user_id", user.id)
+        .in("kind", ["contractor", "both"])
+        .in("connected_user_id", workerIds as string[]);
       workerNameMap = new Map(
-        (profileRows ?? [])
-          .filter((p: any) => p.full_name && p.full_name.trim())
-          .map((p: any) => [p.id, p.full_name.trim()]),
+        (contractorRows ?? [])
+          .filter((c: any) => c.connected_user_id && c.name && c.name.trim())
+          .map((c: any) => [c.connected_user_id, c.name.trim()]),
       );
     }
     const resolveName = (r: any) =>
-      workerNameMap.get(r.worker_user_id) ?? clientNameMap.get(r.client_id) ?? "Freelancer";
+      workerNameMap.get(r.worker_user_id) ?? "Freelancer";
     const mapRow = (r: any): SubmittedReport => ({ ...r, client_name: resolveName(r) });
     setPending(((pRes.data ?? []) as any[]).map(mapRow));
     setApproved(((aRes.data ?? []) as any[]).map(mapRow));

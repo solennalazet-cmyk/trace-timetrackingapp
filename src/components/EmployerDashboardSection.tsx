@@ -292,7 +292,7 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
       >
         <div className="flex items-baseline justify-between">
           <div className="flex items-baseline gap-2">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Reported wages</span>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Total wages for this period</span>
             <span className="text-xl font-bold font-mono tracking-tight">{sym}{totals.total.toFixed(2)}</span>
           </div>
           <div className="flex items-center gap-1 text-[10px] text-muted-foreground">

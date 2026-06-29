@@ -59,6 +59,11 @@ interface PaymentRow {
   recorded_by_user_id: string;
 }
 
+interface FreelancerPaymentGroup {
+  key: string;
+  name: string;
+}
+
 const PaymentsPage = () => {
   const { user } = useAuth();
   const { activeRole } = useRole();
@@ -67,6 +72,7 @@ const PaymentsPage = () => {
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [groupNames, setGroupNames] = useState<Map<string, string>>(new Map());
+  const [employerFreelancers, setEmployerFreelancers] = useState<FreelancerPaymentGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [openReportId, setOpenReportId] = useState<string | null>(null);
@@ -83,52 +89,64 @@ const PaymentsPage = () => {
     if (!user) return;
     setLoading(true);
     const col = isEmployer ? "employer_user_id" : "worker_user_id";
-    // Include submitted (pending) + approved so worker can track regardless of employer action
-    const { data: rRows } = await supabase
+    // Include submitted (pending) + approved so the report list stays visible,
+    // but only approved reports are counted as wages due below.
+    const reportsQuery = supabase
       .from("submitted_reports")
       .select("id, worker_user_id, employer_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, status, submitted_at, reviewed_at, shared_columns, entries_snapshot, rejection_reason, rejection_note")
       .eq(col, user.id)
       .in("status", ["submitted", "approved"])
       .order("period_end", { ascending: false });
 
-    const list = (rRows ?? []) as unknown as ReportRow[];
+    const freelancersQuery = isEmployer
+      ? supabase
+          .from("clients")
+          .select("id, connected_user_id, name")
+          .eq("user_id", user.id)
+          .in("kind", ["contractor", "both"])
+          .order("name", { ascending: true })
+      : null;
+
+    const [reportsRes, freelancersRes] = await Promise.all([
+      reportsQuery,
+      freelancersQuery ?? Promise.resolve({ data: null }),
+    ]);
+
+    const list = (reportsRes.data ?? []) as unknown as ReportRow[];
     setReports(list);
+
+    const nameMap = new Map<string, string>();
+    if (isEmployer) {
+      const freelancerGroups = ((freelancersRes.data ?? []) as any[]).map((row) => ({
+        key: row.connected_user_id ?? row.id,
+        name: row.name as string,
+      }));
+      setEmployerFreelancers(freelancerGroups);
+      for (const freelancer of freelancerGroups) {
+        nameMap.set(freelancer.key, freelancer.name);
+      }
+      for (const workerId of Array.from(new Set(list.map((r) => r.worker_user_id))).filter(Boolean)) {
+        if (!nameMap.has(workerId)) nameMap.set(workerId, "Freelancer");
+      }
+    } else {
+      setEmployerFreelancers([]);
+    }
 
     if (list.length > 0) {
       const ids = list.map((r) => r.id);
       const { data: payRows } = await supabase.from("report_payments").select("*").in("submitted_report_id", ids);
       setPayments((payRows ?? []) as PaymentRow[]);
 
-      const nameMap = new Map<string, string>();
-      if (isEmployer) {
-        // Resolve freelancer names from this employer's own contractor
-        // client rows (same source as the Freelancers page). The `profiles`
-        // table is RLS-restricted, so it returns nothing for the employer
-        // and every card would collapse to a generic "Freelancer" label.
-        const workerIds = Array.from(new Set(list.map((r) => r.worker_user_id))).filter(Boolean);
-        const { data: cRows } = await supabase
-          .from("clients")
-          .select("connected_user_id, name")
-          .eq("user_id", user.id)
-          .in("kind", ["contractor", "both"])
-          .eq("connection_status", "accepted")
-          .in("connected_user_id", workerIds);
-        const byUser = new Map<string, string>();
-        for (const c of (cRows ?? []) as any[]) {
-          if (c.connected_user_id && c.name) byUser.set(c.connected_user_id, c.name);
-        }
-        for (const id of workerIds) nameMap.set(id, byUser.get(id) ?? "Freelancer");
-      } else {
+      if (!isEmployer) {
         const clientIds = Array.from(new Set(list.map((r) => r.client_id)));
         const { data: clientRows } = await supabase.from("clients").select("id, name").in("id", clientIds);
         const cm = new Map((clientRows ?? []).map((c: any) => [c.id, c.name as string]));
         for (const id of clientIds) nameMap.set(id, cm.get(id) ?? "Client");
       }
-      setGroupNames(nameMap);
     } else {
       setPayments([]);
-      setGroupNames(new Map());
     }
+    setGroupNames(nameMap);
     setLoading(false);
   }, [user, isEmployer]);
 
@@ -162,19 +180,29 @@ const PaymentsPage = () => {
   // Group reports by client_id (worker view) or worker_user_id (employer view)
   const groups = useMemo(() => {
     const m = new Map<string, ReportRow[]>();
+    if (isEmployer) {
+      for (const freelancer of employerFreelancers) {
+        if (!m.has(freelancer.key)) m.set(freelancer.key, []);
+      }
+    }
     for (const r of reports) {
       const key = isEmployer ? r.worker_user_id : r.client_id;
       if (!m.has(key)) m.set(key, []);
       m.get(key)!.push(r);
     }
-    return Array.from(m.entries());
-  }, [reports, isEmployer]);
+    return Array.from(m.entries()).sort((a, b) => {
+      const an = groupNames.get(a[0]) ?? "";
+      const bn = groupNames.get(b[0]) ?? "";
+      return an.localeCompare(bn);
+    });
+  }, [reports, isEmployer, employerFreelancers, groupNames]);
 
   const computeGroupTotals = (rows: ReportRow[]) => {
     let due = 0, paid = 0, overdue = 0;
     let currency = "EUR";
     const today = new Date(); today.setHours(0, 0, 0, 0);
     for (const r of rows) {
+      if (r.status !== "approved") continue;
       currency = r.currency;
       const total = Number(r.total_amount);
       const p = paidByReport.get(r.id) ?? 0;
@@ -190,6 +218,26 @@ const PaymentsPage = () => {
     }
     return { due, paid, outstanding: Math.max(0, due - paid), overdue, currency };
   };
+
+  const overallTotals = useMemo(() => {
+    let due = 0, paid = 0, overdue = 0;
+    let currency = "EUR";
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    for (const r of reports) {
+      if (r.status !== "approved") continue;
+      currency = r.currency;
+      const total = Number(r.total_amount);
+      const p = Math.min(total, paidByReport.get(r.id) ?? 0);
+      due += total;
+      paid += p;
+      const remaining = Math.max(0, total - p);
+      if (remaining > 0) {
+        const ref = new Date((r.reviewed_at ?? r.submitted_at));
+        if (nextBillingCutoff(ref) < today) overdue += remaining;
+      }
+    }
+    return { due, paid, outstanding: Math.max(0, due - paid), overdue, currency };
+  }, [reports, paidByReport]);
 
   const handleExpand = (key: string, defaultOutstanding: number) => {
     const next = expandedKey === key ? null : key;
@@ -209,7 +257,9 @@ const PaymentsPage = () => {
       return;
     }
     // Apply payment FIFO across oldest unpaid reports in group
-    const sorted = [...rows].sort((a, b) => a.period_end.localeCompare(b.period_end));
+    const sorted = [...rows]
+      .filter((r) => r.status === "approved")
+      .sort((a, b) => a.period_end.localeCompare(b.period_end));
     let remaining = amount;
     const inserts: any[] = [];
     for (const r of sorted) {
@@ -305,6 +355,45 @@ const PaymentsPage = () => {
         </Card>
       ) : (
         <div className="space-y-3">
+          {(() => {
+            const totalSym = CURRENCY_SYMBOLS[overallTotals.currency] ?? "€";
+            const pct = overallTotals.due > 0 ? Math.min(100, Math.round((overallTotals.paid / overallTotals.due) * 100)) : 0;
+            return (
+              <Card className="p-4 rounded-2xl shadow-sm space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Total wages</p>
+                    <p className="text-2xl font-mono font-bold text-foreground mt-1">{totalSym}{overallTotals.due.toFixed(2)}</p>
+                  </div>
+                  <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
+                    All freelancers
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <p className="text-sm font-mono font-semibold text-foreground">{totalSym}{overallTotals.due.toFixed(2)}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">Total wages</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-mono font-semibold text-foreground">{totalSym}{overallTotals.paid.toFixed(2)}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">Paid</p>
+                  </div>
+                  <div>
+                    <p className={`text-sm font-mono font-semibold ${overallTotals.outstanding > 0.005 ? "text-orange-600 dark:text-orange-400" : "text-foreground"}`}>
+                      {totalSym}{overallTotals.outstanding.toFixed(2)}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">Remaining</p>
+                  </div>
+                </div>
+                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full bg-emerald-500 transition-all" style={{ width: `${pct}%` }} />
+                </div>
+              </Card>
+            );
+          })()}
+
+          {isEmployer && <h2 className="px-1 text-sm font-semibold">Per freelancer</h2>}
+
           {groups.map(([key, rows]) => {
             const t = computeGroupTotals(rows);
             const sym = CURRENCY_SYMBOLS[t.currency] ?? "€";
@@ -317,7 +406,7 @@ const PaymentsPage = () => {
             const overdue = t.overdue > 0.005;
 
             const status = noInvoices
-              ? { label: "No invoices", cls: "bg-muted text-muted-foreground" }
+              ? { label: "No approved reports", cls: "bg-muted text-muted-foreground" }
               : fullyPaid
                 ? { label: "Paid", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" }
                 : overdue

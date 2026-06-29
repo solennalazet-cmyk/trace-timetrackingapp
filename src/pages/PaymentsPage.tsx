@@ -398,7 +398,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
                     <p className="text-2xl font-mono font-bold text-foreground mt-1">{totalSym}{overallTotals.due.toFixed(2)}</p>
                   </div>
                   <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
-                    All freelancers
+                    {selectedWorkerName}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">

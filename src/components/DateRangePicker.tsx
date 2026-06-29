@@ -23,8 +23,28 @@ export default function DateRangePicker({ from, to, onChange, weekStartsOn = 1 }
   const [range, setRange] = useState<DateRange | undefined>({ from, to });
 
   useEffect(() => {
-    if (open) setRange({ from, to });
-  }, [open, from, to]);
+    // Each time the popover opens, clear the selection so the user's next
+    // click is unambiguously the new start date (otherwise react-day-picker
+    // extends the previously completed range and the popover closes
+    // immediately with the wrong end date).
+    if (open) setRange(undefined);
+  }, [open]);
+
+  const handleRangeChange = (next: DateRange | undefined) => {
+    // If a complete range already exists and the user clicks again, restart
+    // selection from that date rather than extending the existing range.
+    if (range?.from && range?.to && next?.from) {
+      setRange({ from: next.from, to: undefined });
+      return;
+    }
+    setRange(next);
+    if (next?.from && next?.to) {
+      const start = next.from <= next.to ? next.from : next.to;
+      const end = next.from <= next.to ? next.to : next.from;
+      onChange(start, end);
+      setOpen(false);
+    }
+  };
 
   const QUICK_RANGES = [
     { label: "This week", getValue: () => {
@@ -47,21 +67,6 @@ export default function DateRangePicker({ from, to, onChange, weekStartsOn = 1 }
       return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
     }},
   ];
-
-  const handleRangeChange = (next: DateRange | undefined) => {
-    // If user clicks again after a complete range, restart selection from that date.
-    if (range?.from && range?.to && next?.from && !next?.to) {
-      setRange({ from: next.from, to: undefined });
-      return;
-    }
-    setRange(next);
-    if (next?.from && next?.to) {
-      const start = next.from <= next.to ? next.from : next.to;
-      const end = next.from <= next.to ? next.to : next.from;
-      onChange(start, end);
-      setOpen(false);
-    }
-  };
 
   const handleQuickRange = (getValue: () => { from: Date; to: Date }) => {
     const r = getValue();

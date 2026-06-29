@@ -424,9 +424,9 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
             );
           })()}
 
-          {isEmployer && <h2 className="px-1 text-sm font-semibold">Per freelancer</h2>}
+          {isEmployer && selectedWorker === "all" && <h2 className="px-1 text-sm font-semibold">Per freelancer</h2>}
 
-          {groups.map(([key, rows]) => {
+          {filteredGroups.map(([key, rows]) => {
             const t = computeGroupTotals(rows);
             const sym = CURRENCY_SYMBOLS[t.currency] ?? "€";
             const name = groupNames.get(key) ?? (isEmployer ? "Freelancer" : "Client");

@@ -333,7 +333,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
   if (!session) return null;
 
   const calcBillableValue = (): number | null => {
-    const parsedAmount = rateAmount.trim() === "" ? null : Number(rateAmount);
+    const parsedAmount = rateAmount.trim() === "" ? null : Number(rateAmount.replace(",", "."));
     const amount = parsedAmount != null && Number.isFinite(parsedAmount) ? parsedAmount : null;
     if (!billable || amount == null) return null;
     if (rateUnit === "hour") return (session.durationMinutes / 60) * amount;

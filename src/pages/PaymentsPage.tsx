@@ -495,6 +495,14 @@ const PaymentsPage = () => {
                         })}
                       </div>
                     </div>
+
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-lg h-10 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => setDeleteTarget({ key, name })}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" /> Delete
+                    </Button>
                   </div>
                 )}
               </Card>

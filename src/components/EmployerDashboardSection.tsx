@@ -134,22 +134,26 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
         setPaidByReport(new Map());
       }
 
-      // Resolve worker display names from the freelancer's profile.
-      // Deliberately do NOT fall back to the employer's client-card name —
-      // on the employer side that label can mirror the employer's own business
-      // name and would mislabel pills/rows on this screen.
+      // Resolve worker display names from this employer's own contractor
+      // client rows (same source as the Freelancers page). The `profiles`
+      // table is RLS-restricted to each user's own row, so it returns nothing
+      // for the employer and every pill collapses to "Freelancer".
       const workerUserIds = Array.from(new Set(rows.map((r) => r.worker_user_id))).filter(Boolean);
       const nameMap = new Map<string, string>();
       if (workerUserIds.length > 0) {
-        const { data: pRows } = await supabase
-          .from("profiles")
-          .select("id, full_name, business_name")
-          .in("id", workerUserIds);
-        const profileById = new Map((pRows ?? []).map((p: any) => [p.id, p]));
-        for (const r of rows) {
-          const p = profileById.get(r.worker_user_id) as any;
-          const nm = (p?.full_name?.trim()) || (p?.business_name?.trim()) || "Freelancer";
-          nameMap.set(r.worker_user_id, nm);
+        const { data: cRows } = await supabase
+          .from("clients")
+          .select("connected_user_id, name")
+          .eq("user_id", user.id)
+          .in("kind", ["contractor", "both"])
+          .eq("connection_status", "accepted")
+          .in("connected_user_id", workerUserIds);
+        const byUser = new Map<string, string>();
+        for (const c of (cRows ?? []) as any[]) {
+          if (c.connected_user_id && c.name) byUser.set(c.connected_user_id, c.name);
+        }
+        for (const wid of workerUserIds) {
+          nameMap.set(wid, byUser.get(wid) ?? "Freelancer");
         }
       }
       if (!cancelled) setWorkerNames(nameMap);

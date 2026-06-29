@@ -279,11 +279,12 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
       <Card className="p-3 space-y-2">
         <div className="flex items-baseline justify-between">
           <div className="flex items-baseline gap-2">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Total wages</span>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Reported wages</span>
             <span className="text-xl font-bold font-mono tracking-tight">{sym}{totals.total.toFixed(2)}</span>
           </div>
           <span className="text-[10px] text-muted-foreground">{filteredReports.length} rpt</span>
         </div>
+        <p className="text-[10px] text-muted-foreground -mt-1">Submitted & approved reports in this range (excludes rejected). Breakdown below.</p>
         <div className="grid grid-cols-3 gap-1.5">
           <div className="rounded-md bg-emerald-500/10 px-2 py-1.5">
             <p className="text-[9px] uppercase tracking-wide text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1"><Coins className="w-2.5 h-2.5" /> Paid</p>

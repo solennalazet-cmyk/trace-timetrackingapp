@@ -102,7 +102,7 @@ const EmployerCalendarPage = () => {
     const [reportsRes, schedRes] = await Promise.all([
       supabase
         .from("submitted_reports")
-        .select("id, client_id, entries_snapshot")
+        .select("id, client_id, period_start, period_end, entries_snapshot")
         .eq("employer_user_id", user.id)
         .gte("period_end", toLocalDateKey(gridStart))
         .lte("period_start", toLocalDateKey(gridEnd)),

@@ -284,7 +284,7 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
       </div>
 
       {/* Payments — full set of cards migrated from the standalone /payments page */}
-      <PaymentsPage embedded />
+      <PaymentsPage embedded selectedWorker={selectedWorker} />
 
 
       {/* Work pattern — collapsible to keep To-date status above the fold */}

@@ -76,6 +76,8 @@ const PaymentsPage = () => {
   const [draftDate, setDraftDate] = useState<string>(toLocalDateKey(new Date()));
   const [editingAmount, setEditingAmount] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ key: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     if (!user) return;

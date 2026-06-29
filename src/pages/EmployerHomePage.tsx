@@ -77,7 +77,7 @@ const EmployerHomePage = () => {
         .limit(20),
       supabase
         .from("submitted_reports")
-        .select("id, client_id, status, reviewed_at, submitted_at, total_amount, currency")
+        .select("id, client_id, worker_user_id, status, reviewed_at, submitted_at, total_amount, currency")
         .eq("employer_user_id", user.id)
         .order("submitted_at", { ascending: false })
         .limit(20),
@@ -101,14 +101,16 @@ const EmployerHomePage = () => {
       clientNameMap = new Map((clientRows ?? []).map((c: any) => [c.id, c.name]));
     }
     if (workerIds.length > 0) {
-      const { data: profileRows } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", workerIds as string[]);
+      const { data: contractorRows } = await supabase
+        .from("clients")
+        .select("connected_user_id, name")
+        .eq("user_id", user.id)
+        .in("kind", ["contractor", "both"])
+        .in("connected_user_id", workerIds as string[]);
       workerNameMap = new Map(
-        (profileRows ?? [])
-          .filter((p: any) => p.full_name && p.full_name.trim())
-          .map((p: any) => [p.id, p.full_name.trim()]),
+        (contractorRows ?? [])
+          .filter((c: any) => c.connected_user_id && c.name && c.name.trim())
+          .map((c: any) => [c.connected_user_id, c.name.trim()]),
       );
     }
     const resolveName = (r: any) =>

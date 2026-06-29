@@ -623,12 +623,19 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                 </div>
                 <div className="flex-1">
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*[.,]?[0-9]*"
                     placeholder="0.00"
                     value={rateAmount}
-                    onChange={(e) => setRateAmount(e.target.value)}
+                    onChange={(e) => {
+                      // Allow digits with a single decimal separator (dot or comma)
+                      const v = e.target.value.replace(/[^0-9.,]/g, "");
+                      setRateAmount(v);
+                    }}
                   />
                 </div>
+
                 <div className="w-28">
                   <Select value={rateUnit} onValueChange={setRateUnit}>
                     <SelectTrigger className="h-10">

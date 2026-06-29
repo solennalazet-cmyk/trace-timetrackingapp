@@ -101,6 +101,7 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [paidByReport, setPaidByReport] = useState<Map<string, number>>(new Map());
   const [workerNames, setWorkerNames] = useState<Map<string, string>>(new Map());
+  const [allFreelancers, setAllFreelancers] = useState<{ id: string; name: string }[]>([]);
   const [selectedWorker, setSelectedWorker] = useState<string | "all">("all");
   const [breaksOpen, setBreaksOpen] = useState(breaksDefaultOpen);
   const [expandedWorker, setExpandedWorker] = useState<string | null>(null);
@@ -136,43 +137,44 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
         setPaidByReport(new Map());
       }
 
-      // Resolve worker display names from this employer's own contractor
-      // client rows (same source as the Freelancers page). The `profiles`
-      // table is RLS-restricted to each user's own row, so it returns nothing
-      // for the employer and every pill collapses to "Freelancer".
-      const workerUserIds = Array.from(new Set(rows.map((r) => r.worker_user_id))).filter(Boolean);
+      // Pull every accepted contractor so the filter pills always list all
+      // connected freelancers — not only those with reports in the current range.
+      const { data: contractorRows } = await supabase
+        .from("clients")
+        .select("connected_user_id, name")
+        .eq("user_id", user.id)
+        .in("kind", ["contractor", "both"])
+        .eq("connection_status", "accepted");
       const nameMap = new Map<string, string>();
-      if (workerUserIds.length > 0) {
-        const { data: cRows } = await supabase
-          .from("clients")
-          .select("connected_user_id, name")
-          .eq("user_id", user.id)
-          .in("kind", ["contractor", "both"])
-          .eq("connection_status", "accepted")
-          .in("connected_user_id", workerUserIds);
-        const byUser = new Map<string, string>();
-        for (const c of (cRows ?? []) as any[]) {
-          if (c.connected_user_id && c.name) byUser.set(c.connected_user_id, c.name);
-        }
-        for (const wid of workerUserIds) {
-          nameMap.set(wid, byUser.get(wid) ?? "Freelancer");
-        }
+      const freelancerList: { id: string; name: string }[] = [];
+      for (const c of (contractorRows ?? []) as any[]) {
+        if (!c.connected_user_id) continue;
+        const name = c.name ?? "Freelancer";
+        nameMap.set(c.connected_user_id, name);
+        freelancerList.push({ id: c.connected_user_id, name });
       }
-      if (!cancelled) setWorkerNames(nameMap);
+      // Fall back to "Freelancer" label for any reporter not in the contractor list.
+      for (const wid of Array.from(new Set(rows.map((r) => r.worker_user_id))).filter(Boolean)) {
+        if (!nameMap.has(wid)) nameMap.set(wid, "Freelancer");
+      }
+      if (!cancelled) {
+        setWorkerNames(nameMap);
+        setAllFreelancers(freelancerList.sort((a, b) => a.name.localeCompare(b.name)));
+      }
     })();
     return () => { cancelled = true; };
   }, [user, from, to, refreshKey]);
 
   const workers = useMemo(() => {
     const m = new Map<string, { id: string; name: string }>();
+    for (const f of allFreelancers) m.set(f.id, f);
     for (const r of reports) {
-      if (!r.worker_user_id) continue;
-      if (!m.has(r.worker_user_id)) {
-        m.set(r.worker_user_id, { id: r.worker_user_id, name: workerNames.get(r.worker_user_id) ?? "Freelancer" });
-      }
+      if (!r.worker_user_id || m.has(r.worker_user_id)) continue;
+      m.set(r.worker_user_id, { id: r.worker_user_id, name: workerNames.get(r.worker_user_id) ?? "Freelancer" });
     }
     return Array.from(m.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [reports, workerNames]);
+  }, [allFreelancers, reports, workerNames]);
+
 
   const filteredReports = useMemo(
     () => selectedWorker === "all" ? reports : reports.filter((r) => r.worker_user_id === selectedWorker),

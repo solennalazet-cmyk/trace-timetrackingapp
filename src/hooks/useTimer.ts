@@ -477,57 +477,45 @@ export function useTimer(mode: TimerMode) {
     setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
     setElapsedMs(0);
 
-    // Await Supabase delete for authenticated users
+    // Fire-and-forget Supabase cleanup so the UI (assignment modal, etc.)
+    // reacts instantly. `markRecentlyStopped` + cleared LS already protect
+    // against the reconcile loop resurrecting the session. Retry once on
+    // failure, and only surface a toast if both attempts fail.
     if (user) {
-      console.log(`[useTimer] active_sessions delete started for ${mode}`);
-      try {
-        const { error } = await supabase
-          .from("active_sessions")
-          .delete()
-          .eq("user_id", user.id);
-
-        if (error) {
-          console.error(`[useTimer] active_sessions delete failed for ${mode}:`, error);
-          // Retry once
-          console.log(`[useTimer] retrying active_sessions delete for ${mode}`);
-          const { error: retryError } = await supabase
+      const userId = user.id;
+      (async () => {
+        console.log(`[useTimer] active_sessions delete started for ${mode}`);
+        try {
+          const { error } = await supabase
             .from("active_sessions")
             .delete()
-            .eq("user_id", user.id);
-
-          if (retryError) {
-            console.error(`[useTimer] active_sessions delete retry also failed for ${mode}:`, retryError);
-            stoppingRef.current = false;
-            return {
-              durationMinutes,
-              breakMinutes,
-              startedAt,
-              pauseIntervals,
-              idempotencyKey,
-              success: false,
-              error: "Failed to clean up active session. Please try again.",
-            };
+            .eq("user_id", userId);
+          if (error) {
+            console.error(`[useTimer] active_sessions delete failed for ${mode}:`, error);
+            const { error: retryError } = await supabase
+              .from("active_sessions")
+              .delete()
+              .eq("user_id", userId);
+            if (retryError) {
+              console.error(`[useTimer] active_sessions delete retry failed for ${mode}:`, retryError);
+              try {
+                const { toast } = await import("sonner");
+                toast.error("Couldn't sync clock-out to the server. Your entry was saved locally.");
+              } catch {}
+              return;
+            }
           }
+          console.log(`[useTimer] active_sessions delete succeeded for ${mode}`);
+        } catch (err) {
+          console.error(`[useTimer] active_sessions delete threw for ${mode}:`, err);
         }
-        console.log(`[useTimer] active_sessions delete succeeded for ${mode}`);
-      } catch (err) {
-        console.error(`[useTimer] active_sessions delete threw for ${mode}:`, err);
-        stoppingRef.current = false;
-        return {
-          durationMinutes,
-          breakMinutes,
-          startedAt,
-          pauseIntervals,
-          idempotencyKey,
-          success: false,
-          error: "Network error cleaning up session. Please try again.",
-        };
-      }
+      })();
     }
 
     stoppingRef.current = false;
     return { durationMinutes, breakMinutes, startedAt, pauseIntervals, idempotencyKey, success: true };
   }, [timerState, lsKey, user, mode]);
+
 
   return {
     status,

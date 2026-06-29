@@ -13,7 +13,7 @@ import FeedbackModal from "./FeedbackModal";
 import WhatsNewModal from "./WhatsNewModal";
 import RoleSwitcher from "./RoleSwitcher";
 
-const workerNav = [
+const workerNav: { path: string; label: string; icon: typeof Timer; beta?: boolean }[] = [
   { path: "/", label: "Start", icon: Timer },
   { path: "/reports", label: "Reports", icon: BarChart3 },
   { path: "/payments", label: "Payments", icon: Wallet, beta: true },

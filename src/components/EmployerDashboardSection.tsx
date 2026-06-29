@@ -105,6 +105,7 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
   const [selectedWorker, setSelectedWorker] = useState<string | "all">("all");
   const [breaksOpen, setBreaksOpen] = useState(breaksDefaultOpen);
   const [expandedWorker, setExpandedWorker] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -215,7 +216,8 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
     for (let t = new Date(from).getTime(); t <= to.getTime(); t += dayMs) {
       allDays.push(toLocalDateKey(new Date(t)));
     }
-    const byWorker = new Map<string, { id: string; name: string; perDay: Map<string, { work: number; brk: number }> }>();
+    type DaySession = { start?: string; end?: string; duration: number; brk: number };
+    const byWorker = new Map<string, { id: string; name: string; perDay: Map<string, { work: number; brk: number; sessions: DaySession[] }> }>();
     for (const r of reports) {
       if (selectedWorker !== "all" && r.worker_user_id !== selectedWorker) continue;
       if (!r.worker_user_id) continue;
@@ -228,14 +230,20 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
       for (const e of snap) {
         const date = e.entry_date as string | undefined;
         if (!date || date < fromKey || date > toKey) continue;
-        const prev = w.perDay.get(date) ?? { work: 0, brk: 0 };
-        prev.work += Number(e.duration_minutes) || 0;
-        prev.brk += Number(e.break_minutes) || 0;
+        const prev = w.perDay.get(date) ?? { work: 0, brk: 0, sessions: [] };
+        const dur = Number(e.duration_minutes) || 0;
+        const brk = Number(e.break_minutes) || 0;
+        prev.work += dur;
+        prev.brk += brk;
+        prev.sessions.push({ start: e.start_time, end: e.end_time, duration: dur, brk });
         w.perDay.set(date, prev);
       }
     }
     return Array.from(byWorker.values()).map((w) => {
-      const series = allDays.map((d) => ({ date: d, ...(w.perDay.get(d) ?? { work: 0, brk: 0 }), worked: w.perDay.has(d) }));
+      const series = allDays.map((d) => {
+        const day = w.perDay.get(d);
+        return { date: d, work: day?.work ?? 0, brk: day?.brk ?? 0, sessions: day?.sessions ?? [] as DaySession[], worked: !!day };
+      });
       const workedDays = series.filter((s) => s.worked);
       const totalWork = workedDays.reduce((s, x) => s + x.work, 0);
       const totalBreak = workedDays.reduce((s, x) => s + x.brk, 0);
@@ -417,16 +425,19 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
                         {(w.series.length > 21 ? w.series.slice(-21) : w.series).map((d) => {
                           const pct = Math.min(100, (d.brk / Y_MAX) * 100);
                           const cls = zoneClass(d.brk, d.work, d.worked);
+                          const isSelected = selectedDay === d.date;
                           return (
-                            <div
+                            <button
+                              type="button"
                               key={d.date}
-                              className="flex-1 h-full bg-muted rounded-sm overflow-hidden relative"
-                              title={`${d.date}: ${d.worked ? `${Math.round(d.brk)}m break · ${fmtHm(d.work)} worked` : "no work"}`}
+                              onClick={() => setSelectedDay(isSelected ? null : d.date)}
+                              className={`flex-1 h-full bg-muted rounded-sm overflow-hidden relative transition-all ${isSelected ? "ring-2 ring-foreground ring-offset-1 ring-offset-background" : "hover:bg-muted/70"}`}
+                              aria-label={`${d.date} details`}
                             >
                               {d.worked && (
                                 <div className={`absolute inset-x-0 bottom-0 ${cls}`} style={{ height: `${Math.max(pct, 6)}%` }} />
                               )}
-                            </div>
+                            </button>
                           );
                         })}
                       </div>
@@ -435,6 +446,49 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
                         <span>90m</span>
                       </div>
                     </div>
+
+                    {/* Day detail panel — appears when user taps a bar */}
+                    {selectedDay && (() => {
+                      const visible = w.series.length > 21 ? w.series.slice(-21) : w.series;
+                      const day = visible.find((s) => s.date === selectedDay);
+                      if (!day) return null;
+                      const dateLabel = new Date(day.date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+                      const band = breakBand(day.brk, day.work);
+                      const sortedSessions = [...day.sessions].sort((a, b) => {
+                        const ta = a.start ? new Date(a.start).getTime() : 0;
+                        const tb = b.start ? new Date(b.start).getTime() : 0;
+                        return ta - tb;
+                      });
+                      const fmtClock = (iso?: string) => iso ? new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "—";
+                      return (
+                        <div className="rounded-md border border-border bg-muted/30 p-2.5 space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs font-semibold">{dateLabel}</p>
+                            <button onClick={() => setSelectedDay(null)} className="text-[10px] text-muted-foreground hover:text-foreground">Close</button>
+                          </div>
+                          {!day.worked ? (
+                            <p className="text-[11px] text-muted-foreground">No work logged this day.</p>
+                          ) : (
+                            <>
+                              <div className="flex items-center gap-2 text-[11px]">
+                                <span className={`inline-block w-2 h-2 rounded-full ${bandClass(band)}`} />
+                                <span className="font-medium">{bandLabel(band)}</span>
+                                <span className="text-muted-foreground">· {fmtHm(day.work)} worked · {fmtHm(day.brk)} break</span>
+                              </div>
+                              <ul className="space-y-0.5 pt-1">
+                                {sortedSessions.map((s, i) => (
+                                  <li key={i} className="text-[11px] font-mono text-foreground/90 flex items-baseline gap-2">
+                                    <span>{fmtClock(s.start)} – {fmtClock(s.end)}</span>
+                                    <span className="text-muted-foreground">{fmtHm(s.duration)}{s.brk > 0 ? ` · ${fmtHm(s.brk)} break` : ""}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })()}
+
 
                     <p className="text-[10px] text-muted-foreground">
                       Targets adjust to the day's hours: under 4h → up to 30m, 4–6h → 15–45m, 6h+ → 45–75m (PT law: ≥45m at 6h+).

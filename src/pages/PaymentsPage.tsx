@@ -66,12 +66,14 @@ interface FreelancerPaymentGroup {
 
 interface PaymentsPageProps {
   embedded?: boolean;
+  selectedWorker?: string | "all";
 }
 
-const PaymentsPage = ({ embedded = false }: PaymentsPageProps = {}) => {
+const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPageProps = {}) => {
   const { user } = useAuth();
   const { activeRole } = useRole();
   const isEmployer = activeRole === "employer";
+
 
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [payments, setPayments] = useState<PaymentRow[]>([]);

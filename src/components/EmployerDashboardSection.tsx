@@ -105,6 +105,7 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
   const [selectedWorker, setSelectedWorker] = useState<string | "all">("all");
   const [breaksOpen, setBreaksOpen] = useState(breaksDefaultOpen);
   const [expandedWorker, setExpandedWorker] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;

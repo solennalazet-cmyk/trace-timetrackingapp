@@ -498,6 +498,7 @@ const PaymentsPage = () => {
                   </div>
                 )}
               </Card>
+              </SwipeToDeleteRow>
             );
           })}
         </div>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { ChevronLeft, ChevronRight, Coffee, Clock3 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Coffee, Clock3, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeekStart } from "@/contexts/WeekStartContext";
@@ -11,8 +11,12 @@ import Seo from "@/components/Seo";
 interface ReportRow {
   id: string;
   client_id: string;
+  period_start: string;
+  period_end: string;
   entries_snapshot: any;
 }
+
+type DayStatus = "worked" | "reported_off" | "missing" | "scheduled_future";
 
 interface DayFreelancer {
   clientId: string;
@@ -25,6 +29,8 @@ interface DayFreelancer {
   scheduledStart: string | null;
   scheduledEnd: string | null;
   scheduledOnly: boolean;
+  reportedCovered: boolean;
+  status: DayStatus;
 }
 
 interface ScheduledClient {
@@ -96,7 +102,7 @@ const EmployerCalendarPage = () => {
     const [reportsRes, schedRes] = await Promise.all([
       supabase
         .from("submitted_reports")
-        .select("id, client_id, entries_snapshot")
+        .select("id, client_id, period_start, period_end, entries_snapshot")
         .eq("employer_user_id", user.id)
         .gte("period_end", toLocalDateKey(gridStart))
         .lte("period_start", toLocalDateKey(gridEnd)),
@@ -135,15 +141,20 @@ const EmployerCalendarPage = () => {
   useEffect(() => { load(); }, [load]);
 
   // Build per-day freelancer breakdown from all reports' entries_snapshot
+  const todayKey = toLocalDateKey(new Date());
+
   const byDay = useMemo(() => {
     const m = new Map<string, Map<string, DayFreelancer>>();
 
-    // Seed with scheduled freelancers for every day in grid window
+    // Seed with scheduled freelancers for every day in grid window,
+    // respecting engagement bounds so we don't flag "missing" before they started.
     for (let t = new Date(gridStart); t <= gridEnd; t.setDate(t.getDate() + 1)) {
       const key = toLocalDateKey(t);
       const dayIndex = t.getDay();
       for (const s of scheduled) {
         if (!s.scheduledDays.includes(dayIndex)) continue;
+        if (s.engagementStart && key < s.engagementStart) continue;
+        if (s.engagementEnd && key > s.engagementEnd) continue;
         let dayMap = m.get(key);
         if (!dayMap) { dayMap = new Map(); m.set(key, dayMap); }
         if (!dayMap.has(s.id)) {
@@ -155,11 +166,30 @@ const EmployerCalendarPage = () => {
             firstStart: null, lastEnd: null,
             scheduledStart: s.start, scheduledEnd: s.end,
             scheduledOnly: true,
+            reportedCovered: false,
+            status: "scheduled_future",
           });
         }
       }
     }
 
+    // Mark which (client, date) cells are covered by a submitted report's period,
+    // so a past day with no entry can be distinguished from a missing report.
+    for (const r of reports) {
+      const start = new Date(r.period_start + "T00:00:00");
+      const end = new Date(r.period_end + "T00:00:00");
+      for (let t = new Date(start); t <= end; t.setDate(t.getDate() + 1)) {
+        const key = toLocalDateKey(t);
+        let dayMap = m.get(key);
+        if (!dayMap) { dayMap = new Map(); m.set(key, dayMap); }
+        const dc = dayMap.get(r.client_id);
+        if (dc) {
+          dc.reportedCovered = true;
+        }
+      }
+    }
+
+    // Merge actual entries from reports.
     for (const r of reports) {
       const snap = Array.isArray(r.entries_snapshot) ? r.entries_snapshot : [];
       for (const e of snap) {
@@ -177,10 +207,13 @@ const EmployerCalendarPage = () => {
             firstStart: null, lastEnd: null,
             scheduledStart: null, scheduledEnd: null,
             scheduledOnly: false,
+            reportedCovered: true,
+            status: "worked",
           };
           dayMap.set(r.client_id, dc);
         }
         dc.scheduledOnly = false;
+        dc.reportedCovered = true;
         dc.workMin += Number(e.duration_minutes) || 0;
         dc.breakMin += Number(e.break_minutes) || 0;
         const st = e.start_time as string | null | undefined;
@@ -189,10 +222,20 @@ const EmployerCalendarPage = () => {
         if (en && (!dc.lastEnd || en > dc.lastEnd)) dc.lastEnd = en;
       }
     }
-    return m;
-  }, [reports, names, scheduled, gridStart, gridEnd]);
 
-  const todayKey = toLocalDateKey(new Date());
+    // Derive status per cell.
+    for (const [key, dayMap] of m) {
+      const isPast = key < todayKey;
+      for (const dc of dayMap.values()) {
+        if (dc.workMin > 0) dc.status = "worked";
+        else if (dc.reportedCovered) dc.status = "reported_off";
+        else if (isPast) dc.status = "missing";
+        else dc.status = "scheduled_future";
+      }
+    }
+    return m;
+  }, [reports, names, scheduled, gridStart, gridEnd, todayKey]);
+
   const weekdayLabels = useMemo(() => {
     const base = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     return Array.from({ length: 7 }, (_, i) => base[(weekStart + i) % 7]);
@@ -272,14 +315,28 @@ const EmployerCalendarPage = () => {
                   {d.getDate()}
                 </span>
                 {hasData && (
-                  <div className="flex flex-wrap gap-0.5 justify-center mt-auto mb-1.5 max-w-full">
-                    {freelancers.slice(0, 4).map((c) => (
-                      <span
-                        key={c.clientId}
-                        className="w-1.5 h-1.5 rounded-full"
-                        style={{ backgroundColor: isSelected ? "#fff" : c.color }}
-                      />
-                    ))}
+                  <div className="flex flex-wrap gap-0.5 justify-center mt-auto mb-1.5 max-w-full items-center">
+                    {freelancers.slice(0, 4).map((c) => {
+                      const dotColor = isSelected ? "#fff" : c.color;
+                      if (c.status === "missing") {
+                        return (
+                          <span
+                            key={c.clientId}
+                            className="w-1.5 h-1.5 rounded-full border"
+                            style={{ borderColor: dotColor, backgroundColor: "transparent" }}
+                            title="Missing report"
+                          />
+                        );
+                      }
+                      const opacity = c.status === "worked" ? 1 : c.status === "reported_off" ? 0.45 : 0.3;
+                      return (
+                        <span
+                          key={c.clientId}
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ backgroundColor: dotColor, opacity }}
+                        />
+                      );
+                    })}
                     {freelancers.length > 4 && (
                       <span className={`text-[8px] leading-none ${isSelected ? "text-background" : "text-muted-foreground"}`}>+{freelancers.length - 4}</span>
                     )}
@@ -299,23 +356,40 @@ const EmployerCalendarPage = () => {
         <SheetContent side="bottom" className="rounded-t-3xl px-5 pt-4 pb-6 max-h-[80vh] overflow-y-auto">
           <SheetHeader className="text-left mb-3">
             <SheetTitle className="text-lg">{selectedDay ? fmtDayHeader(selectedDay) : ""}</SheetTitle>
-            <p className="text-xs text-muted-foreground">
-              {selectedFreelancers.length} {selectedFreelancers.length === 1 ? "freelancer" : "freelancers"} on the job
-            </p>
+            {(() => {
+              const worked = selectedFreelancers.filter((c) => c.status === "worked").length;
+              const off = selectedFreelancers.filter((c) => c.status === "reported_off").length;
+              const missing = selectedFreelancers.filter((c) => c.status === "missing").length;
+              const parts: string[] = [];
+              if (worked) parts.push(`${worked} worked`);
+              if (off) parts.push(`${off} off`);
+              if (missing) parts.push(`${missing} missing report${missing > 1 ? "s" : ""}`);
+              return (
+                <p className="text-xs text-muted-foreground">
+                  {parts.length ? parts.join(" · ") : `${selectedFreelancers.length} scheduled`}
+                </p>
+              );
+            })()}
           </SheetHeader>
 
           <div className="space-y-2.5">
             {selectedFreelancers
-              .sort((a, b) => (b.workMin - a.workMin) || (a.scheduledOnly === b.scheduledOnly ? 0 : a.scheduledOnly ? 1 : -1))
+              .sort((a, b) => {
+                const rank = (s: DayStatus) => s === "missing" ? 0 : s === "worked" ? 1 : s === "reported_off" ? 2 : 3;
+                const r = rank(a.status) - rank(b.status);
+                if (r !== 0) return r;
+                return b.workMin - a.workMin;
+              })
               .map((c) => {
                 const total = c.workMin + c.breakMin;
                 const workPct = total > 0 ? (c.workMin / total) * 100 : 0;
+                const isMissing = c.status === "missing";
                 return (
-                  <Card key={c.clientId} className="p-3.5">
+                  <Card key={c.clientId} className={`p-3.5 ${isMissing ? "border-destructive/40 bg-destructive/5" : ""}`}>
                     <div className="flex items-center gap-2.5 mb-2.5">
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
                       <p className="text-sm font-semibold truncate flex-1">{c.name}</p>
-                      {c.firstStart && c.lastEnd ? (
+                      {c.status === "worked" && c.firstStart && c.lastEnd ? (
                         <p className="text-[11px] text-muted-foreground tabular-nums shrink-0">
                           {c.firstStart.slice(0, 5)} – {c.lastEnd.slice(0, 5)}
                         </p>
@@ -326,9 +400,7 @@ const EmployerCalendarPage = () => {
                       ) : null}
                     </div>
 
-                    {c.scheduledOnly ? (
-                      <p className="text-xs text-muted-foreground">No report submitted yet for this day.</p>
-                    ) : (
+                    {c.status === "worked" ? (
                       <>
                         <div className="h-2 rounded-full overflow-hidden bg-muted flex">
                           <div className="h-full" style={{ width: `${workPct}%`, backgroundColor: c.color }} />
@@ -348,6 +420,15 @@ const EmployerCalendarPage = () => {
                           </div>
                         </div>
                       </>
+                    ) : c.status === "reported_off" ? (
+                      <p className="text-xs text-muted-foreground">Did not work — report submitted with no hours for this day.</p>
+                    ) : c.status === "missing" ? (
+                      <div className="flex items-start gap-2 text-xs text-destructive">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <p>Scheduled but no report submitted for this day.</p>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Scheduled — not yet reported.</p>
                     )}
                   </Card>
                 );

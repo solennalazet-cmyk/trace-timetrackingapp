@@ -315,110 +315,153 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
         </button>
 
         {breaksOpen && (
-          <div className="border-t border-border px-3 py-2 space-y-1.5">
+          <div className="border-t border-border px-3 py-2 space-y-2">
 
             {workerBreaks.length === 0 ? (
               <p className="text-[11px] text-muted-foreground text-center py-2">No freelancer data in this range.</p>
-            ) : (
+            ) : selectedWorker === "all" ? (
+              // ───── Stacked hours per day across all freelancers ─────
               (() => {
-                const maxAvgTotal = Math.max(
-                  1,
-                  ...workerBreaks.map((w) =>
-                    w.workedDaysCount > 0 ? (w.totalWork / w.workedDaysCount) + w.avgBreak : 0,
-                  ),
-                );
-                return workerBreaks.map((w) => {
-                  const color = getClientColor(w.id);
-                  const avg = Math.round(w.avgBreak);
-                  const avgWork = w.workedDaysCount > 0 ? w.totalWork / w.workedDaysCount : 0;
-                  const isOpen = expandedWorker === w.id;
-                  const avgZone = zoneClass(avg, avgWork, w.workedDaysCount > 0);
-                  const totalPct = ((avgWork + w.avgBreak) / maxAvgTotal) * 100;
-                  const workShare = avgWork + w.avgBreak > 0 ? avgWork / (avgWork + w.avgBreak) : 1;
-
-                  return (
-                    <div key={w.id} className="rounded-md bg-muted/30">
-                      <button
-                        onClick={() => setExpandedWorker(isOpen ? null : w.id)}
-                        className="w-full flex items-center gap-2 px-2 py-2"
-                      >
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                        <span className="text-xs font-semibold flex-1 text-left truncate">{w.name}</span>
-                        {/* Avg-shift bar: total length = work + break (scaled across workers).
-                            Left segment = work (break-adequacy color). Right segment = break (slate). */}
-                        <div className="relative w-24 h-2 rounded-full bg-muted overflow-hidden">
-                          <div
-                            className="flex h-full"
-                            style={{ width: `${Math.max(4, totalPct)}%` }}
-                          >
-                            <div className={avgZone} style={{ width: `${workShare * 100}%` }} />
-                            <div className="bg-slate-400 dark:bg-slate-500" style={{ width: `${(1 - workShare) * 100}%` }} />
-                          </div>
-                        </div>
-                        <span className="text-[11px] font-mono font-semibold w-12 text-right">{fmtHm(avgWork)}</span>
-                        <span className="text-[10px] font-mono text-muted-foreground w-9 text-right">{avg}m brk</span>
-                        <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
-                      </button>
-
-
-                    {isOpen && (
-                      <div className="px-2 pb-2 space-y-2 border-t border-border/50">
-                        <div className="grid grid-cols-3 gap-2 pt-2">
-                          <div>
-                            <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Worked</p>
-                            <p className="text-xs font-mono font-bold">{fmtHm(w.totalWork)}</p>
-                          </div>
-                          <div>
-                            <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Breaks</p>
-                            <p className="text-xs font-mono font-bold">{fmtHm(w.totalBreak)}</p>
-                          </div>
-                          <div>
-                            <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Days</p>
-                            <p className="text-xs font-mono font-bold">{w.workedDaysCount}</p>
-                          </div>
-                        </div>
-
-                        {/* Per-day capsule strip — 1 capsule = 1 day, dark fill = that day's break minutes (0–60m scale) */}
-                        <div>
-                          <div className="flex items-end gap-0.5 h-12">
-                            {(w.series.length > 21 ? w.series.slice(-21) : w.series).map((d) => {
-                              const pct = Math.min(100, (d.brk / Y_MAX) * 100);
-                              const cls = zoneClass(d.brk, d.work, d.worked);
-                              return (
-                                <div
-                                  key={d.date}
-                                  className="flex-1 h-full bg-muted rounded-sm overflow-hidden relative"
-                                  title={`${d.date}: ${d.worked ? `${Math.round(d.brk)}m break · ${fmtHm(d.work)} worked` : "no work"}`}
-                                >
-                                  {d.worked && (
-                                    <div className={`absolute inset-x-0 bottom-0 ${cls}`} style={{ height: `${Math.max(pct, 6)}%` }} />
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                          <div className="flex justify-between text-[9px] text-muted-foreground mt-1">
-                            <span>{w.series.length > 21 ? "last 21 days" : "0m"}</span>
-                            <span>90m</span>
-                          </div>
-                        </div>
-
-                        <p className="text-[10px] text-muted-foreground">
-                          Targets adjust to the day's hours: under 4h → up to 30m, 4–6h → 15–45m, 6h+ → 45–75m (PT law: ≥45m at 6h+).
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  );
+                const dayMs = 86400000;
+                const days: string[] = [];
+                for (let t = new Date(from).getTime(); t <= to.getTime(); t += dayMs) {
+                  days.push(toLocalDateKey(new Date(t)));
+                }
+                const perDay = days.map((d) => {
+                  const stacks = workerBreaks
+                    .map((w) => {
+                      const entry = w.series.find((s) => s.date === d);
+                      return { id: w.id, name: w.name, mins: entry?.work ?? 0 };
+                    })
+                    .filter((s) => s.mins > 0);
+                  const total = stacks.reduce((s, x) => s + x.mins, 0);
+                  return { date: d, stacks, total };
                 });
+                const maxTotal = Math.max(1, ...perDay.map((d) => d.total));
+                const grandTotal = perDay.reduce((s, d) => s + d.total, 0);
+                // Cap rendered bars to keep them legible on mobile.
+                const MAX_BARS = 31;
+                const visible = perDay.length > MAX_BARS ? perDay.slice(-MAX_BARS) : perDay;
+
+                return (
+                  <div className="space-y-2">
+                    <div className="flex items-baseline justify-between px-1">
+                      <p className="text-[11px] font-semibold">Hours by freelancer</p>
+                      <p className="text-[10px] text-muted-foreground font-mono">
+                        {fmtHm(grandTotal)} · {visible.length}{perDay.length > visible.length ? ` / ${perDay.length}` : ""}d
+                      </p>
+                    </div>
+                    <div className="flex items-end gap-0.5 h-28">
+                      {visible.map((d) => {
+                        const heightPct = (d.total / maxTotal) * 100;
+                        const title = d.total > 0
+                          ? `${d.date}: ${fmtHm(d.total)}\n` + d.stacks.map((s) => `• ${s.name}: ${fmtHm(s.mins)}`).join("\n")
+                          : `${d.date}: no work`;
+                        return (
+                          <div key={d.date} className="flex-1 h-full flex flex-col justify-end" title={title}>
+                            <div
+                              className="w-full rounded-sm overflow-hidden flex flex-col bg-muted/40"
+                              style={{ height: `${Math.max(heightPct, 2)}%` }}
+                            >
+                              {d.stacks.map((s) => {
+                                const segPct = d.total > 0 ? (s.mins / d.total) * 100 : 0;
+                                return (
+                                  <div
+                                    key={s.id}
+                                    style={{ height: `${segPct}%`, backgroundColor: getClientColor(s.id) }}
+                                  />
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="flex justify-between text-[9px] text-muted-foreground px-1">
+                      <span>{new Date(visible[0].date + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
+                      <span>0–{Math.ceil(maxTotal / 60)}h/day</span>
+                      <span>{new Date(visible[visible.length - 1].date + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
+                    </div>
+                    {/* Legend per freelancer with totals */}
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1">
+                      {workerBreaks.map((w) => (
+                        <button
+                          key={w.id}
+                          onClick={() => setSelectedWorker(w.id)}
+                          className="flex items-center gap-1.5 text-[10px] hover:opacity-80"
+                        >
+                          <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: getClientColor(w.id) }} />
+                          <span className="text-foreground font-medium truncate max-w-[100px]">{w.name}</span>
+                          <span className="text-muted-foreground font-mono">{fmtHm(w.totalWork)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()
+            ) : (
+              // ───── Single-freelancer break pattern ─────
+              (() => {
+                const w = workerBreaks[0];
+                if (!w) return null;
+                return (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 px-1">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: getClientColor(w.id) }} />
+                      <span className="text-xs font-semibold flex-1 truncate">{w.name}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Worked</p>
+                        <p className="text-xs font-mono font-bold">{fmtHm(w.totalWork)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Breaks</p>
+                        <p className="text-xs font-mono font-bold">{fmtHm(w.totalBreak)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Days</p>
+                        <p className="text-xs font-mono font-bold">{w.workedDaysCount}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-end gap-0.5 h-12">
+                        {(w.series.length > 21 ? w.series.slice(-21) : w.series).map((d) => {
+                          const pct = Math.min(100, (d.brk / Y_MAX) * 100);
+                          const cls = zoneClass(d.brk, d.work, d.worked);
+                          return (
+                            <div
+                              key={d.date}
+                              className="flex-1 h-full bg-muted rounded-sm overflow-hidden relative"
+                              title={`${d.date}: ${d.worked ? `${Math.round(d.brk)}m break · ${fmtHm(d.work)} worked` : "no work"}`}
+                            >
+                              {d.worked && (
+                                <div className={`absolute inset-x-0 bottom-0 ${cls}`} style={{ height: `${Math.max(pct, 6)}%` }} />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="flex justify-between text-[9px] text-muted-foreground mt-1">
+                        <span>{w.series.length > 21 ? "last 21 days" : "0m"}</span>
+                        <span>90m</span>
+                      </div>
+                    </div>
+
+                    <p className="text-[10px] text-muted-foreground">
+                      Targets adjust to the day's hours: under 4h → up to 30m, 4–6h → 15–45m, 6h+ → 45–75m (PT law: ≥45m at 6h+).
+                    </p>
+
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[9px] text-muted-foreground pt-1">
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-500" /> Healthy (varies w/ day length)</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-400" /> Too short / too long</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-400" /> No break on 6h+ day</span>
+                    </div>
+                  </div>
+                );
               })()
             )}
-
-            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[9px] text-muted-foreground pt-1">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-500" /> Healthy (varies w/ day length)</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-400" /> Too short / too long</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-400" /> No break on 6h+ day</span>
-            </div>
 
           </div>
         )}
@@ -426,5 +469,6 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
     </section>
   );
 };
+
 
 export default EmployerDashboardSection;

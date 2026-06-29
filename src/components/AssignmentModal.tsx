@@ -419,8 +419,9 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     if (saving) return;
     setSaving(true);
     try {
-      const parsedRate = rateAmount.trim() === "" ? null : Number(rateAmount);
-      const normalizedRate = parsedRate != null && Number.isFinite(parsedRate) ? parsedRate : null;
+      const parsedRate = rateAmount.trim() === "" ? null : Number(rateAmount.replace(",", "."));
+      const normalizedRate = parsedRate != null && Number.isFinite(parsedRate) && parsedRate > 0 ? parsedRate : null;
+
 
       // Persist the rate on the client so it auto-fills next time.
       // Only for hourly rates with a real client and user context.

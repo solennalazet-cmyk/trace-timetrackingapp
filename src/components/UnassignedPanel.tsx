@@ -161,6 +161,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [batchOpen, setBatchOpen] = useState(false);
   const [batchClientId, setBatchClientId] = useState<string>("");
+  const [batchClientName, setBatchClientName] = useState<string>("");
   const [batching, setBatching] = useState(false);
 
   const loadEntries = async () => {

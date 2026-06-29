@@ -46,6 +46,28 @@ export default function DateRangePicker({ from, to, onChange, weekStartsOn = 1 }
     }
   };
 
+  const QUICK_RANGES = [
+    { label: "This week", getValue: () => {
+      const now = new Date();
+      const s = startOfWeek(now, { weekStartsOn });
+      const e = new Date(s);
+      e.setDate(e.getDate() + 6);
+      return { from: s, to: e };
+    }},
+    { label: "Last 7 days", getValue: () => {
+      const now = new Date();
+      return { from: new Date(now.getTime() - 6 * 86400000), to: now };
+    }},
+    { label: "Last 30 days", getValue: () => {
+      const now = new Date();
+      return { from: new Date(now.getTime() - 29 * 86400000), to: now };
+    }},
+    { label: "This month", getValue: () => {
+      const now = new Date();
+      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
+    }},
+  ];
+
   const handleQuickRange = (getValue: () => { from: Date; to: Date }) => {
     const r = getValue();
     setRange(r);

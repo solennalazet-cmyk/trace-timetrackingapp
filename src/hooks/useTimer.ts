@@ -322,6 +322,27 @@ export function useTimer(mode: TimerMode) {
             // A different mode is now active on another device → clear ours
             const lsState = readLS(lsKey);
             if (lsState?.startedAt) {
+              const localStartedMs = new Date(lsState.startedAt).getTime();
+              const remoteStartedMs = new Date(row.started_at).getTime();
+              if (Number.isFinite(localStartedMs) && (!Number.isFinite(remoteStartedMs) || localStartedMs >= remoteStartedMs)) {
+                supabase
+                  .from("active_sessions")
+                  .upsert(
+                    {
+                      user_id: user.id,
+                      session_type: sessionType,
+                      started_at: lsState.startedAt,
+                      paused_at: lsState.pausedAt,
+                      total_paused_ms: lsState.totalPausedMs ?? 0,
+                      pause_intervals: lsState.pauseIntervals ?? [],
+                    } as any,
+                    { onConflict: "user_id" }
+                  )
+                  .then(({ error }) => {
+                    if (error) console.warn(`[useTimer] realtime replace failed for ${mode}; local timer kept`, error);
+                  });
+                return;
+              }
               clearLS(lsKey);
               setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
               setElapsedMs(0);

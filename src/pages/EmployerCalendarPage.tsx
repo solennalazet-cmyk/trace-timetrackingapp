@@ -141,15 +141,20 @@ const EmployerCalendarPage = () => {
   useEffect(() => { load(); }, [load]);
 
   // Build per-day freelancer breakdown from all reports' entries_snapshot
+  const todayKey = toLocalDateKey(new Date());
+
   const byDay = useMemo(() => {
     const m = new Map<string, Map<string, DayFreelancer>>();
 
-    // Seed with scheduled freelancers for every day in grid window
+    // Seed with scheduled freelancers for every day in grid window,
+    // respecting engagement bounds so we don't flag "missing" before they started.
     for (let t = new Date(gridStart); t <= gridEnd; t.setDate(t.getDate() + 1)) {
       const key = toLocalDateKey(t);
       const dayIndex = t.getDay();
       for (const s of scheduled) {
         if (!s.scheduledDays.includes(dayIndex)) continue;
+        if (s.engagementStart && key < s.engagementStart) continue;
+        if (s.engagementEnd && key > s.engagementEnd) continue;
         let dayMap = m.get(key);
         if (!dayMap) { dayMap = new Map(); m.set(key, dayMap); }
         if (!dayMap.has(s.id)) {
@@ -161,11 +166,30 @@ const EmployerCalendarPage = () => {
             firstStart: null, lastEnd: null,
             scheduledStart: s.start, scheduledEnd: s.end,
             scheduledOnly: true,
+            reportedCovered: false,
+            status: "scheduled_future",
           });
         }
       }
     }
 
+    // Mark which (client, date) cells are covered by a submitted report's period,
+    // so a past day with no entry can be distinguished from a missing report.
+    for (const r of reports) {
+      const start = new Date(r.period_start + "T00:00:00");
+      const end = new Date(r.period_end + "T00:00:00");
+      for (let t = new Date(start); t <= end; t.setDate(t.getDate() + 1)) {
+        const key = toLocalDateKey(t);
+        let dayMap = m.get(key);
+        if (!dayMap) { dayMap = new Map(); m.set(key, dayMap); }
+        const dc = dayMap.get(r.client_id);
+        if (dc) {
+          dc.reportedCovered = true;
+        }
+      }
+    }
+
+    // Merge actual entries from reports.
     for (const r of reports) {
       const snap = Array.isArray(r.entries_snapshot) ? r.entries_snapshot : [];
       for (const e of snap) {
@@ -183,10 +207,13 @@ const EmployerCalendarPage = () => {
             firstStart: null, lastEnd: null,
             scheduledStart: null, scheduledEnd: null,
             scheduledOnly: false,
+            reportedCovered: true,
+            status: "worked",
           };
           dayMap.set(r.client_id, dc);
         }
         dc.scheduledOnly = false;
+        dc.reportedCovered = true;
         dc.workMin += Number(e.duration_minutes) || 0;
         dc.breakMin += Number(e.break_minutes) || 0;
         const st = e.start_time as string | null | undefined;
@@ -195,10 +222,20 @@ const EmployerCalendarPage = () => {
         if (en && (!dc.lastEnd || en > dc.lastEnd)) dc.lastEnd = en;
       }
     }
-    return m;
-  }, [reports, names, scheduled, gridStart, gridEnd]);
 
-  const todayKey = toLocalDateKey(new Date());
+    // Derive status per cell.
+    for (const [key, dayMap] of m) {
+      const isPast = key < todayKey;
+      for (const dc of dayMap.values()) {
+        if (dc.workMin > 0) dc.status = "worked";
+        else if (dc.reportedCovered) dc.status = "reported_off";
+        else if (isPast) dc.status = "missing";
+        else dc.status = "scheduled_future";
+      }
+    }
+    return m;
+  }, [reports, names, scheduled, gridStart, gridEnd, todayKey]);
+
   const weekdayLabels = useMemo(() => {
     const base = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     return Array.from({ length: 7 }, (_, i) => base[(weekStart + i) % 7]);

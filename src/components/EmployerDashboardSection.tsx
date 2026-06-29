@@ -134,26 +134,23 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
         setPaidByReport(new Map());
       }
 
-      // Resolve worker display names from their profile (not the client card name,
-      // which is the worker's label for the employer).
+      // Resolve worker display names from the freelancer's profile.
+      // Deliberately do NOT fall back to the employer's client-card name —
+      // on the employer side that label can mirror the employer's own business
+      // name and would mislabel pills/rows on this screen.
       const workerUserIds = Array.from(new Set(rows.map((r) => r.worker_user_id))).filter(Boolean);
       const nameMap = new Map<string, string>();
       if (workerUserIds.length > 0) {
         const { data: pRows } = await supabase
           .from("profiles")
-          .select("id, full_name")
+          .select("id, full_name, business_name")
           .in("id", workerUserIds);
-        const profileById = new Map((pRows ?? []).map((p: any) => [p.id, p.full_name]));
+        const profileById = new Map((pRows ?? []).map((p: any) => [p.id, p]));
         for (const r of rows) {
-          const nm = profileById.get(r.worker_user_id);
-          if (nm) nameMap.set(r.client_id, nm);
+          const p = profileById.get(r.worker_user_id) as any;
+          const nm = (p?.full_name?.trim()) || (p?.business_name?.trim()) || "Freelancer";
+          nameMap.set(r.worker_user_id, nm);
         }
-      }
-      // Fallback to client name for any unresolved rows
-      const missingClientIds = Array.from(new Set(rows.map((r) => r.client_id))).filter((id) => id && !nameMap.has(id));
-      if (missingClientIds.length > 0) {
-        const { data: cRows } = await supabase.from("clients").select("id, name").in("id", missingClientIds);
-        for (const c of (cRows ?? []) as any[]) nameMap.set(c.id, c.name);
       }
       if (!cancelled) setWorkerNames(nameMap);
     })();
@@ -163,13 +160,16 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
   const workers = useMemo(() => {
     const m = new Map<string, { id: string; name: string }>();
     for (const r of reports) {
-      if (!m.has(r.client_id)) m.set(r.client_id, { id: r.client_id, name: workerNames.get(r.client_id) ?? "Freelancer" });
+      if (!r.worker_user_id) continue;
+      if (!m.has(r.worker_user_id)) {
+        m.set(r.worker_user_id, { id: r.worker_user_id, name: workerNames.get(r.worker_user_id) ?? "Freelancer" });
+      }
     }
-    return Array.from(m.values());
+    return Array.from(m.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [reports, workerNames]);
 
   const filteredReports = useMemo(
-    () => selectedWorker === "all" ? reports : reports.filter((r) => r.client_id === selectedWorker),
+    () => selectedWorker === "all" ? reports : reports.filter((r) => r.worker_user_id === selectedWorker),
     [reports, selectedWorker],
   );
 

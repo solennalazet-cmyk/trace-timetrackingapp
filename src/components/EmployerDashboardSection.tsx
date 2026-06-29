@@ -217,19 +217,24 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
       allDays.push(toLocalDateKey(new Date(t)));
     }
     type DaySession = { start?: string; end?: string; duration: number; brk: number };
-    const byWorker = new Map<string, { id: string; name: string; perDay: Map<string, { work: number; brk: number; sessions: DaySession[] }> }>();
+    const byWorker = new Map<string, { id: string; name: string; perDay: Map<string, { work: number; brk: number; sessions: DaySession[] }>; seenEntries: Set<string> }>();
     for (const r of reports) {
       if (selectedWorker !== "all" && r.worker_user_id !== selectedWorker) continue;
       if (!r.worker_user_id) continue;
       let w = byWorker.get(r.worker_user_id);
       if (!w) {
-        w = { id: r.worker_user_id, name: workerNames.get(r.worker_user_id) ?? "Freelancer", perDay: new Map() };
+        w = { id: r.worker_user_id, name: workerNames.get(r.worker_user_id) ?? "Freelancer", perDay: new Map(), seenEntries: new Set() };
         byWorker.set(r.worker_user_id, w);
       }
       const snap = Array.isArray(r.entries_snapshot) ? r.entries_snapshot : [];
       for (const e of snap) {
         const date = e.entry_date as string | undefined;
         if (!date || date < fromKey || date > toKey) continue;
+        // Dedupe the same time entry appearing across multiple submitted reports
+        // (e.g. overlapping periods or resubmissions) so we don't multi-count it.
+        const dedupeKey = String(e.id ?? `${date}|${e.start_time ?? ""}|${e.end_time ?? ""}|${e.duration_minutes ?? ""}`);
+        if (w.seenEntries.has(dedupeKey)) continue;
+        w.seenEntries.add(dedupeKey);
         const prev = w.perDay.get(date) ?? { work: 0, brk: 0, sessions: [] };
         const dur = Number(e.duration_minutes) || 0;
         const brk = Number(e.break_minutes) || 0;

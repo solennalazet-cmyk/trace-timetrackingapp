@@ -209,11 +209,12 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
     }
     const byWorker = new Map<string, { id: string; name: string; perDay: Map<string, { work: number; brk: number }> }>();
     for (const r of reports) {
-      if (selectedWorker !== "all" && r.client_id !== selectedWorker) continue;
-      let w = byWorker.get(r.client_id);
+      if (selectedWorker !== "all" && r.worker_user_id !== selectedWorker) continue;
+      if (!r.worker_user_id) continue;
+      let w = byWorker.get(r.worker_user_id);
       if (!w) {
-        w = { id: r.client_id, name: workerNames.get(r.client_id) ?? "Freelancer", perDay: new Map() };
-        byWorker.set(r.client_id, w);
+        w = { id: r.worker_user_id, name: workerNames.get(r.worker_user_id) ?? "Freelancer", perDay: new Map() };
+        byWorker.set(r.worker_user_id, w);
       }
       const snap = Array.isArray(r.entries_snapshot) ? r.entries_snapshot : [];
       for (const e of snap) {

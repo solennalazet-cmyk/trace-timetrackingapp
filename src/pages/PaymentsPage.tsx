@@ -370,7 +370,7 @@ const PaymentsPage = () => {
                   <div className="grid grid-cols-3 gap-2 mb-3">
                     <div>
                       <p className="text-base font-mono font-semibold text-foreground">{sym}{t.due.toFixed(2)}</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">Amount Due</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Total wages</p>
                     </div>
                     <div>
                       <p className="text-base font-mono font-semibold text-foreground">{sym}{t.paid.toFixed(2)}</p>

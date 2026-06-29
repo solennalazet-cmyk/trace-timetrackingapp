@@ -28,7 +28,7 @@ export const EXPORT_COLUMN_OPTIONS: { key: ExportColumnKey; label: string }[] = 
 ];
 
 /** Sensible defaults the first time a client is billed. */
-export const DEFAULT_EXPORT_COLUMNS: ExportColumnKey[] = ["project", "task"];
+export const DEFAULT_EXPORT_COLUMNS: ExportColumnKey[] = ["clock_in", "clock_out", "pause_start", "pause_resume"];
 
 export const resolveExportColumns = (
   stored: string[] | null | undefined

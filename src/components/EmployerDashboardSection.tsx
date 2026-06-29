@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
-import { Coins, AlertTriangle, Clock3, Coffee, ChevronDown, ChevronRight } from "lucide-react";
+import { Coffee, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getClientColor, toLocalDateKey } from "@/lib/utils";
 import DateRangePicker from "@/components/DateRangePicker";
+import PaymentsPage from "@/pages/PaymentsPage";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
@@ -95,7 +95,7 @@ const fmtHm = (mins: number) => {
 
 const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Props) => {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  
   const [from, setFrom] = useState<Date>(() => { const d = new Date(); d.setDate(d.getDate() - 29); d.setHours(0,0,0,0); return d; });
   const [to, setTo] = useState<Date>(() => { const d = new Date(); d.setHours(0,0,0,0); return d; });
   const [reports, setReports] = useState<ReportRow[]>([]);
@@ -281,41 +281,9 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
         </div>
       </div>
 
-      {/* Wages dashboard — compact; tap to jump to Payments where the numbers come from */}
-      <Card
-        role="button"
-        tabIndex={0}
-        onClick={() => navigate("/payments")}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate("/payments"); } }}
-        className="p-3 space-y-2 cursor-pointer hover:bg-muted/30 active:bg-muted/40 transition-colors"
-        aria-label="Open Payments page to see the breakdown behind these totals"
-      >
-        <div className="flex items-baseline justify-between">
-          <div className="flex items-baseline gap-2">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Total wages for this period</span>
-            <span className="text-xl font-bold font-mono tracking-tight">{sym}{totals.total.toFixed(2)}</span>
-          </div>
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-            <span>{filteredReports.length} rpt</span>
-            <ChevronRight className="w-3 h-3" />
-          </div>
-        </div>
-        <p className="text-[10px] text-muted-foreground -mt-1">Submitted & approved reports in this range. Tap to open Payments.</p>
-        <div className="grid grid-cols-3 gap-1.5">
-          <div className="rounded-md bg-emerald-500/10 px-2 py-1.5">
-            <p className="text-[9px] uppercase tracking-wide text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1"><Coins className="w-2.5 h-2.5" /> Paid</p>
-            <p className="text-xs font-mono font-bold mt-0.5">{fmtMoney(totals.paid)}</p>
-          </div>
-          <div className={`rounded-md px-2 py-1.5 ${totals.pending > 0 ? "bg-amber-500/10" : "bg-muted"}`}>
-            <p className={`text-[9px] uppercase tracking-wide font-semibold flex items-center gap-1 ${totals.pending > 0 ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground"}`}><Clock3 className="w-2.5 h-2.5" /> Pending</p>
-            <p className="text-xs font-mono font-bold mt-0.5">{fmtMoney(totals.pending)}</p>
-          </div>
-          <div className={`rounded-md px-2 py-1.5 ${totals.overdue > 0 ? "bg-red-500/10" : "bg-muted"}`}>
-            <p className={`text-[9px] uppercase tracking-wide font-semibold flex items-center gap-1 ${totals.overdue > 0 ? "text-red-700 dark:text-red-400" : "text-muted-foreground"}`}><AlertTriangle className="w-2.5 h-2.5" /> Overdue</p>
-            <p className="text-xs font-mono font-bold mt-0.5">{fmtMoney(totals.overdue)}</p>
-          </div>
-        </div>
-      </Card>
+      {/* Payments — full set of cards migrated from the standalone /payments page */}
+      <PaymentsPage embedded />
+
 
       {/* Work pattern — collapsible to keep To-date status above the fold */}
       <Card className="overflow-hidden">

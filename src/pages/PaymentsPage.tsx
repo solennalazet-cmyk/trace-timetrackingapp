@@ -64,7 +64,11 @@ interface FreelancerPaymentGroup {
   name: string;
 }
 
-const PaymentsPage = () => {
+interface PaymentsPageProps {
+  embedded?: boolean;
+}
+
+const PaymentsPage = ({ embedded = false }: PaymentsPageProps = {}) => {
   const { user } = useAuth();
   const { activeRole } = useRole();
   const isEmployer = activeRole === "employer";
@@ -327,21 +331,25 @@ const PaymentsPage = () => {
   }, [expandedKey, reports, payments, isEmployer]);
 
   return (
-    <div className="pt-6 space-y-4 pb-24">
-      <Seo title={"Payments — Trace"} description={"Track approved reports, outstanding invoices, and freelancer payouts in one place."} path={"/payments"} />
-      <header className="space-y-1 px-1">
-        <h1 className="text-2xl font-bold tracking-tight">Payments</h1>
-        <p className="text-sm text-muted-foreground">
-          {isEmployer ? "Track what's owed and record payments." : "Track what's owed against your reports."}
-        </p>
-      </header>
+    <div className={embedded ? "space-y-4" : "pt-6 space-y-4 pb-24"}>
+      {!embedded && (
+        <>
+          <Seo title={"Payments — Trace"} description={"Track approved reports, outstanding invoices, and freelancer payouts in one place."} path={"/payments"} />
+          <header className="space-y-1 px-1">
+            <h1 className="text-2xl font-bold tracking-tight">Payments</h1>
+            <p className="text-sm text-muted-foreground">
+              {isEmployer ? "Track what's owed and record payments." : "Track what's owed against your reports."}
+            </p>
+          </header>
 
-      <div className="px-1">
-        <span className="inline-flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full bg-muted text-muted-foreground">
-          BETA
-          <span className="text-muted-foreground/70">Payment tracking is in beta — let us know if you spot anything off.</span>
-        </span>
-      </div>
+          <div className="px-1">
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full bg-muted text-muted-foreground">
+              BETA
+              <span className="text-muted-foreground/70">Payment tracking is in beta — let us know if you spot anything off.</span>
+            </span>
+          </div>
+        </>
+      )}
 
       {loading ? (
         <Card className="p-4 text-xs text-muted-foreground text-center">Loading…</Card>

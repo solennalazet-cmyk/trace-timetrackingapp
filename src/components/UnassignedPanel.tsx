@@ -222,6 +222,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
     toast.success(`${ids.length} ${ids.length === 1 ? "entry" : "entries"} assigned to ${clientName}`);
     setBatchOpen(false);
     setBatchClientId("");
+    setBatchClientName("");
     onCountChange(0);
     onBatchAssigned?.();
     onOpenChange(false);

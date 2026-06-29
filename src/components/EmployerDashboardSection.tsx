@@ -95,6 +95,7 @@ const fmtHm = (mins: number) => {
 
 const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Props) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [from, setFrom] = useState<Date>(() => { const d = new Date(); d.setDate(d.getDate() - 29); d.setHours(0,0,0,0); return d; });
   const [to, setTo] = useState<Date>(() => { const d = new Date(); d.setHours(0,0,0,0); return d; });
   const [reports, setReports] = useState<ReportRow[]>([]);

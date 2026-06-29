@@ -333,7 +333,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
   if (!session) return null;
 
   const calcBillableValue = (): number | null => {
-    const parsedAmount = rateAmount.trim() === "" ? null : Number(rateAmount);
+    const parsedAmount = rateAmount.trim() === "" ? null : Number(rateAmount.replace(",", "."));
     const amount = parsedAmount != null && Number.isFinite(parsedAmount) ? parsedAmount : null;
     if (!billable || amount == null) return null;
     if (rateUnit === "hour") return (session.durationMinutes / 60) * amount;
@@ -419,8 +419,9 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     if (saving) return;
     setSaving(true);
     try {
-      const parsedRate = rateAmount.trim() === "" ? null : Number(rateAmount);
-      const normalizedRate = parsedRate != null && Number.isFinite(parsedRate) ? parsedRate : null;
+      const parsedRate = rateAmount.trim() === "" ? null : Number(rateAmount.replace(",", "."));
+      const normalizedRate = parsedRate != null && Number.isFinite(parsedRate) && parsedRate > 0 ? parsedRate : null;
+
 
       // Persist the rate on the client so it auto-fills next time.
       // Only for hourly rates with a real client and user context.
@@ -623,12 +624,19 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                 </div>
                 <div className="flex-1">
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*[.,]?[0-9]*"
                     placeholder="0.00"
                     value={rateAmount}
-                    onChange={(e) => setRateAmount(e.target.value)}
+                    onChange={(e) => {
+                      // Allow digits with a single decimal separator (dot or comma)
+                      const v = e.target.value.replace(/[^0-9.,]/g, "");
+                      setRateAmount(v);
+                    }}
                   />
                 </div>
+
                 <div className="w-28">
                   <Select value={rateUnit} onValueChange={setRateUnit}>
                     <SelectTrigger className="h-10">

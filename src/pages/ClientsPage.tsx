@@ -197,13 +197,20 @@ const ClientsPage = () => {
           invited_at: new Date().toISOString(),
         }
       : {};
+    const parsedRate = (() => {
+      const raw = (data.default_rate ?? "").toString().trim().replace(",", ".");
+      if (!raw) return null;
+      const n = parseFloat(raw);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    })();
+
 
     if (user) {
       if (editingClient) {
         await supabase.from("clients").update({
           name: data.name, email: data.email || null, phone: data.phone || null, nif: data.nif || null,
           business_address: data.business_address || null,
-          currency: data.currency, default_rate: data.default_rate ? parseFloat(data.default_rate) : null,
+          currency: data.currency, default_rate: parsedRate,
           payment_terms_days: data.payment_terms_days ? parseInt(data.payment_terms_days, 10) : null,
           billing_notes: data.billing_notes || null,
           export_columns: data.export_columns ?? null,
@@ -215,7 +222,7 @@ const ClientsPage = () => {
         await supabase.from("clients").insert({
           name: data.name, email: data.email || null, phone: data.phone || null, nif: data.nif || null,
           business_address: data.business_address || null,
-          currency: data.currency, default_rate: data.default_rate ? parseFloat(data.default_rate) : null,
+          currency: data.currency, default_rate: parsedRate,
           payment_terms_days: data.payment_terms_days ? parseInt(data.payment_terms_days, 10) : null,
           billing_notes: data.billing_notes || null,
           export_columns: data.export_columns ?? null,
@@ -228,7 +235,7 @@ const ClientsPage = () => {
       }
     } else {
       const id = editingClient?.id ?? `local-${Date.now()}`;
-      saveAnonymousClient({ id, name: data.name, email: data.email, phone: data.phone, nif: data.nif, business_address: data.business_address, currency: data.currency, default_rate: data.default_rate ? parseFloat(data.default_rate) : null, payment_terms_days: data.payment_terms_days ? parseInt(data.payment_terms_days, 10) : null, billing_notes: data.billing_notes });
+      saveAnonymousClient({ id, name: data.name, email: data.email, phone: data.phone, nif: data.nif, business_address: data.business_address, currency: data.currency, default_rate: parsedRate, payment_terms_days: data.payment_terms_days ? parseInt(data.payment_terms_days, 10) : null, billing_notes: data.billing_notes });
       toast.success(editingClient ? "Client updated." : "Client added.");
     }
     setClientFormOpen(false);

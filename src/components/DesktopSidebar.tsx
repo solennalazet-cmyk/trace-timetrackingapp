@@ -20,7 +20,7 @@ const workerNav: { path: string; label: string; icon: typeof Timer; beta?: boole
   { path: "/clients", label: "Accounts", icon: Briefcase },
 ];
 
-const employerNav = [
+const employerNav: { path: string; label: string; icon: typeof Home; beta?: boolean }[] = [
   { path: "/employer", label: "Home", icon: Home },
   { path: "/employer/calendar", label: "Calendar", icon: CalendarDays },
   { path: "/workers", label: "Freelancers", icon: Users },

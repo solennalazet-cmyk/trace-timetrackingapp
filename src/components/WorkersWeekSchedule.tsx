@@ -169,7 +169,7 @@ const WorkersWeekSchedule = () => {
 
                   <div
                     className="relative flex-1 rounded-md bg-muted/40 overflow-hidden"
-                    style={{ minHeight: `${rowH * 14 + 6}px` }}
+                    style={{ minHeight: `${rowH * 16 + 6}px` }}
                   >
                     {/* grid lines */}
                     {hourMarks.slice(1, -1).map((_, idx) => (
@@ -195,8 +195,8 @@ const WorkersWeekSchedule = () => {
                           style={{
                             left: `${left}%`,
                             width: `${width}%`,
-                            top: `${3 + wi * 14}px`,
-                            height: "11px",
+                            top: `${3 + wi * 16}px`,
+                            height: "13px",
                             backgroundColor: color,
                           }}
                           title={`${w.name} · ${w.start.slice(0,5)}–${w.end.slice(0,5)}`}

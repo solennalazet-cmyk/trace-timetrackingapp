@@ -4,7 +4,11 @@ import logo from "@/assets/logo.png";
 
 const Header = () => {
   return (
-    <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] h-14 z-50 flex items-center justify-between px-4 transition-colors" id="app-header">
+    <header
+      className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] h-14 z-50 flex items-center justify-between px-4 transition-colors bg-background/70 backdrop-blur-xl border-b border-border/40"
+      style={{ WebkitBackdropFilter: "blur(16px)" }}
+      id="app-header"
+    >
       <Link to="/" className="flex items-center gap-2" aria-label="Go to Start">
         <img src={logo} alt="" className="w-7 h-7 rounded-lg object-cover shrink-0" />
         <span className="font-mono text-xl font-bold text-timer-display">Trace</span>

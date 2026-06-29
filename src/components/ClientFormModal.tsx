@@ -23,6 +23,7 @@ import ExportColumnsPicker from "@/components/ExportColumnsPicker";
 import { type ExportColumnKey, resolveExportColumns } from "@/lib/export-columns";
 import { requestLocation, type ClientGeoOverride } from "@/lib/geolocation";
 import { cn } from "@/lib/utils";
+import { sanitizeDecimalInput } from "@/lib/rate-utils";
 
 interface ClientFormData {
   name: string;
@@ -179,7 +180,7 @@ const ClientFormModal = ({ open, onOpenChange, onSave, onDelete, initial, title 
           <SectionLabel icon={Handshake}>Commercial agreement</SectionLabel>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Default rate">
-              <Input className="h-11 rounded-xl" type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="0.00" value={form.default_rate} onChange={(e) => setForm({ ...form, default_rate: e.target.value.replace(/[^0-9.,]/g, "") })} />
+              <Input className="h-11 rounded-xl" type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="0.00" value={form.default_rate} onChange={(e) => setForm({ ...form, default_rate: sanitizeDecimalInput(e.target.value) })} />
             </Field>
             <Field label="Currency">
               <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>

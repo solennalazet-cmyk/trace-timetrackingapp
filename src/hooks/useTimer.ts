@@ -35,6 +35,7 @@ const LS_KEYS: Record<string, string> = {
 
 const RECENTLY_STOPPED_KEY = "trace_recently_stopped";
 const RECENTLY_STOPPED_TTL = 10_000; // 10 seconds
+const AUTH_GAP_GRACE_MS = 30_000;
 
 function readLS(key: string): TimerState | null {
   try {
@@ -92,6 +93,7 @@ export function useTimer(mode: TimerMode) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const elapsedRef = useRef(0);
   const stoppingRef = useRef(false);
+  const noUserClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const status: TimerStatus = !timerState.startedAt
     ? "idle"
@@ -158,17 +160,31 @@ export function useTimer(mode: TimerMode) {
     // cold start, because user is null for the first render(s).
     if (authLoading) return;
 
-    // No authenticated user → no remote source of truth.
-    // Clear any stale LS so a ghost timer can't survive across refreshes.
+    if (noUserClearTimerRef.current) {
+      clearTimeout(noUserClearTimerRef.current);
+      noUserClearTimerRef.current = null;
+    }
+
+    // No authenticated user → this can be a short token-refresh gap while the
+    // person is still signed in. Don't wipe an active shift immediately.
     if (!user) {
       const lsState = readLS(lsKey);
       if (lsState?.startedAt) {
-        console.warn(`[useTimer] clearing LS ghost timer for ${mode}: no authenticated user`);
-        clearLS(lsKey);
-        setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
-        setElapsedMs(0);
+        noUserClearTimerRef.current = setTimeout(() => {
+          const latest = readLS(lsKey);
+          if (!latest?.startedAt) return;
+          console.warn(`[useTimer] clearing LS ghost timer for ${mode}: no authenticated user after grace period`);
+          clearLS(lsKey);
+          setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
+          setElapsedMs(0);
+        }, AUTH_GAP_GRACE_MS);
       }
-      return;
+      return () => {
+        if (noUserClearTimerRef.current) {
+          clearTimeout(noUserClearTimerRef.current);
+          noUserClearTimerRef.current = null;
+        }
+      };
     }
 
     const sessionType = mode === "shift" ? "shift" : "stopwatch";
@@ -183,32 +199,53 @@ export function useTimer(mode: TimerMode) {
         return;
       }
       console.log(`[useTimer] reconcile triggered for ${mode}`);
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("active_sessions")
         .select("*")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      // No active session in Supabase → clear any stale LS for this mode
+      if (error) {
+        console.warn(`[useTimer] reconcile kept local ${mode}: active session lookup failed`, error);
+        return;
+      }
+
+      // No active session in the backend. If localStorage still has a running
+      // signed-in shift, preserve it and recreate the backend row instead of
+      // clocking the user out because of a missed/failed upsert or transient gap.
       if (!data) {
         const lsState = readLS(lsKey);
         if (lsState?.startedAt) {
-          console.warn(`[useTimer] clearing stale LS for ${mode}: no Supabase session`);
-          clearLS(lsKey);
-          setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
-          setElapsedMs(0);
+          console.warn(`[useTimer] backend session missing for ${mode}; preserving local timer and recreating row`);
+          const { error: upsertError } = await supabase
+            .from("active_sessions")
+            .upsert(
+              {
+                user_id: user.id,
+                session_type: sessionType,
+                started_at: lsState.startedAt,
+                paused_at: lsState.pausedAt,
+                total_paused_ms: lsState.totalPausedMs ?? 0,
+                pause_intervals: lsState.pauseIntervals ?? [],
+              } as any,
+              { onConflict: "user_id" }
+            );
+          if (upsertError) {
+            console.warn(`[useTimer] failed to recreate backend session for ${mode}; local timer kept`, upsertError);
+          }
         }
         return;
       }
 
-      // Auto-clean stale sessions older than 18 hours (forgotten timers)
+      // Auto-clean stale stopwatch sessions older than 18 hours. Shifts are
+      // preserved because legitimate work shifts can run long; the UI warns
+      // after 24h and lets the user choose when to clock out.
       const STALE_MS = 18 * 60 * 60 * 1000;
       const startedMs = new Date(data.started_at).getTime();
-      if (Date.now() - startedMs > STALE_MS) {
+      if (data.session_type !== "shift" && Date.now() - startedMs > STALE_MS) {
         console.warn(`[useTimer] auto-cleaning stale ${data.session_type} session (>18h old)`);
         await supabase.from("active_sessions").delete().eq("user_id", user.id);
-        clearLS(LS_KEYS.stopwatch);
-        clearLS(LS_KEYS.shift);
+        clearLS(lsKey);
         setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
         setElapsedMs(0);
         return;
@@ -218,6 +255,28 @@ export function useTimer(mode: TimerMode) {
       if (data.session_type !== sessionType) {
         const lsState = readLS(lsKey);
         if (lsState?.startedAt) {
+          const localStartedMs = new Date(lsState.startedAt).getTime();
+          const remoteStartedMs = new Date(data.started_at).getTime();
+          if (Number.isFinite(localStartedMs) && (!Number.isFinite(remoteStartedMs) || localStartedMs >= remoteStartedMs)) {
+            console.warn(`[useTimer] backend has older/different session_type=${data.session_type}; preserving local ${mode}`);
+            const { error: upsertError } = await supabase
+              .from("active_sessions")
+              .upsert(
+                {
+                  user_id: user.id,
+                  session_type: sessionType,
+                  started_at: lsState.startedAt,
+                  paused_at: lsState.pausedAt,
+                  total_paused_ms: lsState.totalPausedMs ?? 0,
+                  pause_intervals: lsState.pauseIntervals ?? [],
+                } as any,
+                { onConflict: "user_id" }
+              );
+            if (upsertError) {
+              console.warn(`[useTimer] failed to replace backend session for ${mode}; local timer kept`, upsertError);
+            }
+            return;
+          }
           console.warn(`[useTimer] clearing stale LS for ${mode}: Supabase has different session_type=${data.session_type}`);
           clearLS(lsKey);
           setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
@@ -292,6 +351,10 @@ export function useTimer(mode: TimerMode) {
       supabase.removeChannel(channel);
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("focus", reconcile);
+      if (noUserClearTimerRef.current) {
+        clearTimeout(noUserClearTimerRef.current);
+        noUserClearTimerRef.current = null;
+      }
     };
   }, [user, authLoading, mode, lsKey]);
 

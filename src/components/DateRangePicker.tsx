@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { format, startOfWeek, endOfWeek } from "date-fns";
+import { useState, useEffect } from "react";
+import { format, startOfWeek } from "date-fns";
 import { CalendarIcon } from "lucide-react";
+import type { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -19,8 +20,11 @@ interface DateRangePickerProps {
 
 export default function DateRangePicker({ from, to, onChange, weekStartsOn = 1 }: DateRangePickerProps) {
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<"from" | "to">("from");
-  const [tempFrom, setTempFrom] = useState<Date | undefined>(from);
+  const [range, setRange] = useState<DateRange | undefined>({ from, to });
+
+  useEffect(() => {
+    if (open) setRange({ from, to });
+  }, [open, from, to]);
 
   const QUICK_RANGES = [
     { label: "This week", getValue: () => {
@@ -44,43 +48,32 @@ export default function DateRangePicker({ from, to, onChange, weekStartsOn = 1 }
     }},
   ];
 
-  const handleSelect = (day: Date | undefined) => {
-    if (!day) return;
-    if (step === "from") {
-      setTempFrom(day);
-      setStep("to");
-    } else {
-      const start = tempFrom!;
-      const end = day;
-      if (end < start) {
-        onChange(end, start);
-      } else {
-        onChange(start, end);
-      }
-      setOpen(false);
-      setStep("from");
+  const handleRangeChange = (next: DateRange | undefined) => {
+    // If user clicks again after a complete range, restart selection from that date.
+    if (range?.from && range?.to && next?.from && !next?.to) {
+      setRange({ from: next.from, to: undefined });
+      return;
     }
-  };
-
-  const handleOpenChange = (isOpen: boolean) => {
-    setOpen(isOpen);
-    if (isOpen) {
-      setStep("from");
-      setTempFrom(from);
+    setRange(next);
+    if (next?.from && next?.to) {
+      const start = next.from <= next.to ? next.from : next.to;
+      const end = next.from <= next.to ? next.to : next.from;
+      onChange(start, end);
+      setOpen(false);
     }
   };
 
   const handleQuickRange = (getValue: () => { from: Date; to: Date }) => {
-    const range = getValue();
-    onChange(range.from, range.to);
+    const r = getValue();
+    setRange(r);
+    onChange(r.from, r.to);
     setOpen(false);
   };
 
-  const formatDay = (d: Date) =>
-    format(d, "EEE d MMM");
+  const formatDay = (d: Date) => format(d, "EEE d MMM");
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -97,38 +90,25 @@ export default function DateRangePicker({ from, to, onChange, weekStartsOn = 1 }
       <PopoverContent className="w-auto p-0" align="start">
         <div className="px-4 pt-3 pb-1">
           <p className="text-xs font-medium text-foreground">
-            {step === "from"
-              ? "📅 Pick a start date"
-              : "📅 Now pick an end date"}
+            {range?.from && !range?.to
+              ? "📅 Now pick an end date"
+              : "📅 Pick a start date"}
           </p>
-          {step === "to" && tempFrom && (
+          {range?.from && !range?.to && (
             <p className="text-[10px] text-muted-foreground mt-0.5">
-              From: {formatDay(tempFrom)}
+              From: {formatDay(range.from)}
             </p>
           )}
         </div>
 
         <Calendar
-          mode="single"
-          selected={step === "from" ? tempFrom : undefined}
-          onSelect={handleSelect}
-          defaultMonth={step === "to" && tempFrom ? tempFrom : from}
-          disabled={(date) => {
-            if (step === "to" && tempFrom) return false;
-            return date > new Date();
-          }}
+          mode="range"
+          selected={range}
+          onSelect={handleRangeChange}
+          defaultMonth={range?.from ?? from}
+          numberOfMonths={1}
           className={cn("p-3 pointer-events-auto")}
           weekStartsOn={weekStartsOn}
-          modifiers={{
-            rangeStart: step === "to" && tempFrom ? tempFrom : undefined as any,
-          }}
-          modifiersStyles={{
-            rangeStart: {
-              background: "hsl(var(--primary))",
-              color: "hsl(var(--primary-foreground))",
-              borderRadius: "50%",
-            },
-          }}
         />
 
         <div className="px-3 pb-3 flex flex-wrap gap-1.5">

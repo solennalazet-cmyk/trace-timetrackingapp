@@ -53,6 +53,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setSession(nextSession);
   };
 
+  const hasLocalActiveTimer = () => {
+    try {
+      return ["trace_active_shift", "trace_active_stopwatch"].some((key) => {
+        const raw = localStorage.getItem(key);
+        if (!raw) return false;
+        return !!JSON.parse(raw)?.startedAt;
+      });
+    } catch {
+      return false;
+    }
+  };
+
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
       .from("profiles")
@@ -108,7 +120,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setLoading(false);
             return;
           }
-          if (sessionRef.current) {
+          if (sessionRef.current && hasLocalActiveTimer()) {
             setLoading(false);
             return;
           }

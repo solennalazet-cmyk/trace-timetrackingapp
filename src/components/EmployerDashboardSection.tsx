@@ -215,7 +215,8 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
     for (let t = new Date(from).getTime(); t <= to.getTime(); t += dayMs) {
       allDays.push(toLocalDateKey(new Date(t)));
     }
-    const byWorker = new Map<string, { id: string; name: string; perDay: Map<string, { work: number; brk: number }> }>();
+    type DaySession = { start?: string; end?: string; duration: number; brk: number };
+    const byWorker = new Map<string, { id: string; name: string; perDay: Map<string, { work: number; brk: number; sessions: DaySession[] }> }>();
     for (const r of reports) {
       if (selectedWorker !== "all" && r.worker_user_id !== selectedWorker) continue;
       if (!r.worker_user_id) continue;
@@ -228,14 +229,20 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
       for (const e of snap) {
         const date = e.entry_date as string | undefined;
         if (!date || date < fromKey || date > toKey) continue;
-        const prev = w.perDay.get(date) ?? { work: 0, brk: 0 };
-        prev.work += Number(e.duration_minutes) || 0;
-        prev.brk += Number(e.break_minutes) || 0;
+        const prev = w.perDay.get(date) ?? { work: 0, brk: 0, sessions: [] };
+        const dur = Number(e.duration_minutes) || 0;
+        const brk = Number(e.break_minutes) || 0;
+        prev.work += dur;
+        prev.brk += brk;
+        prev.sessions.push({ start: e.start_time, end: e.end_time, duration: dur, brk });
         w.perDay.set(date, prev);
       }
     }
     return Array.from(byWorker.values()).map((w) => {
-      const series = allDays.map((d) => ({ date: d, ...(w.perDay.get(d) ?? { work: 0, brk: 0 }), worked: w.perDay.has(d) }));
+      const series = allDays.map((d) => {
+        const day = w.perDay.get(d);
+        return { date: d, work: day?.work ?? 0, brk: day?.brk ?? 0, sessions: day?.sessions ?? [] as DaySession[], worked: !!day };
+      });
       const workedDays = series.filter((s) => s.worked);
       const totalWork = workedDays.reduce((s, x) => s + x.work, 0);
       const totalBreak = workedDays.reduce((s, x) => s + x.brk, 0);

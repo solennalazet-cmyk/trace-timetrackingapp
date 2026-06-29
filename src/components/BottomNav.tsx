@@ -11,11 +11,10 @@ const workerTabs = [
   { path: "/clients", label: "Accounts", icon: Briefcase },
 ];
 
-const employerTabs = [
+const employerTabs: { path: string; label: string; icon: typeof Home; beta?: boolean }[] = [
   { path: "/employer", label: "Home", icon: Home },
   { path: "/employer/calendar", label: "Calendar", icon: CalendarDays },
   { path: "/workers", label: "Freelancers", icon: Users },
-  { path: "/payments", label: "Payments", icon: Wallet, beta: true },
 ];
 
 export const getThemeStyles = () => {

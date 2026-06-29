@@ -183,6 +183,11 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
     return m;
   }, [payments]);
 
+  const visibleReports = useMemo(() => {
+    if (!isEmployer || selectedWorker === "all") return reports;
+    return reports.filter((r) => r.worker_user_id === selectedWorker);
+  }, [reports, isEmployer, selectedWorker]);
+
   // Group reports by client_id (worker view) or worker_user_id (employer view)
   const groups = useMemo(() => {
     const m = new Map<string, ReportRow[]>();
@@ -191,7 +196,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
         if (!m.has(freelancer.key)) m.set(freelancer.key, []);
       }
     }
-    for (const r of reports) {
+    for (const r of visibleReports) {
       const key = isEmployer ? r.worker_user_id : r.client_id;
       if (!m.has(key)) m.set(key, []);
       m.get(key)!.push(r);
@@ -201,7 +206,18 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
       const bn = groupNames.get(b[0]) ?? "";
       return an.localeCompare(bn);
     });
-  }, [reports, isEmployer, employerFreelancers, groupNames]);
+  }, [visibleReports, isEmployer, employerFreelancers, groupNames]);
+
+  const filteredGroups = useMemo(() => {
+    if (!isEmployer || selectedWorker === "all") return groups;
+    return groups.filter(([key]) => key === selectedWorker);
+  }, [groups, isEmployer, selectedWorker]);
+
+  const selectedWorkerName = useMemo(() => {
+    if (selectedWorker === "all") return "All freelancers";
+    return groupNames.get(selectedWorker) ?? employerFreelancers.find((f) => f.key === selectedWorker)?.name ?? "Freelancer";
+  }, [selectedWorker, groupNames, employerFreelancers]);
+
 
   const computeGroupTotals = (rows: ReportRow[]) => {
     let due = 0, paid = 0, overdue = 0;

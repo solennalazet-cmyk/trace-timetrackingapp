@@ -11,8 +11,12 @@ import Seo from "@/components/Seo";
 interface ReportRow {
   id: string;
   client_id: string;
+  period_start: string;
+  period_end: string;
   entries_snapshot: any;
 }
+
+type DayStatus = "worked" | "reported_off" | "missing" | "scheduled_future";
 
 interface DayFreelancer {
   clientId: string;
@@ -25,6 +29,8 @@ interface DayFreelancer {
   scheduledStart: string | null;
   scheduledEnd: string | null;
   scheduledOnly: boolean;
+  reportedCovered: boolean;
+  status: DayStatus;
 }
 
 interface ScheduledClient {

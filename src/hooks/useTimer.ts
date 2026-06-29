@@ -242,7 +242,7 @@ export function useTimer(mode: TimerMode) {
       // after 24h and lets the user choose when to clock out.
       const STALE_MS = 18 * 60 * 60 * 1000;
       const startedMs = new Date(data.started_at).getTime();
-      if (data.session_type !== "shift" && Date.now() - startedMs > STALE_MS) {
+      if (data.session_type === sessionType && data.session_type !== "shift" && Date.now() - startedMs > STALE_MS) {
         console.warn(`[useTimer] auto-cleaning stale ${data.session_type} session (>18h old)`);
         await supabase.from("active_sessions").delete().eq("user_id", user.id);
         clearLS(lsKey);

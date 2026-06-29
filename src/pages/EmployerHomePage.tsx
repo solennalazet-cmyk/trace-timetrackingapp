@@ -52,6 +52,25 @@ const EmployerHomePage = () => {
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [view, setView] = useState<"status" | "dashboard">("dashboard");
+  const activityClearKey = user ? `trace.activityClearedAt.${user.id}` : null;
+  const [activityClearedAt, setActivityClearedAt] = useState<string | null>(() => {
+    if (typeof window === "undefined" || !user) return null;
+    return window.localStorage.getItem(`trace.activityClearedAt.${user.id}`);
+  });
+  useEffect(() => {
+    if (typeof window === "undefined" || !user) return;
+    setActivityClearedAt(window.localStorage.getItem(`trace.activityClearedAt.${user.id}`));
+  }, [user]);
+  const visibleActivity = activityClearedAt
+    ? activity.filter((a) => new Date(a.ts).getTime() > new Date(activityClearedAt).getTime())
+    : activity;
+  const handleClearActivity = () => {
+    if (!activityClearKey) return;
+    const now = new Date().toISOString();
+    window.localStorage.setItem(activityClearKey, now);
+    setActivityClearedAt(now);
+    toast.success("Activity cleared.");
+  };
 
   // Pull-to-refresh state
   const [pullY, setPullY] = useState(0);
@@ -358,14 +377,24 @@ const EmployerHomePage = () => {
         <div className="flex items-center gap-2 px-1">
           <Activity className="w-4 h-4 text-muted-foreground" />
           <h2 className="text-sm font-semibold">Recent activity</h2>
+          {visibleActivity.length > 0 && (
+            <button
+              onClick={handleClearActivity}
+              className="ml-auto text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Clear
+            </button>
+          )}
         </div>
-        {activity.length === 0 ? (
+        {visibleActivity.length === 0 ? (
           <Card className="p-4 text-xs text-muted-foreground text-center">
-            Submissions, approvals and payments will appear here.
+            {activityClearedAt
+              ? "Activity cleared. New submissions, approvals and payments will appear here."
+              : "Submissions, approvals and payments will appear here."}
           </Card>
         ) : (
           <Card className="divide-y divide-border">
-            {activity.map((a) => {
+            {visibleActivity.map((a) => {
               const sym = CURRENCY_SYMBOLS[a.currency ?? "EUR"] ?? "€";
               const meta = (() => {
                 switch (a.type) {

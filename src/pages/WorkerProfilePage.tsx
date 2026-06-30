@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, User, Briefcase, CalendarClock, ChevronRight, Send, CheckCircle2, Trash2 } from "lucide-react";
+import { ArrowLeft, User, Briefcase, CalendarClock, ChevronRight, Send, CheckCircle2, Trash2, FileUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";

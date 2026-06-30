@@ -473,17 +473,18 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                   )}
                   <div>
                     <Label htmlFor="loginEmail">Email</Label>
-                    <Input id="loginEmail" type="email" className="h-10 rounded-xl" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />
+                    <Input id="loginEmail" name="email" type="email" autoComplete="username" inputMode="email" className="h-10 rounded-xl" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />
                   </div>
                   <div className="relative">
                     <Label htmlFor="loginPassword">Password</Label>
                     <div className="relative">
-                      <Input id="loginPassword" type={showLoginPw ? "text" : "password"} className="h-10 rounded-xl" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required />
+                      <Input id="loginPassword" name="password" type={showLoginPw ? "text" : "password"} autoComplete="current-password" className="h-10 rounded-xl" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required />
                       <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowLoginPw(!showLoginPw)} aria-label="Toggle password visibility">
                         {showLoginPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
+
                   <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setShowForgot(true)}>
                     Forgot password?
                   </button>

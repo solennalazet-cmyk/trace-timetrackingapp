@@ -80,7 +80,7 @@ const ExportDialog = ({
       setExportFrom(dateFrom);
       setExportTo(dateTo);
       setSelectedClient(clientFilter || "all");
-      setClientChosen(hadPreFilter);
+      setClientChosen(true);
       setShowBusiness(profile?.show_business_on_export !== false);
     }
     onOpenChange(v);

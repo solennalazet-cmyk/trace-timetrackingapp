@@ -19,7 +19,10 @@ import type { TimeEntry } from "@/components/EntryDetailSheet";
 
 import ExportColumnsPicker from "@/components/ExportColumnsPicker";
 import { type ExportColumnKey, resolveExportColumns, EXPORT_COLUMN_OPTIONS } from "@/lib/export-columns";
-import { cn } from "@/lib/utils";
+import { cn, toLocalDateKey } from "@/lib/utils";
+import DateRangePicker from "@/components/DateRangePicker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
@@ -45,7 +48,7 @@ const formatClock = (iso: string | null) => {
 interface PrepareBillingSheetProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  clientId: string;
+  clientId: string | null;
   clientName: string;
   clientCurrency: string;
   entries: TimeEntry[];
@@ -53,15 +56,51 @@ interface PrepareBillingSheetProps {
   dateFrom: Date;
   dateTo: Date;
   onComplete?: () => void;
+  pickerMode?: boolean;
+  availableClients?: Array<{ id: string; name: string; currency: string }>;
+  allEntries?: TimeEntry[];
+  weekStartsOn?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
 }
 
 const PrepareBillingSheet = ({
   open, onOpenChange,
-  clientId, clientName, clientCurrency,
-  entries, rounding, dateFrom, dateTo, onComplete,
+  clientId: propClientId, clientName: propClientName, clientCurrency: propClientCurrency,
+  entries: propEntries, rounding, dateFrom: propDateFrom, dateTo: propDateTo, onComplete,
+  pickerMode = false, availableClients = [], allEntries = [], weekStartsOn = 1,
 }: PrepareBillingSheetProps) => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+
+  // Picker-mode local state
+  const [pickedClientId, setPickedClientId] = useState<string | null>(propClientId ?? null);
+  const [pickedFrom, setPickedFrom] = useState<Date>(propDateFrom);
+  const [pickedTo, setPickedTo] = useState<Date>(propDateTo);
+  useEffect(() => {
+    if (open) {
+      setPickedClientId(propClientId ?? null);
+      setPickedFrom(propDateFrom);
+      setPickedTo(propDateTo);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const clientId = pickerMode ? (pickedClientId ?? "") : (propClientId ?? "");
+  const dateFrom = pickerMode ? pickedFrom : propDateFrom;
+  const dateTo = pickerMode ? pickedTo : propDateTo;
+  const pickedClient = availableClients.find((c) => c.id === clientId);
+  const clientName = pickerMode ? (pickedClient?.name ?? "Select a client") : propClientName;
+  const clientCurrency = pickerMode ? (pickedClient?.currency ?? propClientCurrency) : propClientCurrency;
+
+  const entries = useMemo(() => {
+    if (!pickerMode) return propEntries;
+    if (!clientId) return [];
+    const fromKey = toLocalDateKey(dateFrom);
+    const toKey = toLocalDateKey(dateTo);
+    return allEntries.filter(
+      (e) => e.client_id === clientId && (e.entry_date ?? "") >= fromKey && (e.entry_date ?? "") <= toKey,
+    );
+  }, [pickerMode, propEntries, allEntries, clientId, dateFrom, dateTo]);
+
   const [showBilledPrompt, setShowBilledPrompt] = useState(false);
   const [markingBilled, setMarkingBilled] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -78,7 +117,11 @@ const PrepareBillingSheet = ({
 
   // Load saved export column prefs + site presence + connection state for this client
   useEffect(() => {
-    if (!open || !user) return;
+    if (!open || !user || !clientId) {
+      setConnectionStatus("none");
+      setConnectedUserId(null);
+      return;
+    }
     setColumnsLoaded(false);
     (async () => {
       const { data } = await supabase
@@ -575,10 +618,40 @@ const PrepareBillingSheet = ({
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="bottom" className="rounded-t-2xl max-h-[85vh] overflow-y-auto p-0">
           <SheetHeader className="px-6 pt-6 pb-2">
-            <SheetTitle>{clientName}</SheetTitle>
+            <SheetTitle>{pickerMode && !clientId ? "Prepare report" : clientName}</SheetTitle>
           </SheetHeader>
 
           <div className="px-6 pb-6 space-y-4">
+            {pickerMode && (
+              <div className="space-y-3 rounded-xl border border-border p-3">
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Client</Label>
+                  <Select
+                    value={pickedClientId ?? ""}
+                    onValueChange={(v) => setPickedClientId(v)}
+                  >
+                    <SelectTrigger className="rounded-xl h-9">
+                      <SelectValue placeholder="Select a client…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableClients.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Date range</Label>
+                  <DateRangePicker
+                    from={pickedFrom}
+                    to={pickedTo}
+                    onChange={(f, t) => { setPickedFrom(f); setPickedTo(t); }}
+                    weekStartsOn={weekStartsOn}
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Summary block */}
             <div className="rounded-xl bg-muted/50 p-4 space-y-2">
               <div>

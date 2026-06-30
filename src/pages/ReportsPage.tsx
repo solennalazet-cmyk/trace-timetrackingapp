@@ -1336,17 +1336,9 @@ const ReportsPage = () => {
         <button
           type="button"
           onClick={() => {
-            let targetClientId = clientFilter;
-            if (!targetClientId) {
-              const uniqueClients = Array.from(new Set(displayEntries.map((e) => e.client_id).filter(Boolean))) as string[];
-              if (uniqueClients.length === 1) {
-                targetClientId = uniqueClients[0];
-              } else {
-                toast.info("Filter by a single client to send a report.");
-                return;
-              }
-            }
-            setPrepareBillingClientId(targetClientId);
+            // Always open the prepare sheet. If a single client is filtered,
+            // preselect it; otherwise the sheet's built-in picker handles it.
+            setPrepareBillingClientId(clientFilter || null);
             setPrepareBillingOpen(true);
           }}
           aria-label="Export report"
@@ -1374,20 +1366,26 @@ const ReportsPage = () => {
           loadData();
         }} />
       <BillingDialog open={billingOpen} onOpenChange={(v) => { setBillingOpen(v); if (!v) setBillingClientId(null); }} onComplete={loadData} rounding={rounding} preselectedClientId={billingClientId} />
-      {prepareBillingClientId && (
-        <PrepareBillingSheet
-          open={prepareBillingOpen}
-          onOpenChange={(v) => { setPrepareBillingOpen(v); if (!v) setPrepareBillingClientId(null); }}
-          clientId={prepareBillingClientId}
-          clientName={clients[prepareBillingClientId] ?? "Unknown"}
-          clientCurrency={displayEntries.find(e => e.client_id === prepareBillingClientId)?.rate_currency ?? "EUR"}
-          entries={displayEntries.filter(e => e.client_id === prepareBillingClientId)}
-          rounding={rounding}
-          dateFrom={dateFrom}
-          dateTo={dateTo}
-          onComplete={loadData}
-        />
-      )}
+      <PrepareBillingSheet
+        open={prepareBillingOpen}
+        onOpenChange={(v) => { setPrepareBillingOpen(v); if (!v) setPrepareBillingClientId(null); }}
+        clientId={prepareBillingClientId}
+        clientName={prepareBillingClientId ? (clients[prepareBillingClientId] ?? "Unknown") : ""}
+        clientCurrency={prepareBillingClientId ? (displayEntries.find(e => e.client_id === prepareBillingClientId)?.rate_currency ?? "EUR") : "EUR"}
+        entries={prepareBillingClientId ? displayEntries.filter(e => e.client_id === prepareBillingClientId) : []}
+        rounding={rounding}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        onComplete={loadData}
+        pickerMode
+        availableClients={clientIds.map((id) => ({
+          id,
+          name: clients[id] ?? "Unknown",
+          currency: displayEntries.find(e => e.client_id === id)?.rate_currency ?? "EUR",
+        }))}
+        allEntries={displayEntries}
+        weekStartsOn={weekStartDay as 0 | 1 | 2 | 3 | 4 | 5 | 6}
+      />
       <PaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} />
       <UnassignedPanel
         open={unassignedOpen}

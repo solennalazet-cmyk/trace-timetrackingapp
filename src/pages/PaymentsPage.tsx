@@ -82,6 +82,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
   const [loading, setLoading] = useState(true);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [openReportId, setOpenReportId] = useState<string | null>(null);
+  const [showInactive, setShowInactive] = useState(false);
 
   // Per-group payment entry state
   const [draftAmount, setDraftAmount] = useState<string>("");
@@ -426,7 +427,18 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
 
           {isEmployer && selectedWorker === "all" && <h2 className="px-1 text-sm font-semibold">Per freelancer</h2>}
 
-          {filteredGroups.map(([key, rows]) => {
+          {(() => {
+            // In employer "All freelancers" view, hide freelancers with no
+            // current activity (no reports of any status in the visible set).
+            // They reappear automatically the moment a report is submitted,
+            // approved, or paid. A "Show inactive" toggle reveals the rest
+            // without ever deleting them.
+            const splittable = isEmployer && selectedWorker === "all";
+            const activeGroups = splittable ? filteredGroups.filter(([, rows]) => rows.length > 0) : filteredGroups;
+            const inactiveGroups = splittable ? filteredGroups.filter(([, rows]) => rows.length === 0) : [];
+            const visibleGroups = showInactive ? [...activeGroups, ...inactiveGroups] : activeGroups;
+            return <>
+          {visibleGroups.map(([key, rows]) => {
             const t = computeGroupTotals(rows);
             const sym = CURRENCY_SYMBOLS[t.currency] ?? "€";
             const name = groupNames.get(key) ?? (isEmployer ? "Freelancer" : "Client");
@@ -643,6 +655,17 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
               </SwipeToDeleteRow>
             );
           })}
+          {splittable && inactiveGroups.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowInactive((v) => !v)}
+              className="w-full text-center text-[11px] font-medium text-muted-foreground hover:text-foreground py-2 transition-colors"
+            >
+              {showInactive ? `Hide inactive (${inactiveGroups.length})` : `Show inactive (${inactiveGroups.length})`}
+            </button>
+          )}
+            </>;
+          })()}
         </div>
       )}
 

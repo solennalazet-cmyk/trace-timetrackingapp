@@ -143,6 +143,26 @@ const EmployerCalendarPage = () => {
   // Build per-day freelancer breakdown from all reports' entries_snapshot
   const todayKey = toLocalDateKey(new Date());
 
+  // Assign distinct palette colors per freelancer (deterministic by sorted name)
+  // so a small team never collides on the global hash-based color. Falls back to
+  // the hash for any id outside the known set.
+  const colorMap = useMemo(() => {
+    const ids = new Set<string>();
+    for (const s of scheduled) ids.add(s.id);
+    for (const r of reports) ids.add(r.client_id);
+    const sorted = Array.from(ids).sort((a, b) => {
+      const an = names.get(a) ?? "";
+      const bn = names.get(b) ?? "";
+      return an.localeCompare(bn) || a.localeCompare(b);
+    });
+    const m = new Map<string, string>();
+    sorted.forEach((id, i) => m.set(id, SUNRISE_PALETTE[i % SUNRISE_PALETTE.length]));
+    return m;
+  }, [scheduled, reports, names]);
+  const colorFor = (id: string) => colorMap.get(id) ?? getClientColor(id);
+
+
+
   const byDay = useMemo(() => {
     const m = new Map<string, Map<string, DayFreelancer>>();
 

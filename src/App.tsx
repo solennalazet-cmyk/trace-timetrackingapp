@@ -128,7 +128,9 @@ const AppInner = () => {
   return (
     <WeekStartProvider value={weekStart}>
       <BrowserRouter>
+        <RouteRoleSync />
         <RoleChoiceOverlay />
+
         <Suspense fallback={<div className="min-h-screen" aria-hidden />}>
           <Routes>
             <Route element={<AppLayout />}>

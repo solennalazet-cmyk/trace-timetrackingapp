@@ -427,7 +427,18 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
 
           {isEmployer && selectedWorker === "all" && <h2 className="px-1 text-sm font-semibold">Per freelancer</h2>}
 
-          {filteredGroups.map(([key, rows]) => {
+          {(() => {
+            // In employer "All freelancers" view, hide freelancers with no
+            // current activity (no reports of any status in the visible set).
+            // They reappear automatically the moment a report is submitted,
+            // approved, or paid. A "Show inactive" toggle reveals the rest
+            // without ever deleting them.
+            const splittable = isEmployer && selectedWorker === "all";
+            const activeGroups = splittable ? filteredGroups.filter(([, rows]) => rows.length > 0) : filteredGroups;
+            const inactiveGroups = splittable ? filteredGroups.filter(([, rows]) => rows.length === 0) : [];
+            const visibleGroups = showInactive ? [...activeGroups, ...inactiveGroups] : activeGroups;
+            return <>
+          {visibleGroups.map(([key, rows]) => {
             const t = computeGroupTotals(rows);
             const sym = CURRENCY_SYMBOLS[t.currency] ?? "€";
             const name = groupNames.get(key) ?? (isEmployer ? "Freelancer" : "Client");

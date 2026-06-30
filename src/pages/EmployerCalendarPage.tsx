@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWeekStart } from "@/contexts/WeekStartContext";
 import { Card } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { getClientColor, toLocalDateKey } from "@/lib/utils";
+import { getClientColor, toLocalDateKey, SUNRISE_PALETTE } from "@/lib/utils";
 import Seo from "@/components/Seo";
 
 interface ReportRow {
@@ -143,6 +143,26 @@ const EmployerCalendarPage = () => {
   // Build per-day freelancer breakdown from all reports' entries_snapshot
   const todayKey = toLocalDateKey(new Date());
 
+  // Assign distinct palette colors per freelancer (deterministic by sorted name)
+  // so a small team never collides on the global hash-based color. Falls back to
+  // the hash for any id outside the known set.
+  const colorMap = useMemo(() => {
+    const ids = new Set<string>();
+    for (const s of scheduled) ids.add(s.id);
+    for (const r of reports) ids.add(r.client_id);
+    const sorted = Array.from(ids).sort((a, b) => {
+      const an = names.get(a) ?? "";
+      const bn = names.get(b) ?? "";
+      return an.localeCompare(bn) || a.localeCompare(b);
+    });
+    const m = new Map<string, string>();
+    sorted.forEach((id, i) => m.set(id, SUNRISE_PALETTE[i % SUNRISE_PALETTE.length]));
+    return m;
+  }, [scheduled, reports, names]);
+  const colorFor = (id: string) => colorMap.get(id) ?? getClientColor(id);
+
+
+
   const byDay = useMemo(() => {
     const m = new Map<string, Map<string, DayFreelancer>>();
 
@@ -161,7 +181,7 @@ const EmployerCalendarPage = () => {
           dayMap.set(s.id, {
             clientId: s.id,
             name: s.name,
-            color: getClientColor(s.id),
+            color: colorFor(s.id),
             workMin: 0, breakMin: 0,
             firstStart: null, lastEnd: null,
             scheduledStart: s.start, scheduledEnd: s.end,
@@ -202,7 +222,7 @@ const EmployerCalendarPage = () => {
           dc = {
             clientId: r.client_id,
             name: names.get(r.client_id) ?? "Freelancer",
-            color: getClientColor(r.client_id),
+            color: colorFor(r.client_id),
             workMin: 0, breakMin: 0,
             firstStart: null, lastEnd: null,
             scheduledStart: null, scheduledEnd: null,

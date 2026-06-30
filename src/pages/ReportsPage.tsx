@@ -1336,17 +1336,9 @@ const ReportsPage = () => {
         <button
           type="button"
           onClick={() => {
-            let targetClientId = clientFilter;
-            if (!targetClientId) {
-              const uniqueClients = Array.from(new Set(displayEntries.map((e) => e.client_id).filter(Boolean))) as string[];
-              if (uniqueClients.length === 1) {
-                targetClientId = uniqueClients[0];
-              } else {
-                toast.info("Filter by a single client to send a report.");
-                return;
-              }
-            }
-            setPrepareBillingClientId(targetClientId);
+            // Always open the prepare sheet. If a single client is filtered,
+            // preselect it; otherwise the sheet's built-in picker handles it.
+            setPrepareBillingClientId(clientFilter || null);
             setPrepareBillingOpen(true);
           }}
           aria-label="Export report"

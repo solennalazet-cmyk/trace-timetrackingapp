@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, User, Briefcase, CalendarClock, ChevronRight, Send, CheckCircle2, Trash2 } from "lucide-react";
+import { ArrowLeft, User, Briefcase, CalendarClock, ChevronRight, Send, CheckCircle2, Trash2, FileUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import WorkerFocusEditor, { type EditorKind } from "@/components/WorkerFocusEdit
 import WorkerCvCard from "@/components/WorkerCvCard";
 import WorkerDocumentsCard from "@/components/WorkerDocumentsCard";
 import WorkerInviteModal from "@/components/WorkerInviteModal";
+import ImportReportSheet from "@/components/ImportReportSheet";
 
 interface WorkerRow {
   id: string;
@@ -54,6 +55,7 @@ const WorkerProfilePage = () => {
   const [invitePending, setInvitePending] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -280,6 +282,27 @@ const WorkerProfilePage = () => {
 
 
 
+        <button
+          type="button"
+          onClick={() => setImportOpen(true)}
+          className="w-full text-left"
+        >
+          <Card className="p-4 hover:bg-muted/40 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-foreground/10 flex items-center justify-center shrink-0">
+                <FileUp className="w-4 h-4 text-foreground" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold">Import report</p>
+                <p className="text-xs text-muted-foreground truncate mt-0.5">
+                  Upload a Trace PDF this freelancer emailed you
+                </p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+            </div>
+          </Card>
+        </button>
+
         {/* Danger zone */}
         <div className="pt-4">
           <Button
@@ -305,6 +328,14 @@ const WorkerProfilePage = () => {
         open={inviteOpen}
         onOpenChange={setInviteOpen}
         onInvite={handleInvite}
+      />
+
+      <ImportReportSheet
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        clientId={worker.id}
+        clientName={name}
+        onImported={load}
       />
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>

@@ -139,6 +139,39 @@ const PrepareBillingSheet = ({
     ]);
     const doc = new jsPDF({ orientation, unit: "mm", format: "a4" });
 
+    // Embed a machine-readable Trace payload in PDF Keywords so an employer
+    // can import this exact report (entries + totals) without re-typing.
+    try {
+      const payload = {
+        v: 1,
+        worker: {
+          name: profile?.business_name || profile?.full_name || null,
+          email: user?.email ?? null,
+        },
+        client: { name: clientName },
+        period_start: rangeStart,
+        period_end: rangeEnd,
+        currency: clientCurrency,
+        total_hours: Number((billableMins / 60).toFixed(2)),
+        total_amount: Number(billableValue.toFixed(2)),
+        shared_columns: selectedColumns,
+        entries: reportEntries.map((e) => ({ ...e })),
+      };
+      const json = JSON.stringify(payload);
+      const b64 = typeof window !== "undefined"
+        ? window.btoa(unescape(encodeURIComponent(json)))
+        : Buffer.from(json, "utf8").toString("base64");
+      doc.setProperties({
+        title: `Trace report — ${clientName} — ${rangeStart} to ${rangeEnd}`,
+        subject: "Trace time report",
+        creator: "Trace",
+        author: profile?.business_name || profile?.full_name || user?.email || "Trace",
+        keywords: `TRACE_REPORT_V1:${b64}`,
+      });
+    } catch {
+      // Non-fatal: payload is a convenience, the PDF itself still works.
+    }
+
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
     const margin = 16;

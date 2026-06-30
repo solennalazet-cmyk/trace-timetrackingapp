@@ -1384,12 +1384,12 @@ const ReportsPage = () => {
         dateTo={dateTo}
         onComplete={loadData}
         pickerMode
-        availableClients={clientIds.map((id) => ({
+        availableClients={allClientIds.map((id) => ({
           id,
           name: clients[id] ?? "Unknown",
-          currency: displayEntries.find(e => e.client_id === id)?.rate_currency ?? "EUR",
+          currency: rangeEntries.find(e => e.client_id === id)?.rate_currency ?? "EUR",
         }))}
-        allEntries={displayEntries}
+        allEntries={rangeEntries}
         weekStartsOn={weekStartDay as 0 | 1 | 2 | 3 | 4 | 5 | 6}
       />
       <PaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} />
@@ -1426,7 +1426,7 @@ const ReportsPage = () => {
         projects={projects}
         tasks={tasks}
         clientFilter={clientFilter}
-        clientIds={clientIds}
+        clientIds={allClientIds}
         rounding={rounding}
       />
     </div>

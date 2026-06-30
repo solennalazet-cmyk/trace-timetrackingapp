@@ -377,6 +377,7 @@ export type Database = {
           rejection_reason: string | null
           reviewed_at: string | null
           shared_columns: string[]
+          source: string
           status: string
           submitted_at: string
           total_amount: number
@@ -398,6 +399,7 @@ export type Database = {
           rejection_reason?: string | null
           reviewed_at?: string | null
           shared_columns?: string[]
+          source?: string
           status?: string
           submitted_at?: string
           total_amount?: number
@@ -419,6 +421,7 @@ export type Database = {
           rejection_reason?: string | null
           reviewed_at?: string | null
           shared_columns?: string[]
+          source?: string
           status?: string
           submitted_at?: string
           total_amount?: number

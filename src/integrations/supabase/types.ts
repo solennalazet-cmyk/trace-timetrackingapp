@@ -647,6 +647,7 @@ export type Database = {
       }
       user_settings: {
         Row: {
+          activity_cleared_at: string | null
           daily_hour_target: number | null
           default_billable: boolean | null
           default_report_range: string | null
@@ -671,6 +672,7 @@ export type Database = {
           week_start_day: number | null
         }
         Insert: {
+          activity_cleared_at?: string | null
           daily_hour_target?: number | null
           default_billable?: boolean | null
           default_report_range?: string | null
@@ -695,6 +697,7 @@ export type Database = {
           week_start_day?: number | null
         }
         Update: {
+          activity_cleared_at?: string | null
           daily_hour_target?: number | null
           default_billable?: boolean | null
           default_report_range?: string | null

@@ -260,8 +260,14 @@ const ReportsPage = () => {
   );
   const nonBillableMins = totalMins - billableMins;
 
-  // Client IDs
+  // Client IDs — `clientIds` covers clients with entries in range (charts/legend).
+  // `allClientIds` covers every client the user has, so export/connect pickers aren't
+  // limited to billable or in-range work (e.g. volunteering justifications).
   const clientIds = useMemo(() => [...new Set(rangeEntries.map((e) => e.client_id).filter(Boolean))] as string[], [rangeEntries]);
+  const allClientIds = useMemo(
+    () => Object.keys(clients).sort((a, b) => (clients[a] ?? "").localeCompare(clients[b] ?? "")),
+    [clients],
+  );
   const hasUnassigned = displayEntries.some((e) => !e.client_id);
 
   const clientColorMap = useMemo(() => {
@@ -1378,12 +1384,12 @@ const ReportsPage = () => {
         dateTo={dateTo}
         onComplete={loadData}
         pickerMode
-        availableClients={clientIds.map((id) => ({
+        availableClients={allClientIds.map((id) => ({
           id,
           name: clients[id] ?? "Unknown",
-          currency: displayEntries.find(e => e.client_id === id)?.rate_currency ?? "EUR",
+          currency: rangeEntries.find(e => e.client_id === id)?.rate_currency ?? "EUR",
         }))}
-        allEntries={displayEntries}
+        allEntries={rangeEntries}
         weekStartsOn={weekStartDay as 0 | 1 | 2 | 3 | 4 | 5 | 6}
       />
       <PaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} />
@@ -1420,7 +1426,7 @@ const ReportsPage = () => {
         projects={projects}
         tasks={tasks}
         clientFilter={clientFilter}
-        clientIds={clientIds}
+        clientIds={allClientIds}
         rounding={rounding}
       />
     </div>

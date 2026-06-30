@@ -115,16 +115,17 @@ const EmployerCalendarPage = () => {
     ]);
     const rows = (reportsRes.data ?? []) as any as ReportRow[];
     setReports(rows);
+    // Include every connected freelancer so future days reflect their schedule,
+    // even when agreed start/end times haven't been set yet.
     const schedRows = (schedRes.data ?? [])
-      .filter((r: any) => r.agreed_start_time && r.agreed_end_time)
       .map((r: any) => ({
         id: r.id,
         name: r.name,
-        start: r.agreed_start_time,
-        end: r.agreed_end_time,
+        start: r.agreed_start_time ?? null,
+        end: r.agreed_end_time ?? null,
         engagementStart: r.engagement_start_date,
         engagementEnd: r.engagement_end_date,
-        scheduledDays: r.scheduled_days ?? [0, 1, 2, 3, 4, 5, 6],
+        scheduledDays: r.scheduled_days ?? [1, 2, 3, 4, 5],
       })) as ScheduledClient[];
     setScheduled(schedRows);
     const nameMap = new Map<string, string>();

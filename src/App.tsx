@@ -110,6 +110,23 @@ const AppInner = () => {
     }
   }, [activeRole]);
 
+  // Guards so each role only sees its own screens. Visiting a route that
+  // belongs to the other role bounces you to that role's home — no more
+  // employer dashboard leaking into the freelancer view, or vice versa.
+  const workerHome = "/";
+  const employerHome = "/employer";
+
+  const RequireRole = ({ role, children }: { role: "worker" | "employer"; children: JSX.Element }) => {
+    if (activeRole !== role) {
+      return <Navigate to={role === "worker" ? employerHome : workerHome} replace />;
+    }
+    return children;
+  };
+
+  // "/" is the freelancer's home; for employers it should land on /employer.
+  const RoleAwareHome = () =>
+    activeRole === "employer" ? <Navigate to={employerHome} replace /> : <StartPage />;
+
   return (
     <WeekStartProvider value={weekStart}>
       <BrowserRouter>
@@ -117,15 +134,15 @@ const AppInner = () => {
         <Suspense fallback={<div className="min-h-screen" aria-hidden />}>
           <Routes>
             <Route element={<AppLayout />}>
-              <Route path="/" element={<StartPage />} />
-              <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/" element={<RoleAwareHome />} />
+              <Route path="/reports" element={<RequireRole role="worker"><ReportsPage /></RequireRole>} />
               <Route path="/timeline" element={<Navigate to="/reports" replace />} />
-              <Route path="/clients" element={<ClientsPage />} />
-              <Route path="/clients/:id" element={<AccountProfilePage />} />
-              <Route path="/employer" element={<EmployerHomePage />} />
-              <Route path="/employer/calendar" element={<EmployerCalendarPage />} />
-              <Route path="/workers" element={<WorkersPage />} />
-              <Route path="/workers/:id" element={<WorkerProfilePage />} />
+              <Route path="/clients" element={<RequireRole role="worker"><ClientsPage /></RequireRole>} />
+              <Route path="/clients/:id" element={<RequireRole role="worker"><AccountProfilePage /></RequireRole>} />
+              <Route path="/employer" element={<RequireRole role="employer"><EmployerHomePage /></RequireRole>} />
+              <Route path="/employer/calendar" element={<RequireRole role="employer"><EmployerCalendarPage /></RequireRole>} />
+              <Route path="/workers" element={<RequireRole role="employer"><WorkersPage /></RequireRole>} />
+              <Route path="/workers/:id" element={<RequireRole role="employer"><WorkerProfilePage /></RequireRole>} />
               <Route path="/payments" element={<PaymentsPage />} />
               <Route path="/account" element={<AccountPage />} />
             </Route>
@@ -138,6 +155,7 @@ const AppInner = () => {
     </WeekStartProvider>
   );
 };
+
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

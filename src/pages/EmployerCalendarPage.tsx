@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWeekStart } from "@/contexts/WeekStartContext";
 import { Card } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { getClientColor, toLocalDateKey } from "@/lib/utils";
+import { getClientColor, toLocalDateKey, SUNRISE_PALETTE } from "@/lib/utils";
 import Seo from "@/components/Seo";
 
 interface ReportRow {

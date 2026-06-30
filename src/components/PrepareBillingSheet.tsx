@@ -48,9 +48,6 @@ const formatClock = (iso: string | null) => {
 interface PrepareBillingSheetProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-interface PrepareBillingSheetProps {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
   clientId: string | null;
   clientName: string;
   clientCurrency: string;

@@ -330,6 +330,14 @@ const WorkerProfilePage = () => {
         onInvite={handleInvite}
       />
 
+      <ImportReportSheet
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        clientId={worker.id}
+        clientName={name}
+        onImported={load}
+      />
+
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent className="max-w-[380px] w-[calc(100vw-2rem)] rounded-2xl">
           <AlertDialogHeader>

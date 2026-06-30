@@ -478,7 +478,7 @@ const ExportDialog = ({
           <Button
             className="w-full rounded-[28px] h-12 font-bold gap-2"
             onClick={handleExport}
-            disabled={!clientChosen || filteredEntries.length === 0}
+            disabled={filteredEntries.length === 0}
           >
             <Download className="w-4 h-4" />
             Export {format.toUpperCase()}

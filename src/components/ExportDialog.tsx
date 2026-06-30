@@ -56,7 +56,7 @@ const ExportDialog = ({
   const [exportFrom, setExportFrom] = useState(dateFrom);
   const [exportTo, setExportTo] = useState(dateTo);
   const [selectedClient, setSelectedClient] = useState(clientFilter || "all");
-  const [clientChosen, setClientChosen] = useState(hadPreFilter);
+  const [clientChosen, setClientChosen] = useState(true);
   const [showBusiness, setShowBusiness] = useState(profile?.show_business_on_export !== false);
 
   // Post-export tracking prompt state
@@ -80,7 +80,7 @@ const ExportDialog = ({
       setExportFrom(dateFrom);
       setExportTo(dateTo);
       setSelectedClient(clientFilter || "all");
-      setClientChosen(hadPreFilter);
+      setClientChosen(true);
       setShowBusiness(profile?.show_business_on_export !== false);
     }
     onOpenChange(v);
@@ -417,15 +417,10 @@ const ExportDialog = ({
                 ))}
               </SelectContent>
             </Select>
-            {!clientChosen && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Pick a client (or “All clients”) to continue.
-              </p>
-            )}
           </div>
 
-          {clientChosen && (
-            <>
+          <>
+
               {/* Format */}
               <div>
                 <Label className="text-xs text-muted-foreground mb-2 block">Format</Label>
@@ -477,14 +472,13 @@ const ExportDialog = ({
                 {filteredEntries.length} {filteredEntries.length === 1 ? "entry" : "entries"} in selection
               </p>
             </>
-          )}
         </div>
 
         <DialogFooter className="px-6 pb-6">
           <Button
             className="w-full rounded-[28px] h-12 font-bold gap-2"
             onClick={handleExport}
-            disabled={!clientChosen || filteredEntries.length === 0}
+            disabled={filteredEntries.length === 0}
           >
             <Download className="w-4 h-4" />
             Export {format.toUpperCase()}

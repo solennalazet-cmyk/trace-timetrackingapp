@@ -655,6 +655,17 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
               </SwipeToDeleteRow>
             );
           })}
+          {splittable && inactiveGroups.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowInactive((v) => !v)}
+              className="w-full text-center text-[11px] font-medium text-muted-foreground hover:text-foreground py-2 transition-colors"
+            >
+              {showInactive ? `Hide inactive (${inactiveGroups.length})` : `Show inactive (${inactiveGroups.length})`}
+            </button>
+          )}
+            </>;
+          })()}
         </div>
       )}
 

@@ -19,7 +19,10 @@ import type { TimeEntry } from "@/components/EntryDetailSheet";
 
 import ExportColumnsPicker from "@/components/ExportColumnsPicker";
 import { type ExportColumnKey, resolveExportColumns, EXPORT_COLUMN_OPTIONS } from "@/lib/export-columns";
-import { cn } from "@/lib/utils";
+import { cn, toLocalDateKey } from "@/lib/utils";
+import DateRangePicker from "@/components/DateRangePicker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 

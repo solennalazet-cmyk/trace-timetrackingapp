@@ -117,7 +117,11 @@ const PrepareBillingSheet = ({
 
   // Load saved export column prefs + site presence + connection state for this client
   useEffect(() => {
-    if (!open || !user) return;
+    if (!open || !user || !clientId) {
+      setConnectionStatus("none");
+      setConnectedUserId(null);
+      return;
+    }
     setColumnsLoaded(false);
     (async () => {
       const { data } = await supabase

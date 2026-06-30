@@ -108,6 +108,20 @@ const WorkersPage = () => {
     load();
   };
 
+  const handleRename = async () => {
+    if (!renameTarget) return;
+    const trimmed = renameValue.trim();
+    if (!trimmed) { toast.error("Name is required."); return; }
+    setRenameSaving(true);
+    const { error } = await supabase.from("clients").update({ name: trimmed }).eq("id", renameTarget.id);
+    setRenameSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Freelancer renamed.");
+    setRenameTarget(null);
+    setRenameValue("");
+    load();
+  };
+
   return (
     <div className="pt-6 space-y-4 pb-24">
       <Seo title={"Freelancers — Trace for Employers"} description={"Manage your team: roles, contact details, schedules, and documents."} path={"/workers"} />

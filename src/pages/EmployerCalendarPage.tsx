@@ -181,7 +181,7 @@ const EmployerCalendarPage = () => {
           dayMap.set(s.id, {
             clientId: s.id,
             name: s.name,
-            color: getClientColor(s.id),
+            color: colorFor(s.id),
             workMin: 0, breakMin: 0,
             firstStart: null, lastEnd: null,
             scheduledStart: s.start, scheduledEnd: s.end,
@@ -222,7 +222,7 @@ const EmployerCalendarPage = () => {
           dc = {
             clientId: r.client_id,
             name: names.get(r.client_id) ?? "Freelancer",
-            color: getClientColor(r.client_id),
+            color: colorFor(r.client_id),
             workMin: 0, breakMin: 0,
             firstStart: null, lastEnd: null,
             scheduledStart: null, scheduledEnd: null,

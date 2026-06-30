@@ -229,6 +229,44 @@ const WorkersPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Inline rename sheet */}
+      <Sheet open={!!renameTarget} onOpenChange={(o) => { if (!o) { setRenameTarget(null); setRenameValue(""); } }}>
+        <SheetContent side="bottom" className="rounded-t-3xl p-0 flex flex-col max-h-[calc(100dvh-1rem)]">
+          <SheetHeader className="text-left px-5 pt-4 pb-3 shrink-0">
+            <SheetTitle className="text-lg">Rename freelancer</SheetTitle>
+            <p className="text-xs text-muted-foreground">Choose the display name you see in reports and lists.</p>
+          </SheetHeader>
+          <div className="px-5 pb-2 space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Name</Label>
+              <Input
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                placeholder="e.g. Solenn Dupont"
+                className="h-11 text-sm rounded-xl"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2 px-5 py-4 border-t border-border bg-card shrink-0">
+            <Button
+              variant="ghost"
+              className="flex-1 h-11 rounded-xl"
+              onClick={() => { setRenameTarget(null); setRenameValue(""); }}
+              disabled={renameSaving}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 h-11 rounded-xl"
+              onClick={handleRename}
+              disabled={renameSaving || !renameValue.trim()}
+            >
+              {renameSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };

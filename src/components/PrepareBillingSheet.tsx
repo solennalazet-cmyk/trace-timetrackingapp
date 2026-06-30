@@ -498,20 +498,42 @@ const PrepareBillingSheet = ({
   };
 
   const isConnected = connectionStatus === "accepted" && !!connectedUserId;
+  const hasPendingInvite = connectionStatus === "pending";
+  // Can queue a submission even before the employer accepts, as long as we
+  // know who to deliver it to (a pending invite is already on file, or we at
+  // least have a client email we can attach the invite to right now).
+  const canQueueSubmission = !isConnected && (hasPendingInvite || !!clientEmail);
 
   const handleSubmitToClient = async () => {
-    if (!user || !connectedUserId) return;
+    if (!user) return;
     if (reportEntries.length === 0) {
       toast.error("No entries to submit.");
       return;
     }
+    if (!isConnected && !canQueueSubmission) return;
     setSubmitting(true);
     try {
+      // If we're queueing for a not-yet-connected client, make sure an invite
+      // exists so the trigger can wire the report up on acceptance.
+      if (!isConnected && !hasPendingInvite && clientEmail) {
+        const { error: inviteErr } = await supabase
+          .from("clients")
+          .update({
+            invited_email: clientEmail.toLowerCase(),
+            connection_status: "pending",
+            connection_initiated_by: "worker",
+            invited_at: new Date().toISOString(),
+          } as any)
+          .eq("id", clientId);
+        if (inviteErr) throw inviteErr;
+        setConnectionStatus("pending");
+      }
+
       // Snapshot includes ALL fields the consumer might need to render the report.
       const snapshot = reportEntries.map((e) => ({ ...e }));
       const { error } = await supabase.from("submitted_reports").insert({
         worker_user_id: user.id,
-        employer_user_id: connectedUserId,
+        employer_user_id: isConnected ? connectedUserId : null,
         client_id: clientId,
         period_start: rangeStart,
         period_end: rangeEnd,
@@ -520,10 +542,14 @@ const PrepareBillingSheet = ({
         currency: clientCurrency,
         shared_columns: selectedColumns as any,
         entries_snapshot: snapshot as any,
-        status: "submitted",
+        status: isConnected ? "submitted" : "pending_connection",
       } as any);
       if (error) throw error;
-      toast.success(`Report submitted to ${clientName}.`);
+      toast.success(
+        isConnected
+          ? `Report submitted to ${clientName}.`
+          : `Report queued — it will be delivered to ${clientName} once they accept your request.`,
+      );
       setSubmitOpen(false);
       // Mark sessions as billed since they've been submitted for review
       if (unbilledBillableEntries.length > 0) {
@@ -541,6 +567,7 @@ const PrepareBillingSheet = ({
       setSubmitting(false);
     }
   };
+
 
 
   return (

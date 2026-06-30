@@ -52,25 +52,44 @@ const EmployerHomePage = () => {
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [view, setView] = useState<"status" | "dashboard">("dashboard");
-  const activityClearKey = user ? `trace.activityClearedAt.${user.id}` : null;
-  const [activityClearedAt, setActivityClearedAt] = useState<string | null>(() => {
-    if (typeof window === "undefined" || !user) return null;
-    return window.localStorage.getItem(`trace.activityClearedAt.${user.id}`);
-  });
+  const [activityClearedAt, setActivityClearedAt] = useState<string | null>(null);
   useEffect(() => {
-    if (typeof window === "undefined" || !user) return;
-    setActivityClearedAt(window.localStorage.getItem(`trace.activityClearedAt.${user.id}`));
+    if (!user) { setActivityClearedAt(null); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("user_settings")
+        .select("activity_cleared_at")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      const remote = (data as any)?.activity_cleared_at ?? null;
+      // Migrate any legacy per-device value to the server once.
+      const legacy = typeof window !== "undefined" ? window.localStorage.getItem(`trace.activityClearedAt.${user.id}`) : null;
+      if (legacy && (!remote || new Date(legacy).getTime() > new Date(remote).getTime())) {
+        await supabase.from("user_settings").upsert({ user_id: user.id, activity_cleared_at: legacy }, { onConflict: "user_id" });
+        window.localStorage.removeItem(`trace.activityClearedAt.${user.id}`);
+        setActivityClearedAt(legacy);
+      } else {
+        setActivityClearedAt(remote);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [user]);
   const visibleActivity = activityClearedAt
     ? activity.filter((a) => new Date(a.ts).getTime() > new Date(activityClearedAt).getTime())
     : activity;
-  const handleClearActivity = () => {
-    if (!activityClearKey) return;
+  const handleClearActivity = async () => {
+    if (!user) return;
     const now = new Date().toISOString();
-    window.localStorage.setItem(activityClearKey, now);
     setActivityClearedAt(now);
+    const { error } = await supabase
+      .from("user_settings")
+      .upsert({ user_id: user.id, activity_cleared_at: now }, { onConflict: "user_id" });
+    if (error) { toast.error("Could not clear activity."); return; }
     toast.success("Activity cleared.");
   };
+
 
   // Pull-to-refresh state
   const [pullY, setPullY] = useState(0);

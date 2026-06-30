@@ -153,20 +153,38 @@ const WorkersPage = () => {
         <div className="space-y-2.5">
           {freelancers.map((w) => (
             <SwipeToDeleteRow key={w.id} onDelete={() => setDeleteTarget(w)}>
-              <button className="w-full text-left" onClick={() => navigate(`/workers/${w.id}`)}>
-                <Card className="p-4 flex items-center gap-3 hover:bg-muted/40 transition-colors rounded-xl">
-                  <div className="h-11 w-11 rounded-full bg-foreground/10 text-foreground flex items-center justify-center font-semibold shrink-0">
-                    {w.name.slice(0, 1).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold truncate">{w.name}</p>
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">
-                      {w.role?.trim() || "Role not set"}
-                    </p>
-                  </div>
+              <div className="w-full text-left">
+                <Card className="p-4 flex items-center gap-1 hover:bg-muted/40 transition-colors rounded-xl">
+                  <button
+                    className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                    onClick={() => navigate(`/workers/${w.id}`)}
+                  >
+                    <div className="h-11 w-11 rounded-full bg-foreground/10 text-foreground flex items-center justify-center font-semibold shrink-0">
+                      {w.name.slice(0, 1).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold truncate">{w.name}</p>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        {w.role?.trim() || "Role not set"}
+                      </p>
+                    </div>
+                  </button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full shrink-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRenameTarget(w);
+                      setRenameValue(w.name);
+                    }}
+                    aria-label={`Rename ${w.name}`}
+                  >
+                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                  </Button>
                   <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
                 </Card>
-              </button>
+              </div>
             </SwipeToDeleteRow>
           ))}
 

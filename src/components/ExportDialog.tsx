@@ -56,7 +56,7 @@ const ExportDialog = ({
   const [exportFrom, setExportFrom] = useState(dateFrom);
   const [exportTo, setExportTo] = useState(dateTo);
   const [selectedClient, setSelectedClient] = useState(clientFilter || "all");
-  const [clientChosen, setClientChosen] = useState(hadPreFilter);
+  const [clientChosen, setClientChosen] = useState(true);
   const [showBusiness, setShowBusiness] = useState(profile?.show_business_on_export !== false);
 
   // Post-export tracking prompt state

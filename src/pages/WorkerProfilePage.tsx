@@ -282,6 +282,27 @@ const WorkerProfilePage = () => {
 
 
 
+        <button
+          type="button"
+          onClick={() => setImportOpen(true)}
+          className="w-full text-left"
+        >
+          <Card className="p-4 hover:bg-muted/40 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-foreground/10 flex items-center justify-center shrink-0">
+                <FileUp className="w-4 h-4 text-foreground" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold">Import report</p>
+                <p className="text-xs text-muted-foreground truncate mt-0.5">
+                  Upload a Trace PDF this freelancer emailed you
+                </p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+            </div>
+          </Card>
+        </button>
+
         {/* Danger zone */}
         <div className="pt-4">
           <Button

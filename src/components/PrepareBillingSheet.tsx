@@ -722,12 +722,14 @@ const PrepareBillingSheet = ({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <Send className="w-5 h-5 text-nav-bg" />
-              Submit report?
+              {isConnected ? "Submit report?" : "Send request & queue report?"}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2 text-sm">
                 <p className="text-muted-foreground">
-                  This will send the report to {clientName} for review. You can't edit it after submitting.
+                  {isConnected
+                    ? `This will send the report to ${clientName} for review. You can't edit it after submitting.`
+                    : `${clientName} isn't connected on Trace yet. We'll send them a connection request now and deliver this report automatically once they accept. You can't edit it after sending.`}
                 </p>
                 <div className="rounded-lg bg-muted/50 p-3 space-y-1 text-xs">
                   <div className="flex justify-between"><span className="text-muted-foreground">Client</span><span className="font-medium text-foreground">{clientName}</span></div>
@@ -735,6 +737,9 @@ const PrepareBillingSheet = ({
                   <div className="flex justify-between"><span className="text-muted-foreground">Period</span><span className="font-medium text-foreground">{fromLabel} – {toLabel}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Hours</span><span className="font-mono font-medium text-foreground">{formatHM(billableMins)}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-mono font-medium text-foreground">{sym}{billableValue.toFixed(2)}</span></div>
+                  {!isConnected && (
+                    <div className="flex justify-between"><span className="text-muted-foreground">Status</span><span className="font-medium text-foreground">Pending acceptance</span></div>
+                  )}
                 </div>
               </div>
             </AlertDialogDescription>
@@ -742,8 +747,9 @@ const PrepareBillingSheet = ({
           <AlertDialogFooter>
             <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleSubmitToClient} disabled={submitting}>
-              {submitting ? "Submitting…" : "Submit"}
+              {submitting ? (isConnected ? "Submitting…" : "Sending…") : isConnected ? "Submit" : "Send & queue"}
             </AlertDialogAction>
+
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

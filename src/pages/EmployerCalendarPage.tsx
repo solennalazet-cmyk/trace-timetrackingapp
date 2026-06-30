@@ -36,8 +36,8 @@ interface DayFreelancer {
 interface ScheduledClient {
   id: string;
   name: string;
-  start: string;
-  end: string;
+  start: string | null;
+  end: string | null;
   engagementStart: string | null;
   engagementEnd: string | null;
   scheduledDays: number[];

@@ -614,10 +614,40 @@ const PrepareBillingSheet = ({
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="bottom" className="rounded-t-2xl max-h-[85vh] overflow-y-auto p-0">
           <SheetHeader className="px-6 pt-6 pb-2">
-            <SheetTitle>{clientName}</SheetTitle>
+            <SheetTitle>{pickerMode && !clientId ? "Prepare report" : clientName}</SheetTitle>
           </SheetHeader>
 
           <div className="px-6 pb-6 space-y-4">
+            {pickerMode && (
+              <div className="space-y-3 rounded-xl border border-border p-3">
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Client</Label>
+                  <Select
+                    value={pickedClientId ?? ""}
+                    onValueChange={(v) => setPickedClientId(v)}
+                  >
+                    <SelectTrigger className="rounded-xl h-9">
+                      <SelectValue placeholder="Select a client…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableClients.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Date range</Label>
+                  <DateRangePicker
+                    from={pickedFrom}
+                    to={pickedTo}
+                    onChange={(f, t) => { setPickedFrom(f); setPickedTo(t); }}
+                    weekStartsOn={weekStartsOn}
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Summary block */}
             <div className="rounded-xl bg-muted/50 p-4 space-y-2">
               <div>

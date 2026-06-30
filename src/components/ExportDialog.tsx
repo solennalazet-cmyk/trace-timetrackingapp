@@ -417,15 +417,10 @@ const ExportDialog = ({
                 ))}
               </SelectContent>
             </Select>
-            {!clientChosen && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Pick a client (or “All clients”) to continue.
-              </p>
-            )}
           </div>
 
-          {clientChosen && (
-            <>
+          <>
+
               {/* Format */}
               <div>
                 <Label className="text-xs text-muted-foreground mb-2 block">Format</Label>

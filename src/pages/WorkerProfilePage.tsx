@@ -55,6 +55,7 @@ const WorkerProfilePage = () => {
   const [invitePending, setInvitePending] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;

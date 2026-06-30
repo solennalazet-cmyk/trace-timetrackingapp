@@ -398,16 +398,16 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                 </p>
                 <div>
                   <Label htmlFor="fullName">Full Name</Label>
-                  <Input id="fullName" className="h-10 rounded-xl" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+                  <Input id="fullName" name="name" autoComplete="name" className="h-10 rounded-xl" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
                 </div>
                 <div>
                   <Label htmlFor="signupEmail">Email</Label>
-                  <Input id="signupEmail" type="email" className="h-10 rounded-xl" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} required />
+                  <Input id="signupEmail" name="email" type="email" autoComplete="username" inputMode="email" className="h-10 rounded-xl" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} required />
                 </div>
                 <div className="relative">
                   <Label htmlFor="signupPassword">Password</Label>
                   <div className="relative">
-                    <Input id="signupPassword" type={showSignupPw ? "text" : "password"} className="h-10 rounded-xl" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} required minLength={8} />
+                    <Input id="signupPassword" name="new-password" type={showSignupPw ? "text" : "password"} autoComplete="new-password" className="h-10 rounded-xl" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} required minLength={8} />
                     <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowSignupPw(!showSignupPw)} aria-label="Toggle password visibility">
                       {showSignupPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -415,8 +415,9 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                 </div>
                 <div>
                   <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <Input id="confirmPassword" type="password" className="h-10 rounded-xl" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                  <Input id="confirmPassword" name="confirm-password" type="password" autoComplete="new-password" className="h-10 rounded-xl" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
                 </div>
+
                 {renderTurnstile()}
                 <Button type="submit" className="w-full rounded-[28px] h-12 font-bold bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitDisabled}>
                   {loading ? "Creating account…" : "Create account"}
@@ -438,7 +439,7 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                   <form onSubmit={handleForgotPassword} className="space-y-3">
                     <div>
                       <Label htmlFor="forgotEmail">Email</Label>
-                      <Input id="forgotEmail" type="email" className="h-10 rounded-xl" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required />
+                      <Input id="forgotEmail" name="email" type="email" autoComplete="username" inputMode="email" className="h-10 rounded-xl" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required />
                     </div>
                     {renderTurnstile()}
                     <Button type="submit" className="w-full rounded-[28px] h-12 font-bold bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitDisabled}>
@@ -473,17 +474,18 @@ const AuthModal = ({ open, onOpenChange, onShowHowItWorks }: AuthModalProps) => 
                   )}
                   <div>
                     <Label htmlFor="loginEmail">Email</Label>
-                    <Input id="loginEmail" type="email" className="h-10 rounded-xl" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />
+                    <Input id="loginEmail" name="email" type="email" autoComplete="username" inputMode="email" className="h-10 rounded-xl" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />
                   </div>
                   <div className="relative">
                     <Label htmlFor="loginPassword">Password</Label>
                     <div className="relative">
-                      <Input id="loginPassword" type={showLoginPw ? "text" : "password"} className="h-10 rounded-xl" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required />
+                      <Input id="loginPassword" name="password" type={showLoginPw ? "text" : "password"} autoComplete="current-password" className="h-10 rounded-xl" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required />
                       <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowLoginPw(!showLoginPw)} aria-label="Toggle password visibility">
                         {showLoginPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
+
                   <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setShowForgot(true)}>
                     Forgot password?
                   </button>

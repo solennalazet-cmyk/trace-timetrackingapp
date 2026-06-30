@@ -15,6 +15,7 @@ import WorkerFocusEditor, { type EditorKind } from "@/components/WorkerFocusEdit
 import WorkerCvCard from "@/components/WorkerCvCard";
 import WorkerDocumentsCard from "@/components/WorkerDocumentsCard";
 import WorkerInviteModal from "@/components/WorkerInviteModal";
+import ImportReportSheet from "@/components/ImportReportSheet";
 
 interface WorkerRow {
   id: string;

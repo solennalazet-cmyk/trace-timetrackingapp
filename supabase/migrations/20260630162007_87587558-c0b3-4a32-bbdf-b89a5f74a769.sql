@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.link_pending_reports_on_connection() FROM PUBLIC, anon, authenticated;

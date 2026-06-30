@@ -472,7 +472,6 @@ const ExportDialog = ({
                 {filteredEntries.length} {filteredEntries.length === 1 ? "entry" : "entries"} in selection
               </p>
             </>
-          )}
         </div>
 
         <DialogFooter className="px-6 pb-6">

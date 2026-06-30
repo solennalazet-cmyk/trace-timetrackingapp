@@ -48,7 +48,10 @@ const formatClock = (iso: string | null) => {
 interface PrepareBillingSheetProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  clientId: string;
+interface PrepareBillingSheetProps {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  clientId: string | null;
   clientName: string;
   clientCurrency: string;
   entries: TimeEntry[];
@@ -56,15 +59,51 @@ interface PrepareBillingSheetProps {
   dateFrom: Date;
   dateTo: Date;
   onComplete?: () => void;
+  pickerMode?: boolean;
+  availableClients?: Array<{ id: string; name: string; currency: string }>;
+  allEntries?: TimeEntry[];
+  weekStartsOn?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
 }
 
 const PrepareBillingSheet = ({
   open, onOpenChange,
-  clientId, clientName, clientCurrency,
-  entries, rounding, dateFrom, dateTo, onComplete,
+  clientId: propClientId, clientName: propClientName, clientCurrency: propClientCurrency,
+  entries: propEntries, rounding, dateFrom: propDateFrom, dateTo: propDateTo, onComplete,
+  pickerMode = false, availableClients = [], allEntries = [], weekStartsOn = 1,
 }: PrepareBillingSheetProps) => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+
+  // Picker-mode local state
+  const [pickedClientId, setPickedClientId] = useState<string | null>(propClientId ?? null);
+  const [pickedFrom, setPickedFrom] = useState<Date>(propDateFrom);
+  const [pickedTo, setPickedTo] = useState<Date>(propDateTo);
+  useEffect(() => {
+    if (open) {
+      setPickedClientId(propClientId ?? null);
+      setPickedFrom(propDateFrom);
+      setPickedTo(propDateTo);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const clientId = pickerMode ? (pickedClientId ?? "") : (propClientId ?? "");
+  const dateFrom = pickerMode ? pickedFrom : propDateFrom;
+  const dateTo = pickerMode ? pickedTo : propDateTo;
+  const pickedClient = availableClients.find((c) => c.id === clientId);
+  const clientName = pickerMode ? (pickedClient?.name ?? "Select a client") : propClientName;
+  const clientCurrency = pickerMode ? (pickedClient?.currency ?? propClientCurrency) : propClientCurrency;
+
+  const entries = useMemo(() => {
+    if (!pickerMode) return propEntries;
+    if (!clientId) return [];
+    const fromKey = toLocalDateKey(dateFrom);
+    const toKey = toLocalDateKey(dateTo);
+    return allEntries.filter(
+      (e) => e.client_id === clientId && (e.entry_date ?? "") >= fromKey && (e.entry_date ?? "") <= toKey,
+    );
+  }, [pickerMode, propEntries, allEntries, clientId, dateFrom, dateTo]);
+
   const [showBilledPrompt, setShowBilledPrompt] = useState(false);
   const [markingBilled, setMarkingBilled] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);

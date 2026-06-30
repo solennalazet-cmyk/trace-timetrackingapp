@@ -96,6 +96,20 @@ function useRestoreTheme() {
   }, []);
 }
 
+const RouteRoleSync = () => {
+  const { activeRole, setActiveRole } = useRole();
+  const location = useLocation();
+  useEffect(() => {
+    const p = location.pathname;
+    const isEmployerRoute = p === "/employer" || p.startsWith("/employer/") || p === "/workers" || p.startsWith("/workers/");
+    const isWorkerRoute =
+      p === "/" || p === "/reports" || p === "/timeline" || p === "/clients" || p.startsWith("/clients/") || p === "/payments";
+    if (isEmployerRoute && activeRole !== "employer") setActiveRole("employer");
+    else if (isWorkerRoute && activeRole !== "worker") setActiveRole("worker");
+  }, [location.pathname, activeRole, setActiveRole]);
+  return null;
+};
+
 const AppInner = () => {
   useRestoreTheme();
   const { activeRole } = useRole();
@@ -109,6 +123,7 @@ const AppInner = () => {
       root.classList.remove("employer");
     }
   }, [activeRole]);
+
 
   return (
     <WeekStartProvider value={weekStart}>

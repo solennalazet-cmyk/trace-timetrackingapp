@@ -505,9 +505,6 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
       <DialogContent
         position="centered"
         onOpenAutoFocus={(event) => event.preventDefault()}
-        onPointerDownOutside={(event) => event.preventDefault()}
-        onInteractOutside={(event) => event.preventDefault()}
-        onEscapeKeyDown={(event) => event.preventDefault()}
         className="flex w-[min(calc(100vw-2rem),32rem)] max-h-[min(calc(100dvh-2rem),56rem)] flex-col overflow-hidden rounded-2xl p-0"
       >
         <div className="shrink-0 px-6 pt-6 pb-2">

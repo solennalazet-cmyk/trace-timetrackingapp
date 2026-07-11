@@ -517,7 +517,35 @@ const StartPage = () => {
   const handleAssignSkip = async (session: SessionData) => {
     try {
       if (!editingEntry) {
-        await saveEntry(session, null);
+        try {
+          await saveEntry(session, null);
+        } catch (primaryErr) {
+          console.error("[StartPage] primary unassigned save failed, attempting minimal fallback", primaryErr);
+          // Minimal fallback — guarantee the session is not lost.
+          const ownerId = user?.id ?? "anonymous";
+          const now = new Date();
+          const minimal: any = {
+            idempotency_key: makeSessionEntryKey(ownerId, session, "single"),
+            duration_minutes: session.durationMinutes,
+            break_minutes: session.breakMinutes,
+            entry_type: session.entryType,
+            entry_date: toLocalDateKey(now),
+            billable: true,
+            billing_status: "unbilled",
+            start_time: session.startedAt || null,
+            end_time: session.startedAt ? now.toISOString() : null,
+            pause_intervals: session.pauseIntervals ?? [],
+          };
+          if (user) {
+            const { error } = await supabase
+              .from("time_entries")
+              .upsert({ ...minimal, user_id: user.id }, { onConflict: "user_id,idempotency_key", ignoreDuplicates: true });
+            if (error) throw error;
+          } else {
+            saveAnonymousEntry(minimal);
+          }
+          window.dispatchEvent(new CustomEvent("trace-entries-changed"));
+        }
       }
       setAssignModalOpen(false);
       setPendingSession(null);

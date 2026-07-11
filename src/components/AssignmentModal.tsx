@@ -505,8 +505,24 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
       <DialogContent
         position="centered"
         onOpenAutoFocus={(event) => event.preventDefault()}
+        onInteractOutside={(event) => {
+          // Nested portals (mobile combobox drawer, native select, popovers)
+          // render outside DialogContent. Without this guard, a tap inside those
+          // portals is treated as an outside click and dismisses the modal
+          // mid-edit. Only allow outside-dismiss for genuine background taps.
+          const target = event.detail.originalEvent.target as HTMLElement | null;
+          if (
+            target &&
+            target.closest(
+              "[data-vaul-drawer],[data-vaul-overlay],[data-radix-popper-content-wrapper],[data-radix-select-viewport],[data-radix-popover-content],[role='listbox'],[role='dialog']"
+            )
+          ) {
+            event.preventDefault();
+          }
+        }}
         className="flex w-[min(calc(100vw-2rem),32rem)] max-h-[min(calc(100dvh-2rem),56rem)] flex-col overflow-hidden rounded-2xl p-0"
       >
+
         <div className="shrink-0 px-6 pt-6 pb-2">
           <DialogHeader>
             <DialogTitle>

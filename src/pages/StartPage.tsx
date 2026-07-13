@@ -54,6 +54,37 @@ function getActiveMode(): Mode | null {
   return null;
 }
 
+const PENDING_SESSION_LS_KEY = "trace_pending_assignment";
+
+type PendingAssignmentSnapshot = {
+  session: SessionData;
+  editingEntry: ExistingEntry | null;
+};
+
+function readPendingSnapshot(): PendingAssignmentSnapshot | null {
+  try {
+    const raw = localStorage.getItem(PENDING_SESSION_LS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.session) return null;
+    return parsed as PendingAssignmentSnapshot;
+  } catch {
+    return null;
+  }
+}
+
+function writePendingSnapshot(snap: PendingAssignmentSnapshot) {
+  try {
+    localStorage.setItem(PENDING_SESSION_LS_KEY, JSON.stringify(snap));
+  } catch {}
+}
+
+function clearPendingSnapshot() {
+  try {
+    localStorage.removeItem(PENDING_SESSION_LS_KEY);
+  } catch {}
+}
+
 const StartPage = () => {
   const [mode, setMode] = useState<Mode>(() => getActiveMode() ?? "stopwatch");
   const { user, profile, loading: authLoading } = useAuth();

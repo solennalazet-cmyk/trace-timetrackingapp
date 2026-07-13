@@ -547,6 +547,7 @@ const StartPage = () => {
       setAssignModalOpen(false);
       setPendingSession(null);
       setEditingEntry(null);
+      clearPendingSnapshot();
       fetchSummary();
     } catch (error) {
       console.error("Save failed:", error);

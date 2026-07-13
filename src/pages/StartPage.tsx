@@ -672,6 +672,8 @@ const StartPage = () => {
           toast("Entry deleted.");
           setAssignModalOpen(false);
           setEditingEntry(null);
+          setPendingSession(null);
+          clearPendingSnapshot();
           fetchSummary();
         }}
       />

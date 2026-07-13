@@ -366,7 +366,11 @@ const StartPage = () => {
     }
 
     setEditingEntry(null);
-    setPendingSession({ ...data, entryType });
+    const nextSession = { ...data, entryType };
+    setPendingSession(nextSession);
+    // Persist immediately so a mid-flow unmount (role flicker, reload,
+    // crash) can rehydrate the recap on next mount instead of losing it.
+    writePendingSnapshot({ session: nextSession, editingEntry: null });
     console.log(`[StartPage] assignment modal opened for ${entryType}`);
     setAssignModalOpen(true);
   };

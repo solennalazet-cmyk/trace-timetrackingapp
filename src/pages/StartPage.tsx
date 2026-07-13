@@ -590,7 +590,11 @@ const StartPage = () => {
     { key: "shift", label: "Clock In" },
   ];
 
-  if ((user && !profile) || authLoading || activeRole === "employer" || profileRole === "employer") {
+  // Don't show the Loading… fallback while a pending recap modal is open —
+  // unmounting the tree here is exactly what destroyed the clock-out modal
+  // before. Keep the page mounted so the modal survives role flicker.
+  const hasPending = assignModalOpen || !!pendingSession;
+  if (!hasPending && ((user && !profile) || authLoading || activeRole === "employer" || profileRole === "employer")) {
     return <div className="pt-6 pb-24 text-sm text-muted-foreground px-4">Loading…</div>;
   }
 

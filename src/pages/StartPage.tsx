@@ -563,6 +563,7 @@ const StartPage = () => {
       setAssignModalOpen(false);
       setPendingSession(null);
       setEditingEntry(null);
+      clearPendingSnapshot();
       toast.success("Session saved to Unassigned Work.");
       fetchSummary();
     } catch (error) {

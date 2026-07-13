@@ -101,10 +101,12 @@ const StartPage = () => {
   const isBoost = searchParams.get("boost") === "1";
   const [boostProjectId, setBoostProjectId] = useState<string | null>(null);
 
-  // Assignment modal state
-  const [assignModalOpen, setAssignModalOpen] = useState(false);
-  const [pendingSession, setPendingSession] = useState<SessionData | null>(null);
-  const [editingEntry, setEditingEntry] = useState<ExistingEntry | null>(null);
+  // Assignment modal state — rehydrate from LS so an unexpected unmount
+  // (role-guard flicker, token refresh, reload) can't destroy a pending
+  // clock-out recap. If a snapshot exists on mount, reopen the modal.
+  const [assignModalOpen, setAssignModalOpen] = useState(() => !!readPendingSnapshot());
+  const [pendingSession, setPendingSession] = useState<SessionData | null>(() => readPendingSnapshot()?.session ?? null);
+  const [editingEntry, setEditingEntry] = useState<ExistingEntry | null>(() => readPendingSnapshot()?.editingEntry ?? null);
 
   // Manual entry & call log modals
   const [manualOpen, setManualOpen] = useState(false);
@@ -127,10 +129,15 @@ const StartPage = () => {
   const profileRole = (profile as any)?.active_role;
 
   useEffect(() => {
+    // Don't redirect away while a pending assignment recap is open — losing
+    // this page would destroy the modal and the session before the user can
+    // save. The RoleContext still switches; we just stay put until the modal
+    // is resolved (save / skip / dismiss all save to Unassigned).
+    if (assignModalOpen || pendingSession) return;
     if (activeRole === "employer" || profileRole === "employer") {
       navigate("/employer", { replace: true });
     }
-  }, [activeRole, profileRole, navigate]);
+  }, [activeRole, profileRole, navigate, assignModalOpen, pendingSession]);
 
   const handleModeSwitch = (target: Mode) => {
     if (target === mode) return;

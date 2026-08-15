@@ -186,27 +186,42 @@ const StartPage = () => {
           const parsed = JSON.parse(raw);
           const startMs = new Date(parsed.startedAt).getTime();
           const pausedMs = parsed.totalPausedMs || 0;
+          const nowIso = new Date().toISOString();
           const elapsed = parsed.pausedAt
             ? new Date(parsed.pausedAt).getTime() - startMs - pausedMs
             : Date.now() - startMs - pausedMs;
           const durationMinutes = Math.max(1, Math.round(elapsed / 60000));
           const breakMinutes = Math.round(pausedMs / 60000);
+          // Close any open pause interval so break data isn't lost.
+          const rawIntervals: { paused_at: string; resumed_at: string | null }[] =
+            Array.isArray(parsed.pauseIntervals) ? parsed.pauseIntervals : [];
+          const pauseIntervals =
+            rawIntervals.length > 0 && rawIntervals[rawIntervals.length - 1].resumed_at == null
+              ? [...rawIntervals.slice(0, -1), { ...rawIntervals[rawIntervals.length - 1], resumed_at: nowIso }]
+              : rawIntervals;
           localStorage.removeItem(key);
           // Open assignment modal for this session
           const entryType = conflictActiveMode === "shift" ? "shift" : "timer";
-          setEditingEntry(null);
-          setPendingSession({
+          const nextSession: SessionData = {
             durationMinutes,
             breakMinutes,
             startedAt: parsed.startedAt,
+            endedAt: nowIso,
             entryType,
+            pauseIntervals,
             idempotencyKey: makeTimeEntryIdempotencyKey("timer", user?.id ?? "anonymous", conflictActiveMode, parsed.startedAt ?? "no-start"),
-          });
+          };
+          setEditingEntry(null);
+          setPendingSession(nextSession);
+          // Same persistence contract as a normal stop — an unmount here must
+          // not lose the session.
+          writePendingSnapshot({ session: nextSession, editingEntry: null });
           setAssignModalOpen(true);
         }
       } catch {
         localStorage.removeItem(key);
       }
+
     } else {
       // Discard: just remove the session
       localStorage.removeItem(key);

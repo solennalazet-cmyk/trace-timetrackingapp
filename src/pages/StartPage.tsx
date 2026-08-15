@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import StopwatchMode from "@/components/StopwatchMode";
 import FocusMode from "@/components/FocusMode";
@@ -682,7 +682,7 @@ const StartPage = () => {
   // Auth itself is the one exception: saving while `user` is still resolving
   // would write the entry to the anonymous store instead of the account.
   const hasPending = assignModalOpen || !!pendingSession;
-  if (authLoading || (user && !profile) || (!hasPending && (activeRole === "employer" || profileRole === "employer"))) {
+  if (authLoading || (!hasPending && ((user && !profile) || activeRole === "employer" || profileRole === "employer"))) {
     return <div className="pt-6 pb-24 text-sm text-muted-foreground px-4">Loading…</div>;
   }
 

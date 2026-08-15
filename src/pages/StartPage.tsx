@@ -377,6 +377,7 @@ const StartPage = () => {
     if (data.durationMinutes <= 0) {
       data.durationMinutes = 1;
     }
+    const endedAt = new Date().toISOString();
 
     // Boost sessions: auto-save with Growth project and show congrats
     if (isBoost && boostProjectId && user) {
@@ -387,11 +388,11 @@ const StartPage = () => {
         duration_minutes: data.durationMinutes,
         break_minutes: data.breakMinutes,
         entry_type: "boost",
-        entry_date: toLocalDateKey(now),
+        entry_date: toLocalDateKey(data.startedAt ? new Date(data.startedAt) : now),
         project_id: boostProjectId,
         billable: false,
         start_time: data.startedAt || null,
-        end_time: data.startedAt ? now.toISOString() : null,
+        end_time: data.startedAt ? endedAt : null,
         pause_intervals: data.pauseIntervals ?? [],
       } as any, { onConflict: "user_id,idempotency_key", ignoreDuplicates: true });
       toast.success(getCongratsMessage());
@@ -402,14 +403,15 @@ const StartPage = () => {
     }
 
     setEditingEntry(null);
-    const nextSession = { ...data, entryType };
+    const nextSession: SessionData = { ...data, entryType, endedAt };
     setPendingSession(nextSession);
     // Persist immediately so a mid-flow unmount (role flicker, reload,
     // crash) can rehydrate the recap on next mount instead of losing it.
-    writePendingSnapshot({ session: nextSession, editingEntry: null });
+    writePendingSnapshot({ session: nextSession, editingEntry: null, savedAt: Date.now() });
     console.log(`[StartPage] assignment modal opened for ${entryType}`);
     setAssignModalOpen(true);
   };
+
 
   // Save entry with assignment data
   const saveEntry = async (session: SessionData, assignment: AssignmentResult | null, segment: string = "single") => {

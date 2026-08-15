@@ -54,36 +54,57 @@ function getActiveMode(): Mode | null {
   return null;
 }
 
-const PENDING_SESSION_LS_KEY = "trace_pending_assignment";
+// NOTE: this used to be "trace_pending_assignment", which is also the
+// anonymous-store key that `migrateAnonymousData` reads as a *time entry* and
+// then deletes. That collision blew up the sign-in migration and destroyed the
+// pending recap. Own key, own shape.
+const PENDING_SESSION_LS_KEY = "trace_pending_session_v2";
+const LEGACY_PENDING_SESSION_LS_KEY = "trace_pending_assignment";
+/** After this long an unresolved recap is auto-filed to Unassigned Work. */
+const PENDING_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
 type PendingAssignmentSnapshot = {
   session: SessionData;
   editingEntry: ExistingEntry | null;
+  savedAt?: number;
 };
 
-function readPendingSnapshot(): PendingAssignmentSnapshot | null {
+function parseSnapshot(key: string): PendingAssignmentSnapshot | null {
   try {
-    const raw = localStorage.getItem(PENDING_SESSION_LS_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (!parsed?.session) return null;
+    // Guard against the legacy key holding an anonymous *entry* object.
+    if (!parsed?.session || typeof parsed.session.durationMinutes !== "number") return null;
     return parsed as PendingAssignmentSnapshot;
   } catch {
     return null;
   }
 }
 
+function readPendingSnapshot(): PendingAssignmentSnapshot | null {
+  return parseSnapshot(PENDING_SESSION_LS_KEY) ?? parseSnapshot(LEGACY_PENDING_SESSION_LS_KEY);
+}
+
 function writePendingSnapshot(snap: PendingAssignmentSnapshot) {
   try {
-    localStorage.setItem(PENDING_SESSION_LS_KEY, JSON.stringify(snap));
+    localStorage.setItem(
+      PENDING_SESSION_LS_KEY,
+      JSON.stringify({ ...snap, savedAt: snap.savedAt ?? Date.now() })
+    );
   } catch {}
 }
 
 function clearPendingSnapshot() {
   try {
     localStorage.removeItem(PENDING_SESSION_LS_KEY);
+    // Only drop the legacy key if it actually holds one of our snapshots.
+    if (parseSnapshot(LEGACY_PENDING_SESSION_LS_KEY)) {
+      localStorage.removeItem(LEGACY_PENDING_SESSION_LS_KEY);
+    }
   } catch {}
 }
+
 
 const StartPage = () => {
   const [mode, setMode] = useState<Mode>(() => getActiveMode() ?? "stopwatch");

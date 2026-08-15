@@ -623,6 +623,41 @@ const StartPage = () => {
     }
   };
 
+  // ── Recovery safety net ─────────────────────────────────────────────
+  // A rehydrated recap that can't be shown (employer role) or that has been
+  // sitting around unresolved for hours must never be lost: file it to
+  // Unassigned Work exactly once, then release the page.
+  const recoveredRef = useRef(false);
+  useEffect(() => {
+    if (authLoading) return;
+    if (user && !profile) return;
+    if (!pendingSession || editingEntry) return;
+    if (recoveredRef.current) return;
+
+    const snap = readPendingSnapshot();
+    const savedAt = snap?.savedAt ?? 0;
+    const isStale = savedAt > 0 && Date.now() - savedAt > PENDING_MAX_AGE_MS;
+    const isEmployerView = activeRole === "employer" || profileRole === "employer";
+    if (!isStale && !isEmployerView) return;
+
+    recoveredRef.current = true;
+    (async () => {
+      try {
+        await saveEntry(pendingSession, null);
+        toast.success("Unfinished session saved to Unassigned Work.");
+      } catch (error) {
+        console.error("[StartPage] pending session recovery failed:", error);
+        recoveredRef.current = false;
+        return;
+      }
+      setAssignModalOpen(false);
+      setPendingSession(null);
+      clearPendingSnapshot();
+      fetchSummary();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user, profile, activeRole, profileRole, pendingSession, editingEntry]);
+
   // Handle assigning from unassigned panel
   const handleAssignFromPanel = (entry: any) => {
     setEditingEntry(entry as ExistingEntry);
@@ -644,10 +679,13 @@ const StartPage = () => {
   // Don't show the Loading… fallback while a pending recap modal is open —
   // unmounting the tree here is exactly what destroyed the clock-out modal
   // before. Keep the page mounted so the modal survives role flicker.
+  // Auth itself is the one exception: saving while `user` is still resolving
+  // would write the entry to the anonymous store instead of the account.
   const hasPending = assignModalOpen || !!pendingSession;
-  if (!hasPending && ((user && !profile) || authLoading || activeRole === "employer" || profileRole === "employer")) {
+  if (authLoading || (user && !profile) || (!hasPending && (activeRole === "employer" || profileRole === "employer"))) {
     return <div className="pt-6 pb-24 text-sm text-muted-foreground px-4">Loading…</div>;
   }
+
 
   return (
     <div className="flex flex-col items-center pt-4">

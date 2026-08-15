@@ -419,12 +419,24 @@ const StartPage = () => {
     const hasRate = assignment?.rateAmount != null;
     const hasBillableValue = assignment?.billableValue != null;
     const ownerId = user?.id ?? "anonymous";
+    // Anchor the entry to when the work actually happened, not to when the
+    // recap happened to be resolved. A session recovered after a reload (or
+    // a shift that crossed midnight) must keep its own date and end time.
+    const startedDate = session.startedAt ? new Date(session.startedAt) : null;
+    const validStart = startedDate && !isNaN(startedDate.getTime()) ? startedDate : null;
+    const endedDate = session.endedAt ? new Date(session.endedAt) : null;
+    const validEnd =
+      endedDate && !isNaN(endedDate.getTime())
+        ? endedDate
+        : validStart
+        ? new Date(validStart.getTime() + (session.durationMinutes + (session.breakMinutes || 0)) * 60000)
+        : null;
     const entry: any = {
       idempotency_key: makeSessionEntryKey(ownerId, session, segment),
       duration_minutes: session.durationMinutes,
       break_minutes: session.breakMinutes,
       entry_type: session.entryType,
-      entry_date: toLocalDateKey(now),
+      entry_date: toLocalDateKey(validStart ?? now),
       billable: assignment?.billable ?? true,
       billing_status: "unbilled",
       client_id: assignment?.clientId || null,
@@ -436,10 +448,11 @@ const StartPage = () => {
       rate_currency: assignment?.rateCurrency || null,
       rate_unit: hasRate ? (assignment?.rateUnit || "hour") : null,
       billable_value: hasBillableValue ? assignment?.billableValue : null,
-      start_time: session.startedAt || null,
-      end_time: session.startedAt ? now.toISOString() : null,
+      start_time: validStart ? validStart.toISOString() : null,
+      end_time: validStart && validEnd ? validEnd.toISOString() : null,
       pause_intervals: session.pauseIntervals ?? [],
     };
+
 
     // ── Geolocation capture ──
     // Read cached start fix (set when timer started), capture end fix now.

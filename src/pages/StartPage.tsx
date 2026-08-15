@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import StopwatchMode from "@/components/StopwatchMode";
 import FocusMode from "@/components/FocusMode";
@@ -54,36 +54,57 @@ function getActiveMode(): Mode | null {
   return null;
 }
 
-const PENDING_SESSION_LS_KEY = "trace_pending_assignment";
+// NOTE: this used to be "trace_pending_assignment", which is also the
+// anonymous-store key that `migrateAnonymousData` reads as a *time entry* and
+// then deletes. That collision blew up the sign-in migration and destroyed the
+// pending recap. Own key, own shape.
+const PENDING_SESSION_LS_KEY = "trace_pending_session_v2";
+const LEGACY_PENDING_SESSION_LS_KEY = "trace_pending_assignment";
+/** After this long an unresolved recap is auto-filed to Unassigned Work. */
+const PENDING_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
 type PendingAssignmentSnapshot = {
   session: SessionData;
   editingEntry: ExistingEntry | null;
+  savedAt?: number;
 };
 
-function readPendingSnapshot(): PendingAssignmentSnapshot | null {
+function parseSnapshot(key: string): PendingAssignmentSnapshot | null {
   try {
-    const raw = localStorage.getItem(PENDING_SESSION_LS_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (!parsed?.session) return null;
+    // Guard against the legacy key holding an anonymous *entry* object.
+    if (!parsed?.session || typeof parsed.session.durationMinutes !== "number") return null;
     return parsed as PendingAssignmentSnapshot;
   } catch {
     return null;
   }
 }
 
+function readPendingSnapshot(): PendingAssignmentSnapshot | null {
+  return parseSnapshot(PENDING_SESSION_LS_KEY) ?? parseSnapshot(LEGACY_PENDING_SESSION_LS_KEY);
+}
+
 function writePendingSnapshot(snap: PendingAssignmentSnapshot) {
   try {
-    localStorage.setItem(PENDING_SESSION_LS_KEY, JSON.stringify(snap));
+    localStorage.setItem(
+      PENDING_SESSION_LS_KEY,
+      JSON.stringify({ ...snap, savedAt: snap.savedAt ?? Date.now() })
+    );
   } catch {}
 }
 
 function clearPendingSnapshot() {
   try {
     localStorage.removeItem(PENDING_SESSION_LS_KEY);
+    // Only drop the legacy key if it actually holds one of our snapshots.
+    if (parseSnapshot(LEGACY_PENDING_SESSION_LS_KEY)) {
+      localStorage.removeItem(LEGACY_PENDING_SESSION_LS_KEY);
+    }
   } catch {}
 }
+
 
 const StartPage = () => {
   const [mode, setMode] = useState<Mode>(() => getActiveMode() ?? "stopwatch");
@@ -165,27 +186,42 @@ const StartPage = () => {
           const parsed = JSON.parse(raw);
           const startMs = new Date(parsed.startedAt).getTime();
           const pausedMs = parsed.totalPausedMs || 0;
+          const nowIso = new Date().toISOString();
           const elapsed = parsed.pausedAt
             ? new Date(parsed.pausedAt).getTime() - startMs - pausedMs
             : Date.now() - startMs - pausedMs;
           const durationMinutes = Math.max(1, Math.round(elapsed / 60000));
           const breakMinutes = Math.round(pausedMs / 60000);
+          // Close any open pause interval so break data isn't lost.
+          const rawIntervals: { paused_at: string; resumed_at: string | null }[] =
+            Array.isArray(parsed.pauseIntervals) ? parsed.pauseIntervals : [];
+          const pauseIntervals =
+            rawIntervals.length > 0 && rawIntervals[rawIntervals.length - 1].resumed_at == null
+              ? [...rawIntervals.slice(0, -1), { ...rawIntervals[rawIntervals.length - 1], resumed_at: nowIso }]
+              : rawIntervals;
           localStorage.removeItem(key);
           // Open assignment modal for this session
           const entryType = conflictActiveMode === "shift" ? "shift" : "timer";
-          setEditingEntry(null);
-          setPendingSession({
+          const nextSession: SessionData = {
             durationMinutes,
             breakMinutes,
             startedAt: parsed.startedAt,
+            endedAt: nowIso,
             entryType,
+            pauseIntervals,
             idempotencyKey: makeTimeEntryIdempotencyKey("timer", user?.id ?? "anonymous", conflictActiveMode, parsed.startedAt ?? "no-start"),
-          });
+          };
+          setEditingEntry(null);
+          setPendingSession(nextSession);
+          // Same persistence contract as a normal stop — an unmount here must
+          // not lose the session.
+          writePendingSnapshot({ session: nextSession, editingEntry: null });
           setAssignModalOpen(true);
         }
       } catch {
         localStorage.removeItem(key);
       }
+
     } else {
       // Discard: just remove the session
       localStorage.removeItem(key);
@@ -341,6 +377,7 @@ const StartPage = () => {
     if (data.durationMinutes <= 0) {
       data.durationMinutes = 1;
     }
+    const endedAt = new Date().toISOString();
 
     // Boost sessions: auto-save with Growth project and show congrats
     if (isBoost && boostProjectId && user) {
@@ -351,11 +388,11 @@ const StartPage = () => {
         duration_minutes: data.durationMinutes,
         break_minutes: data.breakMinutes,
         entry_type: "boost",
-        entry_date: toLocalDateKey(now),
+        entry_date: toLocalDateKey(data.startedAt ? new Date(data.startedAt) : now),
         project_id: boostProjectId,
         billable: false,
         start_time: data.startedAt || null,
-        end_time: data.startedAt ? now.toISOString() : null,
+        end_time: data.startedAt ? endedAt : null,
         pause_intervals: data.pauseIntervals ?? [],
       } as any, { onConflict: "user_id,idempotency_key", ignoreDuplicates: true });
       toast.success(getCongratsMessage());
@@ -366,14 +403,15 @@ const StartPage = () => {
     }
 
     setEditingEntry(null);
-    const nextSession = { ...data, entryType };
+    const nextSession: SessionData = { ...data, entryType, endedAt };
     setPendingSession(nextSession);
     // Persist immediately so a mid-flow unmount (role flicker, reload,
     // crash) can rehydrate the recap on next mount instead of losing it.
-    writePendingSnapshot({ session: nextSession, editingEntry: null });
+    writePendingSnapshot({ session: nextSession, editingEntry: null, savedAt: Date.now() });
     console.log(`[StartPage] assignment modal opened for ${entryType}`);
     setAssignModalOpen(true);
   };
+
 
   // Save entry with assignment data
   const saveEntry = async (session: SessionData, assignment: AssignmentResult | null, segment: string = "single") => {
@@ -381,12 +419,24 @@ const StartPage = () => {
     const hasRate = assignment?.rateAmount != null;
     const hasBillableValue = assignment?.billableValue != null;
     const ownerId = user?.id ?? "anonymous";
+    // Anchor the entry to when the work actually happened, not to when the
+    // recap happened to be resolved. A session recovered after a reload (or
+    // a shift that crossed midnight) must keep its own date and end time.
+    const startedDate = session.startedAt ? new Date(session.startedAt) : null;
+    const validStart = startedDate && !isNaN(startedDate.getTime()) ? startedDate : null;
+    const endedDate = session.endedAt ? new Date(session.endedAt) : null;
+    const validEnd =
+      endedDate && !isNaN(endedDate.getTime())
+        ? endedDate
+        : validStart
+        ? new Date(validStart.getTime() + (session.durationMinutes + (session.breakMinutes || 0)) * 60000)
+        : null;
     const entry: any = {
       idempotency_key: makeSessionEntryKey(ownerId, session, segment),
       duration_minutes: session.durationMinutes,
       break_minutes: session.breakMinutes,
       entry_type: session.entryType,
-      entry_date: toLocalDateKey(now),
+      entry_date: toLocalDateKey(validStart ?? now),
       billable: assignment?.billable ?? true,
       billing_status: "unbilled",
       client_id: assignment?.clientId || null,
@@ -398,10 +448,11 @@ const StartPage = () => {
       rate_currency: assignment?.rateCurrency || null,
       rate_unit: hasRate ? (assignment?.rateUnit || "hour") : null,
       billable_value: hasBillableValue ? assignment?.billableValue : null,
-      start_time: session.startedAt || null,
-      end_time: session.startedAt ? now.toISOString() : null,
+      start_time: validStart ? validStart.toISOString() : null,
+      end_time: validStart && validEnd ? validEnd.toISOString() : null,
       pause_intervals: session.pauseIntervals ?? [],
     };
+
 
     // ── Geolocation capture ──
     // Read cached start fix (set when timer started), capture end fix now.
@@ -572,6 +623,41 @@ const StartPage = () => {
     }
   };
 
+  // ── Recovery safety net ─────────────────────────────────────────────
+  // A rehydrated recap that can't be shown (employer role) or that has been
+  // sitting around unresolved for hours must never be lost: file it to
+  // Unassigned Work exactly once, then release the page.
+  const recoveredRef = useRef(false);
+  useEffect(() => {
+    if (authLoading) return;
+    if (user && !profile) return;
+    if (!pendingSession || editingEntry) return;
+    if (recoveredRef.current) return;
+
+    const snap = readPendingSnapshot();
+    const savedAt = snap?.savedAt ?? 0;
+    const isStale = savedAt > 0 && Date.now() - savedAt > PENDING_MAX_AGE_MS;
+    const isEmployerView = activeRole === "employer" || profileRole === "employer";
+    if (!isStale && !isEmployerView) return;
+
+    recoveredRef.current = true;
+    (async () => {
+      try {
+        await saveEntry(pendingSession, null);
+        toast.success("Unfinished session saved to Unassigned Work.");
+      } catch (error) {
+        console.error("[StartPage] pending session recovery failed:", error);
+        recoveredRef.current = false;
+        return;
+      }
+      setAssignModalOpen(false);
+      setPendingSession(null);
+      clearPendingSnapshot();
+      fetchSummary();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user, profile, activeRole, profileRole, pendingSession, editingEntry]);
+
   // Handle assigning from unassigned panel
   const handleAssignFromPanel = (entry: any) => {
     setEditingEntry(entry as ExistingEntry);
@@ -593,10 +679,13 @@ const StartPage = () => {
   // Don't show the Loading… fallback while a pending recap modal is open —
   // unmounting the tree here is exactly what destroyed the clock-out modal
   // before. Keep the page mounted so the modal survives role flicker.
+  // Auth itself is the one exception: saving while `user` is still resolving
+  // would write the entry to the anonymous store instead of the account.
   const hasPending = assignModalOpen || !!pendingSession;
-  if (!hasPending && ((user && !profile) || authLoading || activeRole === "employer" || profileRole === "employer")) {
+  if (authLoading || (!hasPending && ((user && !profile) || activeRole === "employer" || profileRole === "employer"))) {
     return <div className="pt-6 pb-24 text-sm text-muted-foreground px-4">Loading…</div>;
   }
+
 
   return (
     <div className="flex flex-col items-center pt-4">

@@ -41,10 +41,14 @@ export interface SessionData {
   durationMinutes: number;
   breakMinutes: number;
   startedAt: string | null;
+  /** Wall-clock moment the timer was stopped. Used so a recovered session
+   *  keeps its real end time / date instead of "whenever it got saved". */
+  endedAt?: string | null;
   entryType: string;
   pauseIntervals?: { paused_at: string; resumed_at: string | null }[];
   idempotencyKey?: string;
 }
+
 
 export interface AssignmentResult {
   clientId: string | null;

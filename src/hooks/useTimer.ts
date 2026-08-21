@@ -296,6 +296,16 @@ export function useTimer(mode: TimerMode) {
           if (stoppingRef.current) return;
           console.log(`[useTimer] realtime ${payload.eventType} for ${mode}`, payload);
           if (payload.eventType === "DELETE") {
+            // Ignore a delete for an older row than the timer we are currently
+            // running locally (e.g. a stale stop from another device arriving
+            // after this device already started a new session).
+            const lsState = readLS(lsKey);
+            const deletedStarted = new Date((payload.old as any)?.started_at ?? 0).getTime();
+            const localStarted = lsState?.startedAt ? new Date(lsState.startedAt).getTime() : 0;
+            if (localStarted && deletedStarted && localStarted > deletedStarted + 1000) {
+              console.warn(`[useTimer] ignoring stale realtime DELETE for ${mode}`);
+              return;
+            }
             clearLS(lsKey);
             setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
             setElapsedMs(0);

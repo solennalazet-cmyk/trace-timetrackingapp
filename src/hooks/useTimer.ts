@@ -165,27 +165,12 @@ export function useTimer(mode: TimerMode) {
       noUserClearTimerRef.current = null;
     }
 
-    // No authenticated user → this can be a short token-refresh gap while the
-    // person is still signed in. Don't wipe an active shift immediately.
-    if (!user) {
-      const lsState = readLS(lsKey);
-      if (lsState?.startedAt) {
-        noUserClearTimerRef.current = setTimeout(() => {
-          const latest = readLS(lsKey);
-          if (!latest?.startedAt) return;
-          console.warn(`[useTimer] clearing LS ghost timer for ${mode}: no authenticated user after grace period`);
-          clearLS(lsKey);
-          setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
-          setElapsedMs(0);
-        }, AUTH_GAP_GRACE_MS);
-      }
-      return () => {
-        if (noUserClearTimerRef.current) {
-          clearTimeout(noUserClearTimerRef.current);
-          noUserClearTimerRef.current = null;
-        }
-      };
-    }
+    // No authenticated user → either an anonymous tracker or a token-refresh
+    // gap. Never wipe a running timer here: losing hours of work is far worse
+    // than showing a timer that will be reconciled as soon as auth resolves.
+    // The session is re-upserted to the backend by reconcile() once `user`
+    // becomes available again.
+    if (!user) return;
 
     const sessionType = mode === "shift" ? "shift" : "stopwatch";
 
@@ -311,6 +296,16 @@ export function useTimer(mode: TimerMode) {
           if (stoppingRef.current) return;
           console.log(`[useTimer] realtime ${payload.eventType} for ${mode}`, payload);
           if (payload.eventType === "DELETE") {
+            // Ignore a delete for an older row than the timer we are currently
+            // running locally (e.g. a stale stop from another device arriving
+            // after this device already started a new session).
+            const lsState = readLS(lsKey);
+            const deletedStarted = new Date((payload.old as any)?.started_at ?? 0).getTime();
+            const localStarted = lsState?.startedAt ? new Date(lsState.startedAt).getTime() : 0;
+            if (localStarted && deletedStarted && localStarted > deletedStarted + 1000) {
+              console.warn(`[useTimer] ignoring stale realtime DELETE for ${mode}`);
+              return;
+            }
             clearLS(lsKey);
             setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
             setElapsedMs(0);

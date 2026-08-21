@@ -165,27 +165,12 @@ export function useTimer(mode: TimerMode) {
       noUserClearTimerRef.current = null;
     }
 
-    // No authenticated user → this can be a short token-refresh gap while the
-    // person is still signed in. Don't wipe an active shift immediately.
-    if (!user) {
-      const lsState = readLS(lsKey);
-      if (lsState?.startedAt) {
-        noUserClearTimerRef.current = setTimeout(() => {
-          const latest = readLS(lsKey);
-          if (!latest?.startedAt) return;
-          console.warn(`[useTimer] clearing LS ghost timer for ${mode}: no authenticated user after grace period`);
-          clearLS(lsKey);
-          setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
-          setElapsedMs(0);
-        }, AUTH_GAP_GRACE_MS);
-      }
-      return () => {
-        if (noUserClearTimerRef.current) {
-          clearTimeout(noUserClearTimerRef.current);
-          noUserClearTimerRef.current = null;
-        }
-      };
-    }
+    // No authenticated user → either an anonymous tracker or a token-refresh
+    // gap. Never wipe a running timer here: losing hours of work is far worse
+    // than showing a timer that will be reconciled as soon as auth resolves.
+    // The session is re-upserted to the backend by reconcile() once `user`
+    // becomes available again.
+    if (!user) return;
 
     const sessionType = mode === "shift" ? "shift" : "stopwatch";
 

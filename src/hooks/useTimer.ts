@@ -34,7 +34,7 @@ const LS_KEYS: Record<string, string> = {
 };
 
 const RECENTLY_STOPPED_KEY = "trace_recently_stopped";
-const RECENTLY_STOPPED_TTL = 10_000; // 10 seconds
+const RECENTLY_STOPPED_TTL = 5 * 60_000; // 5 minutes — long enough for a slow delete + reload
 const AUTH_GAP_GRACE_MS = 30_000;
 
 function readLS(key: string): TimerState | null {
@@ -54,29 +54,47 @@ function clearLS(key: string) {
   localStorage.removeItem(key);
 }
 
-/** Persist a "recently stopped" marker for the given mode with a TTL */
-function markRecentlyStopped(mode: string) {
+/**
+ * Persist a "recently stopped" marker for the given mode, including the
+ * startedAt of the session that was just closed. Reconcile uses this to
+ * recognise and tear down a stale backend row instead of resurrecting a
+ * session the user explicitly ended — the most common cause of which is a
+ * failed/slow active_sessions delete followed by a reload.
+ */
+function markRecentlyStopped(mode: string, startedAt: string | null) {
   try {
     const existing = JSON.parse(localStorage.getItem(RECENTLY_STOPPED_KEY) || "{}");
-    existing[mode] = Date.now() + RECENTLY_STOPPED_TTL;
+    existing[mode] = { expires: Date.now() + RECENTLY_STOPPED_TTL, startedAt };
     localStorage.setItem(RECENTLY_STOPPED_KEY, JSON.stringify(existing));
-    console.log(`[useTimer] markRecentlyStopped: ${mode}, expires in ${RECENTLY_STOPPED_TTL}ms`);
+    console.log(`[useTimer] markRecentlyStopped: ${mode} (started=${startedAt}), expires in ${RECENTLY_STOPPED_TTL}ms`);
   } catch {}
 }
 
-/** Check if a mode was recently stopped (survives reloads) */
-function isRecentlyStopped(mode: string): boolean {
+/**
+ * Check if a mode was recently stopped. If `remoteStartedAt` is supplied and
+ * matches the stopped session's startedAt, this is the stale backend row from
+ * the session we just closed — caller should delete it, not restore it.
+ */
+function isRecentlyStopped(mode: string, remoteStartedAt?: string | null): boolean {
   try {
     const existing = JSON.parse(localStorage.getItem(RECENTLY_STOPPED_KEY) || "{}");
-    const expiry = existing[mode];
-    if (expiry && Date.now() < expiry) {
-      return true;
-    }
-    // Clean up expired entries
-    if (expiry) {
+    const entry = existing[mode];
+    if (!entry) return false;
+    const expires = typeof entry === "number" ? entry : entry.expires;
+    if (!expires || Date.now() >= expires) {
       delete existing[mode];
       localStorage.setItem(RECENTLY_STOPPED_KEY, JSON.stringify(existing));
+      return false;
     }
+    // Backwards-compat: old format was a bare timestamp (no startedAt).
+    if (typeof entry === "number") return true;
+    // If we know which session was stopped, only block restore when the
+    // backend row is THAT session. A new session started after the stop
+    // should be allowed to restore normally.
+    if (remoteStartedAt && entry.startedAt && remoteStartedAt !== entry.startedAt) {
+      return false;
+    }
+    return true;
   } catch {}
   return false;
 }
@@ -175,10 +193,6 @@ export function useTimer(mode: TimerMode) {
     const sessionType = mode === "shift" ? "shift" : "stopwatch";
 
     const reconcile = async () => {
-      if (isRecentlyStopped(mode)) {
-        console.log(`[useTimer] reconcile skipped: ${mode} was recently stopped`);
-        return;
-      }
       if (stoppingRef.current) {
         console.log(`[useTimer] reconcile skipped: stop in progress for ${mode}`);
         return;
@@ -192,6 +206,19 @@ export function useTimer(mode: TimerMode) {
 
       if (error) {
         console.warn(`[useTimer] reconcile kept local ${mode}: active session lookup failed`, error);
+        return;
+      }
+
+      // The user explicitly stopped a session recently. If the backend still
+      // has a row for THAT session (delete was slow or failed), tear it down
+      // instead of resurrecting a session the user already ended. A different
+      // session started after the stop is allowed to restore normally.
+      if (data && isRecentlyStopped(mode, data.started_at)) {
+        console.warn(`[useTimer] reconcile found stale backend row for recently-stopped ${mode}; deleting it`);
+        await supabase.from("active_sessions").delete().eq("user_id", user.id);
+        clearLS(lsKey);
+        setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
+        setElapsedMs(0);
         return;
       }
 
@@ -222,13 +249,17 @@ export function useTimer(mode: TimerMode) {
         return;
       }
 
-      // Auto-clean stale stopwatch sessions older than 18 hours. Shifts are
-      // preserved because legitimate work shifts can run long; the UI warns
-      // after 24h and lets the user choose when to clock out.
-      const STALE_MS = 18 * 60 * 60 * 1000;
+      // Auto-clean stale sessions so a crashed/closed device doesn't leave a
+      // phantom running timer that resurrects on the next login. Stopwatch
+      // sessions older than 18h are cleared; shifts can legitimately run long
+      // (night shifts, on-call) so they get a 48h threshold. The UI warns the
+      // user after 24h and lets them choose when to clock out.
+      const STALE_STOPWATCH_MS = 18 * 60 * 60 * 1000;
+      const STALE_SHIFT_MS = 48 * 60 * 60 * 1000;
       const startedMs = new Date(data.started_at).getTime();
-      if (data.session_type === sessionType && data.session_type !== "shift" && Date.now() - startedMs > STALE_MS) {
-        console.warn(`[useTimer] auto-cleaning stale ${data.session_type} session (>18h old)`);
+      const staleThreshold = data.session_type === "shift" ? STALE_SHIFT_MS : STALE_STOPWATCH_MS;
+      if (data.session_type === sessionType && Number.isFinite(startedMs) && Date.now() - startedMs > staleThreshold) {
+        console.warn(`[useTimer] auto-cleaning stale ${data.session_type} session (>${Math.round(staleThreshold / 3_600_000)}h old)`);
         await supabase.from("active_sessions").delete().eq("user_id", user.id);
         clearLS(lsKey);
         setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
@@ -282,8 +313,10 @@ export function useTimer(mode: TimerMode) {
         return;
       }
 
-      // Re-check after async
-      if (isRecentlyStopped(mode) || stoppingRef.current) return;
+      // Re-check after async — guard against a stop that completed while we
+      // were waiting on the network. Pass the backend row's startedAt so a
+      // newly-started session is not blocked by an old stop marker.
+      if (isRecentlyStopped(mode, data.started_at) || stoppingRef.current) return;
 
       console.log(`[useTimer] active session restored from Supabase for ${mode}`);
       const supabaseState: TimerState = {
@@ -324,7 +357,7 @@ export function useTimer(mode: TimerMode) {
             }
             const startedAtIso = lsState.startedAt;
             (async () => {
-              if (stoppingRef.current || isRecentlyStopped(mode)) return;
+              if (stoppingRef.current || isRecentlyStopped(mode, startedAtIso)) return;
               const { data: closed, error: closedError } = await supabase
                 .from("time_entries")
                 .select("id")
@@ -542,8 +575,10 @@ export function useTimer(mode: TimerMode) {
       ? [...intervals.slice(0, -1), { ...intervals[intervals.length - 1], resumed_at: nowIso }]
       : intervals;
 
-    // Mark recently stopped BEFORE clearing, survives reloads
-    markRecentlyStopped(mode);
+    // Mark recently stopped BEFORE clearing, survives reloads. Store the
+    // startedAt so reconcile can recognise and delete the stale backend row
+    // if the active_sessions delete is slow or fails.
+    markRecentlyStopped(mode, startedAt);
 
     // Clear local state immediately
     clearLS(lsKey);

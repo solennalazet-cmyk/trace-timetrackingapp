@@ -46,6 +46,7 @@ export function installChunkLoadRecovery(): void {
 
   window.addEventListener("vite:preloadError", (event) => {
     event.preventDefault();
-    recoverFromChunkLoadError(event);
+    const preloadEvent = event as Event & { payload?: unknown };
+    recoverFromChunkLoadError(preloadEvent.payload ?? event);
   });
 }

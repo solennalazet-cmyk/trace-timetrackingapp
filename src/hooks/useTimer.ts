@@ -575,8 +575,10 @@ export function useTimer(mode: TimerMode) {
       ? [...intervals.slice(0, -1), { ...intervals[intervals.length - 1], resumed_at: nowIso }]
       : intervals;
 
-    // Mark recently stopped BEFORE clearing, survives reloads
-    markRecentlyStopped(mode);
+    // Mark recently stopped BEFORE clearing, survives reloads. Store the
+    // startedAt so reconcile can recognise and delete the stale backend row
+    // if the active_sessions delete is slow or fails.
+    markRecentlyStopped(mode, startedAt);
 
     // Clear local state immediately
     clearLS(lsKey);

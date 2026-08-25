@@ -250,9 +250,20 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
     setHasUserChangedSelection(false);
 
+    // Paint the last known lists immediately so suggestions are available the
+    // moment the recap opens, then refresh from the backend in the background.
+    const cached = readAssignmentCache(user?.id);
+    if (cached) {
+      setClientsFull(cached.clients);
+      setAllProjectsFull(cached.projects);
+      setTasks(cached.tasks);
+      setAllTags(cached.tags);
+    }
+
     loadData();
     requestAnimationFrame(() => scrollAreaRef.current?.scrollTo({ top: 0, behavior: "auto" }));
-  }, [open, loadData, existingEntry]);
+  }, [open, loadData, existingEntry, user?.id]);
+
 
   useEffect(() => {
     if (existingEntry && clientId) {

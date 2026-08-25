@@ -193,10 +193,6 @@ export function useTimer(mode: TimerMode) {
     const sessionType = mode === "shift" ? "shift" : "stopwatch";
 
     const reconcile = async () => {
-      if (isRecentlyStopped(mode)) {
-        console.log(`[useTimer] reconcile skipped: ${mode} was recently stopped`);
-        return;
-      }
       if (stoppingRef.current) {
         console.log(`[useTimer] reconcile skipped: stop in progress for ${mode}`);
         return;
@@ -210,6 +206,19 @@ export function useTimer(mode: TimerMode) {
 
       if (error) {
         console.warn(`[useTimer] reconcile kept local ${mode}: active session lookup failed`, error);
+        return;
+      }
+
+      // The user explicitly stopped a session recently. If the backend still
+      // has a row for THAT session (delete was slow or failed), tear it down
+      // instead of resurrecting a session the user already ended. A different
+      // session started after the stop is allowed to restore normally.
+      if (data && isRecentlyStopped(mode, data.started_at)) {
+        console.warn(`[useTimer] reconcile found stale backend row for recently-stopped ${mode}; deleting it`);
+        await supabase.from("active_sessions").delete().eq("user_id", user.id);
+        clearLS(lsKey);
+        setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
+        setElapsedMs(0);
         return;
       }
 

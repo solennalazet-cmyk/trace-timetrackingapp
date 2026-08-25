@@ -262,10 +262,22 @@ export function useTimer(mode: TimerMode) {
             }
             return;
           }
-          console.warn(`[useTimer] clearing stale LS for ${mode}: Supabase has different session_type=${data.session_type}`);
-          clearLS(lsKey);
-          setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
-          setElapsedMs(0);
+          // Backend says another mode is running, but this device has a live
+          // local session. Never silently clock the user out: keep the local
+          // timer and make the backend match it.
+          console.warn(`[useTimer] backend session_type=${data.session_type} differs; keeping local ${mode}`);
+          await supabase.from("active_sessions").upsert(
+            {
+              user_id: user.id,
+              session_type: sessionType,
+              started_at: lsState.startedAt,
+              paused_at: lsState.pausedAt,
+              total_paused_ms: lsState.totalPausedMs ?? 0,
+              pause_intervals: lsState.pauseIntervals ?? [],
+            } as any,
+            { onConflict: "user_id" }
+          );
+
         }
         return;
       }

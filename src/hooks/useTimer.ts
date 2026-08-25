@@ -296,21 +296,55 @@ export function useTimer(mode: TimerMode) {
           if (stoppingRef.current) return;
           console.log(`[useTimer] realtime ${payload.eventType} for ${mode}`, payload);
           if (payload.eventType === "DELETE") {
-            // Ignore a delete for an older row than the timer we are currently
-            // running locally (e.g. a stale stop from another device arriving
-            // after this device already started a new session).
+            // Postgres only ships the primary key in `payload.old` unless the
+            // table uses REPLICA IDENTITY FULL, so we usually CANNOT tell which
+            // session was deleted. Wiping a running timer on that guess is what
+            // clocked users out mid-shift. Never trust a DELETE blindly: keep
+            // the local timer and only accept the clock-out if a saved time
+            // entry proves the session was really closed (e.g. on another
+            // device). Otherwise recreate the backend row.
             const lsState = readLS(lsKey);
-            const deletedStarted = new Date((payload.old as any)?.started_at ?? 0).getTime();
-            const localStarted = lsState?.startedAt ? new Date(lsState.startedAt).getTime() : 0;
-            if (localStarted && deletedStarted && localStarted > deletedStarted + 1000) {
-              console.warn(`[useTimer] ignoring stale realtime DELETE for ${mode}`);
+            if (!lsState?.startedAt) {
+              clearLS(lsKey);
+              setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
+              setElapsedMs(0);
               return;
             }
-            clearLS(lsKey);
-            setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
-            setElapsedMs(0);
+            const startedAtIso = lsState.startedAt;
+            (async () => {
+              if (stoppingRef.current || isRecentlyStopped(mode)) return;
+              const { data: closed, error: closedError } = await supabase
+                .from("time_entries")
+                .select("id")
+                .eq("user_id", user.id)
+                .eq("start_time", startedAtIso)
+                .is("deleted_at", null)
+                .limit(1);
+              if (!closedError && closed && closed.length > 0) {
+                console.warn(`[useTimer] DELETE confirmed by saved entry; clearing ${mode}`);
+                clearLS(lsKey);
+                setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
+                setElapsedMs(0);
+                return;
+              }
+              console.warn(`[useTimer] unconfirmed DELETE for ${mode}; keeping local timer and restoring backend row`);
+              const current = readLS(lsKey);
+              if (!current?.startedAt) return;
+              await supabase.from("active_sessions").upsert(
+                {
+                  user_id: user.id,
+                  session_type: sessionType,
+                  started_at: current.startedAt,
+                  paused_at: current.pausedAt,
+                  total_paused_ms: current.totalPausedMs ?? 0,
+                  pause_intervals: current.pauseIntervals ?? [],
+                } as any,
+                { onConflict: "user_id" }
+              );
+            })();
             return;
           }
+
           const row: any = payload.new;
           if (!row) return;
           if (row.session_type !== sessionType) {

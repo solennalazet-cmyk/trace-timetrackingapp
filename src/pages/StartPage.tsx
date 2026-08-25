@@ -553,10 +553,29 @@ const StartPage = () => {
     }
   };
 
+  // Close the recap right away and finish the write in the background.
+  // Saving can involve several network calls (and a GPS fix), which used to
+  // freeze the dialog for seconds. If the background write fails we bring the
+  // recap back with the same data — nothing is ever lost.
+  const closeRecap = () => {
+    setAssignModalOpen(false);
+    setPendingSession(null);
+    setEditingEntry(null);
+  };
+
+  const restoreRecap = (session: SessionData, entry: ExistingEntry | null) => {
+    setPendingSession(session);
+    setEditingEntry(entry);
+    setAssignModalOpen(true);
+    toast.error("Something went wrong. Your session is safe — try again.");
+  };
+
   const handleAssignSave = async (session: SessionData, assignment: AssignmentResult) => {
+    const entryBeingEdited = editingEntry;
+    closeRecap();
     try {
-      if (editingEntry) {
-        await updateEntry(editingEntry.id, assignment);
+      if (entryBeingEdited) {
+        await updateEntry(entryBeingEdited.id, assignment);
         toast.success("Entry updated.");
       } else {
         console.log(`[StartPage] time entry save started, type=${session.entryType}`);
@@ -577,51 +596,47 @@ const StartPage = () => {
         const label = session.entryType === "shift" ? "Shift saved." : "Entry saved.";
         toast.success(label);
       }
-      setAssignModalOpen(false);
-      setPendingSession(null);
-      setEditingEntry(null);
       clearPendingSnapshot();
       fetchSummary();
     } catch (error) {
       console.error("Save failed:", error);
-      toast.error("Something went wrong. Your session is safe — try again.");
+      restoreRecap(session, entryBeingEdited);
     }
   };
 
   const handleAssignSaveMulti = async (session: SessionData, assignments: AssignmentResult[]) => {
+    const entryBeingEdited = editingEntry;
+    closeRecap();
     try {
       for (const [index, assignment] of assignments.entries()) {
         const dur = (assignment as any)._durationMinutes ?? session.durationMinutes;
         await saveEntry({ ...session, durationMinutes: dur }, assignment, assignment.taskId ?? `task-${index}`);
       }
       toast.success(`${assignments.length} tasks saved.`);
-      setAssignModalOpen(false);
-      setPendingSession(null);
-      setEditingEntry(null);
       clearPendingSnapshot();
       fetchSummary();
     } catch (error) {
       console.error("Save failed:", error);
-      toast.error("Something went wrong. Your session is safe — try again.");
+      restoreRecap(session, entryBeingEdited);
     }
   };
 
   const handleAssignSkip = async (session: SessionData) => {
+    const entryBeingEdited = editingEntry;
+    closeRecap();
+    toast.success("Session saved to Unassigned Work.");
     try {
-      if (!editingEntry) {
+      if (!entryBeingEdited) {
         await saveEntry(session, null);
       }
-      setAssignModalOpen(false);
-      setPendingSession(null);
-      setEditingEntry(null);
       clearPendingSnapshot();
-      toast.success("Session saved to Unassigned Work.");
       fetchSummary();
     } catch (error) {
       console.error("Save failed:", error);
-      toast.error("Something went wrong. Your session is safe — try again.");
+      restoreRecap(session, entryBeingEdited);
     }
   };
+
 
   // ── Recovery safety net ─────────────────────────────────────────────
   // A rehydrated recap that can't be shown (employer role) or that has been

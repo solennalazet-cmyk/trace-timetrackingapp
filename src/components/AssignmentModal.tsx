@@ -34,6 +34,8 @@ import {
 } from "@/lib/anonymous-store";
 import { toast } from "sonner";
 import { useAutoResolvedRate } from "@/hooks/useAutoResolvedRate";
+import { readAssignmentCache, writeAssignmentCache } from "@/lib/assignment-cache";
+
 import { parseDecimalInput, parsePositiveDecimalInput, sanitizeDecimalInput } from "@/lib/rate-utils";
 import { Plus, X } from "lucide-react";
 
@@ -171,24 +173,35 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
   const loadData = useCallback(async () => {
     if (user) {
-      const [{ data: c }, { data: p }, { data: t }] = await Promise.all([
+      const [{ data: c }, { data: p }, { data: t }, { data: tagEntries }] = await Promise.all([
         supabase.from("clients").select("id, name, default_rate, currency").eq("user_id", user.id),
         supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", user.id),
         supabase.from("tasks").select("id, name, project_id, client_id").eq("user_id", user.id),
+        supabase
+          .from("time_entries")
+          .select("tags")
+          .eq("user_id", user.id)
+          .not("tags", "is", null)
+          .is("deleted_at", null),
       ]);
-      setClientsFull((c ?? []) as ClientFull[]);
-      setAllProjectsFull((p ?? []) as ProjectFull[]);
-      setTasks((t ?? []).map((x: any) => ({ id: x.id, name: x.name, project_id: x.project_id ?? null, client_id: x.client_id ?? null })));
+      const nextClients = (c ?? []) as ClientFull[];
+      const nextProjects = (p ?? []) as ProjectFull[];
+      const nextTasks = (t ?? []).map((x: any) => ({ id: x.id, name: x.name, project_id: x.project_id ?? null, client_id: x.client_id ?? null }));
+      setClientsFull(nextClients);
+      setAllProjectsFull(nextProjects);
+      setTasks(nextTasks);
 
-      const { data: tagEntries } = await supabase
-        .from("time_entries")
-        .select("tags")
-        .eq("user_id", user.id)
-        .not("tags", "is", null)
-        .is("deleted_at", null);
       const tagSet = new Set<string>();
-      tagEntries?.forEach((e) => e.tags?.forEach((t: string) => tagSet.add(t)));
-      setAllTags(Array.from(tagSet).sort());
+      tagEntries?.forEach((e: any) => e.tags?.forEach((t: string) => tagSet.add(t)));
+      const nextTags = Array.from(tagSet).sort();
+      setAllTags(nextTags);
+
+      writeAssignmentCache(user.id, {
+        clients: nextClients,
+        projects: nextProjects,
+        tasks: nextTasks,
+        tags: nextTags,
+      });
     } else {
       const ac = getAnonymousClients();
       setClientsFull(ac.map((c: any) => ({ id: c.id, name: c.name, default_rate: c.default_rate ?? null, currency: c.currency ?? null })));
@@ -199,6 +212,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
       setAllTags([]);
     }
   }, [user]);
+
 
   useEffect(() => {
     if (!open) return;
@@ -236,9 +250,20 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
     setHasUserChangedSelection(false);
 
+    // Paint the last known lists immediately so suggestions are available the
+    // moment the recap opens, then refresh from the backend in the background.
+    const cached = readAssignmentCache(user?.id);
+    if (cached) {
+      setClientsFull(cached.clients);
+      setAllProjectsFull(cached.projects);
+      setTasks(cached.tasks);
+      setAllTags(cached.tags);
+    }
+
     loadData();
     requestAnimationFrame(() => scrollAreaRef.current?.scrollTo({ top: 0, behavior: "auto" }));
-  }, [open, loadData, existingEntry]);
+  }, [open, loadData, existingEntry, user?.id]);
+
 
   useEffect(() => {
     if (existingEntry && clientId) {

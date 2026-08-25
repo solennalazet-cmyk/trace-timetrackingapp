@@ -6,27 +6,86 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "./contexts/AuthContext";
 import { RoleProvider, useRole } from "./contexts/RoleContext";
 import { WeekStartProvider } from "./contexts/WeekStartContext";
+import { Button } from "@/components/ui/button";
 import AppLayout from "./components/AppLayout";
 import RoleChoiceOverlay from "./components/RoleChoiceOverlay";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { Component, lazy, Suspense, useEffect, useState, type ComponentType, type PropsWithChildren } from "react";
 import { applyColorTheme, getStoredColorTheme } from "./hooks/useColorTheme";
+import { clearChunkReloadMarker, isChunkLoadError, recoverFromChunkLoadError } from "./lib/chunk-recovery";
+
+const lazyWithChunkRecovery = <T extends ComponentType<any>>(loader: () => Promise<{ default: T }>) =>
+  lazy(() =>
+    loader()
+      .then((module) => {
+        clearChunkReloadMarker();
+        return module;
+      })
+      .catch((error) => {
+        if (recoverFromChunkLoadError(error)) {
+          return new Promise<never>(() => {});
+        }
+        throw error;
+      }),
+  );
+
+class RouteChunkErrorBoundary extends Component<PropsWithChildren, { error: unknown }> {
+  state = { error: null };
+
+  static getDerivedStateFromError(error: unknown) {
+    return { error };
+  }
+
+  componentDidCatch(error: unknown) {
+    console.error(error);
+  }
+
+  render() {
+    if (!this.state.error) return this.props.children;
+
+    const chunkError = isChunkLoadError(this.state.error);
+
+    return (
+      <div className="gradient-bg flex min-h-screen items-center justify-center px-4">
+        <div className="w-full max-w-sm rounded-xl border bg-card p-6 text-center shadow-lg">
+          <h1 className="text-xl font-semibold text-card-foreground">
+            {chunkError ? "Trace needs a refresh" : "Trace could not start"}
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
+            {chunkError
+              ? "The app updated while this screen was loading. Reload to pick up the newest version."
+              : "Reload the app. Your active timer data is kept locally."}
+          </p>
+          <Button
+            className="mt-5 w-full"
+            onClick={() => {
+              clearChunkReloadMarker();
+              window.location.reload();
+            }}
+          >
+            Reload Trace
+          </Button>
+        </div>
+      </div>
+    );
+  }
+}
 
 // Route-level code splitting — keeps the initial JS payload small for the
 // Android WebView cold start. Each page becomes its own chunk fetched on
 // navigation rather than parsed up front.
-const StartPage = lazy(() => import("./pages/StartPage"));
-const ReportsPage = lazy(() => import("./pages/ReportsPage"));
-const ClientsPage = lazy(() => import("./pages/ClientsPage"));
-const AccountProfilePage = lazy(() => import("./pages/AccountProfilePage"));
-const EmployerHomePage = lazy(() => import("./pages/EmployerHomePage"));
-const EmployerCalendarPage = lazy(() => import("./pages/EmployerCalendarPage"));
-const WorkersPage = lazy(() => import("./pages/WorkersPage"));
-const WorkerProfilePage = lazy(() => import("./pages/WorkerProfilePage"));
-const PaymentsPage = lazy(() => import("./pages/PaymentsPage"));
-const AccountPage = lazy(() => import("./pages/AccountPage"));
-const ResetPassword = lazy(() => import("./pages/ResetPassword"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
+const StartPage = lazyWithChunkRecovery(() => import("./pages/StartPage"));
+const ReportsPage = lazyWithChunkRecovery(() => import("./pages/ReportsPage"));
+const ClientsPage = lazyWithChunkRecovery(() => import("./pages/ClientsPage"));
+const AccountProfilePage = lazyWithChunkRecovery(() => import("./pages/AccountProfilePage"));
+const EmployerHomePage = lazyWithChunkRecovery(() => import("./pages/EmployerHomePage"));
+const EmployerCalendarPage = lazyWithChunkRecovery(() => import("./pages/EmployerCalendarPage"));
+const WorkersPage = lazyWithChunkRecovery(() => import("./pages/WorkersPage"));
+const WorkerProfilePage = lazyWithChunkRecovery(() => import("./pages/WorkerProfilePage"));
+const PaymentsPage = lazyWithChunkRecovery(() => import("./pages/PaymentsPage"));
+const AccountPage = lazyWithChunkRecovery(() => import("./pages/AccountPage"));
+const ResetPassword = lazyWithChunkRecovery(() => import("./pages/ResetPassword"));
+const NotFound = lazyWithChunkRecovery(() => import("./pages/NotFound"));
+const PrivacyPage = lazyWithChunkRecovery(() => import("./pages/PrivacyPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -131,26 +190,28 @@ const AppInner = () => {
     <WeekStartProvider value={weekStart}>
       <BrowserRouter>
         <RoleChoiceOverlay />
-        <Suspense fallback={<div className="min-h-screen" aria-hidden />}>
-          <Routes>
-            <Route element={<AppLayout />}>
-              <Route path="/" element={<RoleAwareHome />} />
-              <Route path="/reports" element={<RequireRole role="worker"><ReportsPage /></RequireRole>} />
-              <Route path="/timeline" element={<Navigate to="/reports" replace />} />
-              <Route path="/clients" element={<RequireRole role="worker"><ClientsPage /></RequireRole>} />
-              <Route path="/clients/:id" element={<RequireRole role="worker"><AccountProfilePage /></RequireRole>} />
-              <Route path="/employer" element={<RequireRole role="employer"><EmployerHomePage /></RequireRole>} />
-              <Route path="/employer/calendar" element={<RequireRole role="employer"><EmployerCalendarPage /></RequireRole>} />
-              <Route path="/workers" element={<RequireRole role="employer"><WorkersPage /></RequireRole>} />
-              <Route path="/workers/:id" element={<RequireRole role="employer"><WorkerProfilePage /></RequireRole>} />
-              <Route path="/payments" element={<PaymentsPage />} />
-              <Route path="/account" element={<AccountPage />} />
-            </Route>
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/privacy" element={<PrivacyPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
+        <RouteChunkErrorBoundary>
+          <Suspense fallback={<div className="min-h-screen" aria-hidden />}>
+            <Routes>
+              <Route element={<AppLayout />}>
+                <Route path="/" element={<RoleAwareHome />} />
+                <Route path="/reports" element={<RequireRole role="worker"><ReportsPage /></RequireRole>} />
+                <Route path="/timeline" element={<Navigate to="/reports" replace />} />
+                <Route path="/clients" element={<RequireRole role="worker"><ClientsPage /></RequireRole>} />
+                <Route path="/clients/:id" element={<RequireRole role="worker"><AccountProfilePage /></RequireRole>} />
+                <Route path="/employer" element={<RequireRole role="employer"><EmployerHomePage /></RequireRole>} />
+                <Route path="/employer/calendar" element={<RequireRole role="employer"><EmployerCalendarPage /></RequireRole>} />
+                <Route path="/workers" element={<RequireRole role="employer"><WorkersPage /></RequireRole>} />
+                <Route path="/workers/:id" element={<RequireRole role="employer"><WorkerProfilePage /></RequireRole>} />
+                <Route path="/payments" element={<PaymentsPage />} />
+                <Route path="/account" element={<AccountPage />} />
+              </Route>
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </RouteChunkErrorBoundary>
       </BrowserRouter>
     </WeekStartProvider>
   );

@@ -34,6 +34,8 @@ import {
 } from "@/lib/anonymous-store";
 import { toast } from "sonner";
 import { useAutoResolvedRate } from "@/hooks/useAutoResolvedRate";
+import { readAssignmentCache, writeAssignmentCache } from "@/lib/assignment-cache";
+
 import { parseDecimalInput, parsePositiveDecimalInput, sanitizeDecimalInput } from "@/lib/rate-utils";
 import { Plus, X } from "lucide-react";
 

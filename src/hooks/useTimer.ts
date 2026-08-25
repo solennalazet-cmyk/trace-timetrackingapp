@@ -34,7 +34,7 @@ const LS_KEYS: Record<string, string> = {
 };
 
 const RECENTLY_STOPPED_KEY = "trace_recently_stopped";
-const RECENTLY_STOPPED_TTL = 10_000; // 10 seconds
+const RECENTLY_STOPPED_TTL = 5 * 60_000; // 5 minutes — long enough for a slow delete + reload
 const AUTH_GAP_GRACE_MS = 30_000;
 
 function readLS(key: string): TimerState | null {
@@ -54,29 +54,47 @@ function clearLS(key: string) {
   localStorage.removeItem(key);
 }
 
-/** Persist a "recently stopped" marker for the given mode with a TTL */
-function markRecentlyStopped(mode: string) {
+/**
+ * Persist a "recently stopped" marker for the given mode, including the
+ * startedAt of the session that was just closed. Reconcile uses this to
+ * recognise and tear down a stale backend row instead of resurrecting a
+ * session the user explicitly ended — the most common cause of which is a
+ * failed/slow active_sessions delete followed by a reload.
+ */
+function markRecentlyStopped(mode: string, startedAt: string | null) {
   try {
     const existing = JSON.parse(localStorage.getItem(RECENTLY_STOPPED_KEY) || "{}");
-    existing[mode] = Date.now() + RECENTLY_STOPPED_TTL;
+    existing[mode] = { expires: Date.now() + RECENTLY_STOPPED_TTL, startedAt };
     localStorage.setItem(RECENTLY_STOPPED_KEY, JSON.stringify(existing));
-    console.log(`[useTimer] markRecentlyStopped: ${mode}, expires in ${RECENTLY_STOPPED_TTL}ms`);
+    console.log(`[useTimer] markRecentlyStopped: ${mode} (started=${startedAt}), expires in ${RECENTLY_STOPPED_TTL}ms`);
   } catch {}
 }
 
-/** Check if a mode was recently stopped (survives reloads) */
-function isRecentlyStopped(mode: string): boolean {
+/**
+ * Check if a mode was recently stopped. If `remoteStartedAt` is supplied and
+ * matches the stopped session's startedAt, this is the stale backend row from
+ * the session we just closed — caller should delete it, not restore it.
+ */
+function isRecentlyStopped(mode: string, remoteStartedAt?: string | null): boolean {
   try {
     const existing = JSON.parse(localStorage.getItem(RECENTLY_STOPPED_KEY) || "{}");
-    const expiry = existing[mode];
-    if (expiry && Date.now() < expiry) {
-      return true;
-    }
-    // Clean up expired entries
-    if (expiry) {
+    const entry = existing[mode];
+    if (!entry) return false;
+    const expires = typeof entry === "number" ? entry : entry.expires;
+    if (!expires || Date.now() >= expires) {
       delete existing[mode];
       localStorage.setItem(RECENTLY_STOPPED_KEY, JSON.stringify(existing));
+      return false;
     }
+    // Backwards-compat: old format was a bare timestamp (no startedAt).
+    if (typeof entry === "number") return true;
+    // If we know which session was stopped, only block restore when the
+    // backend row is THAT session. A new session started after the stop
+    // should be allowed to restore normally.
+    if (remoteStartedAt && entry.startedAt && remoteStartedAt !== entry.startedAt) {
+      return false;
+    }
+    return true;
   } catch {}
   return false;
 }

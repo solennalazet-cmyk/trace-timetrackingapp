@@ -3,11 +3,18 @@ import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
 import "./index.css";
 import { applyColorTheme, getStoredColorTheme } from "./hooks/useColorTheme";
+import { installChunkLoadRecovery } from "./lib/chunk-recovery";
+
+installChunkLoadRecovery();
 
 // Apply stored color theme immediately to avoid flash
 applyColorTheme(getStoredColorTheme());
 
-const rootEl = document.getElementById("root")!;
+const rootEl = document.getElementById("root");
+if (!rootEl) {
+  throw new Error("Trace could not find the app root.");
+}
+
 createRoot(rootEl).render(
   <HelmetProvider>
     <App />

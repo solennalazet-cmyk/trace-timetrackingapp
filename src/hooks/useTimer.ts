@@ -249,13 +249,17 @@ export function useTimer(mode: TimerMode) {
         return;
       }
 
-      // Auto-clean stale stopwatch sessions older than 18 hours. Shifts are
-      // preserved because legitimate work shifts can run long; the UI warns
-      // after 24h and lets the user choose when to clock out.
-      const STALE_MS = 18 * 60 * 60 * 1000;
+      // Auto-clean stale sessions so a crashed/closed device doesn't leave a
+      // phantom running timer that resurrects on the next login. Stopwatch
+      // sessions older than 18h are cleared; shifts can legitimately run long
+      // (night shifts, on-call) so they get a 48h threshold. The UI warns the
+      // user after 24h and lets them choose when to clock out.
+      const STALE_STOPWATCH_MS = 18 * 60 * 60 * 1000;
+      const STALE_SHIFT_MS = 48 * 60 * 60 * 1000;
       const startedMs = new Date(data.started_at).getTime();
-      if (data.session_type === sessionType && data.session_type !== "shift" && Date.now() - startedMs > STALE_MS) {
-        console.warn(`[useTimer] auto-cleaning stale ${data.session_type} session (>18h old)`);
+      const staleThreshold = data.session_type === "shift" ? STALE_SHIFT_MS : STALE_STOPWATCH_MS;
+      if (data.session_type === sessionType && Number.isFinite(startedMs) && Date.now() - startedMs > staleThreshold) {
+        console.warn(`[useTimer] auto-cleaning stale ${data.session_type} session (>${Math.round(staleThreshold / 3_600_000)}h old)`);
         await supabase.from("active_sessions").delete().eq("user_id", user.id);
         clearLS(lsKey);
         setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });

@@ -420,6 +420,38 @@ export function useTimer(mode: TimerMode) {
     };
   }, [user, authLoading, mode, lsKey]);
 
+  // Heartbeat: while a session is running, keep the server copy alive every
+  // 60s. If this device's localStorage gets evicted (iOS/PWA storage pressure,
+  // cache clear) the session can still be recovered from the backend instead
+  // of vanishing mid-shift.
+  useEffect(() => {
+    if (mode === "focus" || !user || !timerState.startedAt) return;
+    const sessionType = mode === "shift" ? "shift" : "stopwatch";
+    const beat = () => {
+      const current = readLS(lsKey);
+      if (!current?.startedAt || stoppingRef.current) return;
+      supabase
+        .from("active_sessions")
+        .upsert(
+          {
+            user_id: user.id,
+            session_type: sessionType,
+            started_at: current.startedAt,
+            paused_at: current.pausedAt,
+            total_paused_ms: current.totalPausedMs ?? 0,
+            pause_intervals: current.pauseIntervals ?? [],
+          } as any,
+          { onConflict: "user_id" }
+        )
+        .then(({ error }) => {
+          if (error) console.warn(`[useTimer] heartbeat failed for ${mode}`, error);
+        });
+    };
+    const id = setInterval(beat, 60_000);
+    return () => clearInterval(id);
+  }, [user, mode, lsKey, timerState.startedAt]);
+
+
 
   const start = useCallback(() => {
     const now = new Date().toISOString();

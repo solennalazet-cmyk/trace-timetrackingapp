@@ -357,7 +357,7 @@ export function useTimer(mode: TimerMode) {
             }
             const startedAtIso = lsState.startedAt;
             (async () => {
-              if (stoppingRef.current || isRecentlyStopped(mode)) return;
+              if (stoppingRef.current || isRecentlyStopped(mode, startedAtIso)) return;
               const { data: closed, error: closedError } = await supabase
                 .from("time_entries")
                 .select("id")

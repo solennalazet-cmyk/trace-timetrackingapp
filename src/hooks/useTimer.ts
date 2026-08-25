@@ -313,8 +313,10 @@ export function useTimer(mode: TimerMode) {
         return;
       }
 
-      // Re-check after async
-      if (isRecentlyStopped(mode) || stoppingRef.current) return;
+      // Re-check after async — guard against a stop that completed while we
+      // were waiting on the network. Pass the backend row's startedAt so a
+      // newly-started session is not blocked by an old stop marker.
+      if (isRecentlyStopped(mode, data.started_at) || stoppingRef.current) return;
 
       console.log(`[useTimer] active session restored from Supabase for ${mode}`);
       const supabaseState: TimerState = {

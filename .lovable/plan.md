@@ -24,9 +24,15 @@
 ### 4. Fallback states pass
 - Audit the main list surfaces (Reports, Clients, Workers, Payments, dashboard cards) for the three states: loading skeleton, empty message, and query-error message with a retry action. Add whichever is missing; no behaviour or data changes.
 
+### 5. Automate the Report Bug flow
+- **Auto-attach context:** `FeedbackModal` submissions include a `context` payload — last captured errors from the log, current route, role, plan, app version, browser/device, online status. Adds a `context jsonb` column to `user_feedback`.
+- **Notify the admin by email:** an edge function triggered on submit sends the report (message, type, user email, context) to the admin address. Requires a Resend API key and a verified sender domain.
+- **Fallback if email isn't set up yet:** the same data is readable in-app from an admin-only feedback inbox, so no report is missed while the domain is being verified.
+
 ## Notes
-- No dependency, schema, or data changes.
+- No dependency changes. One additive column on `user_feedback`; nothing else in the schema changes.
 - No blanket try/catch rewrite: error handling is added at the boundaries (global handlers, boundaries, query error states) rather than sprinkled through every function.
 
 ## Out of scope
-- Sending errors to a backend table or third-party service (can be added later if the local log proves useful).
+- Sending every runtime error to a backend table or third-party service (only user-submitted bug reports get sent).
+

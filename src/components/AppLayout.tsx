@@ -6,6 +6,8 @@ import DesktopSidebar from "./DesktopSidebar";
 import DesktopRightPanel from "./DesktopRightPanel";
 import EmployerRightPanel from "./EmployerRightPanel";
 import AuthModal from "./AuthModal";
+import AppErrorBoundary from "./AppErrorBoundary";
+
 import { useRole } from "@/contexts/RoleContext";
 
 const ReportsRightPanel = lazy(() => import("./ReportsRightPanel"));

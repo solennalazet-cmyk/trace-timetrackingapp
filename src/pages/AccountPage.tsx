@@ -254,7 +254,10 @@ const AccountPage = () => {
           )}
         </Card>
 
+        <DiagnosticsCard />
+
         {/* Danger zone */}
+
         <div className="pt-4">
           <Button
             variant="ghost"

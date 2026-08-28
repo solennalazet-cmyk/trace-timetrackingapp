@@ -6,7 +6,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "./contexts/AuthContext";
 import { RoleProvider, useRole } from "./contexts/RoleContext";
 import { WeekStartProvider } from "./contexts/WeekStartContext";
-import { Button } from "@/components/ui/button";
 import AppLayout from "./components/AppLayout";
 import RoleChoiceOverlay from "./components/RoleChoiceOverlay";
 import AppErrorBoundary from "./components/AppErrorBoundary";
@@ -150,7 +149,7 @@ const AppInner = () => {
     <WeekStartProvider value={weekStart}>
       <BrowserRouter>
         <RoleChoiceOverlay />
-        <RouteChunkErrorBoundary>
+        <AppErrorBoundary>
           <Suspense fallback={<div className="min-h-screen" aria-hidden />}>
             <Routes>
               <Route element={<AppLayout />}>
@@ -171,7 +170,7 @@ const AppInner = () => {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
-        </RouteChunkErrorBoundary>
+        </AppErrorBoundary>
       </BrowserRouter>
     </WeekStartProvider>
   );

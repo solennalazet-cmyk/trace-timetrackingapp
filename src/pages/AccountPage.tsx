@@ -16,6 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { redirectToCheckout, redirectToPortal } from "@/lib/stripe";
 import Seo from "@/components/Seo";
+import DiagnosticsCard from "@/components/DiagnosticsCard";
+
 
 type EditorKind = "profile" | "billing" | null;
 

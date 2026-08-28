@@ -18,6 +18,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { getDiagnosticsContext } from "@/lib/error-log";
+
 
 interface FeedbackModalProps {
   open: boolean;

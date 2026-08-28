@@ -35,17 +35,32 @@ const FeedbackModal = ({ open, onOpenChange }: FeedbackModalProps) => {
     if (!message.trim()) return;
 
     setLoading(true);
-    await supabase.from("user_feedback").insert({
+    // Attach technical context automatically so bug reports arrive with the
+    // recent runtime errors, screen and device info already included.
+    const context = getDiagnosticsContext({
+      userEmail: user?.email ?? null,
+      appVersion: (import.meta as any).env?.MODE ?? "production",
+    });
+
+    const { error } = await supabase.from("user_feedback").insert({
       user_id: user?.id ?? null,
       type,
       message: message.trim(),
+      context: context as any,
     });
+
+    setLoading(false);
+
+    if (error) {
+      toast.error("Could not send — check your connection and try again.");
+      return;
+    }
 
     toast.success("Thanks — we read every message.");
     setMessage("");
-    setLoading(false);
     onOpenChange(false);
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

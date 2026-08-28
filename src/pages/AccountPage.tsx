@@ -16,6 +16,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { redirectToCheckout, redirectToPortal } from "@/lib/stripe";
 import Seo from "@/components/Seo";
+import DiagnosticsCard from "@/components/DiagnosticsCard";
+import FeedbackInboxCard from "@/components/FeedbackInboxCard";
+
 
 type EditorKind = "profile" | "billing" | null;
 
@@ -254,7 +257,11 @@ const AccountPage = () => {
           )}
         </Card>
 
+        <FeedbackInboxCard />
+        <DiagnosticsCard />
+
         {/* Danger zone */}
+
         <div className="pt-4">
           <Button
             variant="ghost"

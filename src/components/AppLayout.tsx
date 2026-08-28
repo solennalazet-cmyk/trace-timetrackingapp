@@ -6,6 +6,8 @@ import DesktopSidebar from "./DesktopSidebar";
 import DesktopRightPanel from "./DesktopRightPanel";
 import EmployerRightPanel from "./EmployerRightPanel";
 import AuthModal from "./AuthModal";
+import AppErrorBoundary from "./AppErrorBoundary";
+
 import { useRole } from "@/contexts/RoleContext";
 
 const ReportsRightPanel = lazy(() => import("./ReportsRightPanel"));
@@ -31,7 +33,9 @@ const AppLayout = () => {
           <div className="pt-14 lg:pt-0">
             <main className="pb-20 px-4 lg:pb-8 lg:px-8 lg:pt-20 lg:flex lg:flex-col lg:items-center">
               <div className="w-full lg:max-w-[480px]">
-                <Outlet />
+                <AppErrorBoundary variant="inline" label="this screen">
+                  <Outlet />
+                </AppErrorBoundary>
               </div>
             </main>
           </div>
@@ -42,11 +46,14 @@ const AppLayout = () => {
           </div>
         </div>
 
-        {isReports ? (
-          <Suspense fallback={<div className="hidden lg:block" aria-hidden />}>
-            <ReportsRightPanel />
-          </Suspense>
-        ) : activeRole === "employer" ? <EmployerRightPanel /> : <DesktopRightPanel />}
+        <AppErrorBoundary variant="inline" label="this panel">
+          {isReports ? (
+            <Suspense fallback={<div className="hidden lg:block" aria-hidden />}>
+              <ReportsRightPanel />
+            </Suspense>
+          ) : activeRole === "employer" ? <EmployerRightPanel /> : <DesktopRightPanel />}
+        </AppErrorBoundary>
+
       </div>
       <AuthModal open={authOpen} onOpenChange={setAuthOpen} />
     </div>

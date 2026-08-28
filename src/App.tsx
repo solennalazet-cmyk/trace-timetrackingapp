@@ -6,12 +6,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "./contexts/AuthContext";
 import { RoleProvider, useRole } from "./contexts/RoleContext";
 import { WeekStartProvider } from "./contexts/WeekStartContext";
-import { Button } from "@/components/ui/button";
 import AppLayout from "./components/AppLayout";
 import RoleChoiceOverlay from "./components/RoleChoiceOverlay";
-import { Component, lazy, Suspense, useEffect, useState, type ComponentType, type PropsWithChildren } from "react";
+import AppErrorBoundary from "./components/AppErrorBoundary";
+import { lazy, Suspense, useEffect, useState, type ComponentType } from "react";
 import { applyColorTheme, getStoredColorTheme } from "./hooks/useColorTheme";
-import { clearChunkReloadMarker, isChunkLoadError, recoverFromChunkLoadError } from "./lib/chunk-recovery";
+import { clearChunkReloadMarker, recoverFromChunkLoadError } from "./lib/chunk-recovery";
 
 const lazyWithChunkRecovery = <T extends ComponentType<any>>(loader: () => Promise<{ default: T }>) =>
   lazy(() =>
@@ -28,47 +28,6 @@ const lazyWithChunkRecovery = <T extends ComponentType<any>>(loader: () => Promi
       }),
   );
 
-class RouteChunkErrorBoundary extends Component<PropsWithChildren, { error: unknown }> {
-  state = { error: null };
-
-  static getDerivedStateFromError(error: unknown) {
-    return { error };
-  }
-
-  componentDidCatch(error: unknown) {
-    console.error(error);
-  }
-
-  render() {
-    if (!this.state.error) return this.props.children;
-
-    const chunkError = isChunkLoadError(this.state.error);
-
-    return (
-      <div className="gradient-bg flex min-h-screen items-center justify-center px-4">
-        <div className="w-full max-w-sm rounded-xl border bg-card p-6 text-center shadow-lg">
-          <h1 className="text-xl font-semibold text-card-foreground">
-            {chunkError ? "Trace needs a refresh" : "Trace could not start"}
-          </h1>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">
-            {chunkError
-              ? "The app updated while this screen was loading. Reload to pick up the newest version."
-              : "Reload the app. Your active timer data is kept locally."}
-          </p>
-          <Button
-            className="mt-5 w-full"
-            onClick={() => {
-              clearChunkReloadMarker();
-              window.location.reload();
-            }}
-          >
-            Reload Trace
-          </Button>
-        </div>
-      </div>
-    );
-  }
-}
 
 // Route-level code splitting — keeps the initial JS payload small for the
 // Android WebView cold start. Each page becomes its own chunk fetched on
@@ -190,7 +149,7 @@ const AppInner = () => {
     <WeekStartProvider value={weekStart}>
       <BrowserRouter>
         <RoleChoiceOverlay />
-        <RouteChunkErrorBoundary>
+        <AppErrorBoundary>
           <Suspense fallback={<div className="min-h-screen" aria-hidden />}>
             <Routes>
               <Route element={<AppLayout />}>
@@ -211,7 +170,7 @@ const AppInner = () => {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
-        </RouteChunkErrorBoundary>
+        </AppErrorBoundary>
       </BrowserRouter>
     </WeekStartProvider>
   );

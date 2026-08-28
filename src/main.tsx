@@ -4,8 +4,11 @@ import App from "./App.tsx";
 import "./index.css";
 import { applyColorTheme, getStoredColorTheme } from "./hooks/useColorTheme";
 import { installChunkLoadRecovery } from "./lib/chunk-recovery";
+import { installGlobalErrorCapture } from "./lib/error-log";
 
 installChunkLoadRecovery();
+installGlobalErrorCapture();
+
 
 // Apply stored color theme immediately to avoid flash
 applyColorTheme(getStoredColorTheme());

@@ -623,6 +623,7 @@ export type Database = {
       }
       user_feedback: {
         Row: {
+          context: Json | null
           created_at: string | null
           id: string
           message: string
@@ -630,6 +631,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          context?: Json | null
           created_at?: string | null
           id?: string
           message: string
@@ -637,6 +639,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          context?: Json | null
           created_at?: string | null
           id?: string
           message?: string

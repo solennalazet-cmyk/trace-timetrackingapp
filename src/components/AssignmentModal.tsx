@@ -448,7 +448,32 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     if (saving) return;
     setSaving(true);
     try {
-      const normalizedRate = parsePositiveDecimalInput(rateAmount);
+      let normalizedRate = parsePositiveDecimalInput(rateAmount);
+      let effectiveRateCurrency = rateCurrency;
+      let effectiveRateUnit = rateUnit;
+
+      // Safety net: the rate is normally auto-resolved asynchronously. If that
+      // lookup hasn't landed (slow/offline network, fast save), fall back to the
+      // project/client rate we already hold in memory so the entry is never
+      // saved as billable-with-no-rate (which silently bills €0).
+      if (billable && normalizedRate == null) {
+        const selectedProject = allProjectsFull.find((p) => p.id === projectId);
+        const selectedClient = clientsFull.find((c) => c.id === clientId);
+        const fallback =
+          selectedProject?.rate != null
+            ? { amount: selectedProject.rate, currency: selectedProject.currency ?? selectedClient?.currency ?? rateCurrency }
+            : selectedClient?.default_rate != null
+              ? { amount: selectedClient.default_rate, currency: selectedClient.currency ?? rateCurrency }
+              : null;
+        if (fallback) {
+          normalizedRate = fallback.amount;
+          effectiveRateCurrency = fallback.currency;
+          effectiveRateUnit = "hour";
+          setRateAmount(String(fallback.amount));
+          setRateCurrency(fallback.currency);
+        }
+      }
+
 
 
       // Persist the rate on the client so it auto-fills next time.

@@ -689,7 +689,7 @@ const PrepareBillingSheet = ({
             )}
 
             {/* Summary block */}
-            <div className="rounded-xl bg-muted/50 p-4 space-y-2">
+            <div className={cn("rounded-xl bg-muted/50 p-4 space-y-2 transition-opacity", fetchingEntries && "opacity-50")}>
               <div>
                 <p className="text-2xl font-bold font-mono text-foreground">{sym}{billableValue.toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground">Amount due</p>

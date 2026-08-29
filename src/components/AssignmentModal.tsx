@@ -362,14 +362,8 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
   if (!session) return null;
 
-  const calcBillableValue = (): number | null => {
-    const amount = parseDecimalInput(rateAmount);
-    if (!billable || amount == null) return null;
-    if (rateUnit === "hour") return (session.durationMinutes / 60) * amount;
-    if (rateUnit === "project") return amount;
-    if (rateUnit === "word") return amount;
-    return null;
-  };
+
+
 
   const handleCreateClient = async (name: string): Promise<ComboboxItem | null> => {
     if (user) {

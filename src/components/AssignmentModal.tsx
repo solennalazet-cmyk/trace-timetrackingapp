@@ -362,14 +362,8 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
   if (!session) return null;
 
-  const calcBillableValue = (): number | null => {
-    const amount = parseDecimalInput(rateAmount);
-    if (!billable || amount == null) return null;
-    if (rateUnit === "hour") return (session.durationMinutes / 60) * amount;
-    if (rateUnit === "project") return amount;
-    if (rateUnit === "word") return amount;
-    return null;
-  };
+
+
 
   const handleCreateClient = async (name: string): Promise<ComboboxItem | null> => {
     if (user) {
@@ -448,7 +442,32 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     if (saving) return;
     setSaving(true);
     try {
-      const normalizedRate = parsePositiveDecimalInput(rateAmount);
+      let normalizedRate = parsePositiveDecimalInput(rateAmount);
+      let effectiveRateCurrency = rateCurrency;
+      let effectiveRateUnit = rateUnit;
+
+      // Safety net: the rate is normally auto-resolved asynchronously. If that
+      // lookup hasn't landed (slow/offline network, fast save), fall back to the
+      // project/client rate we already hold in memory so the entry is never
+      // saved as billable-with-no-rate (which silently bills €0).
+      if (billable && normalizedRate == null) {
+        const selectedProject = allProjectsFull.find((p) => p.id === projectId);
+        const selectedClient = clientsFull.find((c) => c.id === clientId);
+        const fallback =
+          selectedProject?.rate != null
+            ? { amount: selectedProject.rate, currency: selectedProject.currency ?? selectedClient?.currency ?? rateCurrency }
+            : selectedClient?.default_rate != null
+              ? { amount: selectedClient.default_rate, currency: selectedClient.currency ?? rateCurrency }
+              : null;
+        if (fallback) {
+          normalizedRate = fallback.amount;
+          effectiveRateCurrency = fallback.currency;
+          effectiveRateUnit = "hour";
+          setRateAmount(String(fallback.amount));
+          setRateCurrency(fallback.currency);
+        }
+      }
+
 
 
       // Persist the rate on the client so it auto-fills next time.
@@ -457,7 +476,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
         user?.id &&
         clientId &&
         normalizedRate != null &&
-        rateUnit === "hour"
+        effectiveRateUnit === "hour"
       ) {
         const existing = clientsFull.find((c) => c.id === clientId);
         // Only auto-populate the client's default rate when none has been set yet.
@@ -465,14 +484,14 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
         if (existing && existing.default_rate == null) {
           supabase
             .from("clients")
-            .update({ default_rate: normalizedRate, currency: rateCurrency })
+            .update({ default_rate: normalizedRate, currency: effectiveRateCurrency })
             .eq("id", clientId)
             .eq("user_id", user.id)
             .then(() => {});
           setClientsFull((prev) =>
             prev.map((c) =>
               c.id === clientId
-                ? { ...c, default_rate: normalizedRate, currency: rateCurrency }
+                ? { ...c, default_rate: normalizedRate, currency: effectiveRateCurrency }
                 : c
             )
           );
@@ -486,8 +505,8 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
         tags,
         billable,
         rateAmount: normalizedRate,
-        rateCurrency,
-        rateUnit,
+        rateCurrency: effectiveRateCurrency,
+        rateUnit: effectiveRateUnit,
       };
 
 
@@ -510,7 +529,13 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
         });
         await onSaveMulti(session, assignments);
       } else {
-        const billableValue = calcBillableValue();
+        const billableValue =
+          !billable || normalizedRate == null
+            ? null
+            : effectiveRateUnit === "hour"
+              ? (session.durationMinutes / 60) * normalizedRate
+              : normalizedRate;
+
         await onSave(session, {
           ...baseAssignment,
           taskId: taskId || null,

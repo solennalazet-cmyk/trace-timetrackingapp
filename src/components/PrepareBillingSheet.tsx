@@ -20,6 +20,8 @@ import type { TimeEntry } from "@/components/EntryDetailSheet";
 import ExportColumnsPicker from "@/components/ExportColumnsPicker";
 import { type ExportColumnKey, resolveExportColumns, EXPORT_COLUMN_OPTIONS } from "@/lib/export-columns";
 import { cn, toLocalDateKey } from "@/lib/utils";
+import { buildProjectClientMap, enrichEntryAssignment } from "@/lib/entry-assignment";
+
 import DateRangePicker from "@/components/DateRangePicker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";

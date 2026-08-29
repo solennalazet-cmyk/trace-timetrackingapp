@@ -89,13 +89,40 @@ const ExportDialog = ({
   const rangeStart = toLocalDateKey(exportFrom);
   const rangeEnd = toLocalDateKey(exportTo);
 
+  // The parent page only loads entries for ITS range, so a wider range picked
+  // here would silently show the same totals. Fetch the picked range directly.
+  const [fetchedEntries, setFetchedEntries] = useState<TimeEntry[] | null>(null);
+
+  useEffect(() => {
+    if (!open || !user) { setFetchedEntries(null); return; }
+    let cancelled = false;
+    (async () => {
+      const entrySelect = "id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, billable_value, client_id, project_id, task_id, billing_status, start_time, end_time, pause_intervals, start_lat, start_lng, start_accuracy_m, start_on_site, start_distance_m, end_lat, end_lng, end_accuracy_m, end_on_site, end_distance_m";
+      const [{ data: rows }, { data: pr }] = await Promise.all([
+        supabase.from("time_entries").select(entrySelect)
+          .eq("user_id", user.id).gte("entry_date", rangeStart).lte("entry_date", rangeEnd)
+          .is("deleted_at", null).order("entry_date", { ascending: false }),
+        supabase.from("projects").select("id, name, client_id").eq("user_id", user.id),
+      ]);
+      if (cancelled) return;
+      const pcm = buildProjectClientMap((pr ?? []) as { id: string; client_id: string | null }[]);
+      const enriched = ((rows ?? []) as any[]).map((e) =>
+        enrichEntryAssignment(e, clients, projects, tasks, pcm),
+      ) as TimeEntry[];
+      setFetchedEntries(enriched);
+    })();
+    return () => { cancelled = true; };
+  }, [open, user, rangeStart, rangeEnd, clients, projects, tasks]);
+
   const filteredEntries = useMemo(() => {
-    return entries.filter((e) => {
+    const source = fetchedEntries ?? entries;
+    return source.filter((e) => {
       const inRange = (e.entry_date ?? "") >= rangeStart && (e.entry_date ?? "") <= rangeEnd;
       const matchesClient = selectedClient === "all" || e.client_id === selectedClient;
       return inRange && matchesClient;
     });
-  }, [entries, rangeStart, rangeEnd, selectedClient]);
+  }, [fetchedEntries, entries, rangeStart, rangeEnd, selectedClient]);
+
 
   // Scope-aware helpers
   const ev = (e: TimeEntry) => entryDisplayValues(e, rounding);

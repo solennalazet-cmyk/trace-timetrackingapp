@@ -482,7 +482,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
         user?.id &&
         clientId &&
         normalizedRate != null &&
-        rateUnit === "hour"
+        effectiveRateUnit === "hour"
       ) {
         const existing = clientsFull.find((c) => c.id === clientId);
         // Only auto-populate the client's default rate when none has been set yet.
@@ -490,14 +490,14 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
         if (existing && existing.default_rate == null) {
           supabase
             .from("clients")
-            .update({ default_rate: normalizedRate, currency: rateCurrency })
+            .update({ default_rate: normalizedRate, currency: effectiveRateCurrency })
             .eq("id", clientId)
             .eq("user_id", user.id)
             .then(() => {});
           setClientsFull((prev) =>
             prev.map((c) =>
               c.id === clientId
-                ? { ...c, default_rate: normalizedRate, currency: rateCurrency }
+                ? { ...c, default_rate: normalizedRate, currency: effectiveRateCurrency }
                 : c
             )
           );
@@ -511,8 +511,8 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
         tags,
         billable,
         rateAmount: normalizedRate,
-        rateCurrency,
-        rateUnit,
+        rateCurrency: effectiveRateCurrency,
+        rateUnit: effectiveRateUnit,
       };
 
 
@@ -535,7 +535,13 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
         });
         await onSaveMulti(session, assignments);
       } else {
-        const billableValue = calcBillableValue();
+        const billableValue =
+          !billable || normalizedRate == null
+            ? null
+            : effectiveRateUnit === "hour"
+              ? (session.durationMinutes / 60) * normalizedRate
+              : normalizedRate;
+
         await onSave(session, {
           ...baseAssignment,
           taskId: taskId || null,

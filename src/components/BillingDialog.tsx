@@ -98,15 +98,18 @@ const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUN
 
       setClientsData(data);
 
-      // If preselected, auto-select and skip to step 2
+      // If preselected, auto-select and skip past client selection.
       if (preselectedClientId && data.some((c) => c.id === preselectedClientId)) {
-        setSelectedClients(new Set([preselectedClientId]));
-        setStep(2);
-      } else {
-        setStep(1);
+        setSelectedClients((prev) => (prev.size > 0 ? prev : new Set([preselectedClientId])));
       }
     })();
-  }, [open, user]);
+  }, [open, user, dateFrom, dateTo, preselectedClientId, rounding]);
+
+  useEffect(() => {
+    if (!open) return;
+    setStep(preselectedClientId ? 2 : 1);
+  }, [open, preselectedClientId]);
+
 
   const toggleClient = (id: string) => {
     setSelectedClients((prev) => {

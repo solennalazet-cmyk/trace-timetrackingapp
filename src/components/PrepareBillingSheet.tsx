@@ -20,6 +20,8 @@ import type { TimeEntry } from "@/components/EntryDetailSheet";
 import ExportColumnsPicker from "@/components/ExportColumnsPicker";
 import { type ExportColumnKey, resolveExportColumns, EXPORT_COLUMN_OPTIONS } from "@/lib/export-columns";
 import { cn, toLocalDateKey } from "@/lib/utils";
+import { buildProjectClientMap, enrichEntryAssignment } from "@/lib/entry-assignment";
+
 import DateRangePicker from "@/components/DateRangePicker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -91,15 +93,51 @@ const PrepareBillingSheet = ({
   const clientName = pickerMode ? (pickedClient?.name ?? "Select a client") : propClientName;
   const clientCurrency = pickerMode ? (pickedClient?.currency ?? propClientCurrency) : propClientCurrency;
 
+  // In picker mode the user can pick ANY date range — including dates outside
+  // the range the parent page loaded. Fetch straight from the backend for the
+  // picked client + range so the totals always match the chosen period.
+  const [fetchedEntries, setFetchedEntries] = useState<TimeEntry[] | null>(null);
+  const [fetchingEntries, setFetchingEntries] = useState(false);
+  const fromKey = toLocalDateKey(dateFrom);
+  const toKey = toLocalDateKey(dateTo);
+
+  useEffect(() => {
+    if (!pickerMode || !open || !user || !clientId) { setFetchedEntries(null); return; }
+    let cancelled = false;
+    setFetchingEntries(true);
+    (async () => {
+      const entrySelect = "id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, billable_value, client_id, project_id, task_id, billing_status, start_time, end_time, pause_intervals, start_lat, start_lng, start_accuracy_m, start_on_site, start_distance_m, end_lat, end_lng, end_accuracy_m, end_on_site, end_distance_m";
+      const [{ data: rows }, { data: cl }, { data: pr }, { data: tk }] = await Promise.all([
+        supabase.from("time_entries").select(entrySelect)
+          .eq("user_id", user.id).gte("entry_date", fromKey).lte("entry_date", toKey)
+          .is("deleted_at", null).order("entry_date", { ascending: false }),
+        supabase.from("clients").select("id, name").eq("user_id", user.id),
+        supabase.from("projects").select("id, name, client_id").eq("user_id", user.id),
+        supabase.from("tasks").select("id, name").eq("user_id", user.id),
+      ]);
+      if (cancelled) return;
+      const cm: Record<string, string> = {}; cl?.forEach((x: any) => { cm[x.id] = x.name; });
+      const pm: Record<string, string> = {}; pr?.forEach((x: any) => { pm[x.id] = x.name; });
+      const tm: Record<string, string> = {}; tk?.forEach((x: any) => { tm[x.id] = x.name; });
+      const pcm = buildProjectClientMap((pr ?? []) as { id: string; client_id: string | null }[]);
+      const enriched = ((rows ?? []) as any[])
+        .map((e) => enrichEntryAssignment(e, cm, pm, tm, pcm))
+        .filter((e) => e.client_id === clientId) as TimeEntry[];
+      setFetchedEntries(enriched);
+      setFetchingEntries(false);
+    })();
+    return () => { cancelled = true; };
+  }, [pickerMode, open, user, clientId, fromKey, toKey]);
+
   const entries = useMemo(() => {
     if (!pickerMode) return propEntries;
     if (!clientId) return [];
-    const fromKey = toLocalDateKey(dateFrom);
-    const toKey = toLocalDateKey(dateTo);
+    if (fetchedEntries) return fetchedEntries;
     return allEntries.filter(
       (e) => e.client_id === clientId && (e.entry_date ?? "") >= fromKey && (e.entry_date ?? "") <= toKey,
     );
-  }, [pickerMode, propEntries, allEntries, clientId, dateFrom, dateTo]);
+  }, [pickerMode, propEntries, allEntries, clientId, fromKey, toKey, fetchedEntries]);
+
 
   const [showBilledPrompt, setShowBilledPrompt] = useState(false);
   const [markingBilled, setMarkingBilled] = useState(false);
@@ -653,7 +691,7 @@ const PrepareBillingSheet = ({
             )}
 
             {/* Summary block */}
-            <div className="rounded-xl bg-muted/50 p-4 space-y-2">
+            <div className={cn("rounded-xl bg-muted/50 p-4 space-y-2 transition-opacity", fetchingEntries && "opacity-50")}>
               <div>
                 <p className="text-2xl font-bold font-mono text-foreground">{sym}{billableValue.toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground">Amount due</p>

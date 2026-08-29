@@ -50,13 +50,22 @@ const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUN
     setSelectedClients(new Set());
     setDateFrom(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
     setDateTo(new Date());
+  }, [open, user]);
 
-    // Load clients with unbilled entries
+  useEffect(() => {
+    if (!open || !user) return;
+
+    // Load clients with unbilled entries inside the picked period so the
+    // review totals always match the selected date range.
     (async () => {
+      const fromStr = format(dateFrom, "yyyy-MM-dd");
+      const toStr = format(dateTo, "yyyy-MM-dd");
       const { data: clients } = await supabase.from("clients").select("id, name, currency").eq("user_id", user.id);
       const { data: entries } = await supabase.from("time_entries")
         .select("client_id, duration_minutes, billable_value, rate_amount, rate_unit, billable")
-        .eq("user_id", user.id).eq("billing_status", "unbilled").not("client_id", "is", null).is("deleted_at", null);
+        .eq("user_id", user.id).eq("billing_status", "unbilled").not("client_id", "is", null).is("deleted_at", null)
+        .gte("entry_date", fromStr).lte("entry_date", toStr);
+
 
       // Group entries by client
       const grouped: Record<string, typeof entries> = {};
@@ -89,15 +98,18 @@ const BillingDialog = ({ open, onOpenChange, onComplete, rounding = DEFAULT_ROUN
 
       setClientsData(data);
 
-      // If preselected, auto-select and skip to step 2
+      // If preselected, auto-select and skip past client selection.
       if (preselectedClientId && data.some((c) => c.id === preselectedClientId)) {
-        setSelectedClients(new Set([preselectedClientId]));
-        setStep(2);
-      } else {
-        setStep(1);
+        setSelectedClients((prev) => (prev.size > 0 ? prev : new Set([preselectedClientId])));
       }
     })();
-  }, [open, user]);
+  }, [open, user, dateFrom, dateTo, preselectedClientId, rounding]);
+
+  useEffect(() => {
+    if (!open) return;
+    setStep(preselectedClientId ? 2 : 1);
+  }, [open, preselectedClientId]);
+
 
   const toggleClient = (id: string) => {
     setSelectedClients((prev) => {

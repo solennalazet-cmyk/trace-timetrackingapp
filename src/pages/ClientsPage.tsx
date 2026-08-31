@@ -322,7 +322,12 @@ const ClientsPage = () => {
   const sym = (currency: string | null) => CURRENCY_SYMBOLS[currency ?? "EUR"] ?? "€";
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-[60vh] text-muted-foreground text-sm">Loading…</div>;
+    return (
+      <div className="flex items-center justify-center gap-2 min-h-[60vh] text-muted-foreground text-sm">
+        <span>Loading</span>
+        <InlineDots />
+      </div>
+    );
   }
 
   return (

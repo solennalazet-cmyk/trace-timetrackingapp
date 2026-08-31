@@ -190,9 +190,15 @@ const MobileSelectSheet = ({
           style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
         >
           {filtered.length === 0 && !showAddOption && (
-            <div className="py-8 text-center text-sm text-muted-foreground">
-              {items.length === 0 ? "Type to add new" : "No results"}
-            </div>
+            loading ? (
+              <div className="py-8 flex justify-center">
+                <InlineDots label={`Loading ${title}`} />
+              </div>
+            ) : (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                {items.length === 0 ? "Type to add new" : "No results"}
+              </div>
+            )
           )}
 
           {/* Add option — singleton button, safe to bypass the keyboard-shift

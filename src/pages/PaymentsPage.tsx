@@ -83,6 +83,8 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [openReportId, setOpenReportId] = useState<string | null>(null);
   const [showInactive, setShowInactive] = useState(false);
+  const [showPerFreelancer, setShowPerFreelancer] = useState(false);
+
 
   // Per-group payment entry state
   const [draftAmount, setDraftAmount] = useState<string>("");
@@ -394,14 +396,18 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
             return (
               <Card className="p-4 rounded-2xl shadow-sm space-y-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Total wages</p>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Wallet className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <span className="text-base font-bold tracking-tight">Total wages</span>
+                    </div>
                     <p className="text-2xl font-mono font-bold text-foreground mt-1">{totalSym}{overallTotals.due.toFixed(2)}</p>
                   </div>
-                  <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
+                  <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground shrink-0">
                     {selectedWorkerName}
                   </span>
                 </div>
+
                 <div className="grid grid-cols-3 gap-2">
                   <div>
                     <p className="text-sm font-mono font-semibold text-foreground">{totalSym}{overallTotals.due.toFixed(2)}</p>
@@ -425,7 +431,16 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
             );
           })()}
 
-          {isEmployer && selectedWorker === "all" && <h2 className="px-1 text-sm font-semibold">Per freelancer</h2>}
+          {isEmployer && selectedWorker === "all" && (
+            <button
+              type="button"
+              onClick={() => setShowPerFreelancer((v) => !v)}
+              className="w-full flex items-center justify-between px-1 py-2 text-sm font-semibold"
+            >
+              <span>Per freelancer</span>
+              <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${showPerFreelancer ? "rotate-90" : ""}`} />
+            </button>
+          )}
 
           {(() => {
             // In employer "All freelancers" view, hide freelancers with no
@@ -434,10 +449,12 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
             // approved, or paid. A "Show inactive" toggle reveals the rest
             // without ever deleting them.
             const splittable = isEmployer && selectedWorker === "all";
+            if (splittable && !showPerFreelancer) return null;
             const activeGroups = splittable ? filteredGroups.filter(([, rows]) => rows.length > 0) : filteredGroups;
             const inactiveGroups = splittable ? filteredGroups.filter(([, rows]) => rows.length === 0) : [];
             const visibleGroups = showInactive ? [...activeGroups, ...inactiveGroups] : activeGroups;
             return <>
+
           {visibleGroups.map(([key, rows]) => {
             const t = computeGroupTotals(rows);
             const sym = CURRENCY_SYMBOLS[t.currency] ?? "€";

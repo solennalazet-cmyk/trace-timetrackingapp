@@ -185,10 +185,6 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
         </div>
       </div>
 
-      {/* Payments — full set of cards migrated from the standalone /payments page */}
-      <PaymentsPage embedded selectedWorker={selectedWorker} />
-
-
       {/* Work pattern — weekly averages, actionable stats, tap-to-scope weeks */}
       <WorkPatternCard
         reports={reports}
@@ -199,6 +195,10 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
         onSelectWorker={setSelectedWorker}
         defaultOpen={breaksDefaultOpen}
       />
+
+      {/* Payments — full set of cards migrated from the standalone /payments page */}
+      <PaymentsPage embedded selectedWorker={selectedWorker} />
+
     </section>
   );
 };

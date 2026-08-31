@@ -665,6 +665,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                 displayValue={clientName}
                 placeholder="Select client (optional)"
                 label="Client"
+                loading={loadingData && clients.length === 0}
                 scrollContainerRef={scrollAreaRef}
                 onSelect={(id, name) => {
                   handleClientSelection(id, name);

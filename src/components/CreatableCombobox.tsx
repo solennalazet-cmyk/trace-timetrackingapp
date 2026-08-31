@@ -30,6 +30,7 @@ const CreatableCombobox = ({
   onSelect,
   onCreate,
   scrollContainerRef,
+  loading = false,
 }: CreatableComboboxProps) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");

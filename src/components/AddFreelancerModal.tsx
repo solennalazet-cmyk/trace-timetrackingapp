@@ -24,6 +24,12 @@ interface Props {
   onCreate: (payload: NewFreelancerPayload) => Promise<void>;
 }
 
+const todayKey = () => {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+
 const empty = {
   name: "",
   role: "",
@@ -55,13 +61,13 @@ const AddFreelancerModal = ({ open, onOpenChange, onCreate }: Props) => {
   const [v, setV] = useState(empty);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { if (open) { setV(empty); setBusy(false); } }, [open]);
+  useEffect(() => { if (open) { setV({ ...empty, engagement_start_date: todayKey() }); setBusy(false); } }, [open]);
 
   const set = (k: keyof typeof empty, val: string) => setV((p) => ({ ...p, [k]: val }));
 
   const submit = async () => {
     const name = v.name.trim();
-    if (!name || busy) return;
+    if (!name || !v.engagement_start_date || busy) return;
     setBusy(true);
     try {
       await onCreate({
@@ -170,7 +176,7 @@ const AddFreelancerModal = ({ open, onOpenChange, onCreate }: Props) => {
           <Button variant="outline" className="flex-1 rounded-xl h-11" onClick={() => onOpenChange(false)} disabled={busy}>
             Cancel
           </Button>
-          <Button className="flex-1 rounded-xl h-11" onClick={submit} disabled={!v.name.trim() || busy}>
+          <Button className="flex-1 rounded-xl h-11" onClick={submit} disabled={!v.name.trim() || !v.engagement_start_date || busy}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create profile"}
           </Button>
         </div>

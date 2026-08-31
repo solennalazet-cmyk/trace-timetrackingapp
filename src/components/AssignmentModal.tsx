@@ -144,6 +144,10 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
   const [saving, setSaving] = useState(false);
   const [taskList, setTaskList] = useState<TaskItem[]>([]);
   const [hasUserChangedSelection, setHasUserChangedSelection] = useState(false);
+  // True while the backend refresh of clients/projects/tasks is in flight.
+  // Used to show the inline "typing dots" loader inside each combobox when its
+  // list is still empty (no cached suggestions to paint yet).
+  const [loadingData, setLoadingData] = useState(false);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -172,6 +176,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
   })();
 
   const loadData = useCallback(async () => {
+    setLoadingData(true);
     if (user) {
       const [{ data: c }, { data: p }, { data: t }, { data: tagEntries }] = await Promise.all([
         supabase.from("clients").select("id, name, default_rate, currency").eq("user_id", user.id),
@@ -211,6 +216,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
       setTasks(at.map((t: any) => ({ id: t.id, name: t.name, project_id: t.project_id ?? null, client_id: t.client_id ?? null })));
       setAllTags([]);
     }
+    setLoadingData(false);
   }, [user]);
 
 
@@ -659,6 +665,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                 displayValue={clientName}
                 placeholder="Select client (optional)"
                 label="Client"
+                loading={loadingData && clients.length === 0}
                 scrollContainerRef={scrollAreaRef}
                 onSelect={(id, name) => {
                   handleClientSelection(id, name);
@@ -727,6 +734,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                 displayValue={projectName}
                 placeholder="Select project (optional)"
                 label="Project"
+                loading={loadingData && filteredProjects.length === 0}
                 scrollContainerRef={scrollAreaRef}
                 onSelect={(id, name) => {
                   handleProjectSelection(id, name);
@@ -751,6 +759,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                     displayValue={taskName}
                     placeholder="What were you working on?"
                     label="Task"
+                    loading={loadingData && filteredTasks.length === 0}
                     scrollContainerRef={scrollAreaRef}
                     onSelect={(id, name) => {
                       setTaskId(id);

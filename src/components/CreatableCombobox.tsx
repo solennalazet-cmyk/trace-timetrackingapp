@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, type TouchEvent as ReactTouchEvent } from "react";
 import { Check, ChevronDown, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import InlineDots from "@/components/InlineDots";
 
 export interface ComboboxItem {
   id: string;
@@ -16,6 +17,9 @@ interface CreatableComboboxProps {
   onCreate: (name: string) => Promise<ComboboxItem | null>;
   /** Optional ref to a scrollable ancestor — dropdown closes on scroll */
   scrollContainerRef?: React.RefObject<HTMLElement>;
+  /** When true and the items list is empty, show inline dots in the dropdown
+   *  instead of the empty state. */
+  loading?: boolean;
 }
 
 const CreatableCombobox = ({
@@ -26,6 +30,7 @@ const CreatableCombobox = ({
   onSelect,
   onCreate,
   scrollContainerRef,
+  loading = false,
 }: CreatableComboboxProps) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -183,9 +188,15 @@ const CreatableCombobox = ({
           style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
         >
           {filtered.length === 0 && !showAddOption && (
-            <div className="py-3 text-center text-sm text-muted-foreground">
-              {items.length === 0 ? "Type to add new" : "No results"}
-            </div>
+            loading ? (
+              <div className="py-3 flex justify-center">
+                <InlineDots label="Loading options" />
+              </div>
+            ) : (
+              <div className="py-3 text-center text-sm text-muted-foreground">
+                {items.length === 0 ? "Type to add new" : "No results"}
+              </div>
+            )
           )}
 
           {filtered.map((item) => (

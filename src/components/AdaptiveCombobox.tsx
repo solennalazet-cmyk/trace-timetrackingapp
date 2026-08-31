@@ -16,6 +16,9 @@ interface AdaptiveComboboxProps {
   /** Optional ref to a scrollable ancestor — only used on desktop */
   scrollContainerRef?: React.RefObject<HTMLElement>;
   allowCreate?: boolean;
+  /** When true and the items list is empty, show the inline dots loader
+   *  instead of the empty "Type to add new" / "No results" state. */
+  loading?: boolean;
 }
 
 const AdaptiveCombobox = ({
@@ -28,6 +31,7 @@ const AdaptiveCombobox = ({
   onCreate,
   scrollContainerRef,
   allowCreate = true,
+  loading = false,
 }: AdaptiveComboboxProps) => {
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -115,6 +119,7 @@ const AdaptiveCombobox = ({
           title={label}
           placeholder={`Search ${label.toLowerCase()}…`}
           allowCreate={allowCreate}
+          loading={loading}
           onSelect={handleMobileSelect}
           onCreate={handleMobileCreate}
         />
@@ -131,6 +136,7 @@ const AdaptiveCombobox = ({
       onSelect={onSelect}
       onCreate={onCreate}
       scrollContainerRef={scrollContainerRef}
+      loading={loading}
     />
   );
 };

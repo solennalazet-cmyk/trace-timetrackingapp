@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Check, Plus, Loader2, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import InlineDots from "@/components/InlineDots";
 import type { ComboboxItem } from "@/components/CreatableCombobox";
 
 interface MobileSelectSheetProps {
@@ -13,6 +14,9 @@ interface MobileSelectSheetProps {
   placeholder?: string;
   allowCreate?: boolean;
   creating?: boolean;
+  /** When true and the items list is empty, show inline dots in the list and
+   *  search bar instead of the empty state. */
+  loading?: boolean;
   onSelect: (id: string, name: string) => void;
   onCreate?: (name: string) => Promise<ComboboxItem | null>;
 }
@@ -26,6 +30,7 @@ const MobileSelectSheet = ({
   placeholder = "Search…",
   allowCreate = true,
   creating: externalCreating,
+  loading = false,
   onSelect,
   onCreate,
 }: MobileSelectSheetProps) => {
@@ -171,7 +176,11 @@ const MobileSelectSheet = ({
               onFocus={suppressAfterSearchTouch}
               disabled={isCreating}
             />
-            {isCreating && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            {isCreating ? (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            ) : loading && items.length === 0 ? (
+              <InlineDots label={`Loading ${title}`} />
+            ) : null}
           </div>
         </div>
 
@@ -181,9 +190,15 @@ const MobileSelectSheet = ({
           style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
         >
           {filtered.length === 0 && !showAddOption && (
-            <div className="py-8 text-center text-sm text-muted-foreground">
-              {items.length === 0 ? "Type to add new" : "No results"}
-            </div>
+            loading ? (
+              <div className="py-8 flex justify-center">
+                <InlineDots label={`Loading ${title}`} />
+              </div>
+            ) : (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                {items.length === 0 ? "Type to add new" : "No results"}
+              </div>
+            )
           )}
 
           {/* Add option — singleton button, safe to bypass the keyboard-shift

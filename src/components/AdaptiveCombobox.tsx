@@ -119,6 +119,7 @@ const AdaptiveCombobox = ({
           title={label}
           placeholder={`Search ${label.toLowerCase()}…`}
           allowCreate={allowCreate}
+          loading={loading}
           onSelect={handleMobileSelect}
           onCreate={handleMobileCreate}
         />

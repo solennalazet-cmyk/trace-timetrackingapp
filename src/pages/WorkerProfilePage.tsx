@@ -247,6 +247,13 @@ const WorkerProfilePage = () => {
       </div>
 
       <div className="space-y-2.5">
+        <WorkerStatusCard
+          clientId={worker.id}
+          startDate={worker.engagement_start_date}
+          endDate={worker.engagement_end_date}
+          onSaved={load}
+        />
+
         {cards.map(({ kind, Icon, title, summary }) => (
           <button
             key={kind}

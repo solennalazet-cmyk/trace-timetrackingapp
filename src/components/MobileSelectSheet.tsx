@@ -30,6 +30,7 @@ const MobileSelectSheet = ({
   placeholder = "Search…",
   allowCreate = true,
   creating: externalCreating,
+  loading = false,
   onSelect,
   onCreate,
 }: MobileSelectSheetProps) => {

@@ -136,6 +136,7 @@ const AdaptiveCombobox = ({
       onSelect={onSelect}
       onCreate={onCreate}
       scrollContainerRef={scrollContainerRef}
+      loading={loading}
     />
   );
 };

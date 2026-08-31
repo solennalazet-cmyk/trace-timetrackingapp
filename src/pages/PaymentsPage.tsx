@@ -394,14 +394,18 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
             return (
               <Card className="p-4 rounded-2xl shadow-sm space-y-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Total wages</p>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Wallet className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <span className="text-base font-bold tracking-tight">Total wages</span>
+                    </div>
                     <p className="text-2xl font-mono font-bold text-foreground mt-1">{totalSym}{overallTotals.due.toFixed(2)}</p>
                   </div>
-                  <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
+                  <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground shrink-0">
                     {selectedWorkerName}
                   </span>
                 </div>
+
                 <div className="grid grid-cols-3 gap-2">
                   <div>
                     <p className="text-sm font-mono font-semibold text-foreground">{totalSym}{overallTotals.due.toFixed(2)}</p>

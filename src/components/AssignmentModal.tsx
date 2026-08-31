@@ -216,6 +216,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
       setTasks(at.map((t: any) => ({ id: t.id, name: t.name, project_id: t.project_id ?? null, client_id: t.client_id ?? null })));
       setAllTags([]);
     }
+    setLoadingData(false);
   }, [user]);
 
 

@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Check, Plus, Loader2, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import InlineDots from "@/components/InlineDots";
 import type { ComboboxItem } from "@/components/CreatableCombobox";
 
 interface MobileSelectSheetProps {
@@ -13,6 +14,9 @@ interface MobileSelectSheetProps {
   placeholder?: string;
   allowCreate?: boolean;
   creating?: boolean;
+  /** When true and the items list is empty, show inline dots in the list and
+   *  search bar instead of the empty state. */
+  loading?: boolean;
   onSelect: (id: string, name: string) => void;
   onCreate?: (name: string) => Promise<ComboboxItem | null>;
 }

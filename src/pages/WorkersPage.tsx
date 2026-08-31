@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Users, Mail, X, Clock, ChevronRight, Pencil, Loader2 } from "lucide-react";
+import { Plus, Users, Mail, X, Clock, ChevronRight, Pencil, Loader2, ChevronDown } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -20,6 +20,7 @@ import SwipeToDeleteRow from "@/components/SwipeToDeleteRow";
 import Seo from "@/components/Seo";
 import ConnectionInvitesCard from "@/components/ConnectionInvitesCard";
 import WorkersWeekSchedule from "@/components/WorkersWeekSchedule";
+import { isWorkerActive } from "@/components/WorkerStatusCard";
 
 
 interface FreelancerInvite {
@@ -35,6 +36,8 @@ interface ConnectedFreelancer {
   name: string;
   role: string | null;
   user_id: string;
+  engagement_start_date?: string | null;
+  engagement_end_date?: string | null;
 }
 
 const WorkersPage = () => {
@@ -51,6 +54,7 @@ const WorkersPage = () => {
   const [renameTarget, setRenameTarget] = useState<ConnectedFreelancer | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [renameSaving, setRenameSaving] = useState(false);
+  const [showInactive, setShowInactive] = useState(false);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -64,7 +68,7 @@ const WorkersPage = () => {
         .order("invited_at", { ascending: false }),
       supabase
         .from("clients")
-        .select("id, name, role, user_id, created_at")
+        .select("id, name, role, user_id, created_at, engagement_start_date, engagement_end_date")
         .eq("user_id", user.id)
         .in("kind", ["contractor", "both"])
         .order("created_at", { ascending: false }),
@@ -122,6 +126,48 @@ const WorkersPage = () => {
     load();
   };
 
+  const activeFreelancers = freelancers.filter((w) => isWorkerActive(w.engagement_end_date ?? null));
+  const inactiveFreelancers = freelancers.filter((w) => !isWorkerActive(w.engagement_end_date ?? null));
+
+  const renderCard = (w: ConnectedFreelancer, dimmed = false) => (
+    <SwipeToDeleteRow key={w.id} onDelete={() => setDeleteTarget(w)}>
+      <div className="w-full text-left">
+        <Card className={`p-4 flex items-center gap-1 hover:bg-muted/40 transition-colors rounded-xl ${dimmed ? "opacity-70" : ""}`}>
+          <button
+            className="flex items-center gap-3 flex-1 min-w-0 text-left"
+            onClick={() => navigate(`/workers/${w.id}`)}
+          >
+            <div className="h-11 w-11 rounded-full bg-foreground/10 text-foreground flex items-center justify-center font-semibold shrink-0">
+              {w.name.slice(0, 1).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold truncate">{w.name}</p>
+              <p className="text-xs text-muted-foreground truncate mt-0.5">
+                {dimmed && w.engagement_end_date
+                  ? `Ended ${new Date(w.engagement_end_date + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`
+                  : (w.role?.trim() || "Role not set")}
+              </p>
+            </div>
+          </button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-full shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              setRenameTarget(w);
+              setRenameValue(w.name);
+            }}
+            aria-label={`Rename ${w.name}`}
+          >
+            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+          </Button>
+          <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+        </Card>
+      </div>
+    </SwipeToDeleteRow>
+  );
+
   return (
     <div className="pt-6 space-y-4 pb-24">
       <Seo title={"Freelancers — Trace for Employers"} description={"Manage your team: roles, contact details, schedules, and documents."} path={"/workers"} />
@@ -151,42 +197,24 @@ const WorkersPage = () => {
         </Card>
       ) : (
         <div className="space-y-2.5">
-          {freelancers.map((w) => (
-            <SwipeToDeleteRow key={w.id} onDelete={() => setDeleteTarget(w)}>
-              <div className="w-full text-left">
-                <Card className="p-4 flex items-center gap-1 hover:bg-muted/40 transition-colors rounded-xl">
-                  <button
-                    className="flex items-center gap-3 flex-1 min-w-0 text-left"
-                    onClick={() => navigate(`/workers/${w.id}`)}
-                  >
-                    <div className="h-11 w-11 rounded-full bg-foreground/10 text-foreground flex items-center justify-center font-semibold shrink-0">
-                      {w.name.slice(0, 1).toUpperCase()}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold truncate">{w.name}</p>
-                      <p className="text-xs text-muted-foreground truncate mt-0.5">
-                        {w.role?.trim() || "Role not set"}
-                      </p>
-                    </div>
-                  </button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-full shrink-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setRenameTarget(w);
-                      setRenameValue(w.name);
-                    }}
-                    aria-label={`Rename ${w.name}`}
-                  >
-                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                  </Button>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                </Card>
-              </div>
-            </SwipeToDeleteRow>
-          ))}
+          {activeFreelancers.map((w) => renderCard(w))}
+
+          {inactiveFreelancers.length > 0 && (
+            <div className="pt-1 space-y-2.5">
+              <button
+                type="button"
+                onClick={() => setShowInactive((v) => !v)}
+                className="w-full flex items-center gap-2 px-1 py-2 text-left"
+                aria-expanded={showInactive}
+              >
+                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showInactive ? "" : "-rotate-90"}`} />
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  No longer working with you · {inactiveFreelancers.length}
+                </span>
+              </button>
+              {showInactive && inactiveFreelancers.map((w) => renderCard(w, true))}
+            </div>
+          )}
 
           {invites.map((i) => (
             <Card key={i.id} className="p-4 flex items-center gap-3 bg-secondary">

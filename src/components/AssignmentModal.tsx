@@ -176,6 +176,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
   })();
 
   const loadData = useCallback(async () => {
+    setLoadingData(true);
     if (user) {
       const [{ data: c }, { data: p }, { data: t }, { data: tagEntries }] = await Promise.all([
         supabase.from("clients").select("id, name, default_rate, currency").eq("user_id", user.id),

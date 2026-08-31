@@ -31,6 +31,7 @@ const AdaptiveCombobox = ({
   onCreate,
   scrollContainerRef,
   allowCreate = true,
+  loading = false,
 }: AdaptiveComboboxProps) => {
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);

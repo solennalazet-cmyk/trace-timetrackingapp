@@ -15,6 +15,7 @@ import SignInLink from "@/components/SignInLink";
 import ClientPaymentsSection from "@/components/ClientPaymentsSection";
 import { toast } from "sonner";
 import Seo from "@/components/Seo";
+import InlineDots from "@/components/InlineDots";
 import { parsePositiveDecimalInput } from "@/lib/rate-utils";
 import {
   AlertDialog,

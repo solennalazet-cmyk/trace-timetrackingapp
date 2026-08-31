@@ -9,6 +9,7 @@ const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "â‚¬", USD: "$", GBP: "Â
 export interface WorkPatternReport {
   worker_user_id: string;
   currency: string;
+  status?: string;
   entries_snapshot: any;
 }
 
@@ -31,6 +32,7 @@ interface FlatEntry {
   brk: number;
   value: number;
   manual: boolean;
+  approved: boolean;
 }
 
 const fmtHm = (mins: number) => {
@@ -88,6 +90,7 @@ const WorkPatternCard = ({ reports, workerNames, from, to, selectedWorker, onSel
           brk: Number(e.break_minutes) || 0,
           value: Number(e.billable_value) || 0,
           manual: e.entry_type === "manual",
+          approved: r.status === "approved",
         });
       }
     }
@@ -161,6 +164,8 @@ const WorkPatternCard = ({ reports, workerNames, from, to, selectedWorker, onSel
       avgValue: days.length ? totalValue / days.length : 0,
       manualCount: scoped.filter((e) => e.manual).length,
       sessionCount: scoped.length,
+      pendingCount: scoped.filter((e) => !e.approved).length,
+      allApproved: scoped.length > 0 && scoped.every((e) => e.approved),
     };
   }, [scoped]);
 

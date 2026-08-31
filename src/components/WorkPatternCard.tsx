@@ -260,33 +260,49 @@ const WorkPatternCard = ({ reports, workerNames, from, to, selectedWorker, onSel
 
               {/* ── Stats ── */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-muted rounded-2xl p-3.5">
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1">Avg start</p>
-                  <p className="text-lg font-bold tabular-nums">{fmtClock(stats.avgStart)}</p>
-                </div>
-                <div className="bg-muted rounded-2xl p-3.5">
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1">Avg finish</p>
-                  <p className="text-lg font-bold tabular-nums">{fmtClock(stats.avgFinish)}</p>
-                </div>
+                {selectedWorker !== "all" ? (
+                  <>
+                    <div className="bg-muted rounded-2xl p-3.5">
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1">Avg start</p>
+                      <p className={`text-lg font-bold tabular-nums ${valueCls}`}>{fmtClock(stats.avgStart)}</p>
+                    </div>
+                    <div className="bg-muted rounded-2xl p-3.5">
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1">Avg finish</p>
+                      <p className={`text-lg font-bold tabular-nums ${valueCls}`}>{fmtClock(stats.avgFinish)}</p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-muted rounded-2xl p-3.5 col-span-2">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1">Avg start / finish</p>
+                    <p className="text-xs text-muted-foreground">Select one freelancer above to see their typical hours.</p>
+                  </div>
+                )}
                 <div className="bg-muted rounded-2xl p-3.5">
                   <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1">Day length</p>
-                  <p className="text-lg font-bold tabular-nums">{fmtHm(stats.avgDay)}</p>
+                  <p className={`text-lg font-bold tabular-nums ${valueCls}`}>{fmtHm(stats.avgDay)}</p>
                 </div>
                 <div className="bg-muted rounded-2xl p-3.5">
                   <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1">Days worked</p>
-                  <p className="text-lg font-bold tabular-nums">{stats.workedDays}</p>
+                  <p className={`text-lg font-bold tabular-nums ${valueCls}`}>{stats.workedDays}</p>
                 </div>
                 <div className="bg-muted rounded-2xl p-3.5 col-span-2 flex items-center justify-between">
                   <div>
                     <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1">Avg paid / worked day</p>
-                    <p className="text-lg font-bold tabular-nums">{sym}{stats.avgValue.toFixed(2)}</p>
+                    <p className={`text-lg font-bold tabular-nums ${valueCls}`}>{sym}{stats.avgValue.toFixed(2)}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1">Total</p>
-                    <p className="text-lg font-bold tabular-nums">{sym}{stats.totalValue.toFixed(2)}</p>
+                    <p className={`text-lg font-bold tabular-nums ${valueCls}`}>{sym}{stats.totalValue.toFixed(2)}</p>
                   </div>
                 </div>
               </div>
+
+              {/* ── Source confidence ── */}
+              {!stats.allApproved && stats.pendingCount > 0 && (
+                <p className="text-[11px] text-muted-foreground">
+                  Faded figures include {stats.pendingCount} session{stats.pendingCount === 1 ? "" : "s"} from reports awaiting approval. They turn solid once every report is approved.
+                </p>
+              )}
 
               {/* ── Manual entry note ── */}
               <div className="flex items-center gap-2 text-muted-foreground">
@@ -298,22 +314,6 @@ const WorkPatternCard = ({ reports, workerNames, from, to, selectedWorker, onSel
                 </span>
               </div>
 
-              {/* ── Legend ── */}
-              {legend.length > 0 && (
-                <div className="flex flex-wrap gap-x-4 gap-y-2 pt-1 border-t border-border pt-4">
-                  {legend.map((l) => (
-                    <button
-                      key={l.id}
-                      onClick={() => onSelectWorker(selectedWorker === l.id ? "all" : l.id)}
-                      className="flex items-center gap-2 text-xs"
-                    >
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getClientColor(l.id) }} />
-                      <span className="font-medium truncate max-w-[120px]">{l.name}</span>
-                      <span className="text-muted-foreground tabular-nums">{fmtHm(l.mins)}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
             </>
           )}
         </div>

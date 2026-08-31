@@ -153,13 +153,17 @@ const AddFreelancerModal = ({ open, onOpenChange, onCreate }: Props) => {
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Start date">
+            <Field label="Collaboration starts" hint="required">
               <Input type="date" className="h-11 rounded-xl" value={v.engagement_start_date} onChange={(e) => set("engagement_start_date", e.target.value)} />
             </Field>
             <Field label="End date" hint="optional">
               <Input type="date" className="h-11 rounded-xl" value={v.engagement_end_date} onChange={(e) => set("engagement_end_date", e.target.value)} />
             </Field>
           </div>
+          <p className="text-[11px] text-muted-foreground -mt-2">
+            Leave the end date empty for an ongoing collaboration. Their Active / Inactive status follows these dates automatically.
+          </p>
+
         </div>
 
         <div className="px-6 py-4 border-t border-border bg-card flex gap-2.5">

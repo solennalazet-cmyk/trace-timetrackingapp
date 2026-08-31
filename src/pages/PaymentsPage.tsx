@@ -429,7 +429,16 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
             );
           })()}
 
-          {isEmployer && selectedWorker === "all" && <h2 className="px-1 text-sm font-semibold">Per freelancer</h2>}
+          {isEmployer && selectedWorker === "all" && (
+            <button
+              type="button"
+              onClick={() => setShowPerFreelancer((v) => !v)}
+              className="w-full flex items-center justify-between px-1 py-2 text-sm font-semibold"
+            >
+              <span>Per freelancer</span>
+              <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${showPerFreelancer ? "rotate-90" : ""}`} />
+            </button>
+          )}
 
           {(() => {
             // In employer "All freelancers" view, hide freelancers with no
@@ -438,10 +447,12 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
             // approved, or paid. A "Show inactive" toggle reveals the rest
             // without ever deleting them.
             const splittable = isEmployer && selectedWorker === "all";
+            if (splittable && !showPerFreelancer) return null;
             const activeGroups = splittable ? filteredGroups.filter(([, rows]) => rows.length > 0) : filteredGroups;
             const inactiveGroups = splittable ? filteredGroups.filter(([, rows]) => rows.length === 0) : [];
             const visibleGroups = showInactive ? [...activeGroups, ...inactiveGroups] : activeGroups;
             return <>
+
           {visibleGroups.map(([key, rows]) => {
             const t = computeGroupTotals(rows);
             const sym = CURRENCY_SYMBOLS[t.currency] ?? "€";

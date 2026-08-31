@@ -188,9 +188,15 @@ const CreatableCombobox = ({
           style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
         >
           {filtered.length === 0 && !showAddOption && (
-            <div className="py-3 text-center text-sm text-muted-foreground">
-              {items.length === 0 ? "Type to add new" : "No results"}
-            </div>
+            loading ? (
+              <div className="py-3 flex justify-center">
+                <InlineDots label="Loading options" />
+              </div>
+            ) : (
+              <div className="py-3 text-center text-sm text-muted-foreground">
+                {items.length === 0 ? "Type to add new" : "No results"}
+              </div>
+            )
           )}
 
           {filtered.map((item) => (

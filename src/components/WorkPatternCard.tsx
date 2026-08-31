@@ -169,13 +169,7 @@ const WorkPatternCard = ({ reports, workerNames, from, to, selectedWorker, onSel
     };
   }, [scoped]);
 
-  const legend = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const e of entries) m.set(e.workerId, (m.get(e.workerId) ?? 0) + e.work);
-    return Array.from(m.entries())
-      .map(([id, mins]) => ({ id, name: workerNames.get(id) ?? "Freelancer", mins }))
-      .sort((a, b) => b.mins - a.mins);
-  }, [entries, workerNames]);
+  const valueCls = stats.allApproved ? "text-foreground" : "text-foreground/45";
 
   const maxAvg = Math.max(1, ...weekStats.map((w) => w.avgPerDay));
   const accent = selectedWorker !== "all" ? getClientColor(selectedWorker) : undefined;

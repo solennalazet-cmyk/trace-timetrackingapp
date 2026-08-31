@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, type TouchEvent as ReactTouchEvent } from "react";
 import { Check, ChevronDown, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import InlineDots from "@/components/InlineDots";
 
 export interface ComboboxItem {
   id: string;
@@ -16,6 +17,9 @@ interface CreatableComboboxProps {
   onCreate: (name: string) => Promise<ComboboxItem | null>;
   /** Optional ref to a scrollable ancestor — dropdown closes on scroll */
   scrollContainerRef?: React.RefObject<HTMLElement>;
+  /** When true and the items list is empty, show inline dots in the dropdown
+   *  instead of the empty state. */
+  loading?: boolean;
 }
 
 const CreatableCombobox = ({

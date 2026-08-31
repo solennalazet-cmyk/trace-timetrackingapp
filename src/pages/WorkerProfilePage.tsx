@@ -16,6 +16,7 @@ import WorkerCvCard from "@/components/WorkerCvCard";
 import WorkerDocumentsCard from "@/components/WorkerDocumentsCard";
 import WorkerInviteModal from "@/components/WorkerInviteModal";
 import ImportReportSheet from "@/components/ImportReportSheet";
+import WorkerStatusCard from "@/components/WorkerStatusCard";
 
 interface WorkerRow {
   id: string;

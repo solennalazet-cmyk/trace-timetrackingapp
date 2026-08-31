@@ -24,6 +24,12 @@ interface Props {
   onCreate: (payload: NewFreelancerPayload) => Promise<void>;
 }
 
+const todayKey = () => {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+
 const empty = {
   name: "",
   role: "",
@@ -55,13 +61,13 @@ const AddFreelancerModal = ({ open, onOpenChange, onCreate }: Props) => {
   const [v, setV] = useState(empty);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { if (open) { setV(empty); setBusy(false); } }, [open]);
+  useEffect(() => { if (open) { setV({ ...empty, engagement_start_date: todayKey() }); setBusy(false); } }, [open]);
 
   const set = (k: keyof typeof empty, val: string) => setV((p) => ({ ...p, [k]: val }));
 
   const submit = async () => {
     const name = v.name.trim();
-    if (!name || busy) return;
+    if (!name || !v.engagement_start_date || busy) return;
     setBusy(true);
     try {
       await onCreate({
@@ -153,20 +159,24 @@ const AddFreelancerModal = ({ open, onOpenChange, onCreate }: Props) => {
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Start date">
+            <Field label="Collaboration starts" hint="required">
               <Input type="date" className="h-11 rounded-xl" value={v.engagement_start_date} onChange={(e) => set("engagement_start_date", e.target.value)} />
             </Field>
             <Field label="End date" hint="optional">
               <Input type="date" className="h-11 rounded-xl" value={v.engagement_end_date} onChange={(e) => set("engagement_end_date", e.target.value)} />
             </Field>
           </div>
+          <p className="text-[11px] text-muted-foreground -mt-2">
+            Leave the end date empty for an ongoing collaboration. Their Active / Inactive status follows these dates automatically.
+          </p>
+
         </div>
 
         <div className="px-6 py-4 border-t border-border bg-card flex gap-2.5">
           <Button variant="outline" className="flex-1 rounded-xl h-11" onClick={() => onOpenChange(false)} disabled={busy}>
             Cancel
           </Button>
-          <Button className="flex-1 rounded-xl h-11" onClick={submit} disabled={!v.name.trim() || busy}>
+          <Button className="flex-1 rounded-xl h-11" onClick={submit} disabled={!v.name.trim() || !v.engagement_start_date || busy}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create profile"}
           </Button>
         </div>

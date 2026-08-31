@@ -198,8 +198,8 @@ const WorkerProfilePage = () => {
       </button>
 
       <div className="pt-1">
-        <button onClick={() => setEditorOpen("role")} className="w-full text-left">
-          <header className="flex items-center gap-4 group">
+        <header className="flex items-start gap-3">
+          <button onClick={() => setEditorOpen("role")} className="flex items-center gap-4 flex-1 min-w-0 text-left group">
             <div className="h-16 w-16 rounded-full bg-foreground/10 text-foreground flex items-center justify-center text-2xl font-semibold shrink-0">
               {initials(worker.name)}
             </div>
@@ -207,8 +207,15 @@ const WorkerProfilePage = () => {
               <h1 className="text-xl font-bold tracking-tight truncate">{name}</h1>
               <p className="text-sm text-muted-foreground truncate group-hover:text-foreground transition-colors">{role} <span className="text-muted-foreground/60">· tap to edit</span></p>
             </div>
-          </header>
-        </button>
+          </button>
+          <WorkerStatusCard
+            clientId={worker.id}
+            startDate={worker.engagement_start_date}
+            endDate={worker.engagement_end_date}
+            onSaved={load}
+          />
+        </header>
+
         {/* Discrete Trace-connection CTA */}
         <div className="mt-2 ml-20 flex items-center gap-1.5 text-[11px] flex-wrap">
           {connected ? (
@@ -247,14 +254,8 @@ const WorkerProfilePage = () => {
       </div>
 
       <div className="space-y-2.5">
-        <WorkerStatusCard
-          clientId={worker.id}
-          startDate={worker.engagement_start_date}
-          endDate={worker.engagement_end_date}
-          onSaved={load}
-        />
-
         {cards.map(({ kind, Icon, title, summary }) => (
+
           <button
             key={kind}
             onClick={() => setEditorOpen(kind)}

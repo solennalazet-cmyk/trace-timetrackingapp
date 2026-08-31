@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { UserCheck } from "lucide-react";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -32,6 +30,11 @@ interface Props {
   onSaved: () => void;
 }
 
+/**
+ * Compact engagement status control. Deliberately NOT a Card: it is a state
+ * indicator for the person, not a section of their profile, so it lives in the
+ * header next to the name rather than in the list of editable cards.
+ */
 const WorkerStatusCard = ({ clientId, startDate, endDate, onSaved }: Props) => {
   const active = isWorkerActive(endDate);
   const [pending, setPending] = useState<"active" | "inactive" | null>(null);
@@ -59,30 +62,34 @@ const WorkerStatusCard = ({ clientId, startDate, endDate, onSaved }: Props) => {
 
   return (
     <>
-      <Card className="p-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-foreground/10 flex items-center justify-center shrink-0">
-            <UserCheck className="w-4 h-4 text-foreground" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">{active ? "Active" : "Inactive"}</p>
-            <p className="text-xs text-muted-foreground truncate mt-0.5">
-              {active
-                ? (fmt(startDate) ? `Working with you since ${fmt(startDate)}` : "Currently works for you")
-                : `Ended ${fmt(endDate)}`}
-            </p>
-          </div>
+      <div className="flex flex-col items-end gap-1 shrink-0">
+        <div
+          className={`inline-flex items-center gap-2 rounded-full pl-2.5 pr-1.5 py-1 ${
+            active ? "bg-foreground/10" : "bg-muted"
+          }`}
+        >
+          <span
+            className={`w-1.5 h-1.5 rounded-full ${active ? "bg-nav-bg" : "bg-muted-foreground/60"}`}
+            aria-hidden
+          />
+          <span className="text-[11px] font-medium">{active ? "Active" : "Inactive"}</span>
           <Switch
             checked={active}
             onCheckedChange={(v) => openFor(v ? "active" : "inactive")}
             aria-label="Toggle freelancer active status"
+            className="scale-75 origin-right"
           />
         </div>
-      </Card>
+        <p className="text-[10px] text-muted-foreground text-right leading-tight">
+          {active
+            ? (fmt(startDate) ? `Since ${fmt(startDate)}` : "Currently works for you")
+            : `Ended ${fmt(endDate)}`}
+        </p>
+      </div>
 
       <Dialog open={pending !== null} onOpenChange={(o) => { if (!o) setPending(null); }}>
-        <DialogContent className="max-w-[380px] w-[calc(100vw-2rem)] rounded-2xl">
-          <DialogHeader>
+        <DialogContent position="centered" className="max-w-[380px] w-[calc(100vw-2rem)] rounded-2xl p-6">
+          <DialogHeader className="pr-10">
             <DialogTitle>{pending === "inactive" ? "Mark as inactive" : "Mark as active"}</DialogTitle>
             <DialogDescription>
               {pending === "inactive"

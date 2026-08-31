@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getClientColor, toLocalDateKey } from "@/lib/utils";
 import DateRangePicker from "@/components/DateRangePicker";
 import PaymentsPage from "@/pages/PaymentsPage";
+import WorkPatternCard from "@/components/WorkPatternCard";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 

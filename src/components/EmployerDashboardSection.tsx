@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { Card } from "@/components/ui/card";
-import { Coffee, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getClientColor, toLocalDateKey } from "@/lib/utils";
@@ -43,49 +41,6 @@ interface Props {
 // Anchored to Portuguese labour law: a worker doing 6h+ must take a break of
 // at least 1h (and not more than 2h) per Art. 213º CT. Shorter days take
 // proportionally shorter breaks.
-const Y_MAX = 90; // capsule scale cap (m)
-
-type Band = "healthy" | "short" | "long" | "none";
-
-/** Returns the recommended break band for a given day. */
-const breakBand = (breakMins: number, workMins: number): Band => {
-  if (workMins <= 0) return "none";
-  // Under 4h worked: no legal break required, but flag clearly excessive breaks.
-  if (workMins < 240) {
-    if (breakMins > 30) return "long";
-    return "healthy";
-  }
-  // 4h to <6h: recommend a short pause, ~15–45m.
-  if (workMins < 360) {
-    if (breakMins < 15) return "short";
-    if (breakMins > 45) return "long";
-    return "healthy";
-  }
-  // 6h+: legal min 45m–1h, healthy up to ~75m.
-  if (breakMins < 45) return breakMins === 0 ? "none" : "short";
-  if (breakMins > 75) return "long";
-  return "healthy";
-};
-
-const bandClass = (band: Band): string => {
-  switch (band) {
-    case "healthy": return "bg-emerald-500";
-    case "short": return "bg-amber-400";
-    case "long": return "bg-amber-400";
-    case "none": return "bg-red-400";
-  }
-};
-
-const bandLabel = (band: Band): string => {
-  switch (band) {
-    case "healthy": return "Healthy";
-    case "short": return "Too short";
-    case "long": return "Too long";
-    case "none": return "No break";
-  }
-};
-
-
 const fmtHm = (mins: number) => {
   const h = Math.floor(mins / 60);
   const m = Math.round(mins % 60);
@@ -105,8 +60,6 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
   const [allFreelancers, setAllFreelancers] = useState<{ id: string; name: string }[]>([]);
   const [selectedWorker, setSelectedWorker] = useState<string | "all">("all");
   const [breaksOpen, setBreaksOpen] = useState(breaksDefaultOpen);
-  const [expandedWorker, setExpandedWorker] = useState<string | null>(null);
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -208,64 +161,8 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
     return { total, paid, pending, overdue, currency };
   }, [filteredReports, paidByReport]);
 
-  // Per-worker break + work breakdown by day within range
-  const workerBreaks = useMemo(() => {
-    const fromKey = toLocalDateKey(from);
-    const toKey = toLocalDateKey(to);
-    const dayMs = 86400000;
-    const allDays: string[] = [];
-    for (let t = new Date(from).getTime(); t <= to.getTime(); t += dayMs) {
-      allDays.push(toLocalDateKey(new Date(t)));
-    }
-    type DaySession = { start?: string; end?: string; duration: number; brk: number };
-    const byWorker = new Map<string, { id: string; name: string; perDay: Map<string, { work: number; brk: number; sessions: DaySession[] }>; seenEntries: Set<string> }>();
-    for (const r of reports) {
-      if (selectedWorker !== "all" && r.worker_user_id !== selectedWorker) continue;
-      if (!r.worker_user_id) continue;
-      let w = byWorker.get(r.worker_user_id);
-      if (!w) {
-        w = { id: r.worker_user_id, name: workerNames.get(r.worker_user_id) ?? "Freelancer", perDay: new Map(), seenEntries: new Set() };
-        byWorker.set(r.worker_user_id, w);
-      }
-      const snap = Array.isArray(r.entries_snapshot) ? r.entries_snapshot : [];
-      for (const e of snap) {
-        const date = e.entry_date as string | undefined;
-        if (!date || date < fromKey || date > toKey) continue;
-        // Dedupe the same time entry appearing across multiple submitted reports
-        // (e.g. overlapping periods or resubmissions) so we don't multi-count it.
-        const dedupeKey = String(e.id ?? `${date}|${e.start_time ?? ""}|${e.end_time ?? ""}|${e.duration_minutes ?? ""}`);
-        if (w.seenEntries.has(dedupeKey)) continue;
-        w.seenEntries.add(dedupeKey);
-        const prev = w.perDay.get(date) ?? { work: 0, brk: 0, sessions: [] };
-        const dur = Number(e.duration_minutes) || 0;
-        const brk = Number(e.break_minutes) || 0;
-        prev.work += dur;
-        prev.brk += brk;
-        prev.sessions.push({ start: e.start_time, end: e.end_time, duration: dur, brk });
-        w.perDay.set(date, prev);
-      }
-    }
-    return Array.from(byWorker.values()).map((w) => {
-      const series = allDays.map((d) => {
-        const day = w.perDay.get(d);
-        return { date: d, work: day?.work ?? 0, brk: day?.brk ?? 0, sessions: day?.sessions ?? [] as DaySession[], worked: !!day };
-      });
-      const workedDays = series.filter((s) => s.worked);
-      const totalWork = workedDays.reduce((s, x) => s + x.work, 0);
-      const totalBreak = workedDays.reduce((s, x) => s + x.brk, 0);
-      const avgBreak = workedDays.length > 0 ? totalBreak / workedDays.length : 0;
-      return { ...w, series, workedDaysCount: workedDays.length, totalWork, totalBreak, avgBreak };
-    }).sort((a, b) => b.totalWork - a.totalWork);
-  }, [reports, selectedWorker, workerNames, from, to]);
-
   const sym = CURRENCY_SYMBOLS[totals.currency] ?? "€";
   const fmtMoney = (n: number) => `${sym}${n.toFixed(0)}`;
-
-  const zoneClass = (breakMins: number, workMins: number, worked: boolean) => {
-    if (!worked) return "bg-muted-foreground/20";
-    return bandClass(breakBand(breakMins, workMins));
-  };
-
 
   return (
     <section className="space-y-2">

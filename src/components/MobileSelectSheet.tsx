@@ -176,7 +176,11 @@ const MobileSelectSheet = ({
               onFocus={suppressAfterSearchTouch}
               disabled={isCreating}
             />
-            {isCreating && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            {isCreating ? (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            ) : loading && items.length === 0 ? (
+              <InlineDots label={`Loading ${title}`} />
+            ) : null}
           </div>
         </div>
 

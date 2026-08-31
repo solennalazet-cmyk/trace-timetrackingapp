@@ -144,6 +144,10 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
   const [saving, setSaving] = useState(false);
   const [taskList, setTaskList] = useState<TaskItem[]>([]);
   const [hasUserChangedSelection, setHasUserChangedSelection] = useState(false);
+  // True while the backend refresh of clients/projects/tasks is in flight.
+  // Used to show the inline "typing dots" loader inside each combobox when its
+  // list is still empty (no cached suggestions to paint yet).
+  const [loadingData, setLoadingData] = useState(false);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 

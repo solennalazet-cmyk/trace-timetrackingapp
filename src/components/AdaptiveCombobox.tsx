@@ -16,6 +16,9 @@ interface AdaptiveComboboxProps {
   /** Optional ref to a scrollable ancestor — only used on desktop */
   scrollContainerRef?: React.RefObject<HTMLElement>;
   allowCreate?: boolean;
+  /** When true and the items list is empty, show the inline dots loader
+   *  instead of the empty "Type to add new" / "No results" state. */
+  loading?: boolean;
 }
 
 const AdaptiveCombobox = ({

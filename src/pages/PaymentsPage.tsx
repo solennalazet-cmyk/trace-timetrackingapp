@@ -83,6 +83,8 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [openReportId, setOpenReportId] = useState<string | null>(null);
   const [showInactive, setShowInactive] = useState(false);
+  const [showPerFreelancer, setShowPerFreelancer] = useState(false);
+
 
   // Per-group payment entry state
   const [draftAmount, setDraftAmount] = useState<string>("");

@@ -734,6 +734,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                 displayValue={projectName}
                 placeholder="Select project (optional)"
                 label="Project"
+                loading={loadingData && filteredProjects.length === 0}
                 scrollContainerRef={scrollAreaRef}
                 onSelect={(id, name) => {
                   handleProjectSelection(id, name);

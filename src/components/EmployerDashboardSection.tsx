@@ -41,14 +41,6 @@ interface Props {
 // Anchored to Portuguese labour law: a worker doing 6h+ must take a break of
 // at least 1h (and not more than 2h) per Art. 213º CT. Shorter days take
 // proportionally shorter breaks.
-const fmtHm = (mins: number) => {
-  const h = Math.floor(mins / 60);
-  const m = Math.round(mins % 60);
-  if (h === 0) return `${m}m`;
-  if (m === 0) return `${h}h`;
-  return `${h}h${String(m).padStart(2, "0")}`;
-};
-
 const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Props) => {
   const { user } = useAuth();
   
@@ -59,7 +51,6 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
   const [workerNames, setWorkerNames] = useState<Map<string, string>>(new Map());
   const [allFreelancers, setAllFreelancers] = useState<{ id: string; name: string }[]>([]);
   const [selectedWorker, setSelectedWorker] = useState<string | "all">("all");
-  const [breaksOpen, setBreaksOpen] = useState(breaksDefaultOpen);
 
   useEffect(() => {
     if (!user) return;

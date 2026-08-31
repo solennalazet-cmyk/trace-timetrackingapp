@@ -759,6 +759,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                     displayValue={taskName}
                     placeholder="What were you working on?"
                     label="Task"
+                    loading={loadingData && filteredTasks.length === 0}
                     scrollContainerRef={scrollAreaRef}
                     onSelect={(id, name) => {
                       setTaskId(id);

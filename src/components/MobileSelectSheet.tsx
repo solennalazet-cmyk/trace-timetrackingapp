@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
-import { Check, Plus, Loader2, Search } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Check, Plus, Loader2, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import InlineDots from "@/components/InlineDots";
 import type { ComboboxItem } from "@/components/CreatableCombobox";
@@ -21,6 +21,15 @@ interface MobileSelectSheetProps {
   onCreate?: (name: string) => Promise<ComboboxItem | null>;
 }
 
+/**
+ * Lightweight bottom sheet rendered in a portal.
+ *
+ * It deliberately does NOT use vaul's Drawer: this sheet is opened from inside
+ * a Radix Dialog (the assignment recap), and having two libraries animate,
+ * scroll-lock and re-measure the viewport at the same time is what made the
+ * panel visibly bounce up and down when the soft keyboard appeared. A single
+ * CSS transform transition keeps the motion to one smooth slide.
+ */
 const MobileSelectSheet = ({
   open,
   onOpenChange,
@@ -36,49 +45,40 @@ const MobileSelectSheet = ({
 }: MobileSelectSheetProps) => {
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
+  const [mounted, setMounted] = useState(open);
+  const [visible, setVisible] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const actionLockRef = useRef(false);
-  const suppressActionsUntilRef = useRef(0);
-  const armedActionRef = useRef<string | null>(null);
 
   const isCreating = externalCreating || creating;
 
+  // Mount / unmount with a short slide transition.
   useEffect(() => {
     if (open) {
       actionLockRef.current = false;
-      armedActionRef.current = null;
       setSearch("");
-      // IMPORTANT: do NOT auto-focus the search input. Auto-focus triggers the
-      // mobile keyboard *after* the drawer's open animation finishes, which
-      // reflows the viewport mid-interaction and causes a tap on one button to
-      // land on a different button (the "double trigger" bug). The user can
-      // tap the search field if they want to filter — that's an explicit
-      // intent and the reflow then happens before any selection tap.
+      setMounted(true);
+      const raf = requestAnimationFrame(() => setVisible(true));
+      return () => cancelAnimationFrame(raf);
     }
+    setVisible(false);
+    const t = setTimeout(() => setMounted(false), 180);
+    return () => clearTimeout(t);
   }, [open]);
 
+  // Close on Escape / hardware back-ish key.
   useEffect(() => {
-    if (!open || typeof window === "undefined" || !window.visualViewport) return;
-
-    const suppressDuringKeyboardShift = () => {
-      // Mobile keyboards often resize the visual viewport after the original
-      // tap has completed. During that short delayed reflow, ignore option
-      // clicks unless they began with a fresh pointer-down on the option itself.
-      suppressActionsUntilRef.current = Date.now() + 450;
-      armedActionRef.current = null;
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onOpenChange(false);
+      }
     };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, [open, onOpenChange]);
 
-    window.visualViewport.addEventListener("resize", suppressDuringKeyboardShift);
-    window.visualViewport.addEventListener("scroll", suppressDuringKeyboardShift);
-
-    return () => {
-      window.visualViewport?.removeEventListener("resize", suppressDuringKeyboardShift);
-      window.visualViewport?.removeEventListener("scroll", suppressDuringKeyboardShift);
-    };
-  }, [open]);
-
-  // Blur any focused element (closes the soft keyboard) before mutating state
-  // so the keyboard collapse doesn't reflow the viewport during navigation.
   const dismissKeyboard = useCallback(() => {
     const active = document.activeElement as HTMLElement | null;
     if (active && typeof active.blur === "function") active.blur();
@@ -95,10 +95,8 @@ const MobileSelectSheet = ({
   const showAddOption = allowCreate && onCreate && search.trim().length > 0 && !exactMatch;
 
   const handleSelect = useCallback(
-    (item: ComboboxItem, actionKey?: string) => {
-      if (actionLockRef.current || Date.now() < suppressActionsUntilRef.current) return;
-      if (actionKey && armedActionRef.current !== actionKey) return;
-      armedActionRef.current = null;
+    (item: ComboboxItem) => {
+      if (actionLockRef.current) return;
       actionLockRef.current = true;
       dismissKeyboard();
       onSelect(item.id, item.name);
@@ -107,10 +105,8 @@ const MobileSelectSheet = ({
     [onSelect, onOpenChange, dismissKeyboard]
   );
 
-  const handleCreate = useCallback(async (actionKey?: string) => {
-    if (actionLockRef.current || isCreating || !onCreate || Date.now() < suppressActionsUntilRef.current) return;
-    if (actionKey && armedActionRef.current !== actionKey) return;
-    armedActionRef.current = null;
+  const handleCreate = useCallback(async () => {
+    if (actionLockRef.current || isCreating || !onCreate) return;
     const name = search.trim();
     if (!name) return;
     actionLockRef.current = true;
@@ -125,47 +121,48 @@ const MobileSelectSheet = ({
     if (!created) actionLockRef.current = false;
   }, [isCreating, onCreate, search, onSelect, onOpenChange, dismissKeyboard]);
 
-  const armAction = useCallback((key: string, element: HTMLButtonElement, pointerId: number) => {
-    if (Date.now() < suppressActionsUntilRef.current) {
-      armedActionRef.current = null;
-      return false;
-    }
-    armedActionRef.current = key;
-    element.setPointerCapture?.(pointerId);
-    return true;
-  }, []);
+  if (!mounted || typeof document === "undefined") return null;
 
-  const suppressAfterSearchTouch = useCallback(() => {
-    suppressActionsUntilRef.current = Date.now() + 700;
-    armedActionRef.current = null;
-  }, []);
+  return createPortal(
+    <div className="fixed inset-0 z-[70]" role="dialog" aria-label={title}>
+      <div
+        className={cn(
+          "absolute inset-0 bg-black/50 transition-opacity duration-150",
+          visible ? "opacity-100" : "opacity-0"
+        )}
+        onClick={() => {
+          dismissKeyboard();
+          onOpenChange(false);
+        }}
+      />
 
-  return (
-    <Drawer
-      open={open}
-      onOpenChange={onOpenChange}
-      shouldScaleBackground={false}
-      // Prevent vaul from mutating <body> styles. When this sheet is rendered
-      // inside a Radix Dialog (Assignment / Manual / Call modals), both libs
-      // try to lock the body, producing a visible double-reflow that feels
-      // like the sheet opens twice. Disabling vaul's body styling avoids that.
-      noBodyStyles
-      setBackgroundColorOnScale={false}
-    >
-      <DrawerContent className="max-h-[85dvh] flex flex-col">
-        <DrawerHeader className="pb-2">
-          <DrawerTitle>{title}</DrawerTitle>
-        </DrawerHeader>
+      <div
+        className={cn(
+          "absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col rounded-t-2xl border-t bg-background shadow-lg",
+          "transition-transform duration-200 ease-out will-change-transform",
+          visible ? "translate-y-0" : "translate-y-full"
+        )}
+      >
+        <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-muted" />
+
+        <div className="flex items-center justify-between px-4 pb-2 pt-3">
+          <h2 className="text-base font-semibold">{title}</h2>
+          <button
+            type="button"
+            aria-label="Close"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground active:bg-accent"
+            onClick={() => {
+              dismissKeyboard();
+              onOpenChange(false);
+            }}
+          >
+            <X className="h-5 w-5 pointer-events-none" />
+          </button>
+        </div>
 
         {/* Search bar */}
         <div className="px-4 pb-3">
-          <div
-            className="flex items-center gap-2 rounded-lg border border-input bg-background px-3 h-10"
-            onPointerDown={(e) => {
-              if (e.pointerType === "touch") suppressAfterSearchTouch();
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="flex items-center gap-2 rounded-lg border border-input bg-background px-3 h-10">
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
             <input
               ref={inputRef}
@@ -173,7 +170,6 @@ const MobileSelectSheet = ({
               placeholder={placeholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              onFocus={suppressAfterSearchTouch}
               disabled={isCreating}
             />
             {isCreating ? (
@@ -201,35 +197,11 @@ const MobileSelectSheet = ({
             )
           )}
 
-          {/* Add option — singleton button, safe to bypass the keyboard-shift
-              suppression guard (which is there to stop list items from being
-              tapped on the wrong row after a viewport reflow). */}
           {showAddOption && (
             <button
               type="button"
               className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-nav-bg active:bg-accent touch-manipulation select-none"
-              onPointerDown={(e) => {
-                e.currentTarget.setPointerCapture?.(e.pointerId);
-              }}
-              onClick={() => {
-                if (actionLockRef.current || isCreating) return;
-                actionLockRef.current = true;
-                dismissKeyboard();
-                const name = search.trim();
-                if (!name || !onCreate) {
-                  actionLockRef.current = false;
-                  return;
-                }
-                setCreating(true);
-                onCreate(name).then((created) => {
-                  if (created) {
-                    onSelect(created.id, created.name);
-                    onOpenChange(false);
-                  }
-                  setCreating(false);
-                  if (!created) actionLockRef.current = false;
-                });
-              }}
+              onClick={handleCreate}
               disabled={isCreating}
             >
               <Plus className="h-5 w-5 shrink-0" />
@@ -245,10 +217,7 @@ const MobileSelectSheet = ({
                 "flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm active:bg-accent touch-manipulation select-none",
                 value === item.id && "bg-accent/50 font-medium"
               )}
-              onPointerDown={(e) => {
-                armAction(item.id, e.currentTarget, e.pointerId);
-              }}
-              onClick={() => handleSelect(item, item.id)}
+              onClick={() => handleSelect(item)}
             >
               <div className="w-5 h-5 flex items-center justify-center shrink-0">
                 {value === item.id && <Check className="h-4 w-4 text-nav-bg" />}
@@ -257,8 +226,9 @@ const MobileSelectSheet = ({
             </button>
           ))}
         </div>
-      </DrawerContent>
-    </Drawer>
+      </div>
+    </div>,
+    document.body
   );
 };
 

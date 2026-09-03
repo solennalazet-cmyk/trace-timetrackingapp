@@ -35,26 +35,19 @@ const AdaptiveCombobox = ({
 }: AdaptiveComboboxProps) => {
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
-  const lastOpenRequestAtRef = useRef(0);
-  const ignoreClicksUntilRef = useRef(0);
-  const ignoreSyntheticClickUntilRef = useRef(0);
+  const ignoreOpenUntilRef = useRef(0);
 
   const handleSheetOpenChange = useCallback((next: boolean) => {
     const now = Date.now();
     if (next) {
-      // Block re-open if already open, if a close just happened, or if a second
-      // open request arrives within the same tap burst. Mobile keyboards reflow
-      // the viewport on close, which can replay the original tap and make the
-      // sheet look like it "reopens several times".
-      if (sheetOpen || now < ignoreClicksUntilRef.current) return;
-      if (now - lastOpenRequestAtRef.current < 400) return;
-      lastOpenRequestAtRef.current = now;
+      // Ignore an open request that arrives right after a close (the same tap
+      // replayed as a synthetic click).
+      if (sheetOpen || now < ignoreOpenUntilRef.current) return;
     } else {
-      ignoreClicksUntilRef.current = now + 600;
+      ignoreOpenUntilRef.current = now + 250;
     }
     setSheetOpen(next);
   }, [sheetOpen]);
-
 
   const openSheet = useCallback(() => {
     handleSheetOpenChange(true);
@@ -79,31 +72,11 @@ const AdaptiveCombobox = ({
       <>
         <button
           type="button"
-          // Touch opens on pointer-up, not pointer-down: this prevents the same
-          // tap from opening the sheet and then landing on an option after the
-          // viewport/keyboard or drawer has moved under the user's finger.
           className={cn(
             "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background touch-manipulation select-none",
             !displayValue && "text-muted-foreground"
           )}
-          onPointerDown={(e) => {
-            if (e.pointerType !== "touch") return;
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-          onPointerUp={(e) => {
-            if (e.pointerType !== "touch") return;
-            e.preventDefault();
-            e.stopPropagation();
-            ignoreSyntheticClickUntilRef.current = Date.now() + 500;
-            openSheet();
-          }}
           onClick={(e) => {
-            if (Date.now() < ignoreSyntheticClickUntilRef.current) {
-              e.preventDefault();
-              e.stopPropagation();
-              return;
-            }
             e.stopPropagation();
             openSheet();
           }}
@@ -111,6 +84,7 @@ const AdaptiveCombobox = ({
           <span className="truncate pointer-events-none">{displayValue || placeholder}</span>
           <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-1 pointer-events-none" />
         </button>
+
         <MobileSelectSheet
           open={sheetOpen}
           onOpenChange={handleSheetOpenChange}

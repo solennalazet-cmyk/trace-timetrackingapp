@@ -161,7 +161,7 @@ const MobileSelectSheet = ({
   if (!mounted || typeof document === "undefined") return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[70]" role="dialog" aria-label={title}>
+    <div ref={rootRef} className="fixed inset-0 z-[70]" role="dialog" aria-label={title}>
       <div
         className={cn(
           "absolute inset-0 bg-black/50 transition-opacity duration-150",
@@ -175,10 +175,14 @@ const MobileSelectSheet = ({
 
       <div
         className={cn(
-          "absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col rounded-t-2xl border-t bg-background shadow-lg",
+          "absolute inset-x-0 bottom-0 flex flex-col rounded-t-2xl border-t bg-background shadow-lg",
           "transition-transform duration-200 ease-out will-change-transform",
           visible ? "translate-y-0" : "translate-y-full"
         )}
+        style={{
+          bottom: keyboardOffset,
+          maxHeight: `calc(85dvh - ${keyboardOffset}px)`,
+        }}
       >
         <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-muted" />
 

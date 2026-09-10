@@ -47,8 +47,45 @@ const MobileSelectSheet = ({
   const [creating, setCreating] = useState(false);
   const [mounted, setMounted] = useState(open);
   const [visible, setVisible] = useState(false);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const actionLockRef = useRef(false);
+
+  // This sheet is portalled to <body>, so it lives *outside* the Radix dialog
+  // that opened it. Radix's focus scope listens for `focusin` on document and
+  // yanks focus back inside the dialog — which closes the soft keyboard, the
+  // user taps again, and the panel visibly bounces. Swallowing focus events at
+  // the sheet root keeps focus here without disabling the dialog's trap.
+  useEffect(() => {
+    const node = rootRef.current;
+    if (!mounted || !node) return;
+    const swallow = (e: Event) => e.stopPropagation();
+    node.addEventListener("focusin", swallow);
+    node.addEventListener("focusout", swallow);
+    return () => {
+      node.removeEventListener("focusin", swallow);
+      node.removeEventListener("focusout", swallow);
+    };
+  }, [mounted]);
+
+  // Keep the panel pinned to the top of the soft keyboard instead of letting
+  // the browser scroll the whole layout viewport around it.
+  useEffect(() => {
+    if (!mounted || typeof window === "undefined" || !window.visualViewport) return;
+    const vv = window.visualViewport;
+    const update = () => {
+      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKeyboardOffset(offset);
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, [mounted]);
 
   const isCreating = externalCreating || creating;
 

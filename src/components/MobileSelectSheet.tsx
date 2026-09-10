@@ -63,9 +63,15 @@ const MobileSelectSheet = ({
     const swallow = (e: Event) => e.stopPropagation();
     node.addEventListener("focusin", swallow);
     node.addEventListener("focusout", swallow);
+    // The parent dialog's scroll lock also treats this portal as "outside" and
+    // would cancel touch scrolling inside the list.
+    node.addEventListener("touchmove", swallow, { passive: true });
+    node.addEventListener("wheel", swallow, { passive: true });
     return () => {
       node.removeEventListener("focusin", swallow);
       node.removeEventListener("focusout", swallow);
+      node.removeEventListener("touchmove", swallow);
+      node.removeEventListener("wheel", swallow);
     };
   }, [mounted]);
 

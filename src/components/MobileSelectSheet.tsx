@@ -47,8 +47,51 @@ const MobileSelectSheet = ({
   const [creating, setCreating] = useState(false);
   const [mounted, setMounted] = useState(open);
   const [visible, setVisible] = useState(false);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const actionLockRef = useRef(false);
+
+  // This sheet is portalled to <body>, so it lives *outside* the Radix dialog
+  // that opened it. Radix's focus scope listens for `focusin` on document and
+  // yanks focus back inside the dialog — which closes the soft keyboard, the
+  // user taps again, and the panel visibly bounces. Swallowing focus events at
+  // the sheet root keeps focus here without disabling the dialog's trap.
+  useEffect(() => {
+    const node = rootRef.current;
+    if (!mounted || !node) return;
+    const swallow = (e: Event) => e.stopPropagation();
+    node.addEventListener("focusin", swallow);
+    node.addEventListener("focusout", swallow);
+    // The parent dialog's scroll lock also treats this portal as "outside" and
+    // would cancel touch scrolling inside the list.
+    node.addEventListener("touchmove", swallow, { passive: true });
+    node.addEventListener("wheel", swallow, { passive: true });
+    return () => {
+      node.removeEventListener("focusin", swallow);
+      node.removeEventListener("focusout", swallow);
+      node.removeEventListener("touchmove", swallow);
+      node.removeEventListener("wheel", swallow);
+    };
+  }, [mounted]);
+
+  // Keep the panel pinned to the top of the soft keyboard instead of letting
+  // the browser scroll the whole layout viewport around it.
+  useEffect(() => {
+    if (!mounted || typeof window === "undefined" || !window.visualViewport) return;
+    const vv = window.visualViewport;
+    const update = () => {
+      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKeyboardOffset(offset);
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, [mounted]);
 
   const isCreating = externalCreating || creating;
 
@@ -124,7 +167,7 @@ const MobileSelectSheet = ({
   if (!mounted || typeof document === "undefined") return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[70]" role="dialog" aria-label={title}>
+    <div ref={rootRef} className="fixed inset-0 z-[70]" role="dialog" aria-label={title}>
       <div
         className={cn(
           "absolute inset-0 bg-black/50 transition-opacity duration-150",
@@ -138,10 +181,14 @@ const MobileSelectSheet = ({
 
       <div
         className={cn(
-          "absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col rounded-t-2xl border-t bg-background shadow-lg",
+          "absolute inset-x-0 bottom-0 flex flex-col rounded-t-2xl border-t bg-background shadow-lg",
           "transition-transform duration-200 ease-out will-change-transform",
           visible ? "translate-y-0" : "translate-y-full"
         )}
+        style={{
+          bottom: keyboardOffset,
+          maxHeight: `calc(85dvh - ${keyboardOffset}px)`,
+        }}
       >
         <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-muted" />
 

@@ -204,10 +204,16 @@ const PrepareBillingSheet = ({
   // sent/exported (just without monetary amounts).
   const reportEntries = billableEntries.length > 0 ? billableEntries : entries;
 
-  const rangeStart = dateFrom.toISOString().split("T")[0];
-  const rangeEnd = dateTo.toISOString().split("T")[0];
+  // Local wall-clock keys — toISOString() shifts to UTC and can report the
+  // range as ending a day early for users east of Greenwich.
+  const rangeStart = toLocalDateKey(dateFrom);
+  const rangeEnd = toLocalDateKey(dateTo);
   const fromLabel = dateFrom.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
   const toLabel = dateTo.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  const shortDate = (d: Date) => d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "2-digit" });
+  const workerName = (profile?.business_name || profile?.full_name || user?.email?.split("@")[0] || "Trace").trim();
+  const reportTitle = `${workerName}_billing from ${shortDate(dateFrom)} to ${shortDate(dateTo)}`;
+  const reportFileName = `${reportTitle.replace(/[/\\:*?"<>|]/g, "-")}.pdf`;
 
   const buildPDF = async () => {
     // Auto-landscape when many optional columns selected (always-on: Date, Duration, Amount).

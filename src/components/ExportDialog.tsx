@@ -379,7 +379,7 @@ const ExportDialog = ({
     y += 6;
 
     // ── Table (shows per-entry display values) ──
-    const tableHead = [["Date", "Duration", "Project", "Task", "Billable", "Value"]];
+    const tableHead = ["Date", "Duration", "Project", "Task", "Billable", "Value"];
     const tableBody = filteredEntries
       .sort((a, b) => (a.entry_date ?? "").localeCompare(b.entry_date ?? ""))
       .map((e) => {

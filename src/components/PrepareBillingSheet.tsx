@@ -214,9 +214,9 @@ const PrepareBillingSheet = ({
     const totalCols = 3 + selectedColumns.length;
     const orientation: "portrait" | "landscape" = totalCols > 5 ? "landscape" : "portrait";
 
-    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    const [{ default: jsPDF }, { drawPdfTable }] = await Promise.all([
       import("jspdf"),
-      import("jspdf-autotable"),
+      import("@/lib/pdf-table"),
     ]);
     const doc = new jsPDF({ orientation, unit: "mm", format: "a4" });
 

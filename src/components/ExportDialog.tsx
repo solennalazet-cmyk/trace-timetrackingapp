@@ -281,9 +281,9 @@ const ExportDialog = ({
   };
 
   const exportPDF = async () => {
-    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    const [{ default: jsPDF }, { drawPdfTable }] = await Promise.all([
       import("jspdf"),
-      import("jspdf-autotable"),
+      import("@/lib/pdf-table"),
     ]);
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
@@ -379,7 +379,7 @@ const ExportDialog = ({
     y += 6;
 
     // ── Table (shows per-entry display values) ──
-    const tableHead = [["Date", "Duration", "Project", "Task", "Billable", "Value"]];
+    const tableHead = ["Date", "Duration", "Project", "Task", "Billable", "Value"];
     const tableBody = filteredEntries
       .sort((a, b) => (a.entry_date ?? "").localeCompare(b.entry_date ?? ""))
       .map((e) => {
@@ -394,17 +394,12 @@ const ExportDialog = ({
         ];
       });
 
-    autoTable(doc, {
+    drawPdfTable(doc, {
       startY: y,
       head: tableHead,
       body: tableBody,
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 8, cellPadding: 2.5, textColor: [50, 50, 50] },
-      headStyles: { fillColor: [245, 245, 245], textColor: [60, 60, 60], fontStyle: "bold", lineColor: [220, 220, 220], lineWidth: 0.3 },
-      alternateRowStyles: { fillColor: [252, 252, 252] },
-      theme: "grid",
-      tableLineColor: [230, 230, 230],
-      tableLineWidth: 0.2,
+      margin,
+      fontSize: 8,
     });
 
     // ── Footer on every page ──

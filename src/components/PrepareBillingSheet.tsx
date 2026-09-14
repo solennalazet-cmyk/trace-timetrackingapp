@@ -204,10 +204,16 @@ const PrepareBillingSheet = ({
   // sent/exported (just without monetary amounts).
   const reportEntries = billableEntries.length > 0 ? billableEntries : entries;
 
-  const rangeStart = dateFrom.toISOString().split("T")[0];
-  const rangeEnd = dateTo.toISOString().split("T")[0];
+  // Local wall-clock keys — toISOString() shifts to UTC and can report the
+  // range as ending a day early for users east of Greenwich.
+  const rangeStart = toLocalDateKey(dateFrom);
+  const rangeEnd = toLocalDateKey(dateTo);
   const fromLabel = dateFrom.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
   const toLabel = dateTo.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  const shortDate = (d: Date) => d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "2-digit" });
+  const workerName = (profile?.business_name || profile?.full_name || user?.email?.split("@")[0] || "Trace").trim();
+  const reportTitle = `${workerName}_billing from ${shortDate(dateFrom)} to ${shortDate(dateTo)}`;
+  const reportFileName = `${reportTitle.replace(/[/\\:*?"<>|]/g, "-")}.pdf`;
 
   const buildPDF = async () => {
     // Auto-landscape when many optional columns selected (always-on: Date, Duration, Amount).
@@ -243,7 +249,7 @@ const PrepareBillingSheet = ({
         ? window.btoa(unescape(encodeURIComponent(json)))
         : Buffer.from(json, "utf8").toString("base64");
       doc.setProperties({
-        title: `Trace report — ${clientName} — ${rangeStart} to ${rangeEnd}`,
+        title: reportTitle,
         subject: "Trace time report",
         creator: "Trace",
         author: profile?.business_name || profile?.full_name || user?.email || "Trace",
@@ -520,7 +526,7 @@ const PrepareBillingSheet = ({
   const handleExportPDF = async () => {
     if (reportEntries.length === 0) { toast.error("No entries to export."); return; }
     const doc = await buildPDF();
-    doc.save(`billing-${clientName.replace(/\s+/g, "-")}-${rangeStart}-to-${rangeEnd}.pdf`);
+    doc.save(reportFileName);
     toast.success("PDF exported.");
     promptMarkBilled();
   };
@@ -529,7 +535,7 @@ const PrepareBillingSheet = ({
     if (reportEntries.length === 0) { toast.error("No entries to share."); return; }
     const doc = await buildPDF();
     const blob = doc.output("blob");
-    const file = new File([blob], `billing-${clientName.replace(/\s+/g, "-")}-${rangeStart}-to-${rangeEnd}.pdf`, { type: "application/pdf" });
+    const file = new File([blob], reportFileName, { type: "application/pdf" });
 
 
     if (navigator.share && navigator.canShare?.({ files: [file] })) {

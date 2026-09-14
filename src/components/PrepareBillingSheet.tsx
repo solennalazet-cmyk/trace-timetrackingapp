@@ -249,7 +249,7 @@ const PrepareBillingSheet = ({
         ? window.btoa(unescape(encodeURIComponent(json)))
         : Buffer.from(json, "utf8").toString("base64");
       doc.setProperties({
-        title: `Trace report — ${clientName} — ${rangeStart} to ${rangeEnd}`,
+        title: reportTitle,
         subject: "Trace time report",
         creator: "Trace",
         author: profile?.business_name || profile?.full_name || user?.email || "Trace",

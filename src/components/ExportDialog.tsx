@@ -281,9 +281,9 @@ const ExportDialog = ({
   };
 
   const exportPDF = async () => {
-    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    const [{ default: jsPDF }, { drawPdfTable }] = await Promise.all([
       import("jspdf"),
-      import("jspdf-autotable"),
+      import("@/lib/pdf-table"),
     ]);
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 

@@ -425,39 +425,28 @@ const PrepareBillingSheet = ({
       ? 2 + orderedOptional.indexOf("location")
       : -1;
 
-    autoTable(doc, {
+    const tableEndY = drawPdfTable(doc, {
       startY: y,
-      head: [head],
+      head,
       body,
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 8, cellPadding: 2.5, textColor: [50, 50, 50], overflow: "linebreak" },
-      headStyles: { fillColor: [245, 245, 245], textColor: [60, 60, 60], fontStyle: "bold", lineColor: [220, 220, 220], lineWidth: 0.3 },
-      alternateRowStyles: { fillColor: [252, 252, 252] },
-      theme: "grid",
-      tableLineColor: [230, 230, 230],
-      tableLineWidth: 0.2,
-      didParseCell: (data) => {
+      margin,
+      fontSize: 8,
+      cellStyle: (_row, col, text) => {
         // Color-code the Location column only when the client has a site set
-        if (!clientHasSite || locationColIndex < 0) return;
-        if (data.section !== "body" || data.column.index !== locationColIndex) return;
-        const text = String(data.cell.raw ?? "");
+        if (!clientHasSite || locationColIndex < 0 || col !== locationColIndex) return undefined;
         if (text.startsWith("On-site")) {
-          // sage green
-          data.cell.styles.fillColor = [219, 234, 224];
-          data.cell.styles.textColor = [29, 78, 50];
-          data.cell.styles.fontStyle = "bold";
-        } else if (text.startsWith("Off-site")) {
-          // mustard yellow
-          data.cell.styles.fillColor = [250, 232, 187];
-          data.cell.styles.textColor = [102, 65, 13];
-          data.cell.styles.fontStyle = "bold";
+          return { fill: [219, 234, 224], text: [29, 78, 50], bold: true };
         }
+        if (text.startsWith("Off-site")) {
+          return { fill: [250, 232, 187], text: [102, 65, 13], bold: true };
+        }
+        return undefined;
       },
     });
 
     const paymentLink = profile?.payment_link;
     if (paymentLink) {
-      const lastY = (doc as any).lastAutoTable?.finalY ?? y + 20;
+      const lastY = tableEndY;
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(40);

@@ -730,6 +730,13 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
         readOnly
       />
 
+      <RejectReportDialog
+        open={rejectId !== null}
+        onOpenChange={(v) => { if (!v) setRejectId(null); }}
+        reportId={rejectId}
+        onRejected={load}
+      />
+
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent className="max-w-[380px] w-[calc(100vw-2rem)] rounded-2xl">
           <AlertDialogHeader>

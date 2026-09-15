@@ -516,8 +516,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
               .join("")
               .toUpperCase();
 
-            return (
-              <SwipeToDeleteRow key={key} onDelete={() => setDeleteTarget({ key, name })}>
+            const paymentCard = (
               <Card className="overflow-hidden rounded-2xl shadow-sm">
                 {/* Collapsed header — always visible */}
                 <button
@@ -696,16 +695,25 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
                       </div>
                     </div>
 
-                    <Button
-                      variant="outline"
-                      className="w-full rounded-lg h-10 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => setDeleteTarget({ key, name })}
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" /> Delete
-                    </Button>
+                    {!embedded && (
+                      <Button
+                        variant="outline"
+                        className="w-full rounded-lg h-10 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => setDeleteTarget({ key, name })}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                      </Button>
+                    )}
                   </div>
                 )}
               </Card>
+            );
+
+            return embedded ? (
+              <div key={key}>{paymentCard}</div>
+            ) : (
+              <SwipeToDeleteRow key={key} onDelete={() => setDeleteTarget({ key, name })}>
+                {paymentCard}
               </SwipeToDeleteRow>
             );
           })}

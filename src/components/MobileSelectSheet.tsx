@@ -141,9 +141,11 @@ const MobileSelectSheet = ({
     (item: ComboboxItem) => {
       if (actionLockRef.current) return;
       actionLockRef.current = true;
-      dismissKeyboard();
+      // Commit the selection before closing the keyboard. On mobile, blurring
+      // first can move the sheet between touch-down and click and cancel the tap.
       onSelect(item.id, item.name);
       onOpenChange(false);
+      dismissKeyboard();
     },
     [onSelect, onOpenChange, dismissKeyboard]
   );
@@ -249,6 +251,7 @@ const MobileSelectSheet = ({
               type="button"
               className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-nav-bg active:bg-accent touch-manipulation select-none"
               onClick={handleCreate}
+              onMouseDown={(event) => event.preventDefault()}
               disabled={isCreating}
             >
               <Plus className="h-5 w-5 shrink-0" />
@@ -264,6 +267,7 @@ const MobileSelectSheet = ({
                 "flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm active:bg-accent touch-manipulation select-none",
                 value === item.id && "bg-accent/50 font-medium"
               )}
+              onMouseDown={(event) => event.preventDefault()}
               onClick={() => handleSelect(item)}
             >
               <div className="w-5 h-5 flex items-center justify-center shrink-0">

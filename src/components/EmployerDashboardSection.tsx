@@ -87,16 +87,21 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
       // connected freelancers — not only those with reports in the current range.
       const { data: contractorRows } = await supabase
         .from("clients")
-        .select("connected_user_id, name")
+        .select("connected_user_id, name, engagement_start_date, engagement_end_date")
         .eq("user_id", user.id)
         .in("kind", ["contractor", "both"])
         .eq("connection_status", "accepted");
       const nameMap = new Map<string, string>();
       const freelancerList: { id: string; name: string }[] = [];
+      const todayKey = toLocalDateKey(new Date());
       for (const c of (contractorRows ?? []) as any[]) {
         if (!c.connected_user_id) continue;
         const name = c.name ?? "Freelancer";
         nameMap.set(c.connected_user_id, name);
+        // Only freelancers currently engaged appear in the dashboard filter.
+        const started = !c.engagement_start_date || c.engagement_start_date <= todayKey;
+        const ended = !!c.engagement_end_date && c.engagement_end_date < todayKey;
+        if (!started || ended) continue;
         freelancerList.push({ id: c.connected_user_id, name });
       }
       // Fall back to "Freelancer" label for any reporter not in the contractor list.

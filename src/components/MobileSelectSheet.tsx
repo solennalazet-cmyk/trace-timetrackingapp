@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, type PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { Check, Plus, Loader2, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -51,6 +51,7 @@ const MobileSelectSheet = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const actionLockRef = useRef(false);
+  const touchStartRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
 
   // This sheet is portalled to <body>, so it lives *outside* the Radix dialog
   // that opened it. Radix's focus scope listens for `focusin` on document and
@@ -166,10 +167,52 @@ const MobileSelectSheet = ({
     if (!created) actionLockRef.current = false;
   }, [isCreating, onCreate, search, onSelect, onOpenChange, dismissKeyboard]);
 
+  // Mobile browsers may cancel the synthetic click when the keyboard changes
+  // the visual viewport between touch-down and touch-up. Recognise a real tap
+  // from the pointer sequence instead, while still allowing vertical scrolling.
+  const touchTapHandlers = useCallback((action: () => void) => ({
+    onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => {
+      if (event.pointerType !== "touch") {
+        event.preventDefault();
+        return;
+      }
+      touchStartRef.current = {
+        pointerId: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+    },
+    onPointerUp: (event: ReactPointerEvent<HTMLButtonElement>) => {
+      if (event.pointerType !== "touch") return;
+      const start = touchStartRef.current;
+      touchStartRef.current = null;
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+      if (
+        start?.pointerId === event.pointerId &&
+        Math.hypot(event.clientX - start.x, event.clientY - start.y) <= 12
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        action();
+      }
+    },
+    onPointerCancel: () => {
+      touchStartRef.current = null;
+    },
+  }), []);
+
   if (!mounted || typeof document === "undefined") return null;
 
   return createPortal(
-    <div ref={rootRef} className="fixed inset-0 z-[70]" role="dialog" aria-label={title}>
+    <div
+      ref={rootRef}
+      className="pointer-events-auto fixed inset-0 z-[70]"
+      role="dialog"
+      aria-label={title}
+    >
       <div
         className={cn(
           "absolute inset-0 bg-black/50 transition-opacity duration-150",
@@ -251,9 +294,7 @@ const MobileSelectSheet = ({
               type="button"
               className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-nav-bg active:bg-accent touch-manipulation select-none"
               onClick={handleCreate}
-              onPointerDown={(event) => {
-                if (event.pointerType !== "touch") event.preventDefault();
-              }}
+              {...touchTapHandlers(handleCreate)}
               onMouseDown={(event) => event.preventDefault()}
               disabled={isCreating}
             >
@@ -270,9 +311,7 @@ const MobileSelectSheet = ({
                 "flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm active:bg-accent touch-manipulation select-none",
                 value === item.id && "bg-accent/50 font-medium"
               )}
-              onPointerDown={(event) => {
-                if (event.pointerType !== "touch") event.preventDefault();
-              }}
+              {...touchTapHandlers(() => handleSelect(item))}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => handleSelect(item)}
             >

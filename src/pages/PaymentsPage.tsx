@@ -651,9 +651,8 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
                         {rows.map((r) => {
                           const s = CURRENCY_SYMBOLS[r.currency] ?? "€";
                           const pending = r.status === "submitted";
-                          return (
+                          const row = (
                             <button
-                              key={r.id}
                               type="button"
                               onClick={() => setOpenReportId(r.id)}
                               className="w-full flex items-center gap-2 p-2.5 rounded-lg border border-border bg-muted/30 hover:bg-muted/60 transition-colors text-left"
@@ -661,11 +660,24 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium truncate">{formatPeriod(r.period_start, r.period_end)}</p>
                                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                                  {pending ? "Pending approval" : "Approved"}
+                                  {pending ? "Pending approval — swipe to review" : "Approved"}
                                 </p>
                               </div>
                               <span className="text-sm font-mono font-semibold">{s}{Number(r.total_amount).toFixed(2)}</span>
                             </button>
+                          );
+                          if (!isEmployer || !pending) return <div key={r.id}>{row}</div>;
+                          return (
+                            <SwipeActionsRow
+                              key={r.id}
+                              actionWidth={76}
+                              actions={[
+                                { label: "Reject", Icon: X, onAction: () => setRejectId(r.id), className: "bg-destructive text-destructive-foreground" },
+                                { label: "Approve", Icon: Check, onAction: () => handleApproveReport(r.id), className: "bg-emerald-600 text-white" },
+                              ]}
+                            >
+                              {row}
+                            </SwipeActionsRow>
                           );
                         })}
                       </div>

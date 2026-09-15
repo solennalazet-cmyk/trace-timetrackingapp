@@ -40,6 +40,7 @@ interface ActivityItem {
 }
 
 const PULL_THRESHOLD = 70;
+const VIEW_KEY = "trace_employer_overview_view";
 
 const EmployerHomePage = () => {
   const { user } = useAuth();
@@ -51,7 +52,17 @@ const EmployerHomePage = () => {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
-  const [view, setView] = useState<"status" | "dashboard">("dashboard");
+  // Remember the last tab so a reload keeps the employer where they were.
+  const [view, setView] = useState<"status" | "dashboard">(() => {
+    try {
+      const v = localStorage.getItem(VIEW_KEY);
+      if (v === "status" || v === "dashboard") return v;
+    } catch {}
+    return "dashboard";
+  });
+  useEffect(() => {
+    try { localStorage.setItem(VIEW_KEY, view); } catch {}
+  }, [view]);
   const [activityClearedAt, setActivityClearedAt] = useState<string | null>(null);
   useEffect(() => {
     if (!user) { setActivityClearedAt(null); return; }

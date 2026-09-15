@@ -26,6 +26,13 @@ const config: CapacitorConfig = {
     allowMixedContent: false,
   },
   plugins: {
+    Keyboard: {
+      // Keep the native WebView stable while an assignment picker is open.
+      // The picker manages its own keyboard clearance, so resizing the entire
+      // app here only causes the field and client rows to jump under the finger.
+      resize: 'none',
+      resizeOnFullScreen: false,
+    },
     // Native splash screen: shown by the OS the instant the app process
     // starts, before the WebView even loads. We hide it ourselves from JS
     // (`launchAutoHide: false`) once React has mounted and painted the first

@@ -116,6 +116,7 @@ const StartPage = () => {
   const [todayCount, setTodayCount] = useState(0);
   const [todayMinutes, setTodayMinutes] = useState(0);
   const [unassignedCount, setUnassignedCount] = useState(0);
+  const [singleUnassignedEntry, setSingleUnassignedEntry] = useState<ExistingEntry | null>(null);
   const [showSummary, setShowSummary] = useState(true);
 
   // Boost mode
@@ -277,20 +278,25 @@ const StartPage = () => {
       setTodayCount(todayEntries?.length ?? 0);
       setTodayMinutes(todayEntries?.reduce((sum, e) => sum + (e.duration_minutes || 0), 0) ?? 0);
 
-      const { count } = await supabase
+      const { data: unassignedEntries, count } = await supabase
         .from("time_entries")
-        .select("id", { count: "exact", head: true })
+        .select("id, entry_type, duration_minutes, break_minutes, entry_date, notes, tags, billable, rate_amount, rate_currency, rate_unit, client_id, project_id, task_id, start_time, end_time", { count: "exact" })
         .eq("user_id", user.id)
         .is("client_id", null)
         .is("project_id", null)
-        .is("deleted_at", null);
+        .is("deleted_at", null)
+        .order("entry_date", { ascending: false })
+        .limit(1);
       setUnassignedCount(count ?? 0);
+      setSingleUnassignedEntry(count === 1 && unassignedEntries?.[0] ? unassignedEntries[0] as ExistingEntry : null);
     } else {
       const entries = getAnonymousEntries();
       const todayEntries = entries.filter((e: any) => e.entry_date === today);
       setTodayCount(todayEntries.length);
       setTodayMinutes(todayEntries.reduce((sum: number, e: any) => sum + (e.duration_minutes || 0), 0));
-      setUnassignedCount(entries.filter((e: any) => !e.client_id && !e.project_id).length);
+      const unassignedEntries = entries.filter((e: any) => !e.client_id && !e.project_id);
+      setUnassignedCount(unassignedEntries.length);
+      setSingleUnassignedEntry(unassignedEntries.length === 1 ? unassignedEntries[0] as ExistingEntry : null);
     }
   };
 
@@ -685,6 +691,14 @@ const StartPage = () => {
     setAssignModalOpen(true);
   };
 
+  const handleUnassignedClick = () => {
+    if (unassignedCount === 1 && singleUnassignedEntry) {
+      handleAssignFromPanel(singleUnassignedEntry);
+      return;
+    }
+    setUnassignedOpen(true);
+  };
+
   const modes: { key: Mode; label: string }[] = [
     { key: "stopwatch", label: "Stopwatch" },
     { key: "focus", label: "Focus" },
@@ -752,7 +766,7 @@ const StartPage = () => {
           todayMinutes={todayMinutes}
           unassignedCount={unassignedCount}
           onTodayClick={() => setTodaySheetOpen(true)}
-          onUnassignedClick={() => setUnassignedOpen(true)}
+          onUnassignedClick={handleUnassignedClick}
         />
       )}
 

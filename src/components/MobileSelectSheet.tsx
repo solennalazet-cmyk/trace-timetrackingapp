@@ -251,6 +251,9 @@ const MobileSelectSheet = ({
               type="button"
               className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-nav-bg active:bg-accent touch-manipulation select-none"
               onClick={handleCreate}
+              onPointerDown={(event) => {
+                if (event.pointerType !== "touch") event.preventDefault();
+              }}
               onMouseDown={(event) => event.preventDefault()}
               disabled={isCreating}
             >
@@ -267,6 +270,9 @@ const MobileSelectSheet = ({
                 "flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm active:bg-accent touch-manipulation select-none",
                 value === item.id && "bg-accent/50 font-medium"
               )}
+              onPointerDown={(event) => {
+                if (event.pointerType !== "touch") event.preventDefault();
+              }}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => handleSelect(item)}
             >

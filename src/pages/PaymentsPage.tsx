@@ -745,7 +745,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
         onRejected={load}
       />
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+      {!embedded && <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent className="max-w-[380px] w-[calc(100vw-2rem)] rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {deleteTarget?.name}?</AlertDialogTitle>
@@ -764,7 +764,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+      </AlertDialog>}
     </div>
   );
 };

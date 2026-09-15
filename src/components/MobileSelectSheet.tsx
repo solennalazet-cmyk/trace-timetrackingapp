@@ -207,7 +207,12 @@ const MobileSelectSheet = ({
   if (!mounted || typeof document === "undefined") return null;
 
   return createPortal(
-    <div ref={rootRef} className="fixed inset-0 z-[70]" role="dialog" aria-label={title}>
+    <div
+      ref={rootRef}
+      className="pointer-events-auto fixed inset-0 z-[70]"
+      role="dialog"
+      aria-label={title}
+    >
       <div
         className={cn(
           "absolute inset-0 bg-black/50 transition-opacity duration-150",

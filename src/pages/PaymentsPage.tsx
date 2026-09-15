@@ -230,9 +230,10 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
   }, [groups, isEmployer, selectedWorker]);
 
   const selectedWorkerName = useMemo(() => {
+    if (!isEmployer) return "Overview";
     if (selectedWorker === "all") return "All freelancers";
     return groupNames.get(selectedWorker) ?? employerFreelancers.find((f) => f.key === selectedWorker)?.name ?? "Freelancer";
-  }, [selectedWorker, groupNames, employerFreelancers]);
+  }, [isEmployer, selectedWorker, groupNames, employerFreelancers]);
 
 
   const computeGroupTotals = (rows: ReportRow[]) => {

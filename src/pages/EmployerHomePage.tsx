@@ -323,7 +323,14 @@ const EmployerHomePage = () => {
               const sym = CURRENCY_SYMBOLS[r.currency] ?? "€";
               const isApproving = approvingId === r.id;
               return (
-                <Card key={r.id} className="overflow-hidden">
+                <SwipeActionsRow
+                  key={r.id}
+                  actions={[
+                    { label: "Reject", Icon: X, onAction: () => setRejectId(r.id), className: "bg-destructive text-destructive-foreground" },
+                    { label: "Approve", Icon: Check, onAction: () => handleQuickApprove(r), className: "bg-emerald-600 text-white" },
+                  ]}
+                >
+                <Card className="overflow-hidden">
                   <Seo title={"Team Dashboard — Trace for Employers"} description={"Approve freelancer time reports, review payments, and monitor team activity at a glance."} path={"/employer"} />
                   <button
                     onClick={() => openReport(r)}

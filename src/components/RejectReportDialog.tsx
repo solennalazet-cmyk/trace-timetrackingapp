@@ -6,6 +6,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -81,6 +82,15 @@ const RejectReportDialog = ({ open, onOpenChange, reportId, onRejected }: Props)
             onChange={(e) => setNote(e.target.value)}
             rows={3}
           />
+          <div className="flex items-start justify-between gap-3 rounded-xl border border-border p-3">
+            <div className="min-w-0">
+              <Label htmlFor="rr-notify" className="text-sm font-medium">Notify the freelancer</Label>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Turn off to reject quietly — no alert is sent.
+              </p>
+            </div>
+            <Switch id="rr-notify" checked={notify} onCheckedChange={setNotify} />
+          </div>
         </div>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={working}>Cancel</AlertDialogCancel>

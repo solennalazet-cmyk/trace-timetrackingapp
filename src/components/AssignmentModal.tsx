@@ -396,7 +396,12 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     if (user) {
       const { data, error } = await supabase.from("clients").insert({ name, user_id: user.id }).select("id, name, default_rate, currency").single();
       if (error || !data) return null;
-      setClientsFull((prev) => [...prev, data as ClientFull]);
+      setClientsFull((prev) => {
+        const nextClients = [...prev, data as ClientFull];
+        const cached = readAssignmentCache(user.id);
+        if (cached) writeAssignmentCache(user.id, { ...cached, clients: nextClients });
+        return nextClients;
+      });
       return { id: data.id, name: data.name };
     } else {
       const id = `local-${Date.now()}`;

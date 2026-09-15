@@ -9,6 +9,7 @@ import RejectReportDialog from "@/components/RejectReportDialog";
 import Seo from "@/components/Seo";
 import EmployerDashboardSection from "@/components/EmployerDashboardSection";
 import ConnectionInvitesCard from "@/components/ConnectionInvitesCard";
+import SwipeActionsRow from "@/components/SwipeActionsRow";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
@@ -214,8 +215,7 @@ const EmployerHomePage = () => {
     setSheetOpen(true);
   };
 
-  const handleQuickApprove = async (r: SubmittedReport, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleQuickApprove = async (r: SubmittedReport) => {
     setApprovingId(r.id);
     const { error } = await supabase
       .from("submitted_reports")
@@ -356,7 +356,7 @@ const EmployerHomePage = () => {
                       <X className="w-3.5 h-3.5" /> Reject
                     </button>
                     <button
-                      onClick={(e) => handleQuickApprove(r, e)}
+                      onClick={(e) => { e.stopPropagation(); handleQuickApprove(r); }}
                       disabled={isApproving}
                       className="flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
                     >
@@ -365,6 +365,7 @@ const EmployerHomePage = () => {
                     </button>
                   </div>
                 </Card>
+                </SwipeActionsRow>
               );
             })}
           </div>

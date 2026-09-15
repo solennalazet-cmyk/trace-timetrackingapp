@@ -45,7 +45,7 @@ const WorkerNotificationsCard = () => {
     const [{ data: rRows }, { data: pRows }] = await Promise.all([
       supabase
         .from("submitted_reports")
-        .select("id, client_id, status, reviewed_at, rejection_reason, rejection_note, total_amount, currency")
+        .select("id, client_id, status, reviewed_at, rejection_reason, rejection_note, total_amount, currency, notify_worker")
         .eq("worker_user_id", user.id)
         .in("status", ["approved", "rejected"])
         .not("reviewed_at", "is", null)
@@ -88,6 +88,8 @@ const WorkerNotificationsCard = () => {
 
     const evts: Event[] = [];
     for (const r of reportRows) {
+      // Employers can reject quietly — those reviews raise no notification.
+      if (r.notify_worker === false) continue;
       evts.push({
         id: `r-${r.id}`,
         ts: r.reviewed_at,

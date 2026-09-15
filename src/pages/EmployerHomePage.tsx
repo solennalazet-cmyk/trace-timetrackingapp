@@ -9,6 +9,7 @@ import RejectReportDialog from "@/components/RejectReportDialog";
 import Seo from "@/components/Seo";
 import EmployerDashboardSection from "@/components/EmployerDashboardSection";
 import ConnectionInvitesCard from "@/components/ConnectionInvitesCard";
+import SwipeActionsRow from "@/components/SwipeActionsRow";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
@@ -40,6 +41,7 @@ interface ActivityItem {
 }
 
 const PULL_THRESHOLD = 70;
+const VIEW_KEY = "trace_employer_overview_view";
 
 const EmployerHomePage = () => {
   const { user } = useAuth();
@@ -51,7 +53,17 @@ const EmployerHomePage = () => {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
-  const [view, setView] = useState<"status" | "dashboard">("dashboard");
+  // Remember the last tab so a reload keeps the employer where they were.
+  const [view, setView] = useState<"status" | "dashboard">(() => {
+    try {
+      const v = localStorage.getItem(VIEW_KEY);
+      if (v === "status" || v === "dashboard") return v;
+    } catch {}
+    return "dashboard";
+  });
+  useEffect(() => {
+    try { localStorage.setItem(VIEW_KEY, view); } catch {}
+  }, [view]);
   const [activityClearedAt, setActivityClearedAt] = useState<string | null>(null);
   useEffect(() => {
     if (!user) { setActivityClearedAt(null); return; }
@@ -203,8 +215,7 @@ const EmployerHomePage = () => {
     setSheetOpen(true);
   };
 
-  const handleQuickApprove = async (r: SubmittedReport, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleQuickApprove = async (r: SubmittedReport) => {
     setApprovingId(r.id);
     const { error } = await supabase
       .from("submitted_reports")
@@ -312,7 +323,14 @@ const EmployerHomePage = () => {
               const sym = CURRENCY_SYMBOLS[r.currency] ?? "€";
               const isApproving = approvingId === r.id;
               return (
-                <Card key={r.id} className="overflow-hidden">
+                <SwipeActionsRow
+                  key={r.id}
+                  actions={[
+                    { label: "Reject", Icon: X, onAction: () => setRejectId(r.id), className: "bg-destructive text-destructive-foreground" },
+                    { label: "Approve", Icon: Check, onAction: () => handleQuickApprove(r), className: "bg-emerald-600 text-white" },
+                  ]}
+                >
+                <Card className="overflow-hidden">
                   <Seo title={"Team Dashboard — Trace for Employers"} description={"Approve freelancer time reports, review payments, and monitor team activity at a glance."} path={"/employer"} />
                   <button
                     onClick={() => openReport(r)}
@@ -338,7 +356,7 @@ const EmployerHomePage = () => {
                       <X className="w-3.5 h-3.5" /> Reject
                     </button>
                     <button
-                      onClick={(e) => handleQuickApprove(r, e)}
+                      onClick={(e) => { e.stopPropagation(); handleQuickApprove(r); }}
                       disabled={isApproving}
                       className="flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
                     >
@@ -347,6 +365,7 @@ const EmployerHomePage = () => {
                     </button>
                   </div>
                 </Card>
+                </SwipeActionsRow>
               );
             })}
           </div>

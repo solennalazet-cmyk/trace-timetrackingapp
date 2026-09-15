@@ -1,0 +1,1 @@
+ALTER TABLE public.submitted_reports ADD COLUMN IF NOT EXISTS notify_worker boolean NOT NULL DEFAULT true;

@@ -87,16 +87,21 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
       // connected freelancers — not only those with reports in the current range.
       const { data: contractorRows } = await supabase
         .from("clients")
-        .select("connected_user_id, name")
+        .select("connected_user_id, name, engagement_start_date, engagement_end_date")
         .eq("user_id", user.id)
         .in("kind", ["contractor", "both"])
         .eq("connection_status", "accepted");
       const nameMap = new Map<string, string>();
       const freelancerList: { id: string; name: string }[] = [];
+      const todayKey = toLocalDateKey(new Date());
       for (const c of (contractorRows ?? []) as any[]) {
         if (!c.connected_user_id) continue;
         const name = c.name ?? "Freelancer";
         nameMap.set(c.connected_user_id, name);
+        // Only freelancers currently engaged appear in the dashboard filter.
+        const started = !c.engagement_start_date || c.engagement_start_date <= todayKey;
+        const ended = !!c.engagement_end_date && c.engagement_end_date < todayKey;
+        if (!started || ended) continue;
         freelancerList.push({ id: c.connected_user_id, name });
       }
       // Fall back to "Freelancer" label for any reporter not in the contractor list.
@@ -111,15 +116,17 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
     return () => { cancelled = true; };
   }, [user, from, to, refreshKey]);
 
+  // Pills list only freelancers currently marked active, so the dashboard
+  // always reflects who works for this employer today.
   const workers = useMemo(() => {
     const m = new Map<string, { id: string; name: string }>();
     for (const f of allFreelancers) m.set(f.id, f);
-    for (const r of reports) {
-      if (!r.worker_user_id || m.has(r.worker_user_id)) continue;
-      m.set(r.worker_user_id, { id: r.worker_user_id, name: workerNames.get(r.worker_user_id) ?? "Freelancer" });
+    if (selectedWorker !== "all" && !m.has(selectedWorker)) {
+      m.set(selectedWorker, { id: selectedWorker, name: workerNames.get(selectedWorker) ?? "Freelancer" });
     }
     return Array.from(m.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [allFreelancers, reports, workerNames]);
+  }, [allFreelancers, workerNames, selectedWorker]);
+
 
 
   const filteredReports = useMemo(

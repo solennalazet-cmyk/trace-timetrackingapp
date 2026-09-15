@@ -116,7 +116,7 @@ function useRestoreTheme() {
 
 const AppInner = () => {
   useRestoreTheme();
-  const { activeRole } = useRole();
+  const { activeRole, roleLoaded } = useRole();
   const weekStart = useWeekStartFromSettings();
 
   useEffect(() => {
@@ -135,6 +135,9 @@ const AppInner = () => {
   const employerHome = "/employer";
 
   const RequireRole = ({ role, children }: { role: "worker" | "employer"; children: JSX.Element }) => {
+    // Never bounce while the saved role is still unknown — a reload would
+    // otherwise throw the user back to the other role's home screen.
+    if (!roleLoaded) return <div className="min-h-screen" aria-hidden />;
     if (activeRole !== role) {
       return <Navigate to={role === "worker" ? employerHome : workerHome} replace />;
     }
@@ -142,8 +145,10 @@ const AppInner = () => {
   };
 
   // "/" is the freelancer's home; for employers it should land on /employer.
-  const RoleAwareHome = () =>
-    activeRole === "employer" ? <Navigate to={employerHome} replace /> : <StartPage />;
+  const RoleAwareHome = () => {
+    if (!roleLoaded) return <div className="min-h-screen" aria-hidden />;
+    return activeRole === "employer" ? <Navigate to={employerHome} replace /> : <StartPage />;
+  };
 
   return (
     <WeekStartProvider value={weekStart}>

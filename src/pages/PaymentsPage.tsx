@@ -8,6 +8,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import SwipeToDeleteRow from "@/components/SwipeToDeleteRow";
+import SwipeActionsRow from "@/components/SwipeActionsRow";
+import RejectReportDialog from "@/components/RejectReportDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/contexts/RoleContext";
@@ -93,6 +95,17 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ key: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [rejectId, setRejectId] = useState<string | null>(null);
+
+  const handleApproveReport = async (reportId: string) => {
+    const { error } = await supabase
+      .from("submitted_reports")
+      .update({ status: "approved" } as any)
+      .eq("id", reportId);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Report approved.");
+    load();
+  };
 
   const load = useCallback(async () => {
     if (!user) return;

@@ -73,7 +73,7 @@ export const RoleProvider = ({ children }: { children: ReactNode }) => {
   );
 
   return (
-    <RoleContext.Provider value={{ activeRole, availableRoles, setActiveRole }}>
+    <RoleContext.Provider value={{ activeRole, availableRoles, roleLoaded, setActiveRole }}>
       {children}
     </RoleContext.Provider>
   );

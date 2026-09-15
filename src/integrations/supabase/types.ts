@@ -370,6 +370,7 @@ export type Database = {
           employer_user_id: string | null
           entries_snapshot: Json
           id: string
+          notify_worker: boolean
           parent_submission_id: string | null
           period_end: string
           period_start: string
@@ -392,6 +393,7 @@ export type Database = {
           employer_user_id?: string | null
           entries_snapshot?: Json
           id?: string
+          notify_worker?: boolean
           parent_submission_id?: string | null
           period_end: string
           period_start: string
@@ -414,6 +416,7 @@ export type Database = {
           employer_user_id?: string | null
           entries_snapshot?: Json
           id?: string
+          notify_worker?: boolean
           parent_submission_id?: string | null
           period_end?: string
           period_start?: string

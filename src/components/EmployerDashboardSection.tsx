@@ -116,15 +116,17 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
     return () => { cancelled = true; };
   }, [user, from, to, refreshKey]);
 
+  // Pills list only freelancers currently marked active, so the dashboard
+  // always reflects who works for this employer today.
   const workers = useMemo(() => {
     const m = new Map<string, { id: string; name: string }>();
     for (const f of allFreelancers) m.set(f.id, f);
-    for (const r of reports) {
-      if (!r.worker_user_id || m.has(r.worker_user_id)) continue;
-      m.set(r.worker_user_id, { id: r.worker_user_id, name: workerNames.get(r.worker_user_id) ?? "Freelancer" });
+    if (selectedWorker !== "all" && !m.has(selectedWorker)) {
+      m.set(selectedWorker, { id: selectedWorker, name: workerNames.get(selectedWorker) ?? "Freelancer" });
     }
     return Array.from(m.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [allFreelancers, reports, workerNames]);
+  }, [allFreelancers, workerNames, selectedWorker]);
+
 
 
   const filteredReports = useMemo(

@@ -26,6 +26,7 @@ interface Props {
 const RejectReportDialog = ({ open, onOpenChange, reportId, onRejected }: Props) => {
   const [reason, setReason] = useState<string>("missing_session");
   const [note, setNote] = useState("");
+  const [notify, setNotify] = useState(true);
   const [working, setWorking] = useState(false);
 
   const handleReject = async () => {
@@ -41,13 +42,15 @@ const RejectReportDialog = ({ open, onOpenChange, reportId, onRejected }: Props)
         status: "rejected",
         rejection_reason: reason,
         rejection_note: note.trim() || null,
+        notify_worker: notify,
       } as any)
       .eq("id", reportId);
     setWorking(false);
     if (error) { toast.error(error.message); return; }
-    toast.success("Report rejected. The freelancer has been notified.");
+    toast.success(notify ? "Report rejected. The freelancer has been notified." : "Report rejected quietly. The freelancer wasn't notified.");
     setNote("");
     setReason("missing_session");
+    setNotify(true);
     onOpenChange(false);
     onRejected?.();
   };

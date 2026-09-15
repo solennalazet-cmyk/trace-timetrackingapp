@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Wallet, Check, ChevronRight, Trash2, Pencil, Calendar as CalendarIcon } from "lucide-react";
+import { Wallet, Check, ChevronRight, Trash2, Pencil, Calendar as CalendarIcon, Users, X } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -435,10 +435,22 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
             <button
               type="button"
               onClick={() => setShowPerFreelancer((v) => !v)}
-              className="w-full flex items-center justify-between px-1 py-2 text-sm font-semibold"
+              aria-expanded={showPerFreelancer}
+              className="w-full flex items-center gap-3 min-h-[56px] px-4 py-3 rounded-2xl border border-border bg-card shadow-sm text-left active:bg-muted/40 transition-colors"
             >
-              <span>Per freelancer</span>
-              <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${showPerFreelancer ? "rotate-90" : ""}`} />
+              <div className="w-9 h-9 rounded-xl bg-foreground/10 flex items-center justify-center shrink-0">
+                <Users className="w-4 h-4 text-foreground" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-base font-bold tracking-tight">Per freelancer</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {showPerFreelancer ? "Tap to hide the breakdown" : "Tap to see who is owed what"}
+                </p>
+              </div>
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">
+                {filteredGroups.filter(([, rows]) => rows.length > 0).length}
+              </span>
+              <ChevronRight className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${showPerFreelancer ? "rotate-90" : ""}`} />
             </button>
           )}
 

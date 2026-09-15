@@ -278,7 +278,7 @@ const ExportDialog = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `trace-report-${rangeStart}-to-${rangeEnd}.csv`;
+    a.download = `${reportFileBase}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success("CSV exported.");
@@ -416,7 +416,7 @@ const ExportDialog = ({
       doc.text(`Page ${p} of ${totalPages}`, pageW - margin, pageH - 8, { align: "right" });
     }
 
-    doc.save(`trace-report-${rangeStart}-to-${rangeEnd}.pdf`);
+    doc.save(`${reportFileBase}.pdf`);
     toast.success("PDF exported.");
   };
 

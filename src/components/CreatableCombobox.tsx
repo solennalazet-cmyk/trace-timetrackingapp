@@ -165,6 +165,10 @@ const CreatableCombobox = ({
       >
         <input
           ref={inputRef}
+          type="text"
+          inputMode="text"
+          autoComplete="off"
+          autoCapitalize="words"
           className="flex-1 bg-transparent outline-none placeholder:text-muted-foreground min-w-0"
           placeholder={displayValue || placeholder}
           value={inputDisplay}

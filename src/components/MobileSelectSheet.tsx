@@ -258,6 +258,10 @@ const MobileSelectSheet = ({
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
             <input
               ref={inputRef}
+              type="text"
+              inputMode="text"
+              autoComplete="off"
+              autoCapitalize="words"
               className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-foreground min-w-0"
               placeholder={placeholder}
               value={search}

@@ -90,6 +90,10 @@ const ExportDialog = ({
 
   const rangeStart = toLocalDateKey(exportFrom);
   const rangeEnd = toLocalDateKey(exportTo);
+  const shortDate = (d: Date) => d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "2-digit" });
+  const workerName = (profile?.business_name || profile?.full_name || user?.email?.split("@")[0] || "Trace").trim();
+  const reportTitle = `${workerName}_billing from ${shortDate(exportFrom)} to ${shortDate(exportTo)}`;
+  const reportFileBase = reportTitle.replace(/[/\\:*?"<>|]/g, "-");
 
   // The parent page only loads entries for ITS range, so a wider range picked
   // here would silently show the same totals. Fetch the picked range directly.

@@ -122,6 +122,12 @@ const RATE_UNITS = [
   { value: "project", label: "Per project" },
 ];
 
+// Opening the recap or switching between its pickers must not launch the same
+// four requests repeatedly. The local cache remains the instant source; this
+// only throttles background freshness checks within the current app session.
+const assignmentRefreshAt = new Map<string, number>();
+const ASSIGNMENT_REFRESH_INTERVAL_MS = 30_000;
+
 const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, onSkip, onDelete }: AssignmentModalProps) => {
   const { user } = useAuth();
   const [clientId, setClientId] = useState("");
@@ -176,38 +182,53 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
   })();
 
   const loadData = useCallback(async () => {
-    setLoadingData(true);
     if (user) {
-      const [{ data: c }, { data: p }, { data: t }, { data: tagEntries }] = await Promise.all([
-        supabase.from("clients").select("id, name, default_rate, currency").eq("user_id", user.id),
-        supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", user.id),
-        supabase.from("tasks").select("id, name, project_id, client_id").eq("user_id", user.id),
-        supabase
-          .from("time_entries")
-          .select("tags")
-          .eq("user_id", user.id)
-          .not("tags", "is", null)
-          .is("deleted_at", null),
-      ]);
-      const nextClients = (c ?? []) as ClientFull[];
-      const nextProjects = (p ?? []) as ProjectFull[];
-      const nextTasks = (t ?? []).map((x: any) => ({ id: x.id, name: x.name, project_id: x.project_id ?? null, client_id: x.client_id ?? null }));
-      setClientsFull(nextClients);
-      setAllProjectsFull(nextProjects);
-      setTasks(nextTasks);
+      const lastRefresh = assignmentRefreshAt.get(user.id) ?? 0;
+      if (Date.now() - lastRefresh < ASSIGNMENT_REFRESH_INTERVAL_MS && readAssignmentCache(user.id)) return;
 
-      const tagSet = new Set<string>();
-      tagEntries?.forEach((e: any) => e.tags?.forEach((t: string) => tagSet.add(t)));
-      const nextTags = Array.from(tagSet).sort();
-      setAllTags(nextTags);
+      assignmentRefreshAt.set(user.id, Date.now());
+      setLoadingData(true);
+      try {
+        const clientsRequest = supabase.from("clients").select("id, name, default_rate, currency").eq("user_id", user.id);
+        const projectsRequest = supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", user.id);
+        const tasksRequest = supabase.from("tasks").select("id, name, project_id, client_id").eq("user_id", user.id);
+        const tagsRequest = supabase
+            .from("time_entries")
+            .select("tags")
+            .eq("user_id", user.id)
+            .not("tags", "is", null)
+            .is("deleted_at", null);
 
-      writeAssignmentCache(user.id, {
-        clients: nextClients,
-        projects: nextProjects,
-        tasks: nextTasks,
-        tags: nextTags,
-      });
+        // Clients are the first and most important assignment choice. Paint
+        // them as soon as their own request resolves; projects/tags can never
+        // hold this list hostage again.
+        const { data: clientRows, error: clientsError } = await clientsRequest;
+        if (clientsError) throw clientsError;
+        const nextClients = (clientRows ?? []) as ClientFull[];
+        setClientsFull(nextClients);
+
+        const [{ data: projectRows }, { data: taskRows }, { data: tagEntries }] = await Promise.all([
+          projectsRequest,
+          tasksRequest,
+          tagsRequest,
+        ]);
+        const nextProjects = (projectRows ?? []) as ProjectFull[];
+        const nextTasks = (taskRows ?? []).map((x: any) => ({ id: x.id, name: x.name, project_id: x.project_id ?? null, client_id: x.client_id ?? null }));
+        const tagSet = new Set<string>();
+        tagEntries?.forEach((entry: any) => entry.tags?.forEach((tag: string) => tagSet.add(tag)));
+        const nextTags = Array.from(tagSet).sort();
+        setAllProjectsFull(nextProjects);
+        setTasks(nextTasks);
+        setAllTags(nextTags);
+        writeAssignmentCache(user.id, { clients: nextClients, projects: nextProjects, tasks: nextTasks, tags: nextTags });
+      } catch (error) {
+        assignmentRefreshAt.delete(user.id);
+        console.error("[AssignmentModal] assignment lists refresh failed", error);
+      } finally {
+        setLoadingData(false);
+      }
     } else {
+      setLoadingData(true);
       const ac = getAnonymousClients();
       setClientsFull(ac.map((c: any) => ({ id: c.id, name: c.name, default_rate: c.default_rate ?? null, currency: c.currency ?? null })));
       const ap = getAnonymousProjects();
@@ -215,8 +236,8 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
       const at = getAnonymousTasks();
       setTasks(at.map((t: any) => ({ id: t.id, name: t.name, project_id: t.project_id ?? null, client_id: t.client_id ?? null })));
       setAllTags([]);
+      setLoadingData(false);
     }
-    setLoadingData(false);
   }, [user]);
 
 

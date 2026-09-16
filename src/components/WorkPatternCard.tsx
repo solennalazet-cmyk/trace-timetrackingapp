@@ -174,11 +174,33 @@ const WorkPatternCard = ({ reports, workerNames, from, to, selectedWorker, onSel
   const maxAvg = Math.max(1, ...weekStats.map((w) => w.avgPerDay));
   const accent = selectedWorker !== "all" ? getClientColor(selectedWorker) : undefined;
 
+  const dm = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const weekRangeLabel = (i: number) => {
+    const w = weekStats[i];
+    return w ? `${dm(w.start)} – ${dm(w.end)}` : "";
+  };
+
   const scopeLabel = weekSelection.length === 0
     ? "Full range"
     : weekSelection.length === 1
-      ? `Week of ${weekStats[weekSelection[0]]?.start.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
+      ? `Week ${weekRangeLabel(weekSelection[0])}`
       : `${weekSelection.length} weeks selected`;
+
+  // Per-worker totals inside the scoped weeks
+  const perWorker = useMemo(() => {
+    const map = new Map<string, { work: number; value: number; days: Set<string>; approved: boolean }>();
+    for (const e of scoped) {
+      const cur = map.get(e.workerId) ?? { work: 0, value: 0, days: new Set<string>(), approved: true };
+      cur.work += e.work;
+      cur.value += e.value;
+      cur.days.add(e.date);
+      if (!e.approved) cur.approved = false;
+      map.set(e.workerId, cur);
+    }
+    return Array.from(map.entries())
+      .map(([id, v]) => ({ id, name: workerNames.get(id) ?? "Freelancer", ...v, days: v.days.size }))
+      .sort((a, b) => b.work - a.work);
+  }, [scoped, workerNames]);
 
   return (
     <Card className="overflow-hidden">

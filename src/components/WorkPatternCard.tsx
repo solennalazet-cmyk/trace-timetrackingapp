@@ -231,7 +231,10 @@ const WorkPatternCard = ({ reports, workerNames, from, to, selectedWorker, onSel
               {/* ── Weekly bars: average hours per worked day ── */}
               <div className="space-y-3">
                 <div className="flex items-baseline justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Avg hours / worked day</p>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Avg hours / worked day</p>
+                    <p className="text-[11px] text-muted-foreground">Each column = one week, starting {new Date(2024, 0, 7 + weekStart).toLocaleDateString("en-GB", { weekday: "long" })}</p>
+                  </div>
                   {weekSelection.length > 0 && (
                     <button
                       onClick={() => setWeekSelection([])}

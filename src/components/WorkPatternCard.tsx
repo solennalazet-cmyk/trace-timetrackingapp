@@ -56,7 +56,7 @@ const minutesOfDay = (iso?: string | null): number | null => {
   return d.getHours() * 60 + d.getMinutes();
 };
 
-const WorkPatternCard = ({ reports, workerNames, from, to, selectedWorker, defaultOpen = false }: Props) => {
+const WorkPatternCard = ({ reports, workerNames, from, to, selectedWorker, onSelectWorker, defaultOpen = false }: Props) => {
   const weekStart = useWeekStart();
   const [open, setOpen] = useState(defaultOpen);
   // Week indices the user tapped to narrow the stats. Empty = whole range.
@@ -174,11 +174,33 @@ const WorkPatternCard = ({ reports, workerNames, from, to, selectedWorker, defau
   const maxAvg = Math.max(1, ...weekStats.map((w) => w.avgPerDay));
   const accent = selectedWorker !== "all" ? getClientColor(selectedWorker) : undefined;
 
+  const dm = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const weekRangeLabel = (i: number) => {
+    const w = weekStats[i];
+    return w ? `${dm(w.start)} – ${dm(w.end)}` : "";
+  };
+
   const scopeLabel = weekSelection.length === 0
     ? "Full range"
     : weekSelection.length === 1
-      ? `Week of ${weekStats[weekSelection[0]]?.start.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
+      ? `Week ${weekRangeLabel(weekSelection[0])}`
       : `${weekSelection.length} weeks selected`;
+
+  // Per-worker totals inside the scoped weeks
+  const perWorker = useMemo(() => {
+    const map = new Map<string, { work: number; value: number; days: Set<string>; approved: boolean }>();
+    for (const e of scoped) {
+      const cur = map.get(e.workerId) ?? { work: 0, value: 0, days: new Set<string>(), approved: true };
+      cur.work += e.work;
+      cur.value += e.value;
+      cur.days.add(e.date);
+      if (!e.approved) cur.approved = false;
+      map.set(e.workerId, cur);
+    }
+    return Array.from(map.entries())
+      .map(([id, v]) => ({ id, name: workerNames.get(id) ?? "Freelancer", ...v, days: v.days.size }))
+      .sort((a, b) => b.work - a.work);
+  }, [scoped, workerNames]);
 
   return (
     <Card className="overflow-hidden">
@@ -209,7 +231,10 @@ const WorkPatternCard = ({ reports, workerNames, from, to, selectedWorker, defau
               {/* ── Weekly bars: average hours per worked day ── */}
               <div className="space-y-3">
                 <div className="flex items-baseline justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Avg hours / worked day</p>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Avg hours / worked day</p>
+                    <p className="text-[11px] text-muted-foreground">Each column = one week, starting {new Date(2024, 0, 7 + weekStart).toLocaleDateString("en-GB", { weekday: "long" })}</p>
+                  </div>
                   {weekSelection.length > 0 && (
                     <button
                       onClick={() => setWeekSelection([])}
@@ -231,7 +256,7 @@ const WorkPatternCard = ({ reports, workerNames, from, to, selectedWorker, defau
                         onClick={() => toggleWeek(i)}
                         className="flex-1 h-full flex flex-col items-center justify-end gap-2 min-w-0"
                         aria-pressed={active}
-                        aria-label={`Week of ${w.startKey}, ${fmtHm(w.avgPerDay)} per day`}
+                        aria-label={`Week ${dm(w.start)} to ${dm(w.end)}, ${fmtHm(w.avgPerDay)} per worked day`}
                       >
                         <span className={`text-[11px] font-bold tabular-nums ${dim ? "text-muted-foreground/50" : "text-foreground"}`}>
                           {w.avgPerDay > 0 ? fmtHm(w.avgPerDay) : "—"}
@@ -248,9 +273,47 @@ const WorkPatternCard = ({ reports, workerNames, from, to, selectedWorker, defau
                   })}
                 </div>
                 <p className="text-[11px] text-muted-foreground text-center">
-                  Tap week columns to narrow the stats below · {scopeLabel}
+                  Tap a week to narrow the stats below · {scopeLabel}
                 </p>
               </div>
+
+              {/* ── Who these hours belong to ── */}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Who worked · {scopeLabel}
+                </p>
+                {perWorker.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No sessions in this selection.</p>
+                ) : (
+                  perWorker.map((w) => (
+                    <button
+                      key={w.id}
+                      type="button"
+                      onClick={() => onSelectWorker?.(selectedWorker === w.id ? "all" : w.id)}
+                      className="w-full flex items-center justify-between gap-3 bg-muted rounded-2xl px-3.5 py-3 text-left hover:bg-muted/70 transition-colors"
+                    >
+                      <span className="flex items-center gap-2 min-w-0">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: getClientColor(w.id) }} />
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold truncate">{w.name}</span>
+                          <span className="block text-[11px] text-muted-foreground">
+                            {w.days} day{w.days === 1 ? "" : "s"} worked
+                          </span>
+                        </span>
+                      </span>
+                      <span className="text-right shrink-0">
+                        <span className={`block text-sm font-bold tabular-nums ${w.approved ? "text-foreground" : "text-foreground/45"}`}>
+                          {fmtHm(w.work)}
+                        </span>
+                        <span className={`block text-[11px] tabular-nums ${w.approved ? "text-muted-foreground" : "text-muted-foreground/60"}`}>
+                          {sym}{w.value.toFixed(2)}
+                        </span>
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+
 
               {/* ── Stats ── */}
               <div className="grid grid-cols-2 gap-3">

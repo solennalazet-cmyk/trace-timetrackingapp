@@ -13,7 +13,7 @@ interface ShiftModeProps {
 }
 
 const ShiftMode = ({ onClockOut }: ShiftModeProps) => {
-  const { status, elapsedMs, startedAt, totalPausedMs, start, pause, resume, stop } = useTimer("shift");
+  const { status, elapsedMs, startedAt, totalPausedMs, pausedAt, start, pause, resume, stop } = useTimer("shift");
   const [stopping, setStopping] = useState(false);
 
   const handleClockIn = () => {

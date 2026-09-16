@@ -11,6 +11,7 @@ export function useFocusTimer() {
   const [remainingMs, setRemainingMs] = useState(25 * 60 * 1000);
   const [status, setStatus] = useState<"idle" | "running" | "paused" | "completed">("idle");
   const [totalPausedMs, setTotalPausedMs] = useState(0);
+  const [pausedAtMs, setPausedAtMs] = useState<number | null>(null);
   const startTimeRef = useRef<number>(0);
   const pausedAtRef = useRef<number>(0);
   const accumulatedPauseRef = useRef<number>(0);

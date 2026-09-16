@@ -12,7 +12,7 @@ interface StopwatchModeProps {
 }
 
 const StopwatchMode = ({ onStop }: StopwatchModeProps) => {
-  const { status, elapsedMs, totalPausedMs, start, pause, resume, stop } = useTimer("stopwatch");
+  const { status, elapsedMs, totalPausedMs, pausedAt, start, pause, resume, stop } = useTimer("stopwatch");
   const [pulse, setPulse] = useState(false);
   const [stopping, setStopping] = useState(false);
 

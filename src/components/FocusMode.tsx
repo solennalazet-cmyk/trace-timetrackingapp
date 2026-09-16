@@ -28,6 +28,7 @@ const FocusMode = ({ onComplete, autoStartMinutes }: FocusModeProps) => {
     totalSeconds,
     remainingMs,
     totalPausedMs,
+    pausedAtMs,
     progress,
     setPreset,
     setCustomSeconds,

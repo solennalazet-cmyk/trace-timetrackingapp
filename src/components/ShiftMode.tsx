@@ -66,6 +66,11 @@ const ShiftMode = ({ onClockOut }: ShiftModeProps) => {
             <span className="text-xs font-medium text-muted-foreground mt-1 uppercase tracking-wider">
               {status === "paused" ? "Paused" : "Shift in progress"}
             </span>
+            {status === "paused" && pausedAt && (
+              <span className="text-[10px] text-muted-foreground mt-0.5">
+                since {format(new Date(pausedAt), "HH:mm")}
+              </span>
+            )}
           </>
         )}
       </CircularTimer>

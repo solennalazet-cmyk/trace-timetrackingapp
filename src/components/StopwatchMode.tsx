@@ -56,8 +56,13 @@ const StopwatchMode = ({ onStop }: StopwatchModeProps) => {
         <span className="text-xs font-medium text-muted-foreground mt-1 uppercase tracking-wider">
           {status === "idle" && "Ready"}
           {status === "running" && "Tracking"}
-          {status === "paused" && `Paused · ${pauseMinutes}m break`}
+          {status === "paused" && "Paused"}
         </span>
+        {status === "paused" && pausedAt && (
+          <span className="text-[10px] text-muted-foreground mt-0.5">
+            since {format(new Date(pausedAt), "HH:mm")}
+          </span>
+        )}
       </CircularTimer>
 
       <div className="flex gap-3 w-full max-w-[280px]">

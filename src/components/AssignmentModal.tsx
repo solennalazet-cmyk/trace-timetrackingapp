@@ -150,6 +150,9 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
   const [saving, setSaving] = useState(false);
   const [taskList, setTaskList] = useState<TaskItem[]>([]);
   const [hasUserChangedSelection, setHasUserChangedSelection] = useState(false);
+  // True once the user types in the rate field — auto-resolution must never
+  // overwrite or clear a rate they entered by hand.
+  const [rateTouched, setRateTouched] = useState(false);
   // True while the backend refresh of clients/projects/tasks is in flight.
   // Used to show the inline "typing dots" loader inside each combobox when its
   // list is still empty (no cached suggestions to paint yet).
@@ -276,6 +279,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     }
 
     setHasUserChangedSelection(false);
+    setRateTouched(false);
 
     // Paint the last known lists immediately so suggestions are available the
     // moment the recap opens, then refresh from the backend in the background.
@@ -308,9 +312,10 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
   }, [clientsFull, allProjectsFull, tasks, existingEntry, clientId, projectId, taskId]);
 
   const isInitialEditSkipActive =
-    !!existingEntry &&
-    !hasUserChangedSelection &&
-    existingEntry.rate_amount != null;
+    rateTouched ||
+    (!!existingEntry &&
+      !hasUserChangedSelection &&
+      existingEntry.rate_amount != null);
 
   const clearResolvedRate = useCallback((reason: string) => {
     console.log("[AssignmentModal] rate cleared", {
@@ -339,6 +344,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     });
 
     setHasUserChangedSelection(true);
+    setRateTouched(false);
     clearResolvedRate("client-change");
     setProjectId("");
     setProjectName("");
@@ -361,6 +367,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     });
 
     setHasUserChangedSelection(true);
+    setRateTouched(false);
     clearResolvedRate("project-change");
     setTaskId("");
     setTaskName("");
@@ -732,6 +739,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                     placeholder="0.00"
                     value={rateAmount}
                     onChange={(e) => {
+                      setRateTouched(true);
                       setRateAmount(sanitizeDecimalInput(e.target.value));
                     }}
                   />

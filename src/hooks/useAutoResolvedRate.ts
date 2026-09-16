@@ -28,6 +28,15 @@ interface UseAutoResolvedRateOptions {
   debugLabel?: string;
 }
 
+/**
+ * Fills the rate field from the selected project/client.
+ *
+ * Two rules keep the field trustworthy while the user is typing:
+ * 1. It only re-runs when the *selection* changes — a background refresh of the
+ *    clients/projects lists can never wipe what is in the field.
+ * 2. It resolves from the already-loaded lists first (instant) and only asks the
+ *    backend when the in-memory copy has no rate.
+ */
 export function useAutoResolvedRate({
   enabled,
   clientId,
@@ -43,162 +52,80 @@ export function useAutoResolvedRate({
 }: UseAutoResolvedRateOptions) {
   const requestKeyRef = useRef(0);
 
-  const logDebug = (event: string, details: Record<string, unknown>) => {
-    if (!debug) {
-      return;
-    }
+  // Latest values kept in refs so list refreshes / new callback identities do
+  // not retrigger the effect (which used to clear a rate mid-typing).
+  const clientsRef = useRef(clients);
+  const projectsRef = useRef(projects);
+  const onResetRef = useRef(onReset);
+  const onResolvedRef = useRef(onResolved);
+  clientsRef.current = clients;
+  projectsRef.current = projects;
+  onResetRef.current = onReset;
+  onResolvedRef.current = onResolved;
 
+  const logDebug = (event: string, details: Record<string, unknown>) => {
+    if (!debug) return;
     console.log(`[${debugLabel}] ${event}`, details);
   };
 
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || skip) {
       requestKeyRef.current += 1;
-      logDebug("disabled", {
-        selectedClientId: clientId || null,
-        selectedProjectId: projectId || null,
-        initialEditSkipActive: skip,
-      });
-      return;
-    }
-
-    if (skip) {
-      requestKeyRef.current += 1;
-      logDebug("skip-initial-hydration", {
-        selectedClientId: clientId || null,
-        selectedProjectId: projectId || null,
-        initialEditSkipActive: skip,
-      });
       return;
     }
 
     const requestKey = ++requestKeyRef.current;
 
-    logDebug("resolve-start", {
-      selectedClientId: clientId || null,
-      selectedProjectId: projectId || null,
-      initialEditSkipActive: skip,
-      requestKey,
-    });
-
-    onReset();
-    logDebug("rate-reset", {
-      selectedClientId: clientId || null,
-      selectedProjectId: projectId || null,
-      initialEditSkipActive: skip,
-      rateWasReset: true,
-      requestKey,
-    });
+    onResetRef.current();
 
     if (!clientId && !projectId) {
-      logDebug("resolve-complete", {
-        selectedClientId: null,
-        selectedProjectId: null,
-        initialEditSkipActive: skip,
-        source: "null",
-        requestKey,
+      logDebug("resolve-complete", { source: "null", requestKey });
+      return;
+    }
+
+    // 1. Instant resolution from what is already in memory.
+    const selectedProject = projectsRef.current.find((project) => project.id === projectId);
+    const selectedClient = clientsRef.current.find((client) => client.id === clientId);
+
+    if (selectedProject?.rate != null) {
+      logDebug("resolve-complete", { source: "project-local", requestKey });
+      onResolvedRef.current({
+        amount: String(selectedProject.rate),
+        currency: selectedProject.currency ?? selectedClient?.currency ?? "EUR",
+      });
+      return;
+    }
+
+    if (selectedClient?.default_rate != null) {
+      logDebug("resolve-complete", { source: "client-local", requestKey });
+      onResolvedRef.current({
+        amount: String(selectedClient.default_rate),
+        currency: selectedClient.currency ?? "EUR",
       });
       return;
     }
 
     if (!userId) {
-      const selectedProject = projects.find((project) => project.id === projectId);
-      const selectedClient = clients.find((client) => client.id === clientId);
-
-      if (selectedProject?.rate != null) {
-        logDebug("resolve-complete", {
-          selectedClientId: clientId || null,
-          selectedProjectId: projectId || null,
-          initialEditSkipActive: skip,
-          source: "project",
-          requestKey,
-        });
-        onResolved({
-          amount: String(selectedProject.rate),
-          currency: selectedProject.currency ?? selectedClient?.currency ?? "EUR",
-        });
-        return;
-      }
-
-      if (selectedClient?.default_rate != null) {
-        logDebug("resolve-complete", {
-          selectedClientId: clientId || null,
-          selectedProjectId: projectId || null,
-          initialEditSkipActive: skip,
-          source: "client",
-          requestKey,
-        });
-        onResolved({
-          amount: String(selectedClient.default_rate),
-          currency: selectedClient.currency ?? "EUR",
-        });
-        return;
-      }
-
-      logDebug("resolve-complete", {
-        selectedClientId: clientId || null,
-        selectedProjectId: projectId || null,
-        initialEditSkipActive: skip,
-        source: "null",
-        requestKey,
-      });
-
+      logDebug("resolve-complete", { source: "null", requestKey });
       return;
     }
 
+    // 2. Fall back to the backend when memory has nothing.
     resolveRate(clientId || null, projectId || null, userId)
       .then((rate) => {
         if (requestKeyRef.current !== requestKey) {
-          logDebug("stale-result-ignored", {
-            selectedClientId: clientId || null,
-            selectedProjectId: projectId || null,
-            initialEditSkipActive: skip,
-            source: rate.source,
-            requestKey,
-          });
+          logDebug("stale-result-ignored", { source: rate.source, requestKey });
           return;
         }
-
-        logDebug("resolve-complete", {
-          selectedClientId: clientId || null,
-          selectedProjectId: projectId || null,
-          initialEditSkipActive: skip,
-          source: rate.source,
-          requestKey,
-        });
-
-        if (rate.amount == null) {
-          return;
-        }
-
-        onResolved({ amount: String(rate.amount), currency: rate.currency });
+        logDebug("resolve-complete", { source: rate.source, requestKey });
+        if (rate.amount == null) return;
+        onResolvedRef.current({ amount: String(rate.amount), currency: rate.currency });
       })
       .catch((error) => {
         logDebug("resolve-error", {
-          selectedClientId: clientId || null,
-          selectedProjectId: projectId || null,
-          initialEditSkipActive: skip,
           requestKey,
           message: error instanceof Error ? error.message : String(error),
         });
       });
-
-    return () => {
-      if (requestKeyRef.current === requestKey) {
-        requestKeyRef.current += 1;
-      }
-    };
-  }, [
-    enabled,
-    skip,
-    clientId,
-    projectId,
-    userId,
-    clients,
-    projects,
-    onReset,
-    onResolved,
-    debug,
-    debugLabel,
-  ]);
+  }, [enabled, skip, clientId, projectId, userId]);
 }

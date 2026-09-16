@@ -471,6 +471,12 @@ export function useTimer(mode: TimerMode) {
             totalPausedMs: row.total_paused_ms ?? 0,
             pauseIntervals: Array.isArray(row.pause_intervals) ? row.pause_intervals : [],
           };
+          // Never let an echo of an older server copy un-pause a session the
+          // user paused on this device.
+          if (localPauseIsAhead(readLS(lsKey), next)) {
+            console.warn(`[useTimer] ignoring realtime row that would drop a local pause for ${mode}`);
+            return;
+          }
           setTimerState(next);
           writeLS(lsKey, next);
         }

@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { playTimerSound } from "@/lib/timer-sounds";
 import { makeTimeEntryIdempotencyKey } from "@/lib/time-entry-idempotency";
+import { format } from "date-fns";
 
 interface FocusModeProps {
   onComplete: (data: { durationMinutes: number; breakMinutes: number; startedAt: string | null; pauseIntervals?: { paused_at: string; resumed_at: string | null }[]; idempotencyKey?: string }) => void;
@@ -200,7 +201,7 @@ const FocusMode = ({ onComplete, autoStartMinutes }: FocusModeProps) => {
     onComplete({ durationMinutes, breakMinutes: 0, startedAt: null, idempotencyKey });
   };
 
-  const pauseMinutes = Math.floor(totalPausedMs / 60000);
+  
 
   return (
     <div className="flex flex-col items-center gap-6">

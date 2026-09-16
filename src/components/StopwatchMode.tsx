@@ -4,6 +4,7 @@ import CircularTimer from "./CircularTimer";
 import { Button } from "@/components/ui/button";
 import { Pause, Play, Square } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 const BTN = "rounded-[28px] h-14 text-[16px] font-bold";
 
@@ -41,7 +42,7 @@ const StopwatchMode = ({ onStop }: StopwatchModeProps) => {
     onStop(result);
   };
 
-  const pauseMinutes = Math.floor(totalPausedMs / 60000);
+  
 
   return (
     <div className="flex flex-col items-center gap-6">

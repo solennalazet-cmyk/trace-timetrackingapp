@@ -383,7 +383,7 @@ const ExportDialog = ({
     y += 6;
 
     // ── Table (shows per-entry display values) ──
-    const tableHead = ["Date", "Duration", "Project", "Task", "Billable", "Value"];
+    const tableHead = ["Date", "Duration", "Hours", "Project", "Task", "Billable", "Rate", "Value"];
     const tableBody = filteredEntries
       .sort((a, b) => (a.entry_date ?? "").localeCompare(b.entry_date ?? ""))
       .map((e) => {
@@ -391,9 +391,11 @@ const ExportDialog = ({
         return [
           e.entry_date ? new Date(e.entry_date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "",
           formatDuration(displayMinutes),
+          (displayMinutes / 60).toFixed(2),
           e.project_name ?? "",
           e.task_name ?? "",
           e.billable ? "Yes" : "—",
+          e.rate_amount != null && Number(e.rate_amount) > 0 ? `€${Number(e.rate_amount).toFixed(2)}/h` : "—",
           displayValue > 0 ? `€${displayValue.toFixed(2)}` : "—",
         ];
       });

@@ -216,9 +216,9 @@ const PrepareBillingSheet = ({
   const reportFileName = `${reportTitle.replace(/[/\\:*?"<>|]/g, "-")}.pdf`;
 
   const buildPDF = async () => {
-    // Auto-landscape when many optional columns selected (always-on: Date, Duration, Amount).
-    const totalCols = 3 + selectedColumns.length;
-    const orientation: "portrait" | "landscape" = totalCols > 5 ? "landscape" : "portrait";
+    // Auto-landscape when many optional columns selected (always-on: Date, Duration, Hours, Rate, Amount).
+    const totalCols = 5 + selectedColumns.length;
+    const orientation: "portrait" | "landscape" = totalCols > 6 ? "landscape" : "portrait";
 
     const [{ default: jsPDF }, { drawPdfTable }] = await Promise.all([
       import("jspdf"),
@@ -311,9 +311,9 @@ const PrepareBillingSheet = ({
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(80);
-    doc.text(`Billable time: ${formatHM(billableMins)}`, margin, y); y += 4;
-    doc.text(`Total worked: ${formatHM(totalMins)}`, margin, y); y += 4;
-    if (unbillableMins > 0) { doc.text(`Unbillable: ${formatHM(unbillableMins)}`, margin, y); y += 4; }
+    doc.text(`Billable time: ${formatHM(billableMins)}  (${(billableMins / 60).toFixed(2)} h)`, margin, y); y += 4;
+    doc.text(`Total worked: ${formatHM(totalMins)}  (${(totalMins / 60).toFixed(2)} h)`, margin, y); y += 4;
+    if (unbillableMins > 0) { doc.text(`Unbillable: ${formatHM(unbillableMins)}  (${(unbillableMins / 60).toFixed(2)} h)`, margin, y); y += 4; }
     y += 2;
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
@@ -349,7 +349,7 @@ const PrepareBillingSheet = ({
       .filter((o) => selectedColumns.includes(o.key))
       .map((o) => o.key);
 
-    const head = ["Date", "Duration", ...orderedOptional.map((k) => optionalHeaders[k]), "Amount"];
+    const head = ["Date", "Duration", "Hours", ...orderedOptional.map((k) => optionalHeaders[k]), "Rate", "Amount"];
 
     // Sort by date, then by start_time so same-day sessions are in chronological order
     const sortedEntries = [...reportEntries].sort((a, b) => {
@@ -418,17 +418,23 @@ const PrepareBillingSheet = ({
     const body = sortedEntries.map((e, i) => {
       const { displayMinutes, displayValue } = entryDisplayValues(e, rounding);
       const pause = pauseInfo[i];
+      const rateSym = CURRENCY_SYMBOLS[(e.rate_currency as string) ?? clientCurrency] ?? sym;
+      const rateCell = e.rate_amount != null && Number(e.rate_amount) > 0
+        ? `${rateSym}${Number(e.rate_amount).toFixed(2)}/h`
+        : "—";
       return [
         e.entry_date ? new Date(e.entry_date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "",
         formatDuration(displayMinutes),
+        (displayMinutes / 60).toFixed(2),
         ...orderedOptional.map((k) => cellFor(e, k, pause)),
+        rateCell,
         displayValue > 0 ? `${sym}${displayValue.toFixed(2)}` : "—",
       ];
     });
 
-    // Find location column index in the final table (Date + Duration + optionals + Amount)
+    // Find location column index in the final table (Date + Duration + Hours + optionals + Rate + Amount)
     const locationColIndex = orderedOptional.includes("location")
-      ? 2 + orderedOptional.indexOf("location")
+      ? 3 + orderedOptional.indexOf("location")
       : -1;
 
     const tableEndY = drawPdfTable(doc, {

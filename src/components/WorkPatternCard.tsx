@@ -256,7 +256,7 @@ const WorkPatternCard = ({ reports, workerNames, from, to, selectedWorker, onSel
                         onClick={() => toggleWeek(i)}
                         className="flex-1 h-full flex flex-col items-center justify-end gap-2 min-w-0"
                         aria-pressed={active}
-                        aria-label={`Week of ${w.startKey}, ${fmtHm(w.avgPerDay)} per day`}
+                        aria-label={`Week ${dm(w.start)} to ${dm(w.end)}, ${fmtHm(w.avgPerDay)} per worked day`}
                       >
                         <span className={`text-[11px] font-bold tabular-nums ${dim ? "text-muted-foreground/50" : "text-foreground"}`}>
                           {w.avgPerDay > 0 ? fmtHm(w.avgPerDay) : "—"}

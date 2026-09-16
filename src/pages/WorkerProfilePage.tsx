@@ -36,6 +36,8 @@ interface WorkerRow {
   connected_user_id: string | null;
 }
 
+const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
+
 const fmtDate = (s: string | null) => {
   if (!s) return "—";
   try {
@@ -233,6 +235,14 @@ const WorkerProfilePage = () => {
             <div className="min-w-0 flex-1">
               <h1 className="text-xl font-bold tracking-tight truncate">{name}</h1>
               <p className="text-sm text-muted-foreground truncate group-hover:text-foreground transition-colors">{role} <span className="text-muted-foreground/60">· tap to edit</span></p>
+              {hourlyRate && (
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                  <span className="font-semibold text-foreground font-mono">
+                    {(CURRENCY_SYMBOLS[hourlyRate.currency] ?? "€")}{hourlyRate.amount.toFixed(2)}/h
+                  </span>{" "}
+                  <span className="text-muted-foreground/70">from their Trace account</span>
+                </p>
+              )}
             </div>
           </button>
           <WorkerStatusCard

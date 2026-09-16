@@ -56,7 +56,7 @@ const minutesOfDay = (iso?: string | null): number | null => {
   return d.getHours() * 60 + d.getMinutes();
 };
 
-const WorkPatternCard = ({ reports, workerNames, from, to, selectedWorker, defaultOpen = false }: Props) => {
+const WorkPatternCard = ({ reports, workerNames, from, to, selectedWorker, onSelectWorker, defaultOpen = false }: Props) => {
   const weekStart = useWeekStart();
   const [open, setOpen] = useState(defaultOpen);
   // Week indices the user tapped to narrow the stats. Empty = whole range.

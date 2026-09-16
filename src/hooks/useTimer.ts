@@ -511,6 +511,34 @@ export function useTimer(mode: TimerMode) {
     }
   }, [lsKey, user, mode]);
 
+  // Pause/resume MUST upsert the whole session row, not patch it. A bare
+  // `update()` silently affects 0 rows when the backend row is missing (first
+  // write failed, offline, row cleaned elsewhere), so the pause never reaches
+  // the server and the next reload restores a "still running" session.
+  const persistState = useCallback(
+    (state: TimerState) => {
+      if (!user || mode === "focus" || !state.startedAt) return;
+      const sessionType = mode === "shift" ? "shift" : "stopwatch";
+      supabase
+        .from("active_sessions")
+        .upsert(
+          {
+            user_id: user.id,
+            session_type: sessionType,
+            started_at: state.startedAt,
+            paused_at: state.pausedAt,
+            total_paused_ms: state.totalPausedMs ?? 0,
+            pause_intervals: state.pauseIntervals ?? [],
+          } as any,
+          { onConflict: "user_id" }
+        )
+        .then(({ error }) => {
+          if (error) console.warn(`[useTimer] failed to persist pause state for ${mode}`, error);
+        });
+    },
+    [user, mode]
+  );
+
   const pause = useCallback(() => {
     const now = new Date().toISOString();
     const nextIntervals: PauseInterval[] = [
@@ -520,11 +548,8 @@ export function useTimer(mode: TimerMode) {
     const updated: TimerState = { ...timerState, pausedAt: now, pauseIntervals: nextIntervals };
     writeLS(lsKey, updated);
     setTimerState(updated);
-
-    if (user) {
-      supabase.from("active_sessions").update({ paused_at: now, pause_intervals: nextIntervals } as any).eq("user_id", user.id).then();
-    }
-  }, [timerState, lsKey, user]);
+    persistState(updated);
+  }, [timerState, lsKey, persistState]);
 
   const resume = useCallback(() => {
     if (!timerState.pausedAt) return;
@@ -538,15 +563,8 @@ export function useTimer(mode: TimerMode) {
     const updated: TimerState = { ...timerState, pausedAt: null, totalPausedMs: newTotal, pauseIntervals: nextIntervals };
     writeLS(lsKey, updated);
     setTimerState(updated);
-
-    if (user) {
-      supabase
-        .from("active_sessions")
-        .update({ paused_at: null, total_paused_ms: newTotal, pause_intervals: nextIntervals } as any)
-        .eq("user_id", user.id)
-        .then();
-    }
-  }, [timerState, lsKey, user]);
+    persistState(updated);
+  }, [timerState, lsKey, persistState]);
 
   const stop = useCallback(async (): Promise<StopResult> => {
     if (stoppingRef.current) {

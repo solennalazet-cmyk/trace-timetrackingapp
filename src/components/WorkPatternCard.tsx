@@ -273,9 +273,47 @@ const WorkPatternCard = ({ reports, workerNames, from, to, selectedWorker, onSel
                   })}
                 </div>
                 <p className="text-[11px] text-muted-foreground text-center">
-                  Tap week columns to narrow the stats below · {scopeLabel}
+                  Tap a week to narrow the stats below · {scopeLabel}
                 </p>
               </div>
+
+              {/* ── Who these hours belong to ── */}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Who worked · {scopeLabel}
+                </p>
+                {perWorker.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No sessions in this selection.</p>
+                ) : (
+                  perWorker.map((w) => (
+                    <button
+                      key={w.id}
+                      type="button"
+                      onClick={() => onSelectWorker?.(selectedWorker === w.id ? "all" : w.id)}
+                      className="w-full flex items-center justify-between gap-3 bg-muted rounded-2xl px-3.5 py-3 text-left hover:bg-muted/70 transition-colors"
+                    >
+                      <span className="flex items-center gap-2 min-w-0">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: getClientColor(w.id) }} />
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold truncate">{w.name}</span>
+                          <span className="block text-[11px] text-muted-foreground">
+                            {w.days} day{w.days === 1 ? "" : "s"} worked
+                          </span>
+                        </span>
+                      </span>
+                      <span className="text-right shrink-0">
+                        <span className={`block text-sm font-bold tabular-nums ${w.approved ? "text-foreground" : "text-foreground/45"}`}>
+                          {fmtHm(w.work)}
+                        </span>
+                        <span className={`block text-[11px] tabular-nums ${w.approved ? "text-muted-foreground" : "text-muted-foreground/60"}`}>
+                          {sym}{w.value.toFixed(2)}
+                        </span>
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+
 
               {/* ── Stats ── */}
               <div className="grid grid-cols-2 gap-3">

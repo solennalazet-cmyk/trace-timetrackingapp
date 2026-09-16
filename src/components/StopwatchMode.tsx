@@ -4,6 +4,7 @@ import CircularTimer from "./CircularTimer";
 import { Button } from "@/components/ui/button";
 import { Pause, Play, Square } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 const BTN = "rounded-[28px] h-14 text-[16px] font-bold";
 
@@ -12,7 +13,7 @@ interface StopwatchModeProps {
 }
 
 const StopwatchMode = ({ onStop }: StopwatchModeProps) => {
-  const { status, elapsedMs, totalPausedMs, start, pause, resume, stop } = useTimer("stopwatch");
+  const { status, elapsedMs, totalPausedMs, pausedAt, start, pause, resume, stop } = useTimer("stopwatch");
   const [pulse, setPulse] = useState(false);
   const [stopping, setStopping] = useState(false);
 
@@ -41,7 +42,7 @@ const StopwatchMode = ({ onStop }: StopwatchModeProps) => {
     onStop(result);
   };
 
-  const pauseMinutes = Math.floor(totalPausedMs / 60000);
+  
 
   return (
     <div className="flex flex-col items-center gap-6">
@@ -56,8 +57,13 @@ const StopwatchMode = ({ onStop }: StopwatchModeProps) => {
         <span className="text-xs font-medium text-muted-foreground mt-1 uppercase tracking-wider">
           {status === "idle" && "Ready"}
           {status === "running" && "Tracking"}
-          {status === "paused" && `Paused · ${pauseMinutes}m break`}
+          {status === "paused" && "Paused"}
         </span>
+        {status === "paused" && pausedAt && (
+          <span className="text-[10px] text-muted-foreground mt-0.5">
+            since {format(new Date(pausedAt), "HH:mm")}
+          </span>
+        )}
       </CircularTimer>
 
       <div className="flex gap-3 w-full max-w-[280px]">

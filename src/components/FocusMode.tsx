@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { playTimerSound } from "@/lib/timer-sounds";
 import { makeTimeEntryIdempotencyKey } from "@/lib/time-entry-idempotency";
+import { format } from "date-fns";
 
 interface FocusModeProps {
   onComplete: (data: { durationMinutes: number; breakMinutes: number; startedAt: string | null; pauseIntervals?: { paused_at: string; resumed_at: string | null }[]; idempotencyKey?: string }) => void;
@@ -28,6 +29,7 @@ const FocusMode = ({ onComplete, autoStartMinutes }: FocusModeProps) => {
     totalSeconds,
     remainingMs,
     totalPausedMs,
+    pausedAtMs,
     progress,
     setPreset,
     setCustomSeconds,
@@ -199,7 +201,7 @@ const FocusMode = ({ onComplete, autoStartMinutes }: FocusModeProps) => {
     onComplete({ durationMinutes, breakMinutes: 0, startedAt: null, idempotencyKey });
   };
 
-  const pauseMinutes = Math.floor(totalPausedMs / 60000);
+  
 
   return (
     <div className="flex flex-col items-center gap-6">
@@ -227,9 +229,14 @@ const FocusMode = ({ onComplete, autoStartMinutes }: FocusModeProps) => {
           <span className="text-xs font-medium text-muted-foreground mt-1 uppercase tracking-wider">
             {status === "idle" && "Set duration"}
             {status === "running" && "Focus"}
-            {status === "paused" && `Paused · ${pauseMinutes}m break`}
+            {status === "paused" && "Paused"}
             {status === "completed" && "Session complete"}
           </span>
+          {status === "paused" && pausedAtMs && (
+            <span className="text-[10px] text-muted-foreground mt-0.5">
+              since {format(new Date(pausedAtMs), "HH:mm")}
+            </span>
+          )}
         </CircularTimer>
       </div>
 

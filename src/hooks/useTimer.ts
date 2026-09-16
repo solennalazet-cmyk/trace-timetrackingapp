@@ -338,13 +338,35 @@ export function useTimer(mode: TimerMode) {
       // newly-started session is not blocked by an old stop marker.
       if (isRecentlyStopped(mode, data.started_at) || stoppingRef.current) return;
 
-      console.log(`[useTimer] active session restored from Supabase for ${mode}`);
       const supabaseState: TimerState = {
         startedAt: data.started_at,
         pausedAt: data.paused_at,
         totalPausedMs: data.total_paused_ms ?? 0,
         pauseIntervals: Array.isArray((data as any).pause_intervals) ? (data as any).pause_intervals : [],
       };
+
+      // Same session, but this device knows about a pause the server missed →
+      // keep the local (paused) copy and repair the server row.
+      const localState = readLS(lsKey);
+      if (localPauseIsAhead(localState, supabaseState) && localState) {
+        console.warn(`[useTimer] local pause state ahead of backend for ${mode}; keeping local and repairing row`);
+        setTimerState(localState);
+        const { error: repairError } = await supabase.from("active_sessions").upsert(
+          {
+            user_id: user.id,
+            session_type: sessionType,
+            started_at: localState.startedAt,
+            paused_at: localState.pausedAt,
+            total_paused_ms: localState.totalPausedMs ?? 0,
+            pause_intervals: localState.pauseIntervals ?? [],
+          } as any,
+          { onConflict: "user_id" }
+        );
+        if (repairError) console.warn(`[useTimer] pause repair failed for ${mode}`, repairError);
+        return;
+      }
+
+      console.log(`[useTimer] active session restored from Supabase for ${mode}`);
       setTimerState(supabaseState);
       writeLS(lsKey, supabaseState);
     };

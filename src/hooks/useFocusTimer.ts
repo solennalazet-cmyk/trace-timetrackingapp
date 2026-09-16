@@ -39,6 +39,7 @@ export function useFocusTimer() {
   const pause = useCallback(() => {
     if (status !== "running") return;
     pausedAtRef.current = Date.now();
+    setPausedAtMs(pausedAtRef.current);
     setStatus("paused");
     if (intervalRef.current) clearInterval(intervalRef.current);
   }, [status]);
@@ -48,6 +49,7 @@ export function useFocusTimer() {
     const pauseDuration = Date.now() - pausedAtRef.current;
     accumulatedPauseRef.current += pauseDuration;
     setTotalPausedMs(accumulatedPauseRef.current);
+    setPausedAtMs(null);
     setStatus("running");
   }, [status]);
 
@@ -117,6 +119,7 @@ export function useFocusTimer() {
     totalSeconds,
     remainingMs,
     totalPausedMs,
+    pausedAtMs,
     progress: totalSeconds > 0 ? 1 - remainingMs / (totalSeconds * 1000) : 0,
     setPreset,
     setCustomSeconds,

@@ -99,6 +99,26 @@ function isRecentlyStopped(mode: string, remoteStartedAt?: string | null): boole
   return false;
 }
 
+/**
+ * True when the local copy is the SAME session as the remote row but holds more
+ * pause information (an extra pause interval, a longer paused total, or an open
+ * pause the server never received). This happens whenever a pause/resume write
+ * failed — offline, token gap, missing row. In that case the local copy wins and
+ * gets pushed back to the server, so a pause is never silently dropped and the
+ * session never reappears as "running" after a reload.
+ */
+function localPauseIsAhead(local: TimerState | null, remote: TimerState): boolean {
+  if (!local?.startedAt || !remote.startedAt) return false;
+  if (local.startedAt !== remote.startedAt) return false;
+  const localCount = local.pauseIntervals?.length ?? 0;
+  const remoteCount = remote.pauseIntervals?.length ?? 0;
+  if (localCount !== remoteCount) return localCount > remoteCount;
+  const localTotal = local.totalPausedMs ?? 0;
+  const remoteTotal = remote.totalPausedMs ?? 0;
+  if (localTotal !== remoteTotal) return localTotal > remoteTotal;
+  return !!local.pausedAt && !remote.pausedAt;
+}
+
 export function useTimer(mode: TimerMode) {
   const { user, loading: authLoading } = useAuth();
   const lsKey = LS_KEYS[mode] || LS_KEYS.stopwatch;
@@ -318,13 +338,35 @@ export function useTimer(mode: TimerMode) {
       // newly-started session is not blocked by an old stop marker.
       if (isRecentlyStopped(mode, data.started_at) || stoppingRef.current) return;
 
-      console.log(`[useTimer] active session restored from Supabase for ${mode}`);
       const supabaseState: TimerState = {
         startedAt: data.started_at,
         pausedAt: data.paused_at,
         totalPausedMs: data.total_paused_ms ?? 0,
         pauseIntervals: Array.isArray((data as any).pause_intervals) ? (data as any).pause_intervals : [],
       };
+
+      // Same session, but this device knows about a pause the server missed →
+      // keep the local (paused) copy and repair the server row.
+      const localState = readLS(lsKey);
+      if (localPauseIsAhead(localState, supabaseState) && localState) {
+        console.warn(`[useTimer] local pause state ahead of backend for ${mode}; keeping local and repairing row`);
+        setTimerState(localState);
+        const { error: repairError } = await supabase.from("active_sessions").upsert(
+          {
+            user_id: user.id,
+            session_type: sessionType,
+            started_at: localState.startedAt,
+            paused_at: localState.pausedAt,
+            total_paused_ms: localState.totalPausedMs ?? 0,
+            pause_intervals: localState.pauseIntervals ?? [],
+          } as any,
+          { onConflict: "user_id" }
+        );
+        if (repairError) console.warn(`[useTimer] pause repair failed for ${mode}`, repairError);
+        return;
+      }
+
+      console.log(`[useTimer] active session restored from Supabase for ${mode}`);
       setTimerState(supabaseState);
       writeLS(lsKey, supabaseState);
     };
@@ -429,6 +471,12 @@ export function useTimer(mode: TimerMode) {
             totalPausedMs: row.total_paused_ms ?? 0,
             pauseIntervals: Array.isArray(row.pause_intervals) ? row.pause_intervals : [],
           };
+          // Never let an echo of an older server copy un-pause a session the
+          // user paused on this device.
+          if (localPauseIsAhead(readLS(lsKey), next)) {
+            console.warn(`[useTimer] ignoring realtime row that would drop a local pause for ${mode}`);
+            return;
+          }
           setTimerState(next);
           writeLS(lsKey, next);
         }
@@ -511,6 +559,34 @@ export function useTimer(mode: TimerMode) {
     }
   }, [lsKey, user, mode]);
 
+  // Pause/resume MUST upsert the whole session row, not patch it. A bare
+  // `update()` silently affects 0 rows when the backend row is missing (first
+  // write failed, offline, row cleaned elsewhere), so the pause never reaches
+  // the server and the next reload restores a "still running" session.
+  const persistState = useCallback(
+    (state: TimerState) => {
+      if (!user || mode === "focus" || !state.startedAt) return;
+      const sessionType = mode === "shift" ? "shift" : "stopwatch";
+      supabase
+        .from("active_sessions")
+        .upsert(
+          {
+            user_id: user.id,
+            session_type: sessionType,
+            started_at: state.startedAt,
+            paused_at: state.pausedAt,
+            total_paused_ms: state.totalPausedMs ?? 0,
+            pause_intervals: state.pauseIntervals ?? [],
+          } as any,
+          { onConflict: "user_id" }
+        )
+        .then(({ error }) => {
+          if (error) console.warn(`[useTimer] failed to persist pause state for ${mode}`, error);
+        });
+    },
+    [user, mode]
+  );
+
   const pause = useCallback(() => {
     const now = new Date().toISOString();
     const nextIntervals: PauseInterval[] = [
@@ -520,11 +596,8 @@ export function useTimer(mode: TimerMode) {
     const updated: TimerState = { ...timerState, pausedAt: now, pauseIntervals: nextIntervals };
     writeLS(lsKey, updated);
     setTimerState(updated);
-
-    if (user) {
-      supabase.from("active_sessions").update({ paused_at: now, pause_intervals: nextIntervals } as any).eq("user_id", user.id).then();
-    }
-  }, [timerState, lsKey, user]);
+    persistState(updated);
+  }, [timerState, lsKey, persistState]);
 
   const resume = useCallback(() => {
     if (!timerState.pausedAt) return;
@@ -538,15 +611,8 @@ export function useTimer(mode: TimerMode) {
     const updated: TimerState = { ...timerState, pausedAt: null, totalPausedMs: newTotal, pauseIntervals: nextIntervals };
     writeLS(lsKey, updated);
     setTimerState(updated);
-
-    if (user) {
-      supabase
-        .from("active_sessions")
-        .update({ paused_at: null, total_paused_ms: newTotal, pause_intervals: nextIntervals } as any)
-        .eq("user_id", user.id)
-        .then();
-    }
-  }, [timerState, lsKey, user]);
+    persistState(updated);
+  }, [timerState, lsKey, persistState]);
 
   const stop = useCallback(async (): Promise<StopResult> => {
     if (stoppingRef.current) {

@@ -57,6 +57,7 @@ const WorkerProfilePage = () => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [hourlyRate, setHourlyRate] = useState<{ amount: number; currency: string } | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -82,6 +83,32 @@ const WorkerProfilePage = () => {
       setInvitePending(!!inv);
     } else {
       setInvitePending(false);
+    }
+
+    // Hourly rate comes from the freelancer's own account: read it off the
+    // most recent report they submitted to this employer.
+    if (data?.connected_user_id && user) {
+      const { data: rep } = await supabase
+        .from("submitted_reports")
+        .select("currency, total_hours, total_amount, entries_snapshot")
+        .eq("employer_user_id", user.id)
+        .eq("worker_user_id", data.connected_user_id)
+        .order("period_end", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      let rate: { amount: number; currency: string } | null = null;
+      if (rep) {
+        const snap = Array.isArray(rep.entries_snapshot) ? (rep.entries_snapshot as any[]) : [];
+        const withRate = snap.find((e) => Number(e?.rate_amount) > 0);
+        if (withRate) {
+          rate = { amount: Number(withRate.rate_amount), currency: withRate.rate_currency ?? rep.currency ?? "EUR" };
+        } else if (Number(rep.total_hours) > 0 && Number(rep.total_amount) > 0) {
+          rate = { amount: Number(rep.total_amount) / Number(rep.total_hours), currency: rep.currency ?? "EUR" };
+        }
+      }
+      setHourlyRate(rate);
+    } else {
+      setHourlyRate(null);
     }
   }, [id, user]);
 

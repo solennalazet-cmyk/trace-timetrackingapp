@@ -98,25 +98,8 @@ function isRecentlyStopped(mode: string, remoteStartedAt?: string | null): boole
   return false;
 }
 
-/**
- * True when the local copy is the SAME session as the remote row but holds more
- * pause information (an extra pause interval, a longer paused total, or an open
- * pause the server never received). This happens whenever a pause/resume write
- * failed — offline, token gap, missing row. In that case the local copy wins and
- * gets pushed back to the server, so a pause is never silently dropped and the
- * session never reappears as "running" after a reload.
- */
-function localPauseIsAhead(local: TimerState | null, remote: TimerState): boolean {
-  if (!local?.startedAt || !remote.startedAt) return false;
-  if (local.startedAt !== remote.startedAt) return false;
-  const localCount = local.pauseIntervals?.length ?? 0;
-  const remoteCount = remote.pauseIntervals?.length ?? 0;
-  if (localCount !== remoteCount) return localCount > remoteCount;
-  const localTotal = local.totalPausedMs ?? 0;
-  const remoteTotal = remote.totalPausedMs ?? 0;
-  if (localTotal !== remoteTotal) return localTotal > remoteTotal;
-  return !!local.pausedAt && !remote.pausedAt;
-}
+// localPauseIsAhead lives in @/lib/timer-conflict (imported below) so the
+// conflict rules can be unit-tested without mounting the hook.
 
 export function useTimer(mode: TimerMode) {
   const { user, loading: authLoading } = useAuth();

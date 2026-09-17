@@ -35,6 +35,7 @@ import {
 import { toast } from "sonner";
 import { useAutoResolvedRate } from "@/hooks/useAutoResolvedRate";
 import { readAssignmentCache, writeAssignmentCache } from "@/lib/assignment-cache";
+import { resolveRate } from "@/lib/resolve-rate";
 
 import { parseDecimalInput, parsePositiveDecimalInput, sanitizeDecimalInput } from "@/lib/rate-utils";
 import { Plus, X } from "lucide-react";
@@ -515,6 +516,20 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
           effectiveRateUnit = "hour";
           setRateAmount(String(fallback.amount));
           setRateCurrency(fallback.currency);
+        }
+      }
+
+      // On a cold first open the list refresh and automatic rate request can
+      // still be in flight when Save is tapped. Resolve once here before the
+      // entry is built so a known saved rate cannot become a silent zero.
+      if (billable && normalizedRate == null && !rateTouched && userId && (clientId || projectId)) {
+        const resolved = await resolveRate(clientId || null, projectId || null, userId);
+        if (resolved.amount != null) {
+          normalizedRate = resolved.amount;
+          effectiveRateCurrency = resolved.currency;
+          effectiveRateUnit = "hour";
+          setRateAmount(String(resolved.amount));
+          setRateCurrency(resolved.currency);
         }
       }
 

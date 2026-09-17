@@ -35,7 +35,6 @@ const LS_KEYS: Record<string, string> = {
 
 const RECENTLY_STOPPED_KEY = "trace_recently_stopped";
 const RECENTLY_STOPPED_TTL = 5 * 60_000; // 5 minutes — long enough for a slow delete + reload
-const AUTH_GAP_GRACE_MS = 30_000;
 
 function readLS(key: string): TimerState | null {
   try {
@@ -555,6 +554,10 @@ export function useTimer(mode: TimerMode) {
           if (error) console.warn(`[useTimer] heartbeat failed for ${mode}`, error);
         });
     };
+    // Also repair the server immediately when authentication returns. Waiting
+    // for the first 60-second heartbeat left a resumed timer vulnerable to a
+    // stale server copy after a brief token-refresh gap.
+    beat();
     const id = setInterval(beat, 60_000);
     return () => clearInterval(id);
   }, [user, mode, lsKey, timerState.startedAt]);
@@ -596,24 +599,45 @@ export function useTimer(mode: TimerMode) {
     (state: TimerState) => {
       if (!user || mode === "focus" || !state.startedAt) return;
       const sessionType = mode === "shift" ? "shift" : "stopwatch";
-      supabase
-        .from("active_sessions")
-        .upsert(
-          {
-            user_id: user.id,
-            session_type: sessionType,
-            started_at: state.startedAt,
-            paused_at: state.pausedAt,
-            total_paused_ms: state.totalPausedMs ?? 0,
-            pause_intervals: state.pauseIntervals ?? [],
-          } as any,
-          { onConflict: "user_id" }
-        )
-        .then(({ error }) => {
-          if (error) console.warn(`[useTimer] failed to persist pause state for ${mode}`, error);
-        });
+      const payload = {
+        user_id: user.id,
+        session_type: sessionType,
+        started_at: state.startedAt,
+        paused_at: state.pausedAt,
+        total_paused_ms: state.totalPausedMs ?? 0,
+        pause_intervals: state.pauseIntervals ?? [],
+      } as any;
+      (async () => {
+        const { error } = await supabase
+          .from("active_sessions")
+          .upsert(payload, { onConflict: "user_id" });
+        if (!error) return;
+        console.warn(`[useTimer] failed to persist pause state for ${mode}; retrying`, error);
+        await new Promise((resolve) => setTimeout(resolve, 750));
+        const latest = readLS(lsKey);
+        if (!latest?.startedAt) return;
+        const { error: retryError } = await supabase
+          .from("active_sessions")
+          .upsert(
+            {
+              ...payload,
+              started_at: latest.startedAt,
+              paused_at: latest.pausedAt,
+              total_paused_ms: latest.totalPausedMs ?? 0,
+              pause_intervals: latest.pauseIntervals ?? [],
+            },
+            { onConflict: "user_id" }
+          );
+        if (retryError) {
+          console.warn(`[useTimer] pause state retry failed for ${mode}; local state remains authoritative`, retryError);
+          try {
+            const { toast } = await import("sonner");
+            toast.error("Connection interrupted. Your timer is safe on this device and will sync automatically.");
+          } catch {}
+        }
+      })();
     },
-    [user, mode]
+    [user, mode, lsKey]
   );
 
   const pause = useCallback(() => {

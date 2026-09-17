@@ -216,13 +216,23 @@ const EmployerHomePage = () => {
   };
 
   const handleQuickApprove = async (r: SubmittedReport) => {
+    if (approvingId === r.id) return;
     setApprovingId(r.id);
-    const { error } = await supabase
-      .from("submitted_reports")
-      .update({ status: "approved" } as any)
-      .eq("id", r.id);
+    const { data, error } = await runExclusive(`review:${r.id}`, async () =>
+      await supabase
+        .from("submitted_reports")
+        .update({ status: "approved" } as any)
+        .eq("id", r.id)
+        .eq("status", REVIEWABLE_STATUS)
+        .select("id"),
+    );
     setApprovingId(null);
-    if (error) { toast.error(error.message); return; }
+    const outcome = interpretReviewResult(data as { id: string }[] | null, error);
+    if (!outcome.ok) {
+      if (outcome.kind === "stale") { toast.info(outcome.message); load(); }
+      else toast.error(outcome.message);
+      return;
+    }
     toast.success(`Approved ${r.client_name}'s report.`);
     load();
   };

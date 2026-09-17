@@ -133,6 +133,7 @@ export function useTimer(mode: TimerMode) {
   const stoppingRef = useRef(false);
   const noUserClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const localMutationRef = useRef(0);
+  const localMutationAtRef = useRef(0);
   const timerStateRef = useRef(timerState);
   timerStateRef.current = timerState;
 
@@ -488,7 +489,7 @@ export function useTimer(mode: TimerMode) {
           // device copy is authoritative.
           const localState = timerStateRef.current;
           if (
-            localMutationRef.current > 0 &&
+            Date.now() - localMutationAtRef.current < 10_000 &&
             localState.startedAt === next.startedAt &&
             (localState.pausedAt !== next.pausedAt ||
               localState.totalPausedMs !== next.totalPausedMs ||
@@ -565,6 +566,7 @@ export function useTimer(mode: TimerMode) {
     const state: TimerState = { startedAt: now, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] };
     writeLS(lsKey, state);
     localMutationRef.current += 1;
+    localMutationAtRef.current = Date.now();
     setTimerState(state);
 
     // Notify listeners (e.g. geolocation capture) that a session has started
@@ -625,6 +627,7 @@ export function useTimer(mode: TimerMode) {
     const updated: TimerState = { ...current, pausedAt: now, pauseIntervals: nextIntervals };
     writeLS(lsKey, updated);
     localMutationRef.current += 1;
+    localMutationAtRef.current = Date.now();
     timerStateRef.current = updated;
     setTimerState(updated);
     persistState(updated);
@@ -643,6 +646,7 @@ export function useTimer(mode: TimerMode) {
     const updated: TimerState = { ...current, pausedAt: null, totalPausedMs: newTotal, pauseIntervals: nextIntervals };
     writeLS(lsKey, updated);
     localMutationRef.current += 1;
+    localMutationAtRef.current = Date.now();
     timerStateRef.current = updated;
     setTimerState(updated);
     persistState(updated);
@@ -680,6 +684,7 @@ export function useTimer(mode: TimerMode) {
     // if the active_sessions delete is slow or fails.
     markRecentlyStopped(mode, startedAt);
     localMutationRef.current += 1;
+    localMutationAtRef.current = Date.now();
 
     // Clear local state immediately
     clearLS(lsKey);

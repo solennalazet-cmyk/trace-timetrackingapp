@@ -161,6 +161,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
   const [loadingData, setLoadingData] = useState(false);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const dismissingRef = useRef(false);
 
   const clients: ComboboxItem[] = clientsFull.map((c) => ({ id: c.id, name: c.name }));
   const filteredProjects: ComboboxItem[] = clientId
@@ -255,6 +256,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
   useEffect(() => {
     if (!open) return;
+    dismissingRef.current = false;
     setSaving(false);
 
     if (existingEntry) {
@@ -600,7 +602,11 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     // Intentionally leave `saving` true on success — modal will unmount/close.
   };
 
-  const handleSkipOrDismiss = () => onSkip(session);
+  const handleSkipOrDismiss = () => {
+    if (saving || dismissingRef.current) return;
+    dismissingRef.current = true;
+    onSkip(session);
+  };
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleSkipOrDismiss(); }}>

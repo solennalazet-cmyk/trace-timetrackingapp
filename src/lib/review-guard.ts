@@ -14,10 +14,12 @@
 
 export const REVIEWABLE_STATUS = "submitted";
 
-export type ReviewOutcome =
-  | { ok: true }
-  | { ok: false; kind: "error"; message: string }
-  | { ok: false; kind: "stale"; message: string };
+export interface ReviewOutcome {
+  ok: boolean;
+  /** "stale" = someone already reviewed it; "error" = the write itself failed. */
+  kind?: "error" | "stale";
+  message?: string;
+}
 
 /**
  * Interpret the result of a conditional review update.

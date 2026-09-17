@@ -7,7 +7,11 @@
  * is tolerated by a one-cent margin.
  */
 
-export type PaymentCheck = { ok: true; amount: number } | { ok: false; message: string };
+export interface PaymentCheck {
+  ok: boolean;
+  amount?: number;
+  message?: string;
+}
 
 const CENT = 0.01;
 

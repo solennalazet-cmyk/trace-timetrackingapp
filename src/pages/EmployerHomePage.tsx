@@ -10,6 +10,8 @@ import Seo from "@/components/Seo";
 import EmployerDashboardSection from "@/components/EmployerDashboardSection";
 import ConnectionInvitesCard from "@/components/ConnectionInvitesCard";
 import SwipeActionsRow from "@/components/SwipeActionsRow";
+import { interpretReviewResult, REVIEWABLE_STATUS } from "@/lib/review-guard";
+import { runExclusive } from "@/lib/action-lock";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 

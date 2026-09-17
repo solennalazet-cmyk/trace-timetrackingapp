@@ -52,13 +52,14 @@ const RecordPaymentSheet = ({ open, onOpenChange, reportId, currency, totalAmoun
       toast.error(check.message);
       return;
     }
+    const amountToSave = check.amount ?? 0;
     setSaving(true);
     const { error } = await runExclusive(
-      paymentLockKey(reportId, check.amount, date),
+      paymentLockKey(reportId, amountToSave, date),
       async () =>
         await supabase.from("report_payments").insert({
           submitted_report_id: reportId,
-          amount: check.amount,
+          amount: amountToSave,
           currency,
           paid_at: date,
           note: note.trim() || null,

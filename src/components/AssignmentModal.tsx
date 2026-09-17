@@ -126,10 +126,12 @@ const RATE_UNITS = [
 // four requests repeatedly. The local cache remains the instant source; this
 // only throttles background freshness checks within the current app session.
 const assignmentRefreshAt = new Map<string, number>();
+const assignmentRefreshes = new Map<string, Promise<void>>();
 const ASSIGNMENT_REFRESH_INTERVAL_MS = 30_000;
 
 const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, onSkip, onDelete }: AssignmentModalProps) => {
   const { user } = useAuth();
+  const userId = user?.id;
   const [clientId, setClientId] = useState("");
   const [clientName, setClientName] = useState("");
   const [projectId, setProjectId] = useState("");
@@ -185,20 +187,23 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
   })();
 
   const loadData = useCallback(async () => {
-    if (user) {
-      const lastRefresh = assignmentRefreshAt.get(user.id) ?? 0;
-      if (Date.now() - lastRefresh < ASSIGNMENT_REFRESH_INTERVAL_MS && readAssignmentCache(user.id)) return;
+    if (userId) {
+      const lastRefresh = assignmentRefreshAt.get(userId) ?? 0;
+      if (Date.now() - lastRefresh < ASSIGNMENT_REFRESH_INTERVAL_MS && readAssignmentCache(userId)) return;
+      const existingRefresh = assignmentRefreshes.get(userId);
+      if (existingRefresh) return existingRefresh;
 
-      assignmentRefreshAt.set(user.id, Date.now());
+      assignmentRefreshAt.set(userId, Date.now());
       setLoadingData(true);
-      try {
-        const clientsRequest = supabase.from("clients").select("id, name, default_rate, currency").eq("user_id", user.id);
-        const projectsRequest = supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", user.id);
-        const tasksRequest = supabase.from("tasks").select("id, name, project_id, client_id").eq("user_id", user.id);
+      const refresh = (async () => {
+       try {
+        const clientsRequest = supabase.from("clients").select("id, name, default_rate, currency").eq("user_id", userId);
+        const projectsRequest = supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", userId);
+        const tasksRequest = supabase.from("tasks").select("id, name, project_id, client_id").eq("user_id", userId);
         const tagsRequest = supabase
             .from("time_entries")
             .select("tags")
-            .eq("user_id", user.id)
+            .eq("user_id", userId)
             .not("tags", "is", null)
             .is("deleted_at", null);
 
@@ -223,13 +228,17 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
         setAllProjectsFull(nextProjects);
         setTasks(nextTasks);
         setAllTags(nextTags);
-        writeAssignmentCache(user.id, { clients: nextClients, projects: nextProjects, tasks: nextTasks, tags: nextTags });
+        writeAssignmentCache(userId, { clients: nextClients, projects: nextProjects, tasks: nextTasks, tags: nextTags });
       } catch (error) {
-        assignmentRefreshAt.delete(user.id);
+        assignmentRefreshAt.delete(userId);
         console.error("[AssignmentModal] assignment lists refresh failed", error);
       } finally {
+        assignmentRefreshes.delete(userId);
         setLoadingData(false);
       }
+      })();
+      assignmentRefreshes.set(userId, refresh);
+      return refresh;
     } else {
       setLoadingData(true);
       const ac = getAnonymousClients();
@@ -241,7 +250,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
       setAllTags([]);
       setLoadingData(false);
     }
-  }, [user]);
+  }, [userId]);
 
 
   useEffect(() => {
@@ -283,7 +292,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
     // Paint the last known lists immediately so suggestions are available the
     // moment the recap opens, then refresh from the backend in the background.
-    const cached = readAssignmentCache(user?.id);
+    const cached = readAssignmentCache(userId);
     if (cached) {
       setClientsFull(cached.clients);
       setAllProjectsFull(cached.projects);
@@ -293,7 +302,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
     loadData();
     requestAnimationFrame(() => scrollAreaRef.current?.scrollTo({ top: 0, behavior: "auto" }));
-  }, [open, loadData, existingEntry, user?.id]);
+  }, [open, loadData, existingEntry, userId]);
 
 
   useEffect(() => {

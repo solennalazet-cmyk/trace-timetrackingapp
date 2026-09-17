@@ -45,6 +45,35 @@ export async function resolveRate(
     }
   }
 
+  // Older clients may not have a default_rate even though the same rate has
+  // been used repeatedly. Reuse the newest matching hourly entry rather than
+  // presenting an unexplained empty/zero field on first selection.
+  if (clientId || projectId) {
+    let recentRateQuery = supabase
+      .from("time_entries")
+      .select("rate_amount, rate_currency")
+      .eq("user_id", userId)
+      .eq("rate_unit", "hour")
+      .not("rate_amount", "is", null)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    recentRateQuery = projectId
+      ? recentRateQuery.eq("project_id", projectId)
+      : recentRateQuery.eq("client_id", clientId);
+
+    const { data: recentEntries } = await recentRateQuery;
+    const recent = recentEntries?.[0];
+    if (recent?.rate_amount != null) {
+      return {
+        amount: recent.rate_amount,
+        currency: recent.rate_currency ?? "EUR",
+        source: clientId ? "client" : "project",
+      };
+    }
+  }
+
   // 3. No rate found
   return { amount: null, currency: "EUR", source: "null" };
 }

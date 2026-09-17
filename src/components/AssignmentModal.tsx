@@ -190,8 +190,8 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
   const loadData = useCallback(async () => {
     if (userId) {
-      setLoadingData(true);
       return runAssignmentRefresh(userId, async () => {
+       setLoadingData(true);
        try {
         const clientsRequest = supabase.from("clients").select("id, name, default_rate, currency").eq("user_id", userId);
         const projectsRequest = supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", userId);

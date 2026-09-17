@@ -35,6 +35,7 @@ import {
 import { toast } from "sonner";
 import { useAutoResolvedRate } from "@/hooks/useAutoResolvedRate";
 import { readAssignmentCache, writeAssignmentCache } from "@/lib/assignment-cache";
+import { runAssignmentRefresh } from "@/lib/assignment-refresh";
 import { resolveRate } from "@/lib/resolve-rate";
 
 import { parseDecimalInput, parsePositiveDecimalInput, sanitizeDecimalInput } from "@/lib/rate-utils";
@@ -126,9 +127,8 @@ const RATE_UNITS = [
 // Opening the recap or switching between its pickers must not launch the same
 // four requests repeatedly. The local cache remains the instant source; this
 // only throttles background freshness checks within the current app session.
-const assignmentRefreshAt = new Map<string, number>();
-const assignmentRefreshes = new Map<string, Promise<void>>();
-const ASSIGNMENT_REFRESH_INTERVAL_MS = 30_000;
+// Throttle + single-flight guard lives in @/lib/assignment-refresh so the
+// de-duplication rules are unit-testable.
 
 const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, onSkip, onDelete }: AssignmentModalProps) => {
   const { user } = useAuth();
@@ -190,14 +190,8 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
   const loadData = useCallback(async () => {
     if (userId) {
-      const lastRefresh = assignmentRefreshAt.get(userId) ?? 0;
-      if (Date.now() - lastRefresh < ASSIGNMENT_REFRESH_INTERVAL_MS && readAssignmentCache(userId)) return;
-      const existingRefresh = assignmentRefreshes.get(userId);
-      if (existingRefresh) return existingRefresh;
-
-      assignmentRefreshAt.set(userId, Date.now());
       setLoadingData(true);
-      const refresh = (async () => {
+      return runAssignmentRefresh(userId, async () => {
        try {
         const clientsRequest = supabase.from("clients").select("id, name, default_rate, currency").eq("user_id", userId);
         const projectsRequest = supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", userId);
@@ -232,15 +226,12 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
         setAllTags(nextTags);
         writeAssignmentCache(userId, { clients: nextClients, projects: nextProjects, tasks: nextTasks, tags: nextTags });
       } catch (error) {
-        assignmentRefreshAt.delete(userId);
         console.error("[AssignmentModal] assignment lists refresh failed", error);
+        throw error;
       } finally {
-        assignmentRefreshes.delete(userId);
         setLoadingData(false);
       }
-      })();
-      assignmentRefreshes.set(userId, refresh);
-      return refresh;
+      }, { hasCache: !!readAssignmentCache(userId) })?.catch(() => {});
     } else {
       setLoadingData(true);
       const ac = getAnonymousClients();

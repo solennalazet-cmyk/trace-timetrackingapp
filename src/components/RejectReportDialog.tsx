@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { interpretReviewResult, REVIEWABLE_STATUS } from "@/lib/review-guard";
+import { runExclusive } from "@/lib/action-lock";
 
 export const REJECT_REASONS = [
   { value: "missing_session", label: "Missing session" },
@@ -37,17 +39,31 @@ const RejectReportDialog = ({ open, onOpenChange, reportId, onRejected }: Props)
       return;
     }
     setWorking(true);
-    const { error } = await supabase
-      .from("submitted_reports")
-      .update({
-        status: "rejected",
-        rejection_reason: reason,
-        rejection_note: note.trim() || null,
-        notify_worker: notify,
-      } as any)
-      .eq("id", reportId);
+    const { data, error } = await runExclusive(`review:${reportId}`, async () =>
+      await supabase
+        .from("submitted_reports")
+        .update({
+          status: "rejected",
+          rejection_reason: reason,
+          rejection_note: note.trim() || null,
+          notify_worker: notify,
+        } as any)
+        .eq("id", reportId)
+        .eq("status", REVIEWABLE_STATUS)
+        .select("id"),
+    );
     setWorking(false);
-    if (error) { toast.error(error.message); return; }
+    const outcome = interpretReviewResult(data as { id: string }[] | null, error);
+    if (!outcome.ok) {
+      if (outcome.kind === "stale") {
+        toast.info(outcome.message);
+        onOpenChange(false);
+        onRejected?.();
+      } else {
+        toast.error(outcome.message);
+      }
+      return;
+    }
     toast.success(notify ? "Report rejected. The freelancer has been notified." : "Report rejected quietly. The freelancer wasn't notified.");
     setNote("");
     setReason("missing_session");

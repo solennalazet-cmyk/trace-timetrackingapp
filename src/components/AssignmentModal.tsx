@@ -35,6 +35,7 @@ import {
 import { toast } from "sonner";
 import { useAutoResolvedRate } from "@/hooks/useAutoResolvedRate";
 import { readAssignmentCache, writeAssignmentCache } from "@/lib/assignment-cache";
+import { resolveRate } from "@/lib/resolve-rate";
 
 import { parseDecimalInput, parsePositiveDecimalInput, sanitizeDecimalInput } from "@/lib/rate-utils";
 import { Plus, X } from "lucide-react";
@@ -126,10 +127,12 @@ const RATE_UNITS = [
 // four requests repeatedly. The local cache remains the instant source; this
 // only throttles background freshness checks within the current app session.
 const assignmentRefreshAt = new Map<string, number>();
+const assignmentRefreshes = new Map<string, Promise<void>>();
 const ASSIGNMENT_REFRESH_INTERVAL_MS = 30_000;
 
 const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, onSkip, onDelete }: AssignmentModalProps) => {
   const { user } = useAuth();
+  const userId = user?.id;
   const [clientId, setClientId] = useState("");
   const [clientName, setClientName] = useState("");
   const [projectId, setProjectId] = useState("");
@@ -159,6 +162,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
   const [loadingData, setLoadingData] = useState(false);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const dismissingRef = useRef(false);
 
   const clients: ComboboxItem[] = clientsFull.map((c) => ({ id: c.id, name: c.name }));
   const filteredProjects: ComboboxItem[] = clientId
@@ -185,20 +189,23 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
   })();
 
   const loadData = useCallback(async () => {
-    if (user) {
-      const lastRefresh = assignmentRefreshAt.get(user.id) ?? 0;
-      if (Date.now() - lastRefresh < ASSIGNMENT_REFRESH_INTERVAL_MS && readAssignmentCache(user.id)) return;
+    if (userId) {
+      const lastRefresh = assignmentRefreshAt.get(userId) ?? 0;
+      if (Date.now() - lastRefresh < ASSIGNMENT_REFRESH_INTERVAL_MS && readAssignmentCache(userId)) return;
+      const existingRefresh = assignmentRefreshes.get(userId);
+      if (existingRefresh) return existingRefresh;
 
-      assignmentRefreshAt.set(user.id, Date.now());
+      assignmentRefreshAt.set(userId, Date.now());
       setLoadingData(true);
-      try {
-        const clientsRequest = supabase.from("clients").select("id, name, default_rate, currency").eq("user_id", user.id);
-        const projectsRequest = supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", user.id);
-        const tasksRequest = supabase.from("tasks").select("id, name, project_id, client_id").eq("user_id", user.id);
+      const refresh = (async () => {
+       try {
+        const clientsRequest = supabase.from("clients").select("id, name, default_rate, currency").eq("user_id", userId);
+        const projectsRequest = supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", userId);
+        const tasksRequest = supabase.from("tasks").select("id, name, project_id, client_id").eq("user_id", userId);
         const tagsRequest = supabase
             .from("time_entries")
             .select("tags")
-            .eq("user_id", user.id)
+            .eq("user_id", userId)
             .not("tags", "is", null)
             .is("deleted_at", null);
 
@@ -223,13 +230,17 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
         setAllProjectsFull(nextProjects);
         setTasks(nextTasks);
         setAllTags(nextTags);
-        writeAssignmentCache(user.id, { clients: nextClients, projects: nextProjects, tasks: nextTasks, tags: nextTags });
+        writeAssignmentCache(userId, { clients: nextClients, projects: nextProjects, tasks: nextTasks, tags: nextTags });
       } catch (error) {
-        assignmentRefreshAt.delete(user.id);
+        assignmentRefreshAt.delete(userId);
         console.error("[AssignmentModal] assignment lists refresh failed", error);
       } finally {
+        assignmentRefreshes.delete(userId);
         setLoadingData(false);
       }
+      })();
+      assignmentRefreshes.set(userId, refresh);
+      return refresh;
     } else {
       setLoadingData(true);
       const ac = getAnonymousClients();
@@ -241,11 +252,12 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
       setAllTags([]);
       setLoadingData(false);
     }
-  }, [user]);
+  }, [userId]);
 
 
   useEffect(() => {
     if (!open) return;
+    dismissingRef.current = false;
     setSaving(false);
 
     if (existingEntry) {
@@ -283,7 +295,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
     // Paint the last known lists immediately so suggestions are available the
     // moment the recap opens, then refresh from the backend in the background.
-    const cached = readAssignmentCache(user?.id);
+    const cached = readAssignmentCache(userId);
     if (cached) {
       setClientsFull(cached.clients);
       setAllProjectsFull(cached.projects);
@@ -293,7 +305,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
     loadData();
     requestAnimationFrame(() => scrollAreaRef.current?.scrollTo({ top: 0, behavior: "auto" }));
-  }, [open, loadData, existingEntry, user?.id]);
+  }, [open, loadData, existingEntry, userId]);
 
 
   useEffect(() => {
@@ -507,6 +519,20 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
         }
       }
 
+      // On a cold first open the list refresh and automatic rate request can
+      // still be in flight when Save is tapped. Resolve once here before the
+      // entry is built so a known saved rate cannot become a silent zero.
+      if (billable && normalizedRate == null && !rateTouched && userId && (clientId || projectId)) {
+        const resolved = await resolveRate(clientId || null, projectId || null, userId);
+        if (resolved.amount != null) {
+          normalizedRate = resolved.amount;
+          effectiveRateCurrency = resolved.currency;
+          effectiveRateUnit = "hour";
+          setRateAmount(String(resolved.amount));
+          setRateCurrency(resolved.currency);
+        }
+      }
+
 
 
       // Persist the rate on the client so it auto-fills next time.
@@ -591,7 +617,11 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     // Intentionally leave `saving` true on success — modal will unmount/close.
   };
 
-  const handleSkipOrDismiss = () => onSkip(session);
+  const handleSkipOrDismiss = () => {
+    if (saving || dismissingRef.current) return;
+    dismissingRef.current = true;
+    onSkip(session);
+  };
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleSkipOrDismiss(); }}>

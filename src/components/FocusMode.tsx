@@ -233,8 +233,8 @@ const FocusMode = ({ onComplete, autoStartMinutes }: FocusModeProps) => {
             {status === "completed" && "Session complete"}
           </span>
           {status === "paused" && pausedAtMs && (
-            <span className="text-[10px] text-muted-foreground mt-0.5">
-              since {format(new Date(pausedAtMs), "HH:mm")}
+            <span className="mt-1 text-xs font-medium text-muted-foreground">
+              Paused since {format(new Date(pausedAtMs), "HH:mm")}
             </span>
           )}
         </CircularTimer>

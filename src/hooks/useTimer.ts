@@ -35,7 +35,6 @@ const LS_KEYS: Record<string, string> = {
 
 const RECENTLY_STOPPED_KEY = "trace_recently_stopped";
 const RECENTLY_STOPPED_TTL = 5 * 60_000; // 5 minutes — long enough for a slow delete + reload
-const AUTH_GAP_GRACE_MS = 30_000;
 
 function readLS(key: string): TimerState | null {
   try {
@@ -132,6 +131,10 @@ export function useTimer(mode: TimerMode) {
   const elapsedRef = useRef(0);
   const stoppingRef = useRef(false);
   const noUserClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const localMutationRef = useRef(0);
+  const localMutationAtRef = useRef(0);
+  const timerStateRef = useRef(timerState);
+  timerStateRef.current = timerState;
 
   const status: TimerStatus = !timerState.startedAt
     ? "idle"
@@ -218,6 +221,7 @@ export function useTimer(mode: TimerMode) {
         return;
       }
       console.log(`[useTimer] reconcile triggered for ${mode}`);
+      const mutationAtRequestStart = localMutationRef.current;
       const { data, error } = await supabase
         .from("active_sessions")
         .select("*")
@@ -226,6 +230,14 @@ export function useTimer(mode: TimerMode) {
 
       if (error) {
         console.warn(`[useTimer] reconcile kept local ${mode}: active session lookup failed`, error);
+        return;
+      }
+
+      // A Pause/Resume/Start/Stop tap that happened while this request was in
+      // flight is newer than its response. Never let that old response undo
+      // the user's command.
+      if (localMutationRef.current !== mutationAtRequestStart) {
+        console.log(`[useTimer] stale reconcile ignored after local ${mode} action`);
         return;
       }
 
@@ -471,6 +483,20 @@ export function useTimer(mode: TimerMode) {
             totalPausedMs: row.total_paused_ms ?? 0,
             pauseIntervals: Array.isArray(row.pause_intervals) ? row.pause_intervals : [],
           };
+          // Local controls update immediately, while realtime can echo the
+          // previous row before the upsert lands. During that short window the
+          // device copy is authoritative.
+          const localState = timerStateRef.current;
+          if (
+            Date.now() - localMutationAtRef.current < 10_000 &&
+            localState.startedAt === next.startedAt &&
+            (localState.pausedAt !== next.pausedAt ||
+              localState.totalPausedMs !== next.totalPausedMs ||
+              localState.pauseIntervals.length !== next.pauseIntervals.length)
+          ) {
+            console.log(`[useTimer] stale realtime state ignored for ${mode}`);
+            return;
+          }
           // Never let an echo of an older server copy un-pause a session the
           // user paused on this device.
           if (localPauseIsAhead(readLS(lsKey), next)) {
@@ -528,6 +554,10 @@ export function useTimer(mode: TimerMode) {
           if (error) console.warn(`[useTimer] heartbeat failed for ${mode}`, error);
         });
     };
+    // Also repair the server immediately when authentication returns. Waiting
+    // for the first 60-second heartbeat left a resumed timer vulnerable to a
+    // stale server copy after a brief token-refresh gap.
+    beat();
     const id = setInterval(beat, 60_000);
     return () => clearInterval(id);
   }, [user, mode, lsKey, timerState.startedAt]);
@@ -538,6 +568,8 @@ export function useTimer(mode: TimerMode) {
     const now = new Date().toISOString();
     const state: TimerState = { startedAt: now, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] };
     writeLS(lsKey, state);
+    localMutationRef.current += 1;
+    localMutationAtRef.current = Date.now();
     setTimerState(state);
 
     // Notify listeners (e.g. geolocation capture) that a session has started
@@ -567,52 +599,82 @@ export function useTimer(mode: TimerMode) {
     (state: TimerState) => {
       if (!user || mode === "focus" || !state.startedAt) return;
       const sessionType = mode === "shift" ? "shift" : "stopwatch";
-      supabase
-        .from("active_sessions")
-        .upsert(
-          {
-            user_id: user.id,
-            session_type: sessionType,
-            started_at: state.startedAt,
-            paused_at: state.pausedAt,
-            total_paused_ms: state.totalPausedMs ?? 0,
-            pause_intervals: state.pauseIntervals ?? [],
-          } as any,
-          { onConflict: "user_id" }
-        )
-        .then(({ error }) => {
-          if (error) console.warn(`[useTimer] failed to persist pause state for ${mode}`, error);
-        });
+      const payload = {
+        user_id: user.id,
+        session_type: sessionType,
+        started_at: state.startedAt,
+        paused_at: state.pausedAt,
+        total_paused_ms: state.totalPausedMs ?? 0,
+        pause_intervals: state.pauseIntervals ?? [],
+      } as any;
+      (async () => {
+        const { error } = await supabase
+          .from("active_sessions")
+          .upsert(payload, { onConflict: "user_id" });
+        if (!error) return;
+        console.warn(`[useTimer] failed to persist pause state for ${mode}; retrying`, error);
+        await new Promise((resolve) => setTimeout(resolve, 750));
+        const latest = readLS(lsKey);
+        if (!latest?.startedAt) return;
+        const { error: retryError } = await supabase
+          .from("active_sessions")
+          .upsert(
+            {
+              ...payload,
+              started_at: latest.startedAt,
+              paused_at: latest.pausedAt,
+              total_paused_ms: latest.totalPausedMs ?? 0,
+              pause_intervals: latest.pauseIntervals ?? [],
+            },
+            { onConflict: "user_id" }
+          );
+        if (retryError) {
+          console.warn(`[useTimer] pause state retry failed for ${mode}; local state remains authoritative`, retryError);
+          try {
+            const { toast } = await import("sonner");
+            toast.error("Connection interrupted. Your timer is safe on this device and will sync automatically.");
+          } catch {}
+        }
+      })();
     },
-    [user, mode]
+    [user, mode, lsKey]
   );
 
   const pause = useCallback(() => {
+    const current = timerStateRef.current;
+    if (!current.startedAt || current.pausedAt) return;
     const now = new Date().toISOString();
     const nextIntervals: PauseInterval[] = [
-      ...(timerState.pauseIntervals ?? []),
+      ...(current.pauseIntervals ?? []),
       { paused_at: now, resumed_at: null },
     ];
-    const updated: TimerState = { ...timerState, pausedAt: now, pauseIntervals: nextIntervals };
+    const updated: TimerState = { ...current, pausedAt: now, pauseIntervals: nextIntervals };
     writeLS(lsKey, updated);
+    localMutationRef.current += 1;
+    localMutationAtRef.current = Date.now();
+    timerStateRef.current = updated;
     setTimerState(updated);
     persistState(updated);
-  }, [timerState, lsKey, persistState]);
+  }, [lsKey, persistState]);
 
   const resume = useCallback(() => {
-    if (!timerState.pausedAt) return;
+    const current = timerStateRef.current;
+    if (!current.pausedAt) return;
     const now = new Date().toISOString();
-    const pauseDuration = Date.now() - new Date(timerState.pausedAt).getTime();
-    const newTotal = timerState.totalPausedMs + pauseDuration;
-    const prev = timerState.pauseIntervals ?? [];
+    const pauseDuration = Math.max(0, Date.now() - new Date(current.pausedAt).getTime());
+    const newTotal = current.totalPausedMs + pauseDuration;
+    const prev = current.pauseIntervals ?? [];
     const nextIntervals: PauseInterval[] = prev.length > 0 && prev[prev.length - 1].resumed_at == null
       ? [...prev.slice(0, -1), { ...prev[prev.length - 1], resumed_at: now }]
       : prev;
-    const updated: TimerState = { ...timerState, pausedAt: null, totalPausedMs: newTotal, pauseIntervals: nextIntervals };
+    const updated: TimerState = { ...current, pausedAt: null, totalPausedMs: newTotal, pauseIntervals: nextIntervals };
     writeLS(lsKey, updated);
+    localMutationRef.current += 1;
+    localMutationAtRef.current = Date.now();
+    timerStateRef.current = updated;
     setTimerState(updated);
     persistState(updated);
-  }, [timerState, lsKey, persistState]);
+  }, [lsKey, persistState]);
 
   const stop = useCallback(async (): Promise<StopResult> => {
     if (stoppingRef.current) {
@@ -645,10 +707,14 @@ export function useTimer(mode: TimerMode) {
     // startedAt so reconcile can recognise and delete the stale backend row
     // if the active_sessions delete is slow or fails.
     markRecentlyStopped(mode, startedAt);
+    localMutationRef.current += 1;
+    localMutationAtRef.current = Date.now();
 
     // Clear local state immediately
     clearLS(lsKey);
-    setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
+    const clearedState = { startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] };
+    timerStateRef.current = clearedState;
+    setTimerState(clearedState);
     setElapsedMs(0);
 
     // Fire-and-forget Supabase cleanup so the UI (assignment modal, etc.)

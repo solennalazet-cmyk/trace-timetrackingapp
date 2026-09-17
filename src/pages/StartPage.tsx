@@ -630,12 +630,12 @@ const StartPage = () => {
   const handleAssignSkip = async (session: SessionData) => {
     const entryBeingEdited = editingEntry;
     closeRecap();
-    toast.success("Session saved to Unassigned Work.");
     try {
       if (!entryBeingEdited) {
         await saveEntry(session, null);
       }
       clearPendingSnapshot();
+      toast.success("Session saved to Unassigned Work.");
       fetchSummary();
     } catch (error) {
       console.error("Save failed:", error);
@@ -681,13 +681,16 @@ const StartPage = () => {
 
   // Handle assigning from unassigned panel
   const handleAssignFromPanel = (entry: any) => {
-    setEditingEntry(entry as ExistingEntry);
-    setPendingSession({
+    const existing = entry as ExistingEntry;
+    const nextSession: SessionData = {
       durationMinutes: entry.duration_minutes,
       breakMinutes: entry.break_minutes ?? 0,
       startedAt: null,
       entryType: entry.entry_type ?? "timer",
-    });
+    };
+    setEditingEntry(existing);
+    setPendingSession(nextSession);
+    writePendingSnapshot({ session: nextSession, editingEntry: existing });
     setAssignModalOpen(true);
   };
 
@@ -825,13 +828,16 @@ const StartPage = () => {
         onOpenChange={setTodaySheetOpen}
         onEntryTap={(entry) => {
           setTodaySheetOpen(false);
-          setEditingEntry(entry as any);
-          setPendingSession({
+          const existing = entry as ExistingEntry;
+          const nextSession: SessionData = {
             durationMinutes: entry.duration_minutes,
             breakMinutes: entry.break_minutes ?? 0,
             startedAt: null,
             entryType: entry.entry_type ?? "timer",
-          });
+          };
+          setEditingEntry(existing);
+          setPendingSession(nextSession);
+          writePendingSnapshot({ session: nextSession, editingEntry: existing });
           setAssignModalOpen(true);
         }}
       />

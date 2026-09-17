@@ -60,8 +60,8 @@ const StopwatchMode = ({ onStop }: StopwatchModeProps) => {
           {status === "paused" && "Paused"}
         </span>
         {status === "paused" && pausedAt && (
-          <span className="text-[10px] text-muted-foreground mt-0.5">
-            since {format(new Date(pausedAt), "HH:mm")}
+          <span className="mt-1 text-xs font-medium text-muted-foreground">
+            Paused since {format(new Date(pausedAt), "HH:mm")}
           </span>
         )}
       </CircularTimer>

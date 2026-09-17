@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { makeTimeEntryIdempotencyKey } from "@/lib/time-entry-idempotency";
+import { localPauseIsAhead } from "@/lib/timer-conflict";
 
 export type TimerMode = "stopwatch" | "focus" | "shift";
 export type TimerStatus = "idle" | "running" | "paused";

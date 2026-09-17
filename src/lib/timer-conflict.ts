@@ -14,7 +14,7 @@ export interface PauseInterval {
 
 export interface TimerLikeState {
   startedAt: string | null;
-  pausedAt: number | null;
+  pausedAt: string | number | null;
   totalPausedMs: number;
   pauseIntervals?: PauseInterval[];
 }

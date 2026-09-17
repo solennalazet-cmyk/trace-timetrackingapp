@@ -12,6 +12,8 @@ import { Check, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { EXPORT_COLUMN_OPTIONS, type ExportColumnKey } from "@/lib/export-columns";
+import { interpretReviewResult, REVIEWABLE_STATUS } from "@/lib/review-guard";
+import { runExclusive } from "@/lib/action-lock";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
@@ -111,37 +113,63 @@ const SubmittedReportSheet = ({ open, onOpenChange, report, onReviewed, readOnly
     }
   };
 
-  const handleApprove = async () => {
-    if (!report) return;
+  /** Shared handling of a conditional review write (approve or reject). */
+  const applyReview = async (
+    build: () => Promise<{ data: unknown; error: { message: string } | null }>,
+  ): Promise<boolean> => {
+    if (!report) return false;
     setWorking(true);
-    const { error } = await supabase
-      .from("submitted_reports")
-      .update({ status: "approved" } as any)
-      .eq("id", report.id);
+    const { data, error } = await runExclusive(`review:${report.id}`, build);
     setWorking(false);
-    if (error) { toast.error(error.message); return; }
+    const outcome = interpretReviewResult(data as { id: string }[] | null, error);
+    if (!outcome.ok) {
+      if (outcome.kind === "stale") {
+        toast.info(outcome.message);
+        onReviewed?.();
+        onOpenChange(false);
+      } else {
+        toast.error(outcome.message);
+      }
+      return false;
+    }
+    return true;
+  };
+
+  const handleApprove = async () => {
+    if (!report || working) return;
+    const ok = await applyReview(async () =>
+      await supabase
+        .from("submitted_reports")
+        .update({ status: "approved" } as any)
+        .eq("id", report.id)
+        .eq("status", REVIEWABLE_STATUS)
+        .select("id"),
+    );
+    if (!ok) return;
     toast.success("Report approved.");
     onReviewed?.();
     onOpenChange(false);
   };
 
   const handleReject = async () => {
-    if (!report) return;
+    if (!report || working) return;
     if (reason === "other" && note.trim().length === 0) {
       toast.error("Please add a note explaining the rejection.");
       return;
     }
-    setWorking(true);
-    const { error } = await supabase
-      .from("submitted_reports")
-      .update({
-        status: "rejected",
-        rejection_reason: reason,
-        rejection_note: note.trim() || null,
-      } as any)
-      .eq("id", report.id);
-    setWorking(false);
-    if (error) { toast.error(error.message); return; }
+    const ok = await applyReview(async () =>
+      await supabase
+        .from("submitted_reports")
+        .update({
+          status: "rejected",
+          rejection_reason: reason,
+          rejection_note: note.trim() || null,
+        } as any)
+        .eq("id", report.id)
+        .eq("status", REVIEWABLE_STATUS)
+        .select("id"),
+    );
+    if (!ok) return;
     toast.success("Report rejected. The freelancer has been notified.");
     setRejectOpen(false);
     setNote("");

@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { validatePaymentAmount, paymentLockKey } from "@/lib/payment-amount";
+import { runExclusive } from "@/lib/action-lock";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
@@ -44,21 +46,26 @@ const RecordPaymentSheet = ({ open, onOpenChange, reportId, currency, totalAmoun
   }, [open, outstanding]);
 
   const handleSave = async () => {
-    if (!reportId) return;
-    const numeric = Number(amount);
-    if (!Number.isFinite(numeric) || numeric <= 0) {
-      toast.error("Enter a valid amount.");
+    if (!reportId || saving) return;
+    const check = validatePaymentAmount(amount, outstanding);
+    if (!check.ok) {
+      toast.error(check.message);
       return;
     }
+    const amountToSave = check.amount ?? 0;
     setSaving(true);
-    const { error } = await supabase.from("report_payments").insert({
-      submitted_report_id: reportId,
-      amount: numeric,
-      currency,
-      paid_at: date,
-      note: note.trim() || null,
-      recorded_by_user_id: recorderUserId,
-    });
+    const { error } = await runExclusive(
+      paymentLockKey(reportId, amountToSave, date),
+      async () =>
+        await supabase.from("report_payments").insert({
+          submitted_report_id: reportId,
+          amount: amountToSave,
+          currency,
+          paid_at: date,
+          note: note.trim() || null,
+          recorded_by_user_id: recorderUserId,
+        }),
+    );
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Payment recorded.");

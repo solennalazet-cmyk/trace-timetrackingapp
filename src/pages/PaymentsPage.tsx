@@ -7,9 +7,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import SwipeToDeleteRow from "@/components/SwipeToDeleteRow";
 import SwipeActionsRow from "@/components/SwipeActionsRow";
 import RejectReportDialog from "@/components/RejectReportDialog";
+import FeedbackModal from "@/components/FeedbackModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/contexts/RoleContext";
@@ -96,6 +96,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
   const [deleteTarget, setDeleteTarget] = useState<{ key: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [rejectId, setRejectId] = useState<string | null>(null);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const handleApproveReport = async (reportId: string) => {
     const { error } = await supabase
@@ -727,13 +728,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
               </Card>
             );
 
-            return embedded ? (
-              <div key={key}>{paymentCard}</div>
-            ) : (
-              <SwipeToDeleteRow key={key} onDelete={() => setDeleteTarget({ key, name })}>
-                {paymentCard}
-              </SwipeToDeleteRow>
-            );
+            return <div key={key}>{paymentCard}</div>;
           })}
           {splittable && inactiveGroups.length > 0 && (
             <button
@@ -755,6 +750,8 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
         onOpenChange={(v) => { if (!v) setOpenReportId(null); }}
         readOnly
       />
+
+      <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
 
       <RejectReportDialog
         open={rejectId !== null}

@@ -59,6 +59,7 @@ interface PaymentRow {
   paid_at: string;
   note: string | null;
   recorded_by_user_id: string;
+  created_at?: string;
 }
 
 interface FreelancerPaymentGroup {
@@ -338,8 +339,9 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
     load();
   };
 
-  const handleDeletePayment = async (id: string) => {
-    const { error } = await supabase.from("report_payments").delete().eq("id", id);
+  const handleDeletePayment = async (ids: string | string[]) => {
+    const list = Array.isArray(ids) ? ids : [ids];
+    const { error } = await supabase.from("report_payments").delete().in("id", list);
     if (error) { toast.error(error.message); return; }
     toast.success("Payment removed.");
     load();
@@ -642,30 +644,40 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
                     )}
 
 
-                    {/* Recent payments log */}
+                    {/* Payments as registered: one line per time a payment was recorded */}
                     {(() => {
                       const reportIds = new Set(rows.map((r) => r.id));
-                      const groupPayments = payments
-                        .filter((p) => reportIds.has(p.submitted_report_id))
-                        .sort((a, b) => b.paid_at.localeCompare(a.paid_at));
+                      const groupPayments = payments.filter((p) => reportIds.has(p.submitted_report_id));
                       if (groupPayments.length === 0) return null;
+                      // One recorded payment can be split across several reports —
+                      // group them back into the single entry the user registered.
+                      const byRegistration = new Map<string, { ids: string[]; amount: number; currency: string; paidAt: string; mine: boolean }>();
+                      for (const p of groupPayments) {
+                        const k = `${p.paid_at}|${(p.created_at ?? "").slice(0, 19)}`;
+                        const g = byRegistration.get(k) ?? { ids: [], amount: 0, currency: p.currency, paidAt: p.paid_at, mine: true };
+                        g.ids.push(p.id);
+                        g.amount += Number(p.amount);
+                        g.mine = g.mine && p.recorded_by_user_id === user?.id;
+                        byRegistration.set(k, g);
+                      }
+                      const entries = Array.from(byRegistration.values()).sort((a, b) => b.paidAt.localeCompare(a.paidAt));
                       return (
                         <div className="space-y-2">
                           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Payment history</p>
                           <div className="space-y-1">
-                            {groupPayments.map((p) => {
-                              const s = CURRENCY_SYMBOLS[p.currency] ?? "€";
+                            {entries.map((e) => {
+                              const s = CURRENCY_SYMBOLS[e.currency] ?? "€";
                               return (
-                                <div key={p.id} className="flex items-center gap-2 text-xs py-1">
-                                  <span className="text-muted-foreground w-16">{formatDate(p.paid_at)}</span>
-                                  <span className="font-mono font-medium flex-1">{s}{Number(p.amount).toFixed(2)}</span>
-                                  {p.recorded_by_user_id === user?.id && (
+                                <div key={e.ids.join("-")} className="flex items-center gap-2 text-sm py-1">
+                                  <span className="text-muted-foreground w-20">{formatDate(e.paidAt)}</span>
+                                  <span className="font-mono font-medium flex-1">{s}{e.amount.toFixed(2)}</span>
+                                  {e.mine && (
                                     <button
-                                      onClick={() => handleDeletePayment(p.id)}
+                                      onClick={() => handleDeletePayment(e.ids)}
                                       className="text-muted-foreground hover:text-destructive"
                                       aria-label="Remove payment"
                                     >
-                                      <Trash2 className="w-3.5 h-3.5" />
+                                      <Trash2 className="w-4 h-4" />
                                     </button>
                                   )}
                                 </div>
@@ -682,6 +694,15 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
                         {rows.map((r) => {
                           const s = CURRENCY_SYMBOLS[r.currency] ?? "€";
                           const pending = r.status === "submitted";
+                          const total = Number(r.total_amount);
+                          const reportPaid = Math.min(total, paidByReport.get(r.id) ?? 0);
+                          const isPaid = reportPaid + 0.005 >= total && total > 0;
+                          const partiallyPaid = reportPaid > 0.005 && !isPaid;
+                          const payLabel = isPaid
+                            ? "Paid"
+                            : partiallyPaid
+                              ? `${s}${reportPaid.toFixed(2)} paid · ${s}${(total - reportPaid).toFixed(2)} due`
+                              : "Unpaid";
                           const row = (
                             <button
                               type="button"
@@ -690,8 +711,8 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
                             >
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium truncate">{formatPeriod(r.period_start, r.period_end)}</p>
-                                <p className="text-[11px] text-muted-foreground mt-0.5">
-                                  {pending ? "Pending approval — swipe to review" : "Approved"}
+                                <p className={`text-xs mt-0.5 font-medium ${isPaid ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"}`}>
+                                  {payLabel}
                                 </p>
                               </div>
                               <span className="text-sm font-mono font-semibold">{s}{Number(r.total_amount).toFixed(2)}</span>

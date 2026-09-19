@@ -138,6 +138,43 @@ const FeedbackModal = ({ open, onOpenChange }: FeedbackModalProps) => {
               required
             />
           </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm">Screenshot (optional)</Label>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => pickScreenshot(e.target.files?.[0] ?? null)}
+            />
+            {preview ? (
+              <div className="relative rounded-xl overflow-hidden border">
+                <img src={preview} alt="Selected screenshot" className="w-full max-h-48 object-contain bg-muted" />
+                <button
+                  type="button"
+                  onClick={clearScreenshot}
+                  aria-label="Remove screenshot"
+                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/90 border flex items-center justify-center"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-11 rounded-xl justify-center gap-2"
+                onClick={() => fileRef.current?.click()}
+                disabled={!user}
+              >
+                <ImagePlus className="w-4 h-4" />
+                Add a screenshot
+              </Button>
+            )}
+            {!user && (
+              <p className="text-[11px] text-muted-foreground">Sign in to attach an image.</p>
+            )}
+          </div>
           <Button
             type="submit"
             className="w-full rounded-[28px] h-12 font-bold bg-primary text-primary-foreground hover:bg-primary/90"

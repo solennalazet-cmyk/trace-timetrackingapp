@@ -123,7 +123,7 @@ const ClientBillingSummary = ({
     return (
       <div className="text-center py-8">
         <p className="text-sm text-muted-foreground">No entries for this period.</p>
-        <p className="text-xs text-muted-foreground mt-1">Start tracking to see your billing summary.</p>
+        <p className="text-sm text-muted-foreground mt-1">Start tracking to see your billing summary.</p>
       </div>
     );
   }
@@ -158,7 +158,7 @@ const ClientBillingSummary = ({
             >
               {/* Avatar with initials */}
               <div
-                className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-[11px] font-bold text-white"
+                className="w-11 h-11 rounded-full shrink-0 flex items-center justify-center text-sm font-bold text-primary-foreground"
                 style={{ background: color }}
               >
                 {initialsOf(c.name)}
@@ -167,12 +167,12 @@ const ClientBillingSummary = ({
               {/* Body: name, sub, bar */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-sm font-semibold text-foreground truncate">{c.name}</span>
-                  <span className="text-sm font-bold font-mono text-foreground tabular-nums shrink-0">
+                  <span className="text-base font-bold text-foreground truncate">{c.name}</span>
+                  <span className="text-lg font-bold font-mono text-foreground tabular-nums shrink-0">
                     {sym}{c.billableValue.toFixed(2)}
                   </span>
                 </div>
-                <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                <div className="text-sm text-foreground/75 mt-1 truncate">
                   {c.billableMins > 0 ? `${formatHM(c.billableMins)} billable` : "0h 00m billable"}
                   {unbillableMins > 0 ? ` · ${formatHM(unbillableMins)} unbillable` : ""}
                 </div>
@@ -195,12 +195,12 @@ const ClientBillingSummary = ({
               <div className="border-t border-border/60 bg-muted/10">
                 <div className="flex items-center justify-end px-3 py-2 gap-3">
                   {c.outstanding > 0 && (
-                    <span className="text-[11px] text-muted-foreground">{sym}{c.outstanding.toFixed(2)} outstanding</span>
+                    <span className="text-sm text-muted-foreground">{sym}{c.outstanding.toFixed(2)} outstanding</span>
                   )}
                   {isPro && c.billableValue > 0 && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onBillClient(c.id); }}
-                      className="text-[11px] font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-foreground/10 text-foreground hover:bg-foreground/15 transition-colors"
+                      className="min-h-10 text-sm font-semibold flex items-center gap-1 px-3 py-2 rounded-full bg-muted text-foreground hover:bg-muted/80 transition-colors"
                     >
                       Send <ArrowRight className="w-3 h-3" />
                     </button>
@@ -214,25 +214,25 @@ const ClientBillingSummary = ({
                       className="w-full flex items-center justify-between px-3 py-2.5 text-sm border-t border-border/60 hover:bg-muted/40 transition-colors text-left"
                     >
                       <div className="flex flex-col gap-0.5 min-w-0">
-                        <span className="text-muted-foreground text-[11px]">
+                        <span className="text-muted-foreground text-sm">
                           {new Date(entry.entry_date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
                         </span>
-                        <span className="text-foreground font-medium text-xs truncate">
+                        <span className="text-foreground font-medium text-sm truncate">
                           {entry.project_name ?? "No project"}
                           {entry.task_name ? ` · ${entry.task_name}` : ""}
                         </span>
                       </div>
                       <div className="flex flex-col items-end gap-0.5 shrink-0 ml-2">
-                        <span className="font-mono text-foreground text-xs">{formatHM(entryDisplayValues(entry, rounding).displayMinutes)}</span>
+                        <span className="font-mono text-foreground text-sm">{formatHM(entryDisplayValues(entry, rounding).displayMinutes)}</span>
                         {entry.billable && entryDisplayValues(entry, rounding).displayValue > 0 ? (
-                          <span className="font-mono text-muted-foreground text-[11px]">
+                          <span className="font-mono text-muted-foreground text-sm">
                             {sym}{entryDisplayValues(entry, rounding).displayValue.toFixed(2)}
                             {entry.billing_status === "unbilled" && (
                               <span className="ml-1 text-foreground font-medium">unbilled</span>
                             )}
                           </span>
                         ) : (
-                          <span className="text-muted-foreground text-[11px]">—</span>
+                          <span className="text-muted-foreground text-sm">—</span>
                         )}
                       </div>
                     </button>
@@ -252,19 +252,19 @@ const ClientBillingSummary = ({
             className="w-full text-left px-3 py-3 flex items-center gap-3 hover:bg-muted/30 transition-colors"
           >
             <div
-              className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-[11px] font-bold text-white"
+              className="w-11 h-11 rounded-full shrink-0 flex items-center justify-center text-sm font-bold text-primary-foreground"
               style={{ background: "hsl(240 5% 65%)" }}
             >
               NA
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="text-sm font-semibold text-foreground truncate">Unassigned</span>
-                <span className="text-sm font-bold font-mono text-foreground tabular-nums shrink-0">
+                <span className="text-base font-bold text-foreground truncate">Unassigned</span>
+                <span className="text-lg font-bold font-mono text-foreground tabular-nums shrink-0">
                   {formatHM(unassignedSummary.totalMins)}
                 </span>
               </div>
-              <div className="text-[11px] text-muted-foreground mt-0.5">Not billable · tap to assign</div>
+              <div className="text-sm text-foreground/75 mt-1">Not billable · tap to assign</div>
             </div>
             <ChevronRight
               className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${expandedId === "__unassigned__" ? "rotate-90" : ""}`}
@@ -276,7 +276,7 @@ const ClientBillingSummary = ({
               <div className="flex justify-end px-3 py-2">
                 <button
                   onClick={onOpenUnassigned}
-                  className="text-[11px] font-medium flex items-center gap-0.5 px-2.5 py-1 rounded-full bg-foreground/10 text-foreground hover:bg-foreground/15 transition-colors"
+                  className="min-h-10 text-sm font-semibold flex items-center gap-1 px-3 py-2 rounded-full bg-muted text-foreground hover:bg-muted/80 transition-colors"
                 >
                   Assign entries <ArrowRight className="w-3 h-3" />
                 </button>
@@ -285,13 +285,13 @@ const ClientBillingSummary = ({
                 {unassignedSummary.entries.map((entry) => (
                   <div
                     key={entry.id}
-                    className="flex items-center justify-between px-3 py-2.5 text-xs border-t border-border/60 hover:bg-muted/40 transition-colors"
+                    className="flex items-center justify-between px-3 py-3 text-sm border-t border-border/60 hover:bg-muted/40 transition-colors"
                   >
                     <button
                       onClick={() => onEditEntry?.(entry)}
                       className="flex flex-col gap-0.5 text-left flex-1 min-w-0"
                     >
-                      <span className="text-muted-foreground text-[11px]">
+                      <span className="text-muted-foreground text-sm">
                         {new Date(entry.entry_date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
                       </span>
                       <span className="text-foreground font-medium truncate">

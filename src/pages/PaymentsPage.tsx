@@ -644,30 +644,40 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
                     )}
 
 
-                    {/* Recent payments log */}
+                    {/* Payments as registered: one line per time a payment was recorded */}
                     {(() => {
                       const reportIds = new Set(rows.map((r) => r.id));
-                      const groupPayments = payments
-                        .filter((p) => reportIds.has(p.submitted_report_id))
-                        .sort((a, b) => b.paid_at.localeCompare(a.paid_at));
+                      const groupPayments = payments.filter((p) => reportIds.has(p.submitted_report_id));
                       if (groupPayments.length === 0) return null;
+                      // One recorded payment can be split across several reports —
+                      // group them back into the single entry the user registered.
+                      const byRegistration = new Map<string, { ids: string[]; amount: number; currency: string; paidAt: string; mine: boolean }>();
+                      for (const p of groupPayments) {
+                        const k = `${p.paid_at}|${(p.created_at ?? "").slice(0, 19)}`;
+                        const g = byRegistration.get(k) ?? { ids: [], amount: 0, currency: p.currency, paidAt: p.paid_at, mine: true };
+                        g.ids.push(p.id);
+                        g.amount += Number(p.amount);
+                        g.mine = g.mine && p.recorded_by_user_id === user?.id;
+                        byRegistration.set(k, g);
+                      }
+                      const entries = Array.from(byRegistration.values()).sort((a, b) => b.paidAt.localeCompare(a.paidAt));
                       return (
                         <div className="space-y-2">
                           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Payment history</p>
                           <div className="space-y-1">
-                            {groupPayments.map((p) => {
-                              const s = CURRENCY_SYMBOLS[p.currency] ?? "€";
+                            {entries.map((e) => {
+                              const s = CURRENCY_SYMBOLS[e.currency] ?? "€";
                               return (
-                                <div key={p.id} className="flex items-center gap-2 text-xs py-1">
-                                  <span className="text-muted-foreground w-16">{formatDate(p.paid_at)}</span>
-                                  <span className="font-mono font-medium flex-1">{s}{Number(p.amount).toFixed(2)}</span>
-                                  {p.recorded_by_user_id === user?.id && (
+                                <div key={e.ids.join("-")} className="flex items-center gap-2 text-sm py-1">
+                                  <span className="text-muted-foreground w-20">{formatDate(e.paidAt)}</span>
+                                  <span className="font-mono font-medium flex-1">{s}{e.amount.toFixed(2)}</span>
+                                  {e.mine && (
                                     <button
-                                      onClick={() => handleDeletePayment(p.id)}
+                                      onClick={() => handleDeletePayment(e.ids)}
                                       className="text-muted-foreground hover:text-destructive"
                                       aria-label="Remove payment"
                                     >
-                                      <Trash2 className="w-3.5 h-3.5" />
+                                      <Trash2 className="w-4 h-4" />
                                     </button>
                                   )}
                                 </div>

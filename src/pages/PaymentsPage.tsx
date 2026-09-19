@@ -694,6 +694,15 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
                         {rows.map((r) => {
                           const s = CURRENCY_SYMBOLS[r.currency] ?? "€";
                           const pending = r.status === "submitted";
+                          const total = Number(r.total_amount);
+                          const reportPaid = Math.min(total, paidByReport.get(r.id) ?? 0);
+                          const isPaid = reportPaid + 0.005 >= total && total > 0;
+                          const partiallyPaid = reportPaid > 0.005 && !isPaid;
+                          const payLabel = isPaid
+                            ? "Paid"
+                            : partiallyPaid
+                              ? `${s}${reportPaid.toFixed(2)} paid · ${s}${(total - reportPaid).toFixed(2)} due`
+                              : "Unpaid";
                           const row = (
                             <button
                               type="button"

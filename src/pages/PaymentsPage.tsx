@@ -711,8 +711,8 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
                             >
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium truncate">{formatPeriod(r.period_start, r.period_end)}</p>
-                                <p className="text-[11px] text-muted-foreground mt-0.5">
-                                  {pending ? "Pending approval — swipe to review" : "Approved"}
+                                <p className={`text-xs mt-0.5 font-medium ${isPaid ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"}`}>
+                                  {payLabel}
                                 </p>
                               </div>
                               <span className="text-sm font-mono font-semibold">{s}{Number(r.total_amount).toFixed(2)}</span>

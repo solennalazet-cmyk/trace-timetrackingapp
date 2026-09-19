@@ -18,6 +18,29 @@ interface FeedbackRow {
  * technical context captured at submit time. Visible only to accounts that
  * carry the "admin" role.
  */
+/** Renders a signed URL for an attached screenshot. */
+const FeedbackScreenshot = ({ path }: { path: string }) => {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    supabase.storage
+      .from("feedback-screenshots")
+      .createSignedUrl(path, 60 * 60)
+      .then(({ data }) => {
+        if (!cancelled) setUrl(data?.signedUrl ?? null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [path]);
+  if (!url) return <p className="mt-2 text-[10px] text-muted-foreground">Loading screenshot…</p>;
+  return (
+    <a href={url} target="_blank" rel="noreferrer" className="block mt-2">
+      <img src={url} alt="Attached screenshot" className="w-full rounded-lg border" />
+    </a>
+  );
+};
+
 const FeedbackInboxCard = () => {
   const { user } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -103,6 +126,9 @@ const FeedbackInboxCard = () => {
                   </p>
                   <p className="text-xs break-words">{row.message}</p>
                 </button>
+                {expanded === row.id && row.context?.screenshotPath && (
+                  <FeedbackScreenshot path={row.context.screenshotPath} />
+                )}
                 {expanded === row.id && row.context && (
                   <pre className="mt-2 text-[10px] leading-4 whitespace-pre-wrap break-words text-muted-foreground">
                     {JSON.stringify(row.context, null, 2)}

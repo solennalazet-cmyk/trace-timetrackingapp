@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { ImagePlus, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -31,12 +32,52 @@ const FeedbackModal = ({ open, onOpenChange }: FeedbackModalProps) => {
   const [type, setType] = useState<string>("suggestion");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [screenshot, setScreenshot] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const pickScreenshot = (file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("That image is too large — please keep it under 10 MB.");
+      return;
+    }
+    setScreenshot(file);
+    setPreview(URL.createObjectURL(file));
+  };
+
+  const clearScreenshot = () => {
+    if (preview) URL.revokeObjectURL(preview);
+    setScreenshot(null);
+    setPreview(null);
+    if (fileRef.current) fileRef.current.value = "";
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim()) return;
 
     setLoading(true);
+
+    // Upload the optional screenshot first so the report arrives with it.
+    let screenshotPath: string | null = null;
+    if (screenshot && user?.id) {
+      const ext = (screenshot.name.split(".").pop() || "png").toLowerCase();
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("feedback-screenshots")
+        .upload(path, screenshot, { contentType: screenshot.type, upsert: false });
+      if (uploadError) {
+        setLoading(false);
+        toast.error("Couldn't attach the image — try again or send without it.");
+        return;
+      }
+      screenshotPath = path;
+    }
     // Attach technical context automatically so bug reports arrive with the
     // recent runtime errors, screen and device info already included.
     const context = getDiagnosticsContext({
@@ -48,7 +89,7 @@ const FeedbackModal = ({ open, onOpenChange }: FeedbackModalProps) => {
       user_id: user?.id ?? null,
       type,
       message: message.trim(),
-      context: context as any,
+      context: { ...context, screenshotPath } as any,
     });
 
     setLoading(false);
@@ -60,6 +101,7 @@ const FeedbackModal = ({ open, onOpenChange }: FeedbackModalProps) => {
 
     toast.success("Thanks — we read every message.");
     setMessage("");
+    clearScreenshot();
     onOpenChange(false);
   };
 
@@ -95,6 +137,43 @@ const FeedbackModal = ({ open, onOpenChange }: FeedbackModalProps) => {
               className="rounded-xl"
               required
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm">Screenshot (optional)</Label>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => pickScreenshot(e.target.files?.[0] ?? null)}
+            />
+            {preview ? (
+              <div className="relative rounded-xl overflow-hidden border">
+                <img src={preview} alt="Selected screenshot" className="w-full max-h-48 object-contain bg-muted" />
+                <button
+                  type="button"
+                  onClick={clearScreenshot}
+                  aria-label="Remove screenshot"
+                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/90 border flex items-center justify-center"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-11 rounded-xl justify-center gap-2"
+                onClick={() => fileRef.current?.click()}
+                disabled={!user}
+              >
+                <ImagePlus className="w-4 h-4" />
+                Add a screenshot
+              </Button>
+            )}
+            {!user && (
+              <p className="text-[11px] text-muted-foreground">Sign in to attach an image.</p>
+            )}
           </div>
           <Button
             type="submit"

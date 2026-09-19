@@ -89,7 +89,7 @@ const FeedbackModal = ({ open, onOpenChange }: FeedbackModalProps) => {
       user_id: user?.id ?? null,
       type,
       message: message.trim(),
-      context: context as any,
+      context: { ...context, screenshotPath } as any,
     });
 
     setLoading(false);

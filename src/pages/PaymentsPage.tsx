@@ -277,7 +277,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
         if (nextBillingCutoff(ref) < today) overdue += remaining;
       }
     }
-    return { due, paid, outstanding: Math.max(0, due - paid), overdue, currency };
+    return { due, paid, outstanding: Math.max(0, due - paid), overdue, currency, since };
   }, [visibleReports, paidByReport]);
 
   // Collapse any open card when the worker filter changes so a hidden group doesn't stay open.

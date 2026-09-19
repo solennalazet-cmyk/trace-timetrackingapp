@@ -7,9 +7,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import SwipeToDeleteRow from "@/components/SwipeToDeleteRow";
 import SwipeActionsRow from "@/components/SwipeActionsRow";
 import RejectReportDialog from "@/components/RejectReportDialog";
+import FeedbackModal from "@/components/FeedbackModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/contexts/RoleContext";
@@ -96,6 +96,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
   const [deleteTarget, setDeleteTarget] = useState<{ key: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [rejectId, setRejectId] = useState<string | null>(null);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const handleApproveReport = async (reportId: string) => {
     const { error } = await supabase
@@ -261,9 +262,11 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
   const overallTotals = useMemo(() => {
     let due = 0, paid = 0, overdue = 0;
     let currency = "EUR";
+    let since: string | null = null;
     const today = new Date(); today.setHours(0, 0, 0, 0);
     for (const r of visibleReports) {
       if (r.status !== "approved") continue;
+      if (!since || r.period_start < since) since = r.period_start;
       currency = r.currency;
       const total = Number(r.total_amount);
       const p = Math.min(total, paidByReport.get(r.id) ?? 0);
@@ -275,7 +278,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
         if (nextBillingCutoff(ref) < today) overdue += remaining;
       }
     }
-    return { due, paid, outstanding: Math.max(0, due - paid), overdue, currency };
+    return { due, paid, outstanding: Math.max(0, due - paid), overdue, currency, since };
   }, [visibleReports, paidByReport]);
 
   // Collapse any open card when the worker filter changes so a hidden group doesn't stay open.
@@ -386,7 +389,17 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
           <div className="px-1">
             <span className="inline-flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full bg-muted text-muted-foreground">
               BETA
-              <span className="text-muted-foreground/70">Payment tracking is in beta — let us know if you spot anything off.</span>
+              <span className="text-muted-foreground/70">
+                Payment tracking is in beta —{" "}
+                <button
+                  type="button"
+                  onClick={() => setFeedbackOpen(true)}
+                  className="underline underline-offset-2 font-semibold text-foreground"
+                >
+                  let us know
+                </button>{" "}
+                if you spot anything off.
+              </span>
             </span>
           </div>
         </>
@@ -416,6 +429,11 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
                       <span className="text-base font-bold tracking-tight">Total wages</span>
                     </div>
                     <p className="text-2xl font-mono font-bold text-foreground mt-1">{totalSym}{overallTotals.due.toFixed(2)}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {overallTotals.since
+                        ? `Since ${new Date(overallTotals.since + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`
+                        : "No approved reports yet"}
+                    </p>
                   </div>
                   <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground shrink-0">
                     {selectedWorkerName}
@@ -710,13 +728,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
               </Card>
             );
 
-            return embedded ? (
-              <div key={key}>{paymentCard}</div>
-            ) : (
-              <SwipeToDeleteRow key={key} onDelete={() => setDeleteTarget({ key, name })}>
-                {paymentCard}
-              </SwipeToDeleteRow>
-            );
+            return <div key={key}>{paymentCard}</div>;
           })}
           {splittable && inactiveGroups.length > 0 && (
             <button
@@ -738,6 +750,8 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
         onOpenChange={(v) => { if (!v) setOpenReportId(null); }}
         readOnly
       />
+
+      <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
 
       <RejectReportDialog
         open={rejectId !== null}

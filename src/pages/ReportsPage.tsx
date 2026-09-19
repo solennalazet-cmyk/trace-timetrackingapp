@@ -695,15 +695,15 @@ const ReportsPage = () => {
             return (
               <div className="mb-6 grid grid-cols-2 gap-2.5">
                 {/* TIME TRACKED card */}
-                <div className="rounded-2xl border border-border/60 bg-card p-3 flex flex-col">
+                <div className="rounded-xl border border-border bg-card p-4 flex flex-col">
                   <div className="flex items-center gap-1.5 mb-2">
                     <div className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
                       <Clock className="w-3.5 h-3.5 text-foreground" />
                     </div>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Time tracked</span>
+                    <span className="text-sm font-semibold uppercase text-muted-foreground">Time tracked</span>
                   </div>
-                  <div className="text-xl font-bold tracking-tight text-foreground leading-none mb-1.5">{timeStr}</div>
-                  <div className="space-y-0.5 text-[11px] mb-3">
+                  <div className="text-2xl font-bold text-foreground leading-none mb-2">{timeStr}</div>
+                  <div className="space-y-1 text-sm mb-3">
                     <div className="flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                       <span className="text-muted-foreground">Billable {billableStr}</span>
@@ -726,15 +726,15 @@ const ReportsPage = () => {
                 </div>
 
                 {/* REVENUE EARNED card */}
-                <div className="rounded-2xl border border-border/60 bg-card p-3 flex flex-col">
+                <div className="rounded-xl border border-border bg-card p-4 flex flex-col">
                   <div className="flex items-center gap-1.5 mb-2">
                     <div className="w-6 h-6 rounded-full bg-emerald-500/15 flex items-center justify-center shrink-0">
                       <Euro className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                     </div>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Revenue earned</span>
+                    <span className="text-sm font-semibold uppercase text-muted-foreground">Revenue earned</span>
                   </div>
-                  <div className="text-xl font-bold tracking-tight text-foreground leading-none mb-1.5">{sym}{totalTurnoverValue.toFixed(2)}</div>
-                  <div className="text-[11px] text-muted-foreground mb-3">Billable revenue</div>
+                  <div className="text-2xl font-bold text-foreground leading-none mb-2">{sym}{totalTurnoverValue.toFixed(2)}</div>
+                  <div className="text-sm text-muted-foreground mb-3">Billable revenue</div>
                   <div className="mt-auto">
                     {turnoverDonutData.length > 0 ? (
                       <Donut
@@ -744,7 +744,7 @@ const ReportsPage = () => {
                         centerSub="turnover"
                       />
                     ) : (
-                      <div className="h-[150px] flex items-center justify-center text-[11px] text-muted-foreground">No billable revenue</div>
+                      <div className="h-[150px] flex items-center justify-center text-sm text-muted-foreground">No billable revenue</div>
                     )}
                   </div>
                 </div>
@@ -976,26 +976,26 @@ const ReportsPage = () => {
                   <>
                     {proratedHourTarget > 0 && (
                       <div>
-                        <div className="flex items-baseline justify-between mb-1">
-                          <span className="text-sm text-foreground font-medium">Hours</span>
-                          <span className="text-sm text-muted-foreground font-mono">
-                            {(totalMins / 60).toFixed(1)} / {proratedHourTarget.toFixed(1)}h
-                            <span className="ml-1.5 text-foreground font-semibold">{Math.round(hourProgress)}%</span>
-                          </span>
-                        </div>
-                        <Progress value={hourProgress} className="h-2 rounded-full" />
+                         <div className="flex items-end justify-between gap-3 mb-2">
+                           <div>
+                             <span className="block text-base text-foreground font-bold">Hours</span>
+                             <span className="block text-sm text-foreground/80 font-mono mt-0.5">{(totalMins / 60).toFixed(1)} / {proratedHourTarget.toFixed(1)}h</span>
+                           </div>
+                           <span className="text-2xl text-foreground font-bold tabular-nums">{Math.round(hourProgress)}%</span>
+                         </div>
+                         <Progress value={hourProgress} className="h-3 rounded-full bg-card" />
                       </div>
                     )}
                     {proratedRevenueTarget > 0 && (
                       <div>
-                        <div className="flex items-baseline justify-between mb-1">
-                          <span className="text-sm text-foreground font-medium">Revenue</span>
-                          <span className="text-sm text-muted-foreground font-mono">
-                            €{billableValue.toFixed(0)} / €{proratedRevenueTarget.toFixed(0)}
-                            <span className="ml-1.5 text-foreground font-semibold">{Math.round(revenueProgress)}%</span>
-                          </span>
-                        </div>
-                        <Progress value={revenueProgress} className="h-2 rounded-full" />
+                         <div className="flex items-end justify-between gap-3 mb-2">
+                           <div>
+                             <span className="block text-base text-foreground font-bold">Revenue</span>
+                             <span className="block text-sm text-foreground/80 font-mono mt-0.5">€{billableValue.toFixed(0)} / €{proratedRevenueTarget.toFixed(0)}</span>
+                           </div>
+                           <span className="text-2xl text-foreground font-bold tabular-nums">{Math.round(revenueProgress)}%</span>
+                         </div>
+                         <Progress value={revenueProgress} className="h-3 rounded-full bg-card" />
                       </div>
                     )}
                   </>

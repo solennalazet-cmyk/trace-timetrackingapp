@@ -123,7 +123,7 @@ const ClientBillingSummary = ({
     return (
       <div className="text-center py-8">
         <p className="text-sm text-muted-foreground">No entries for this period.</p>
-        <p className="text-xs text-muted-foreground mt-1">Start tracking to see your billing summary.</p>
+        <p className="text-sm text-muted-foreground mt-1">Start tracking to see your billing summary.</p>
       </div>
     );
   }

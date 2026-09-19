@@ -32,12 +32,52 @@ const FeedbackModal = ({ open, onOpenChange }: FeedbackModalProps) => {
   const [type, setType] = useState<string>("suggestion");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [screenshot, setScreenshot] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const pickScreenshot = (file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("That image is too large — please keep it under 10 MB.");
+      return;
+    }
+    setScreenshot(file);
+    setPreview(URL.createObjectURL(file));
+  };
+
+  const clearScreenshot = () => {
+    if (preview) URL.revokeObjectURL(preview);
+    setScreenshot(null);
+    setPreview(null);
+    if (fileRef.current) fileRef.current.value = "";
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim()) return;
 
     setLoading(true);
+
+    // Upload the optional screenshot first so the report arrives with it.
+    let screenshotPath: string | null = null;
+    if (screenshot && user?.id) {
+      const ext = (screenshot.name.split(".").pop() || "png").toLowerCase();
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("feedback-screenshots")
+        .upload(path, screenshot, { contentType: screenshot.type, upsert: false });
+      if (uploadError) {
+        setLoading(false);
+        toast.error("Couldn't attach the image — try again or send without it.");
+        return;
+      }
+      screenshotPath = path;
+    }
     // Attach technical context automatically so bug reports arrive with the
     // recent runtime errors, screen and device info already included.
     const context = getDiagnosticsContext({

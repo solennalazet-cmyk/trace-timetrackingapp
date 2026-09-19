@@ -428,6 +428,11 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
                       <span className="text-base font-bold tracking-tight">Total wages</span>
                     </div>
                     <p className="text-2xl font-mono font-bold text-foreground mt-1">{totalSym}{overallTotals.due.toFixed(2)}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {overallTotals.since
+                        ? `Since ${new Date(overallTotals.since + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`
+                        : "No approved reports yet"}
+                    </p>
                   </div>
                   <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground shrink-0">
                     {selectedWorkerName}

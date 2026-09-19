@@ -103,6 +103,9 @@ const FeedbackInboxCard = () => {
                   </p>
                   <p className="text-xs break-words">{row.message}</p>
                 </button>
+                {expanded === row.id && row.context?.screenshotPath && (
+                  <FeedbackScreenshot path={row.context.screenshotPath} />
+                )}
                 {expanded === row.id && row.context && (
                   <pre className="mt-2 text-[10px] leading-4 whitespace-pre-wrap break-words text-muted-foreground">
                     {JSON.stringify(row.context, null, 2)}

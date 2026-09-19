@@ -339,8 +339,9 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
     load();
   };
 
-  const handleDeletePayment = async (id: string) => {
-    const { error } = await supabase.from("report_payments").delete().eq("id", id);
+  const handleDeletePayment = async (ids: string | string[]) => {
+    const list = Array.isArray(ids) ? ids : [ids];
+    const { error } = await supabase.from("report_payments").delete().in("id", list);
     if (error) { toast.error(error.message); return; }
     toast.success("Payment removed.");
     load();

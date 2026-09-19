@@ -59,6 +59,7 @@ interface PaymentRow {
   paid_at: string;
   note: string | null;
   recorded_by_user_id: string;
+  created_at?: string;
 }
 
 interface FreelancerPaymentGroup {

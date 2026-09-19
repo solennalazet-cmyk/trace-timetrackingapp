@@ -261,9 +261,11 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
   const overallTotals = useMemo(() => {
     let due = 0, paid = 0, overdue = 0;
     let currency = "EUR";
+    let since: string | null = null;
     const today = new Date(); today.setHours(0, 0, 0, 0);
     for (const r of visibleReports) {
       if (r.status !== "approved") continue;
+      if (!since || r.period_start < since) since = r.period_start;
       currency = r.currency;
       const total = Number(r.total_amount);
       const p = Math.min(total, paidByReport.get(r.id) ?? 0);

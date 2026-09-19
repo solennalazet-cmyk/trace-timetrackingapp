@@ -101,6 +101,7 @@ const FeedbackModal = ({ open, onOpenChange }: FeedbackModalProps) => {
 
     toast.success("Thanks — we read every message.");
     setMessage("");
+    clearScreenshot();
     onOpenChange(false);
   };
 

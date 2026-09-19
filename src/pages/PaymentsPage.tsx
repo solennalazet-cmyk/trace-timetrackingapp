@@ -388,7 +388,17 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
           <div className="px-1">
             <span className="inline-flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full bg-muted text-muted-foreground">
               BETA
-              <span className="text-muted-foreground/70">Payment tracking is in beta — let us know if you spot anything off.</span>
+              <span className="text-muted-foreground/70">
+                Payment tracking is in beta —{" "}
+                <button
+                  type="button"
+                  onClick={() => setFeedbackOpen(true)}
+                  className="underline underline-offset-2 font-semibold text-foreground"
+                >
+                  let us know
+                </button>{" "}
+                if you spot anything off.
+              </span>
             </span>
           </div>
         </>

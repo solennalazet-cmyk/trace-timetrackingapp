@@ -1,20 +1,20 @@
-# Fix client selection drawer
+# Make mobile Reports easier to read
 
 ## Goal
-Make tapping an existing client select it immediately and close the drawer reliably in both the browser and phone app, without breaking list scrolling or desktop assignment.
+Improve the Freelancer Reports overview so goals, totals, client filters, and supporting insights are immediately legible on a phone.
 
 ## Changes
-- Replace click-only mobile row selection with a touch-safe pointer interaction that distinguishes a tap from a vertical scroll.
-- Keep ownership of the pointer through small keyboard/drawer position changes so the selection is not cancelled mid-tap.
-- Prevent the parent assignment dialog and backdrop from receiving the same completed tap or reopening the client drawer.
-- Keep mouse and keyboard selection working through the normal click path.
-- Apply the same shared fix to client, project, and task drawers because they use the same control.
+- Give Goals a tinted, stronger card treatment with a bold border, larger labels, values, percentages, and progress bars.
+- Replace the Hours and Average per Session donuts with flat metric cards; keep tap-to-show and copy decimal hours.
+- Keep entry-mode insight as a compact breakdown beneath the metrics instead of hiding it in Settings or forcing it into exported reports.
+- Increase small labels and body copy throughout the Reports overview and client breakdown to a readable 14–15px baseline.
+- Increase headline values to 19–24px, strengthen client-filter contrast, and enlarge their touch targets.
+- Normalize section gaps, headings, card padding, and mobile chart labels for a more continuous reading flow.
 
 ## Validation
-- Verify a searched client can be selected while the keyboard is open and the drawer closes with the chosen name displayed.
-- Verify vertical scrolling does not accidentally select a row.
-- Verify repeated opening/closing remains stable at the current mobile viewport.
-- Check the preview build and runtime logs after the change.
+- Check the Reports overview at the current phone width for readability, clipping, and interaction.
+- Confirm decimal-hour toggling/copying, client filters, goal progress, and client expansion still work.
+- Confirm the app builds without errors.
 
 ## Technical details
-The current row waits for a synthetic `click`. Mobile browsers can cancel that click when the keyboard changes the visual viewport and moves the drawer between pointer-down and pointer-up. The fix will commit a genuine tap from the pointer sequence itself, using movement tolerance and pointer capture, while retaining `click` for mouse and keyboard access.
+The existing calculations and report/export data stay unchanged. This is a presentation-only change, using existing theme tokens and responsive classes. Entry-mode insight remains on-screen because it helps explain the totals immediately; exports should continue showing entry type as row-level detail rather than adding a default summary section.

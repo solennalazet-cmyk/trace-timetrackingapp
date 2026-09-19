@@ -7,7 +7,7 @@ import {
 import {
   ChevronDown, ChevronUp, Timer, PenLine, Clock, Phone,
   Crown, Download, Trash2, X, Euro, PieChart as PieChartIcon,
-  Coffee, Heart, Activity, Pause as PauseIcon, Info,
+  Coffee, Heart, Activity, Pause as PauseIcon, Info, CircleHelp,
 } from "lucide-react";
 import { startOfWeek } from "date-fns";
 import DateRangePicker from "@/components/DateRangePicker";
@@ -97,6 +97,7 @@ const ReportsPage = () => {
   const [weekStartDay, setWeekStartDay] = useState(1);
   const [rounding, setRounding] = useState<RoundingSettings>(DEFAULT_ROUNDING);
   const [showDecimalHours, setShowDecimalHours] = useState(false);
+  const [showAverageHelp, setShowAverageHelp] = useState(false);
 
   // Settings are loaded inside the date initialization effect below
 
@@ -545,11 +546,11 @@ const ReportsPage = () => {
       <h1 className="text-2xl font-bold tracking-tight mb-3 mt-2">Reports</h1>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="w-full grid grid-cols-2 rounded-full bg-muted/40 h-10 p-1 mb-4">
-          <TabsTrigger value="overview" className="rounded-full text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-nav-bg data-[state=active]:shadow-sm">
+        <TabsList className="w-full grid grid-cols-2 rounded-full bg-muted/60 h-12 p-1 mb-4">
+          <TabsTrigger value="overview" className="h-10 rounded-full text-sm font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
             Overview
           </TabsTrigger>
-          <TabsTrigger value="done" className="rounded-full text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-nav-bg data-[state=active]:shadow-sm">
+          <TabsTrigger value="done" className="h-10 rounded-full text-sm font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
             Done
           </TabsTrigger>
         </TabsList>
@@ -572,13 +573,13 @@ const ReportsPage = () => {
 
       {/* ── 2. Client filter chips ── */}
       {clientIds.length > 0 && (
-        <div className="flex gap-1.5 overflow-x-auto pb-3 -mx-1 px-1 scrollbar-none">
+        <div className="flex gap-2 overflow-x-auto pb-4 -mx-1 px-1 scrollbar-none">
           <button
             onClick={() => setClientFilter("")}
-            className={`shrink-0 px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+            className={`shrink-0 min-h-11 px-4 py-2 text-sm font-semibold rounded-full border-2 transition-colors ${
               !clientFilter
-                ? "border-primary bg-primary/20 text-foreground"
-                : "border-border text-muted-foreground hover:bg-muted/30"
+                ? "border-foreground/70 bg-primary text-primary-foreground shadow-sm"
+                : "border-border bg-card text-foreground hover:bg-muted/50"
             }`}
           >
             All clients
@@ -587,10 +588,10 @@ const ReportsPage = () => {
             <button
               key={id}
               onClick={() => setClientFilter(clientFilter === id ? "" : id)}
-              className={`shrink-0 px-3 py-1.5 text-xs font-medium rounded-full border transition-colors flex items-center gap-1.5 ${
+              className={`shrink-0 min-h-11 px-4 py-2 text-sm font-semibold rounded-full border-2 transition-colors flex items-center gap-2 ${
                 clientFilter === id
-                  ? "border-primary bg-primary/20 text-foreground"
-                  : "border-border text-muted-foreground hover:bg-muted/30"
+                  ? "border-foreground/70 bg-primary text-primary-foreground shadow-sm"
+                  : "border-border bg-card text-foreground hover:bg-muted/50"
               }`}
             >
               <div className="w-2 h-2 rounded-full" style={{ background: getClientColor(id) }} />
@@ -600,7 +601,7 @@ const ReportsPage = () => {
           {clientFilter && (
             <button
               onClick={() => setClientFilter("")}
-              className="shrink-0 px-2 py-1.5 text-xs text-foreground font-medium hover:underline"
+              className="shrink-0 min-h-11 min-w-11 inline-flex items-center justify-center text-foreground rounded-full border-2 border-border bg-card"
             >
               <X className="w-3 h-3" />
             </button>
@@ -788,7 +789,7 @@ const ReportsPage = () => {
           {/* ── 4. Client Cards ── */}
           {displayEntries.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <h3 className="text-sm font-bold text-foreground uppercase mb-3 flex items-center gap-2">
                 <PieChartIcon className="w-3.5 h-3.5 text-nav-bg" />
                 Revenue by client
               </h3>
@@ -827,18 +828,15 @@ const ReportsPage = () => {
             </div>
           )}
 
-          {/* ── Entry Type Mini Donuts ── */}
+          {/* ── Input metrics and entry-mode breakdown ── */}
           {rangeEntries.length > 0 && (() => {
-            // Input-type palette — intentionally distinct from client colors
-            // (which use the Sunrise palette: blues, ambers, roses, oranges, golds).
-            // We pick neutral/cool tones here so input-type donuts never look like a client.
             const ENTRY_TYPE_COLORS: Record<string, string> = {
-              stopwatch: "hsl(215 16% 47%)",  // slate grey
-              manual: "hsl(175 55% 42%)",     // teal (was amber — clashed with client gold)
-              shift: "hsl(260 35% 55%)",      // muted violet
-              focus: "hsl(195 60% 45%)",      // deep cyan
-              call: "hsl(150 35% 45%)",       // sage green
-              boost: "hsl(280 40% 55%)",      // muted purple
+              stopwatch: "hsl(215 16% 47%)",
+              manual: "hsl(175 55% 42%)",
+              shift: "hsl(260 35% 55%)",
+              focus: "hsl(195 60% 45%)",
+              call: "hsl(150 35% 45%)",
+              boost: "hsl(280 40% 55%)",
             };
             const ENTRY_TYPE_LABELS: Record<string, string> = {
               stopwatch: "Stopwatch",
@@ -849,15 +847,14 @@ const ReportsPage = () => {
               boost: "Boost",
             };
             const ENTRY_TYPE_ICONS: Record<string, React.ReactNode> = {
-              stopwatch: <Timer className="w-3 h-3" />,
-              manual: <PenLine className="w-3 h-3" />,
-              shift: <Clock className="w-3 h-3" />,
-              focus: <Phone className="w-3 h-3" />,
-              call: <Phone className="w-3 h-3" />,
-              boost: <Sparkles className="w-3 h-3" />,
+              stopwatch: <Timer className="w-4 h-4" />,
+              manual: <PenLine className="w-4 h-4" />,
+              shift: <Clock className="w-4 h-4" />,
+              focus: <Phone className="w-4 h-4" />,
+              call: <Phone className="w-4 h-4" />,
+              boost: <Sparkles className="w-4 h-4" />,
             };
 
-            // Aggregate by entry type
             const byType: Record<string, { mins: number; value: number; count: number }> = {};
             displayEntries.forEach((e) => {
               const t = e.entry_type ?? "stopwatch";
@@ -866,113 +863,86 @@ const ReportsPage = () => {
               byType[t].value += ed(e).displayValue;
               byType[t].count += 1;
             });
-
             const types = Object.keys(byType);
             if (types.length === 0) return null;
 
-            const hoursData = types.map((t) => ({ name: ENTRY_TYPE_LABELS[t] ?? t, value: byType[t].mins, fill: ENTRY_TYPE_COLORS[t] ?? "hsl(var(--muted-foreground))" }));
-            const turnoverData = types.map((t) => ({ name: ENTRY_TYPE_LABELS[t] ?? t, value: byType[t].value, fill: ENTRY_TYPE_COLORS[t] ?? "hsl(var(--muted-foreground))" })).filter((d) => d.value > 0);
-            const avgData = types.map((t) => ({ name: ENTRY_TYPE_LABELS[t] ?? t, value: byType[t].count > 0 ? Math.round(byType[t].mins / byType[t].count) : 0, fill: ENTRY_TYPE_COLORS[t] ?? "hsl(var(--muted-foreground))" }));
-
-            const totalTurnover = turnoverData.reduce((s, d) => s + d.value, 0);
-
-            const MiniDonut = ({ data, centerLabel, centerSub, size = 120 }: { data: { name: string; value: number; fill: string }[]; centerLabel: string; centerSub: string; size?: number }) => {
-              const isTurnover = centerSub === "turnover";
-              return (
-                <div className="relative shrink-0 [&_svg]:outline-none [&_svg]:border-none [&_svg_*]:outline-none" style={{ width: size, height: size }}>
-                  <ResponsiveContainer width={size} height={size}>
-                    <PieChart>
-                      <Pie
-                        data={data}
-                        innerRadius={size * 0.32}
-                        outerRadius={size * 0.46}
-                        dataKey="value"
-                        stroke="hsl(var(--background))"
-                        strokeWidth={2}
-                        paddingAngle={1}
-                        isAnimationActive={false}
-                      >
-                        {data.map((d, i) => <Cell key={i} fill={d.fill} />)}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-sm font-bold font-mono text-foreground">{centerLabel}</span>
-                    <span className="text-[11px] text-muted-foreground">{centerSub === "turnover" ? "turnover" : centerSub}</span>
-                  </div>
-                </div>
-              );
+            const decimal = (totalMins / 60).toFixed(2);
+            const averageMins = Math.round(totalMins / (displayEntries.length || 1));
+            const handleHoursTap = () => {
+              if (showDecimalHours) {
+                navigator.clipboard?.writeText(decimal).then(
+                  () => toast.success(`Copied ${decimal}`),
+                  () => {},
+                );
+                return;
+              }
+              setShowDecimalHours(true);
+              window.setTimeout(() => setShowDecimalHours(false), 4000);
             };
 
             return (
-              <div className="mb-5">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Input Analysis</h3>
-                 <div className="flex flex-wrap justify-center gap-4 pb-2">
-                  {(() => {
-                    const decimal = (totalMins / 60).toFixed(2);
-                    const handleHoursTap = () => {
-                      if (showDecimalHours) {
-                        navigator.clipboard?.writeText(decimal).then(
-                          () => toast.success(`Copied ${decimal}`),
-                          () => {}
-                        );
-                        return;
-                      }
-                      setShowDecimalHours(true);
-                      window.setTimeout(() => setShowDecimalHours(false), 4000);
-                    };
-                    return (
-                      <div className="shrink-0 flex flex-col items-center">
-                        <button
-                          type="button"
-                          onClick={handleHoursTap}
-                          title={showDecimalHours ? "Tap to copy" : "Tap for decimal"}
-                          aria-label={showDecimalHours ? `Decimal hours ${decimal}, tap to copy` : "Show decimal hours"}
-                          className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-transform active:scale-[0.98]"
-                        >
-                          <MiniDonut
-                            data={hoursData}
-                            centerLabel={showDecimalHours ? decimal : formatHHMM(totalMins)}
-                            centerSub={showDecimalHours ? "decimal" : "hours"}
-                          />
-                        </button>
-                        <span className="text-xs text-muted-foreground mt-1">Hours</span>
-                      </div>
-                    );
-                  })()}
-                  <div className="shrink-0 flex flex-col items-center">
-                    <MiniDonut data={avgData} centerLabel={formatHHMM(Math.round(totalMins / (displayEntries.length || 1)))} centerSub="per session" />
-                    <span className="text-xs text-muted-foreground mt-1">Avg / Session</span>
-                  </div>
-                  {/* Boost mini-metric */}
-                  {(() => {
-                    const boostMins = displayEntries.filter(e => e.entry_type === "boost").reduce((s, e) => s + edMins(e), 0);
-                    if (boostMins === 0) return null;
-                    const boostCount = displayEntries.filter(e => e.entry_type === "boost").length;
-                    return (
-                      <div className="shrink-0 flex flex-col items-center">
-                        <div className="flex items-center justify-center rounded-full border-2 border-amber-400/40" style={{ width: 120, height: 120, background: "linear-gradient(135deg, hsl(45 90% 96%), hsl(38 80% 92%))" }}>
-                          <div className="flex flex-col items-center">
-                            <Sparkles className="w-5 h-5 text-amber-500 mb-1" />
-                            <span className="text-sm font-bold font-mono text-foreground">{formatHHMM(boostMins)}</span>
-                            <span className="text-[11px] text-muted-foreground">{boostCount} boost{boostCount !== 1 ? "s" : ""}</span>
-                          </div>
-                        </div>
-                        <span className="text-xs text-muted-foreground mt-1">Growth</span>
-                      </div>
-                    );
-                  })()}
-                </div>
-                {/* Shared legend */}
-                <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-2">
-                  {types.map((t) => (
-                    <div key={t} className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <div className="w-2 h-2 rounded-full" style={{ background: ENTRY_TYPE_COLORS[t] ?? "hsl(var(--muted-foreground))" }} />
-                      {ENTRY_TYPE_ICONS[t]} {ENTRY_TYPE_LABELS[t] ?? t}
+              <section className="mb-5 space-y-3" aria-labelledby="input-analysis-heading">
+                <h3 id="input-analysis-heading" className="text-sm font-bold text-foreground uppercase">Input analysis</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={handleHoursTap}
+                    className="min-h-32 rounded-xl border border-border bg-card p-4 text-left shadow-sm transition-transform active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={showDecimalHours ? `Decimal hours ${decimal}, tap to copy` : "Show decimal hours"}
+                  >
+                    <span className="block text-sm font-semibold text-muted-foreground">Hours</span>
+                    <span className="mt-3 block text-2xl font-bold font-mono text-foreground tabular-nums">
+                      {showDecimalHours ? decimal : formatHHMM(totalMins)}
+                    </span>
+                    <span className="mt-2 block text-sm font-medium text-foreground/80">
+                      {showDecimalHours ? "Tap to copy" : "Tap for decimals"}
+                    </span>
+                  </button>
+
+                  <div className="relative min-h-32 rounded-xl border border-border bg-card p-4 shadow-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold text-muted-foreground">Avg / session</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowAverageHelp((value) => !value)}
+                        className="inline-flex h-10 w-10 -mr-2 -mt-2 items-center justify-center rounded-full text-foreground hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        aria-label="Explain average per session"
+                        aria-expanded={showAverageHelp}
+                      >
+                        <CircleHelp className="h-5 w-5" />
+                      </button>
                     </div>
-                  ))}
+                    <span className="mt-2 block text-2xl font-bold font-mono text-foreground tabular-nums">{formatHHMM(averageMins)}</span>
+                    <span className="mt-2 block text-sm text-foreground/80">Across {displayEntries.length} session{displayEntries.length === 1 ? "" : "s"}</span>
+                    {showAverageHelp && (
+                      <div role="tooltip" className="absolute z-20 right-2 top-12 w-52 rounded-lg border border-border bg-popover p-3 text-sm leading-snug text-popover-foreground shadow-lg">
+                        Total tracked time divided by the number of sessions in this date range.
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <p className="text-sm font-semibold text-foreground mb-3">Entry modes</p>
+                  <div className="space-y-3">
+                    {types.map((t) => {
+                      const typeHours = byType[t].mins / 60;
+                      const share = totalMins > 0 ? Math.round((byType[t].mins / totalMins) * 100) : 0;
+                      return (
+                        <div key={t} className="flex items-center gap-3 text-sm">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
+                            {ENTRY_TYPE_ICONS[t]}
+                          </span>
+                          <span className="min-w-0 flex-1 font-medium text-foreground">{ENTRY_TYPE_LABELS[t] ?? t}</span>
+                          <span className="font-mono text-muted-foreground tabular-nums">{typeHours.toFixed(2)}h</span>
+                          <span className="w-11 text-right font-semibold text-foreground tabular-nums">{share}%</span>
+                          <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: ENTRY_TYPE_COLORS[t] ?? "hsl(var(--muted-foreground))" }} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </section>
             );
           })()}
 
@@ -989,13 +959,13 @@ const ReportsPage = () => {
             const showBlurred = isFree && !hasGoals;
             if (!hasGoals && !showBlurred) return null;
             return (
-              <div className="mb-6 space-y-3 relative lg:hidden">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Goals</h3>
+              <section className="mb-5 rounded-xl border-2 border-foreground/20 bg-accent p-4 shadow-sm space-y-4 relative lg:hidden" aria-labelledby="goals-heading">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 id="goals-heading" className="text-base font-bold text-foreground uppercase">Goals</h3>
                   {isPro && (
                     <button
                       onClick={() => setBoostOpen(true)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 transition-colors text-xs font-semibold"
+                      className="inline-flex min-h-10 items-center gap-1.5 px-3 py-2 rounded-full bg-card text-foreground border border-border transition-colors text-sm font-semibold"
                     >
                       <Sparkles className="w-3.5 h-3.5 animate-pulse" />
                       Boost
@@ -1049,12 +1019,9 @@ const ReportsPage = () => {
                     </div>
                   </div>
                 )}
-              </div>
+              </section>
             );
           })()}
-
-
-
 
           {/* ── 6. Daily Breakdown Stacked Bar (fixed column width + horizontal scroll) ── */}
           {stackedChartData.length > 0 && rangeEntries.length > 0 && (() => {
@@ -1144,7 +1111,7 @@ const ReportsPage = () => {
                 </h3>
 
                 {/* Legend */}
-                <div className="flex items-center gap-4 mb-2 text-[11px] text-muted-foreground">
+                <div className="flex items-center gap-4 mb-3 text-sm font-medium text-foreground/80">
                   <div className="flex items-center gap-1.5">
                     <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "hsl(var(--primary))" }} />
                     Focus time
@@ -1227,32 +1194,32 @@ const ReportsPage = () => {
                   <>
                     <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <div className="rounded-xl border border-border/60 bg-card/60 p-3">
-                        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                        <div className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground">
                           <Coffee className="w-3 h-3" /> Breaks / day
                         </div>
-                        <p className="text-base font-bold font-mono text-foreground mt-1">{breaksPerDay.toFixed(1)}</p>
-                        <p className="text-[10px] text-muted-foreground">avg</p>
+                        <p className="text-xl font-bold font-mono text-foreground mt-2">{breaksPerDay.toFixed(1)}</p>
+                        <p className="text-sm text-muted-foreground">average</p>
                       </div>
                       <div className="rounded-xl border border-border/60 bg-card/60 p-3">
-                        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                        <div className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground">
                           <Clock className="w-3 h-3" /> Avg length
                         </div>
-                        <p className="text-base font-bold font-mono text-foreground mt-1">{fmtMS(avgBreakLen)}</p>
-                        <p className="text-[10px] text-muted-foreground">avg</p>
+                        <p className="text-xl font-bold font-mono text-foreground mt-2">{fmtMS(avgBreakLen)}</p>
+                        <p className="text-sm text-muted-foreground">average</p>
                       </div>
                       <div className="rounded-xl border border-border/60 bg-card/60 p-3">
-                        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                        <div className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground">
                           <PieChartIcon className="w-3 h-3" /> Break time
                         </div>
-                        <p className="text-base font-bold font-mono text-foreground mt-1">{breakPct.toFixed(0)}%</p>
-                        <p className="text-[10px] text-muted-foreground">of tracked time</p>
+                        <p className="text-xl font-bold font-mono text-foreground mt-2">{breakPct.toFixed(0)}%</p>
+                        <p className="text-sm text-muted-foreground">of tracked time</p>
                       </div>
                       <div className="rounded-xl border border-border/60 bg-card/60 p-3">
-                        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                        <div className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground">
                           <Activity className="w-3 h-3" /> Longest break
                         </div>
-                        <p className="text-base font-bold font-mono text-foreground mt-1">{fmtMins(longestPauseMins)}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">{longestPauseDate ? `on ${dateLabel}` : "—"}</p>
+                        <p className="text-xl font-bold font-mono text-foreground mt-2">{fmtMins(longestPauseMins)}</p>
+                        <p className="text-sm text-muted-foreground truncate">{longestPauseDate ? `on ${dateLabel}` : "—"}</p>
                       </div>
                     </div>
 
@@ -1263,14 +1230,14 @@ const ReportsPage = () => {
                       </div>
                       <div className="min-w-0">
                         <p className={`text-base font-bold ${S.tone}`}>{S.title}</p>
-                        <p className="text-xs text-foreground/80 mt-0.5">{S.msg}</p>
-                        <p className="text-[11px] text-muted-foreground mt-1">Ideal range: 8% – 20% of tracked time</p>
+                        <p className="text-sm text-foreground/80 mt-1 leading-relaxed">{S.msg}</p>
+                        <p className="text-sm text-muted-foreground mt-2">Ideal range: 8% – 20% of tracked time</p>
                       </div>
                     </div>
 
                     <div className="mt-2 rounded-xl bg-muted/40 p-3 flex items-start gap-2">
                       <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      <p className="text-sm text-muted-foreground leading-relaxed">
                         <span className="font-medium text-foreground">Why this matters.</span>{" "}
                         Regular breaks help your brain recharge, improve focus and prevent burnout.
                       </p>
@@ -1283,7 +1250,7 @@ const ReportsPage = () => {
                     </div>
                     <div className="min-w-0">
                       <p className="text-base font-bold text-foreground">No breaks tracked yet</p>
-                      <p className="text-xs text-foreground/80 mt-0.5">
+                      <p className="text-sm text-foreground/80 mt-1 leading-relaxed">
                         Tap <span className="font-semibold">Pause</span> during a session to log your breaks. Trace will then show whether your work-rest balance is in the healthy 8–20% range.
                       </p>
                     </div>

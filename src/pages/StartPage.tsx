@@ -59,6 +59,7 @@ function getActiveMode(): Mode | null {
 // then deletes. That collision blew up the sign-in migration and destroyed the
 // pending recap. Own key, own shape.
 const PENDING_SESSION_LS_KEY = "trace_pending_session_v2";
+const LAST_MODE_LS_KEY = "trace_last_mode";
 const LEGACY_PENDING_SESSION_LS_KEY = "trace_pending_assignment";
 /** After this long an unresolved recap is auto-filed to Unassigned Work. */
 const PENDING_MAX_AGE_MS = 12 * 60 * 60 * 1000;

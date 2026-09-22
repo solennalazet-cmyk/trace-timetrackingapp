@@ -107,7 +107,22 @@ function clearPendingSnapshot() {
 
 
 const StartPage = () => {
-  const [mode, setMode] = useState<Mode>(() => getActiveMode() ?? "stopwatch");
+  const [mode, setMode] = useState<Mode>(() => {
+    // Remember the tab across remounts so a tap on "Clock In" isn't undone by
+    // the page re-mounting underneath the user.
+    const active = getActiveMode();
+    if (active) return active;
+    try {
+      const saved = localStorage.getItem(LAST_MODE_LS_KEY);
+      if (saved === "stopwatch" || saved === "focus" || saved === "shift") return saved;
+    } catch {}
+    return "stopwatch";
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem(LAST_MODE_LS_KEY, mode); } catch {}
+  }, [mode]);
+
   const { user, profile, loading: authLoading } = useAuth();
   const { activeRole } = useRole();
   const navigate = useNavigate();

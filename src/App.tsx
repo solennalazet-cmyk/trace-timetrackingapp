@@ -114,9 +114,34 @@ function useRestoreTheme() {
   }, []);
 }
 
+const WORKER_HOME = "/";
+const EMPLOYER_HOME = "/employer";
+
+// Defined at module level on purpose. When these lived inside AppInner they
+// were re-created on every render, so React saw a brand-new component type and
+// threw away the whole page (remounting StartPage and resetting its state —
+// the "first tap on Clock In bounces back to the default screen" bug).
+const RequireRole = ({ role, children }: { role: "worker" | "employer"; children: JSX.Element }) => {
+  const { activeRole, roleLoaded } = useRole();
+  // Never bounce while the saved role is still unknown — a reload would
+  // otherwise throw the user back to the other role's home screen.
+  if (!roleLoaded) return <div className="min-h-screen" aria-hidden />;
+  if (activeRole !== role) {
+    return <Navigate to={role === "worker" ? EMPLOYER_HOME : WORKER_HOME} replace />;
+  }
+  return children;
+};
+
+// "/" is the freelancer's home; for employers it should land on /employer.
+const RoleAwareHome = () => {
+  const { activeRole, roleLoaded } = useRole();
+  if (!roleLoaded) return <div className="min-h-screen" aria-hidden />;
+  return activeRole === "employer" ? <Navigate to={EMPLOYER_HOME} replace /> : <StartPage />;
+};
+
 const AppInner = () => {
   useRestoreTheme();
-  const { activeRole, roleLoaded } = useRole();
+  const { activeRole } = useRole();
   const weekStart = useWeekStartFromSettings();
 
   useEffect(() => {
@@ -128,27 +153,6 @@ const AppInner = () => {
     }
   }, [activeRole]);
 
-  // Guards so each role only sees its own screens. Visiting a route that
-  // belongs to the other role bounces you to that role's home — no more
-  // employer dashboard leaking into the freelancer view, or vice versa.
-  const workerHome = "/";
-  const employerHome = "/employer";
-
-  const RequireRole = ({ role, children }: { role: "worker" | "employer"; children: JSX.Element }) => {
-    // Never bounce while the saved role is still unknown — a reload would
-    // otherwise throw the user back to the other role's home screen.
-    if (!roleLoaded) return <div className="min-h-screen" aria-hidden />;
-    if (activeRole !== role) {
-      return <Navigate to={role === "worker" ? employerHome : workerHome} replace />;
-    }
-    return children;
-  };
-
-  // "/" is the freelancer's home; for employers it should land on /employer.
-  const RoleAwareHome = () => {
-    if (!roleLoaded) return <div className="min-h-screen" aria-hidden />;
-    return activeRole === "employer" ? <Navigate to={employerHome} replace /> : <StartPage />;
-  };
 
   return (
     <WeekStartProvider value={weekStart}>

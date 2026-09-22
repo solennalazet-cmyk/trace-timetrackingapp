@@ -59,6 +59,7 @@ function getActiveMode(): Mode | null {
 // then deletes. That collision blew up the sign-in migration and destroyed the
 // pending recap. Own key, own shape.
 const PENDING_SESSION_LS_KEY = "trace_pending_session_v2";
+const LAST_MODE_LS_KEY = "trace_last_mode";
 const LEGACY_PENDING_SESSION_LS_KEY = "trace_pending_assignment";
 /** After this long an unresolved recap is auto-filed to Unassigned Work. */
 const PENDING_MAX_AGE_MS = 12 * 60 * 60 * 1000;
@@ -107,7 +108,22 @@ function clearPendingSnapshot() {
 
 
 const StartPage = () => {
-  const [mode, setMode] = useState<Mode>(() => getActiveMode() ?? "stopwatch");
+  const [mode, setMode] = useState<Mode>(() => {
+    // Remember the tab across remounts so a tap on "Clock In" isn't undone by
+    // the page re-mounting underneath the user.
+    const active = getActiveMode();
+    if (active) return active;
+    try {
+      const saved = localStorage.getItem(LAST_MODE_LS_KEY);
+      if (saved === "stopwatch" || saved === "focus" || saved === "shift") return saved;
+    } catch {}
+    return "stopwatch";
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem(LAST_MODE_LS_KEY, mode); } catch {}
+  }, [mode]);
+
   const { user, profile, loading: authLoading } = useAuth();
   const { activeRole } = useRole();
   const navigate = useNavigate();

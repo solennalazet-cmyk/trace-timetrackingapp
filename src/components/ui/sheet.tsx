@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 
 const Sheet = SheetPrimitive.Root;
 
@@ -29,40 +30,17 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 
 const useBottomSheetViewportStyle = (enabled: boolean) => {
-  const [viewportStyle, setViewportStyle] = React.useState<React.CSSProperties>({});
+  // Shared, debounced keyboard height; pauses while a picker above owns it.
+  const inset = useKeyboardInset(enabled, true);
 
-  React.useEffect(() => {
-    if (!enabled || typeof window === "undefined" || !window.visualViewport) {
-      setViewportStyle({});
-      return;
-    }
-
-    const visualViewport = window.visualViewport;
-    const updateViewportStyle = () => {
-      const keyboardOffset = Math.max(0, window.innerHeight - visualViewport.offsetTop - visualViewport.height);
-      if (keyboardOffset > 0) {
-        setViewportStyle({
-          bottom: `${keyboardOffset}px`,
-          maxHeight: `${Math.max(260, visualViewport.height - 8)}px`,
-        });
-      } else {
-        setViewportStyle({});
-      }
-    };
-
-    updateViewportStyle();
-    visualViewport.addEventListener("resize", updateViewportStyle);
-    visualViewport.addEventListener("scroll", updateViewportStyle);
-    window.addEventListener("orientationchange", updateViewportStyle);
-
-    return () => {
-      visualViewport.removeEventListener("resize", updateViewportStyle);
-      visualViewport.removeEventListener("scroll", updateViewportStyle);
-      window.removeEventListener("orientationchange", updateViewportStyle);
-    };
-  }, [enabled]);
-
-  return viewportStyle;
+  return React.useMemo<React.CSSProperties>(() => {
+    if (!enabled || inset <= 0) return {};
+    const available = Math.max(
+      260,
+      (typeof window === "undefined" ? 0 : window.innerHeight) - inset - 8
+    );
+    return { bottom: `${inset}px`, maxHeight: `${available}px` };
+  }, [enabled, inset]);
 };
 
 const sheetVariants = cva(

@@ -3,6 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 
 const Dialog = DialogPrimitive.Root;
 
@@ -13,53 +14,24 @@ const DialogPortal = DialogPrimitive.Portal;
 const DialogClose = DialogPrimitive.Close;
 
 const useVisualViewportStyle = (enabled: boolean, mode: "centered" | "sheet" = "centered") => {
-  const [viewportStyle, setViewportStyle] = React.useState<React.CSSProperties>({});
+  // Debounced, hysteresis-filtered keyboard height, paused while a picker
+  // rendered above this dialog owns the keyboard — see lib/viewport-inset.ts.
+  const inset = useKeyboardInset(enabled, true);
 
-  React.useEffect(() => {
-    if (!enabled || typeof window === "undefined" || !window.visualViewport) {
-      setViewportStyle({});
-      return;
+  return React.useMemo<React.CSSProperties>(() => {
+    if (!enabled || inset <= 0) return {};
+    const available = Math.max(
+      260,
+      (typeof window === "undefined" ? 0 : window.innerHeight) - inset - 8
+    );
+    if (mode === "centered") {
+      return {
+        maxHeight: `${available}px`,
+        top: `${available / 2 + 4}px`,
+      };
     }
-
-    const visualViewport = window.visualViewport;
-
-    const updateViewportStyle = () => {
-      if (mode === "centered") {
-        setViewportStyle({
-          maxHeight: `calc(${visualViewport.height}px - 1rem)`,
-          top: `${visualViewport.offsetTop + visualViewport.height / 2}px`,
-        });
-      } else {
-        const keyboardOffset = Math.max(
-          0,
-          window.innerHeight - visualViewport.offsetTop - visualViewport.height
-        );
-        if (keyboardOffset > 0) {
-          setViewportStyle({
-            maxHeight: `${Math.max(260, visualViewport.height - 8)}px`,
-            bottom: `${keyboardOffset}px`,
-          });
-        } else {
-          setViewportStyle({});
-        }
-      }
-    };
-
-
-    updateViewportStyle();
-
-    visualViewport.addEventListener("resize", updateViewportStyle);
-    visualViewport.addEventListener("scroll", updateViewportStyle);
-    window.addEventListener("orientationchange", updateViewportStyle);
-
-    return () => {
-      visualViewport.removeEventListener("resize", updateViewportStyle);
-      visualViewport.removeEventListener("scroll", updateViewportStyle);
-      window.removeEventListener("orientationchange", updateViewportStyle);
-    };
-  }, [enabled, mode]);
-
-  return viewportStyle;
+    return { maxHeight: `${available}px`, bottom: `${inset}px` };
+  }, [enabled, inset, mode]);
 };
 
 
@@ -91,10 +63,18 @@ const DialogContent = React.forwardRef<
   const handleFocusCapture = (event: React.FocusEvent<HTMLDivElement>) => {
     onFocusCapture?.(event);
     const target = event.target as HTMLElement;
-    if (!target.matches("input, textarea, select, [role='combobox'], [contenteditable='true']")) return;
+    if (!target.matches("input, textarea, select, [contenteditable='true']")) return;
+    // Only nudge the field into view when the keyboard actually covers it, and
+    // use the smallest possible scroll. Unconditional centering was moving the
+    // dialog on every focus, which read as a bounce.
     window.setTimeout(() => {
-      target.scrollIntoView({ block: "center", behavior: "auto" });
-    }, 320);
+      if (document.activeElement !== target) return;
+      const vv = window.visualViewport;
+      const bottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+      const rect = target.getBoundingClientRect();
+      if (rect.bottom <= bottom - 8 && rect.top >= 0) return;
+      target.scrollIntoView({ block: "nearest", behavior: "auto" });
+    }, 350);
   };
 
   return (

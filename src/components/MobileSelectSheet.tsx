@@ -4,6 +4,7 @@ import { Check, Plus, Loader2, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import InlineDots from "@/components/InlineDots";
 import type { ComboboxItem } from "@/components/CreatableCombobox";
+import { subscribeKeyboardInset, freezeDialogViewport } from "@/lib/viewport-inset";
 
 interface MobileSelectSheetProps {
   open: boolean;
@@ -77,20 +78,15 @@ const MobileSelectSheet = ({
   }, [mounted]);
 
   // Keep the panel pinned to the top of the soft keyboard instead of letting
-  // the browser scroll the whole layout viewport around it.
+  // the browser scroll the whole layout viewport around it. While this sheet is
+  // mounted the dialog underneath stops repositioning, so only one layer moves.
   useEffect(() => {
-    if (!mounted || typeof window === "undefined" || !window.visualViewport) return;
-    const vv = window.visualViewport;
-    const update = () => {
-      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      setKeyboardOffset(offset);
-    };
-    update();
-    vv.addEventListener("resize", update);
-    vv.addEventListener("scroll", update);
+    if (!mounted) return;
+    const release = freezeDialogViewport();
+    const unsubscribe = subscribeKeyboardInset(setKeyboardOffset);
     return () => {
-      vv.removeEventListener("resize", update);
-      vv.removeEventListener("scroll", update);
+      unsubscribe();
+      release();
     };
   }, [mounted]);
 

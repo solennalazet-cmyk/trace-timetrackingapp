@@ -13,53 +13,24 @@ const DialogPortal = DialogPrimitive.Portal;
 const DialogClose = DialogPrimitive.Close;
 
 const useVisualViewportStyle = (enabled: boolean, mode: "centered" | "sheet" = "centered") => {
-  const [viewportStyle, setViewportStyle] = React.useState<React.CSSProperties>({});
+  // Debounced, hysteresis-filtered keyboard height, paused while a picker
+  // rendered above this dialog owns the keyboard — see lib/viewport-inset.ts.
+  const inset = useKeyboardInset(enabled, true);
 
-  React.useEffect(() => {
-    if (!enabled || typeof window === "undefined" || !window.visualViewport) {
-      setViewportStyle({});
-      return;
+  return React.useMemo<React.CSSProperties>(() => {
+    if (!enabled || inset <= 0) return {};
+    const available = Math.max(
+      260,
+      (typeof window === "undefined" ? 0 : window.innerHeight) - inset - 8
+    );
+    if (mode === "centered") {
+      return {
+        maxHeight: `${available}px`,
+        top: `${available / 2 + 4}px`,
+      };
     }
-
-    const visualViewport = window.visualViewport;
-
-    const updateViewportStyle = () => {
-      if (mode === "centered") {
-        setViewportStyle({
-          maxHeight: `calc(${visualViewport.height}px - 1rem)`,
-          top: `${visualViewport.offsetTop + visualViewport.height / 2}px`,
-        });
-      } else {
-        const keyboardOffset = Math.max(
-          0,
-          window.innerHeight - visualViewport.offsetTop - visualViewport.height
-        );
-        if (keyboardOffset > 0) {
-          setViewportStyle({
-            maxHeight: `${Math.max(260, visualViewport.height - 8)}px`,
-            bottom: `${keyboardOffset}px`,
-          });
-        } else {
-          setViewportStyle({});
-        }
-      }
-    };
-
-
-    updateViewportStyle();
-
-    visualViewport.addEventListener("resize", updateViewportStyle);
-    visualViewport.addEventListener("scroll", updateViewportStyle);
-    window.addEventListener("orientationchange", updateViewportStyle);
-
-    return () => {
-      visualViewport.removeEventListener("resize", updateViewportStyle);
-      visualViewport.removeEventListener("scroll", updateViewportStyle);
-      window.removeEventListener("orientationchange", updateViewportStyle);
-    };
-  }, [enabled, mode]);
-
-  return viewportStyle;
+    return { maxHeight: `${available}px`, bottom: `${inset}px` };
+  }, [enabled, inset, mode]);
 };
 
 

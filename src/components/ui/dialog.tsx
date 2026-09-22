@@ -3,6 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 
 const Dialog = DialogPrimitive.Root;
 
@@ -62,10 +63,18 @@ const DialogContent = React.forwardRef<
   const handleFocusCapture = (event: React.FocusEvent<HTMLDivElement>) => {
     onFocusCapture?.(event);
     const target = event.target as HTMLElement;
-    if (!target.matches("input, textarea, select, [role='combobox'], [contenteditable='true']")) return;
+    if (!target.matches("input, textarea, select, [contenteditable='true']")) return;
+    // Only nudge the field into view when the keyboard actually covers it, and
+    // use the smallest possible scroll. Unconditional centering was moving the
+    // dialog on every focus, which read as a bounce.
     window.setTimeout(() => {
-      target.scrollIntoView({ block: "center", behavior: "auto" });
-    }, 320);
+      if (document.activeElement !== target) return;
+      const vv = window.visualViewport;
+      const bottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+      const rect = target.getBoundingClientRect();
+      if (rect.bottom <= bottom - 8 && rect.top >= 0) return;
+      target.scrollIntoView({ block: "nearest", behavior: "auto" });
+    }, 350);
   };
 
   return (

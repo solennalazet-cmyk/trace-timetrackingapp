@@ -100,6 +100,8 @@ interface AssignmentModalProps {
   onSaveMulti?: (session: SessionData, assignments: AssignmentResult[]) => void | Promise<void>;
   onSkip: (session: SessionData) => void;
   onDelete?: (entryId: string) => void;
+  /** Choices to restore after a failed save. */
+  draft?: AssignmentResult | null;
 }
 
 interface ClientFull {
@@ -130,7 +132,7 @@ const RATE_UNITS = [
 // Throttle + single-flight guard lives in @/lib/assignment-refresh so the
 // de-duplication rules are unit-testable.
 
-const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, onSkip, onDelete }: AssignmentModalProps) => {
+const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, onSkip, onDelete, draft }: AssignmentModalProps) => {
   const { user } = useAuth();
   const userId = user?.id;
   const [clientId, setClientId] = useState("");
@@ -284,6 +286,20 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
     setHasUserChangedSelection(false);
     setRateTouched(false);
 
+    if (draft) {
+      setClientId(draft.clientId ?? "");
+      setProjectId(draft.projectId ?? "");
+      setTaskId(draft.taskId ?? "");
+      setTaskName(draft.taskName ?? "");
+      setNotes(draft.notes ?? "");
+      setTags(draft.tags ?? []);
+      setBillable(draft.billable);
+      setRateAmount(draft.rateAmount != null ? String(draft.rateAmount) : "");
+      setRateCurrency(draft.rateCurrency || "EUR");
+      setRateUnit(draft.rateUnit || "hour");
+      setRateTouched(draft.rateAmount != null);
+    }
+
     // Paint the last known lists immediately so suggestions are available the
     // moment the recap opens, then refresh from the backend in the background.
     const cached = readAssignmentCache(userId);
@@ -296,7 +312,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
     loadData();
     requestAnimationFrame(() => scrollAreaRef.current?.scrollTo({ top: 0, behavior: "auto" }));
-  }, [open, loadData, existingEntry, userId]);
+  }, [open, loadData, existingEntry, userId, draft]);
 
 
   useEffect(() => {

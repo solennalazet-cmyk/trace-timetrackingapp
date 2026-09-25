@@ -49,6 +49,8 @@ interface UnassignedPanelProps {
   onAssignEntry: (entry: UnassignedEntry) => void;
   onCountChange: (count: number) => void;
   onBatchAssigned?: () => void;
+  /** When exactly one entry is unassigned, skip the list and open it straight away. */
+  autoOpenSingle?: boolean;
 }
 
 const entryTypeIcon = (type: string | null) => {

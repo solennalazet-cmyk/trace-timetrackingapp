@@ -316,7 +316,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
                 <div className="flex items-center w-full px-3 py-3 rounded-lg hover:bg-muted/50 transition-colors">
                   <button
                     className="flex items-center gap-3 flex-1 min-w-0 text-left"
-                    onClick={() => setSelectedEntry(entry)}
+                    onClick={() => handleAssign(entry)}
                   >
                     {entryTypeIcon(entry.entry_type)}
                     <div className="min-w-0">

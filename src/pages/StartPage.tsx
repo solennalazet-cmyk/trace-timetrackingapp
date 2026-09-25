@@ -527,8 +527,10 @@ const StartPage = () => {
 
     if (user) {
       const { error } = await supabase
+      // An assigned save must win over an earlier unassigned copy of the same
+      // session (e.g. filed by a dismiss or recovery), so merge on conflict.
         .from("time_entries")
-        .upsert({ ...entry, user_id: user.id }, { onConflict: "user_id,idempotency_key", ignoreDuplicates: true });
+        .upsert({ ...entry, user_id: user.id }, { onConflict: "user_id,idempotency_key", ignoreDuplicates: !assignment });
       if (error) throw error;
     } else {
       saveAnonymousEntry(entry);

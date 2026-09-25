@@ -516,12 +516,9 @@ const StartPage = () => {
 
     if (shouldCapture) {
       const startLoc: CapturedLocation | null = readStartLocation(session.entryType ?? "timer", session.startedAt);
-      // Hard cap: a GPS fix that never answers (backgrounded webview, pending
-      // permission prompt) must never hold the save hostage.
-      const endLoc: CapturedLocation | null = await Promise.race([
-        requestLocation().catch(() => null),
-        new Promise<null>((r) => setTimeout(() => r(null), 8000)),
-      ]);
+      // Fast path: use the fix warmed when the user tapped stop, or a fix up
+      // to a minute old. Never hold the save for more than 2 seconds.
+      const endLoc: CapturedLocation | null = await requestLocationFast(2000);
 
       if (startLoc) {
         entry.start_lat = startLoc.lat;

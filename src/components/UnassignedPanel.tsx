@@ -154,12 +154,14 @@ const SwipeDeleteRow = ({
   );
 };
 
-const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onBatchAssigned }: UnassignedPanelProps) => {
+const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onBatchAssigned, autoOpenSingle }: UnassignedPanelProps) => {
   const { user } = useAuth();
   
   const [entries, setEntries] = useState<UnassignedEntry[]>([]);
-  const [selectedEntry, setSelectedEntry] = useState<UnassignedEntry | null>(null);
   const [loading, setLoading] = useState(false);
+  // While true the sheet stays hidden: we may be about to skip it entirely
+  // because there is exactly one entry to assign.
+  const [resolving, setResolving] = useState(false);
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [batchOpen, setBatchOpen] = useState(false);
   const [batchClientId, setBatchClientId] = useState<string>("");
@@ -168,6 +170,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
 
   const loadEntries = async () => {
     setLoading(true);
+    let list: UnassignedEntry[] = [];
     if (user) {
       const { data } = await supabase
         .from("time_entries")
@@ -177,8 +180,9 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
         .is("project_id", null)
         .is("deleted_at", null)
         .order("entry_date", { ascending: false });
-      setEntries((data ?? []) as UnassignedEntry[]);
-      onCountChange((data ?? []).length);
+      list = (data ?? []) as UnassignedEntry[];
+      setEntries(list);
+      onCountChange(list.length);
 
       const { data: cs } = await supabase
         .from("clients")
@@ -188,19 +192,26 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
       setClients((cs ?? []) as { id: string; name: string }[]);
     } else {
       const all = getAnonymousEntries();
-      const unassigned = all.filter((e: any) => !e.client_id && !e.project_id)
+      list = all.filter((e: any) => !e.client_id && !e.project_id)
         .map((e: any, i: number) => ({ ...e, id: e.id ?? `anon-${i}` }));
-      setEntries(unassigned);
-      onCountChange(unassigned.length);
+      setEntries(list);
+      onCountChange(list.length);
       setClients(getAnonymousClients().map((c: any) => ({ id: c.id, name: c.name })));
     }
     setLoading(false);
+    setResolving(false);
+    // Exactly one entry: there is nothing to choose from, so open it straight away.
+    if (autoOpenSingle && list.length === 1) {
+      handleAssign(list[0]);
+    }
   };
 
   useEffect(() => {
     if (open) {
+      setResolving(!!autoOpenSingle);
       loadEntries();
-      setSelectedEntry(null);
+    } else {
+      setResolving(false);
     }
   }, [open, user]);
 

@@ -16,7 +16,7 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Timer, PenLine, Clock, Phone, X, ArrowRight, Users } from "lucide-react";
+import { Timer, PenLine, Clock, Phone, X, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getAnonymousClients, saveAnonymousClient, getAnonymousEntries, updateAnonymousEntry } from "@/lib/anonymous-store";

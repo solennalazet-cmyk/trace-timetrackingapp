@@ -61,6 +61,69 @@ export async function requestLocation(): Promise<CapturedLocation | null> {
   return second.accuracy_m < first.accuracy_m ? second : first;
 }
 
+// ── Fast path: pre-fetch + short cache ───────────────────────────────────────
+// Waiting for a pristine high-accuracy fix at save time made clock-out feel
+// slow. Instead we warm a fix the moment the user taps stop, accept a fix up
+// to a minute old, and never hold the save for more than a couple of seconds.
+
+const FRESH_FIX_MAX_AGE_MS = 60_000;
+
+let lastFix: { loc: CapturedLocation; at: number } | null = null;
+let inFlight: Promise<CapturedLocation | null> | null = null;
+
+function startFix(): Promise<CapturedLocation | null> {
+  if (inFlight) return inFlight;
+  if (typeof navigator === "undefined" || !navigator.geolocation) return Promise.resolve(null);
+  inFlight = new Promise<CapturedLocation | null>((resolve) => {
+    try {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const loc = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            accuracy_m: Math.round(pos.coords.accuracy),
+          };
+          lastFix = { loc, at: Date.now() };
+          resolve(loc);
+        },
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: 10_000, maximumAge: FRESH_FIX_MAX_AGE_MS }
+      );
+    } catch {
+      resolve(null);
+    }
+  }).finally(() => {
+    inFlight = null;
+  }) as Promise<CapturedLocation | null>;
+  return inFlight;
+}
+
+/** Warm a location fix ahead of time (e.g. the instant the user taps stop). */
+export function primeLocation(): void {
+  if (readFreshFix()) return;
+  void startFix();
+}
+
+/** A fix captured within the last minute, if any. */
+export function readFreshFix(): CapturedLocation | null {
+  if (lastFix && Date.now() - lastFix.at <= FRESH_FIX_MAX_AGE_MS) return lastFix.loc;
+  return null;
+}
+
+/**
+ * Return a location quickly: cached fix if recent, otherwise wait at most
+ * `maxWaitMs` for the pending fix. Never blocks a save beyond that budget.
+ */
+export async function requestLocationFast(maxWaitMs = 2000): Promise<CapturedLocation | null> {
+  const fresh = readFreshFix();
+  if (fresh) return fresh;
+  const fix = startFix();
+  return await Promise.race([
+    fix.catch(() => null),
+    new Promise<null>((r) => setTimeout(() => r(null), maxWaitMs)),
+  ]);
+}
+
 /** Haversine distance in meters between two coordinates. */
 function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6_371_000;

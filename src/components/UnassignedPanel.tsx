@@ -16,7 +16,7 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Timer, PenLine, Clock, Phone, X, ArrowRight, Users } from "lucide-react";
+import { Timer, PenLine, Clock, Phone, X, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getAnonymousClients, saveAnonymousClient, getAnonymousEntries, updateAnonymousEntry } from "@/lib/anonymous-store";
@@ -49,6 +49,8 @@ interface UnassignedPanelProps {
   onAssignEntry: (entry: UnassignedEntry) => void;
   onCountChange: (count: number) => void;
   onBatchAssigned?: () => void;
+  /** When exactly one entry is unassigned, skip the list and open it straight away. */
+  autoOpenSingle?: boolean;
 }
 
 const entryTypeIcon = (type: string | null) => {
@@ -152,12 +154,14 @@ const SwipeDeleteRow = ({
   );
 };
 
-const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onBatchAssigned }: UnassignedPanelProps) => {
+const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onBatchAssigned, autoOpenSingle }: UnassignedPanelProps) => {
   const { user } = useAuth();
   
   const [entries, setEntries] = useState<UnassignedEntry[]>([]);
-  const [selectedEntry, setSelectedEntry] = useState<UnassignedEntry | null>(null);
   const [loading, setLoading] = useState(false);
+  // While true the sheet stays hidden: we may be about to skip it entirely
+  // because there is exactly one entry to assign.
+  const [resolving, setResolving] = useState(false);
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [batchOpen, setBatchOpen] = useState(false);
   const [batchClientId, setBatchClientId] = useState<string>("");
@@ -166,6 +170,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
 
   const loadEntries = async () => {
     setLoading(true);
+    let list: UnassignedEntry[] = [];
     if (user) {
       const { data } = await supabase
         .from("time_entries")
@@ -175,8 +180,9 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
         .is("project_id", null)
         .is("deleted_at", null)
         .order("entry_date", { ascending: false });
-      setEntries((data ?? []) as UnassignedEntry[]);
-      onCountChange((data ?? []).length);
+      list = (data ?? []) as UnassignedEntry[];
+      setEntries(list);
+      onCountChange(list.length);
 
       const { data: cs } = await supabase
         .from("clients")
@@ -186,19 +192,26 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
       setClients((cs ?? []) as { id: string; name: string }[]);
     } else {
       const all = getAnonymousEntries();
-      const unassigned = all.filter((e: any) => !e.client_id && !e.project_id)
+      list = all.filter((e: any) => !e.client_id && !e.project_id)
         .map((e: any, i: number) => ({ ...e, id: e.id ?? `anon-${i}` }));
-      setEntries(unassigned);
-      onCountChange(unassigned.length);
+      setEntries(list);
+      onCountChange(list.length);
       setClients(getAnonymousClients().map((c: any) => ({ id: c.id, name: c.name })));
     }
     setLoading(false);
+    setResolving(false);
+    // Exactly one entry: there is nothing to choose from, so open it straight away.
+    if (autoOpenSingle && list.length === 1) {
+      handleAssign(list[0]);
+    }
   };
 
   useEffect(() => {
     if (open) {
+      setResolving(!!autoOpenSingle);
       loadEntries();
-      setSelectedEntry(null);
+    } else {
+      setResolving(false);
     }
   }, [open, user]);
 
@@ -259,7 +272,6 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
   const handleAssign = (entry: UnassignedEntry) => {
     setEntries((prev) => prev.filter((e) => e.id !== entry.id));
     onCountChange(Math.max(entries.length - 1, 0));
-    setSelectedEntry(null);
     onOpenChange(false);
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
@@ -268,7 +280,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open && !resolving} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto">
         <SheetHeader>
           <div className="flex items-center justify-between">
@@ -283,58 +295,8 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
           </div>
         </SheetHeader>
 
-        {selectedEntry ? (
-          /* Detail view */
-          <div className="mt-4 space-y-4">
-            <div className="space-y-2 p-3 rounded-lg bg-muted/50">
-              <div className="flex items-center gap-2">
-                {entryTypeIcon(selectedEntry.entry_type)}
-                <span className="text-sm font-medium capitalize">{selectedEntry.entry_type ?? "Timer"}</span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {formatEntryDate(selectedEntry.entry_date)}
-              </p>
-              {(selectedEntry.start_time || selectedEntry.end_time) && (
-                <p className="text-sm text-muted-foreground">
-                  {formatTimeOfDay(selectedEntry.start_time)}{selectedEntry.start_time && selectedEntry.end_time ? " → " : ""}{formatTimeOfDay(selectedEntry.end_time)}
-                </p>
-              )}
-              <p className="font-mono text-2xl font-bold">
-                {formatHHMM(selectedEntry.duration_minutes)}
-              </p>
-              {(selectedEntry.break_minutes ?? 0) > 0 && (
-                <p className="text-sm text-muted-foreground">{selectedEntry.break_minutes}m break</p>
-              )}
-              {selectedEntry.notes && (
-                <p className="text-sm text-muted-foreground mt-2">{selectedEntry.notes}</p>
-              )}
-            </div>
-
-            <Button
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-12 font-bold"
-              onClick={() => handleAssign(selectedEntry)}
-            >
-              Assign this entry
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-
-            <button
-              className="w-full text-center text-sm text-destructive hover:underline"
-              onClick={() => { setSelectedEntry(null); softDelete(selectedEntry.id); }}
-            >
-              Delete
-            </button>
-
-            <Button
-              variant="ghost"
-              className="w-full text-muted-foreground"
-              onClick={() => setSelectedEntry(null)}
-            >
-              ← Back to list
-            </Button>
-          </div>
-        ) : (
-          /* List view */
+        {(
+          /* List view — tapping an entry opens its assignment box directly */
           <div className="mt-4 space-y-1">
             {loading && <p className="text-sm text-muted-foreground text-center py-4">Loading…</p>}
             {!loading && entries.length === 0 && (
@@ -354,7 +316,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
                 <div className="flex items-center w-full px-3 py-3 rounded-lg hover:bg-muted/50 transition-colors">
                   <button
                     className="flex items-center gap-3 flex-1 min-w-0 text-left"
-                    onClick={() => setSelectedEntry(entry)}
+                    onClick={() => handleAssign(entry)}
                   >
                     {entryTypeIcon(entry.entry_type)}
                     <div className="min-w-0">

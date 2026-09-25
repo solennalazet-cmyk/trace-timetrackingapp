@@ -1362,6 +1362,7 @@ const ReportsPage = () => {
       <PaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} />
       <UnassignedPanel
         open={unassignedOpen}
+        autoOpenSingle
         onOpenChange={setUnassignedOpen}
         onAssignEntry={(entry) => {
           setUnassignedOpen(false);

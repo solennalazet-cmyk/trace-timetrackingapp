@@ -68,7 +68,20 @@ type PendingAssignmentSnapshot = {
   session: SessionData;
   editingEntry: ExistingEntry | null;
   savedAt?: number;
+  /** Set once the user pressed Save: the save is retried, never re-asked. */
+  assignment?: AssignmentResult | null;
+  assignments?: AssignmentResult[];
+  /** Set once the user closed the recap: file to Unassigned on retry. */
+  skipped?: boolean;
+  /** Choices to pre-fill after a failed save. */
+  draft?: AssignmentResult | null;
 };
+
+const isSaveInProgress = (s: PendingAssignmentSnapshot) =>
+  !!s.skipped || s.assignment != null || (s.assignments?.length ?? 0) > 0;
+
+// Module-level so a remount can't start a second copy of the same save.
+let pendingSaveInFlight = false;
 
 function parseSnapshot(key: string): PendingAssignmentSnapshot | null {
   try {
@@ -142,9 +155,16 @@ const StartPage = () => {
   // Assignment modal state — rehydrate from LS so an unexpected unmount
   // (role-guard flicker, token refresh, reload) can't destroy a pending
   // clock-out recap. If a snapshot exists on mount, reopen the modal.
-  const [assignModalOpen, setAssignModalOpen] = useState(() => !!readPendingSnapshot());
-  const [pendingSession, setPendingSession] = useState<SessionData | null>(() => readPendingSnapshot()?.session ?? null);
-  const [editingEntry, setEditingEntry] = useState<ExistingEntry | null>(() => readPendingSnapshot()?.editingEntry ?? null);
+  // A snapshot whose save is already in progress is finished in the
+  // background (see effect below) — it must not reopen the recap.
+  const reopenSnap = () => {
+    const s = readPendingSnapshot();
+    return s && !isSaveInProgress(s) ? s : null;
+  };
+  const [assignModalOpen, setAssignModalOpen] = useState(() => !!reopenSnap());
+  const [pendingSession, setPendingSession] = useState<SessionData | null>(() => reopenSnap()?.session ?? null);
+  const [editingEntry, setEditingEntry] = useState<ExistingEntry | null>(() => reopenSnap()?.editingEntry ?? null);
+  const [recapDraft, setRecapDraft] = useState<AssignmentResult | null>(() => reopenSnap()?.draft ?? null);
 
   // Manual entry & call log modals
   const [manualOpen, setManualOpen] = useState(false);
@@ -583,88 +603,119 @@ const StartPage = () => {
   };
 
   // Close the recap right away and finish the write in the background.
-  // Saving can involve several network calls (and a GPS fix), which used to
-  // freeze the dialog for seconds. If the background write fails we bring the
-  // recap back with the same data — nothing is ever lost.
+  // The user's choices are written to the pending snapshot *before* the
+  // recap closes, so a remount mid-save (auth refresh, role flicker, app
+  // backgrounded) retries the same save silently instead of reopening an
+  // empty recap. If the write truly fails, the recap comes back pre-filled.
   const closeRecap = () => {
     setAssignModalOpen(false);
     setPendingSession(null);
     setEditingEntry(null);
+    setRecapDraft(null);
   };
 
-  const restoreRecap = (session: SessionData, entry: ExistingEntry | null) => {
+  const restoreRecap = (session: SessionData, entry: ExistingEntry | null, draft: AssignmentResult | null) => {
+    writePendingSnapshot({ session, editingEntry: entry, draft });
     setPendingSession(session);
     setEditingEntry(entry);
+    setRecapDraft(draft);
     setAssignModalOpen(true);
-    toast.error("Something went wrong. Your session is safe — try again.");
+    toast.error("Couldn't save yet. Your choices are kept — tap Save again.");
+  };
+
+  const persistAssignment = async (snap: PendingAssignmentSnapshot): Promise<string> => {
+    const { session, editingEntry: entry, assignment, assignments } = snap;
+    if (entry && assignment) {
+      await updateEntry(entry, assignment);
+      return "Entry updated.";
+    }
+    if (assignments && assignments.length > 0) {
+      for (const [index, a] of assignments.entries()) {
+        const dur = (a as any)._durationMinutes ?? session.durationMinutes;
+        await saveEntry({ ...session, durationMinutes: dur }, a, a.taskId ?? `task-${index}`);
+      }
+      return `${assignments.length} tasks saved.`;
+    }
+    if (user) {
+      // Best effort only — a failure here must never block the save.
+      try {
+        const { data: staleSession } = await supabase
+          .from("active_sessions").select("id").eq("user_id", user.id).maybeSingle();
+        if (staleSession) await supabase.from("active_sessions").delete().eq("user_id", user.id);
+      } catch { /* ignore */ }
+    }
+    await saveEntry(session, assignment ?? null);
+    return session.entryType === "shift" ? "Shift saved." : "Entry saved.";
+  };
+
+  const runPendingSave = async (snap: PendingAssignmentSnapshot) => {
+    if (pendingSaveInFlight) return;
+    pendingSaveInFlight = true;
+    try {
+      const msg = await persistAssignment(snap);
+      clearPendingSnapshot();
+      toast.success(msg);
+      fetchSummary();
+    } catch (error) {
+      console.error("Save failed:", error);
+      restoreRecap(snap.session, snap.editingEntry, snap.assignment ?? snap.assignments?.[0] ?? null);
+    } finally {
+      pendingSaveInFlight = false;
+    }
   };
 
   const handleAssignSave = async (session: SessionData, assignment: AssignmentResult) => {
-    const entryBeingEdited = editingEntry;
+    const snap: PendingAssignmentSnapshot = { session, editingEntry, assignment };
+    writePendingSnapshot(snap);
     closeRecap();
-    try {
-      if (entryBeingEdited) {
-        await updateEntry(entryBeingEdited.id, assignment);
-        toast.success("Entry updated.");
-      } else {
-        console.log(`[StartPage] time entry save started, type=${session.entryType}`);
-        // Verify no stale active session exists before saving
-        if (user) {
-          const { data: staleSession } = await supabase
-            .from("active_sessions")
-            .select("id")
-            .eq("user_id", user.id)
-            .maybeSingle();
-          if (staleSession) {
-            console.warn(`[StartPage] stale active_session found after stop! Cleaning up before save.`);
-            await supabase.from("active_sessions").delete().eq("user_id", user.id);
-          }
-        }
-        await saveEntry(session, assignment);
-        console.log(`[StartPage] time entry save succeeded`);
-        const label = session.entryType === "shift" ? "Shift saved." : "Entry saved.";
-        toast.success(label);
-      }
-      clearPendingSnapshot();
-      fetchSummary();
-    } catch (error) {
-      console.error("Save failed:", error);
-      restoreRecap(session, entryBeingEdited);
-    }
+    await runPendingSave(snap);
   };
 
   const handleAssignSaveMulti = async (session: SessionData, assignments: AssignmentResult[]) => {
-    const entryBeingEdited = editingEntry;
+    const snap: PendingAssignmentSnapshot = { session, editingEntry: null, assignments };
+    writePendingSnapshot(snap);
     closeRecap();
-    try {
-      for (const [index, assignment] of assignments.entries()) {
-        const dur = (assignment as any)._durationMinutes ?? session.durationMinutes;
-        await saveEntry({ ...session, durationMinutes: dur }, assignment, assignment.taskId ?? `task-${index}`);
-      }
-      toast.success(`${assignments.length} tasks saved.`);
-      clearPendingSnapshot();
-      fetchSummary();
-    } catch (error) {
-      console.error("Save failed:", error);
-      restoreRecap(session, entryBeingEdited);
-    }
+    await runPendingSave(snap);
   };
 
   const handleAssignSkip = async (session: SessionData) => {
     const entryBeingEdited = editingEntry;
     closeRecap();
+    if (entryBeingEdited) {
+      // Closing an edit of an existing entry leaves it exactly as it was.
+      clearPendingSnapshot();
+      return;
+    }
+    const snap: PendingAssignmentSnapshot = { session, editingEntry: null, assignment: null, skipped: true };
+    writePendingSnapshot(snap);
+    if (pendingSaveInFlight) return;
+    pendingSaveInFlight = true;
     try {
-      if (!entryBeingEdited) {
-        await saveEntry(session, null);
-      }
+      await saveEntry(session, null);
       clearPendingSnapshot();
       toast.success("Session saved to Unassigned Work.");
       fetchSummary();
     } catch (error) {
       console.error("Save failed:", error);
-      restoreRecap(session, entryBeingEdited);
+      restoreRecap(session, null, null);
+    } finally {
+      pendingSaveInFlight = false;
     }
   };
+
+  // Finish a save that was interrupted by a remount/reload.
+  useEffect(() => {
+    if (authLoading || (user && !profile)) return;
+    const snap = readPendingSnapshot();
+    if (snap && isSaveInProgress(snap)) {
+      if (snap.skipped) {
+        void handleAssignSkip(snap.session);
+      } else {
+        void runPendingSave(snap);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user, profile]);
 
 
   // ── Recovery safety net ─────────────────────────────────────────────
@@ -808,6 +859,7 @@ const StartPage = () => {
         open={assignModalOpen}
         session={pendingSession}
         existingEntry={editingEntry}
+        draft={recapDraft}
         onSave={handleAssignSave}
         onSaveMulti={handleAssignSaveMulti}
         onSkip={handleAssignSkip}

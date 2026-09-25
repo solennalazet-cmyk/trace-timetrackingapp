@@ -295,58 +295,8 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
           </div>
         </SheetHeader>
 
-        {false ? (
-          /* Detail view */
-          <div className="mt-4 space-y-4">
-            <div className="space-y-2 p-3 rounded-lg bg-muted/50">
-              <div className="flex items-center gap-2">
-                {entryTypeIcon(selectedEntry.entry_type)}
-                <span className="text-sm font-medium capitalize">{selectedEntry.entry_type ?? "Timer"}</span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {formatEntryDate(selectedEntry.entry_date)}
-              </p>
-              {(selectedEntry.start_time || selectedEntry.end_time) && (
-                <p className="text-sm text-muted-foreground">
-                  {formatTimeOfDay(selectedEntry.start_time)}{selectedEntry.start_time && selectedEntry.end_time ? " → " : ""}{formatTimeOfDay(selectedEntry.end_time)}
-                </p>
-              )}
-              <p className="font-mono text-2xl font-bold">
-                {formatHHMM(selectedEntry.duration_minutes)}
-              </p>
-              {(selectedEntry.break_minutes ?? 0) > 0 && (
-                <p className="text-sm text-muted-foreground">{selectedEntry.break_minutes}m break</p>
-              )}
-              {selectedEntry.notes && (
-                <p className="text-sm text-muted-foreground mt-2">{selectedEntry.notes}</p>
-              )}
-            </div>
-
-            <Button
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-[28px] h-12 font-bold"
-              onClick={() => handleAssign(selectedEntry)}
-            >
-              Assign this entry
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-
-            <button
-              className="w-full text-center text-sm text-destructive hover:underline"
-              onClick={() => { setSelectedEntry(null); softDelete(selectedEntry.id); }}
-            >
-              Delete
-            </button>
-
-            <Button
-              variant="ghost"
-              className="w-full text-muted-foreground"
-              onClick={() => setSelectedEntry(null)}
-            >
-              ← Back to list
-            </Button>
-          </div>
-        ) : (
-          /* List view */
+        {(
+          /* List view — tapping an entry opens its assignment box directly */
           <div className="mt-4 space-y-1">
             {loading && <p className="text-sm text-muted-foreground text-center py-4">Loading…</p>}
             {!loading && entries.length === 0 && (

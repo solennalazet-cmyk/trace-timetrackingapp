@@ -272,7 +272,6 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
   const handleAssign = (entry: UnassignedEntry) => {
     setEntries((prev) => prev.filter((e) => e.id !== entry.id));
     onCountChange(Math.max(entries.length - 1, 0));
-    setSelectedEntry(null);
     onOpenChange(false);
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
@@ -281,7 +280,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open && !resolving} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto">
         <SheetHeader>
           <div className="flex items-center justify-between">
@@ -296,7 +295,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
           </div>
         </SheetHeader>
 
-        {selectedEntry ? (
+        {false ? (
           /* Detail view */
           <div className="mt-4 space-y-4">
             <div className="space-y-2 p-3 rounded-lg bg-muted/50">

@@ -26,6 +26,8 @@ import GeolocationPrePromptModal from "@/components/GeolocationPrePromptModal";
 import Seo from "@/components/Seo";
 import {
   requestLocation,
+  requestLocationFast,
+  primeLocation,
   evaluateOnSite,
   cacheStartLocation,
   readStartLocation,

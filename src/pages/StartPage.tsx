@@ -494,7 +494,12 @@ const StartPage = () => {
 
     if (shouldCapture) {
       const startLoc: CapturedLocation | null = readStartLocation(session.entryType ?? "timer", session.startedAt);
-      const endLoc: CapturedLocation | null = await requestLocation();
+      // Hard cap: a GPS fix that never answers (backgrounded webview, pending
+      // permission prompt) must never hold the save hostage.
+      const endLoc: CapturedLocation | null = await Promise.race([
+        requestLocation().catch(() => null),
+        new Promise<null>((r) => setTimeout(() => r(null), 8000)),
+      ]);
 
       if (startLoc) {
         entry.start_lat = startLoc.lat;
@@ -531,16 +536,16 @@ const StartPage = () => {
     window.dispatchEvent(new CustomEvent("trace-entries-changed"));
   };
 
-  const updateEntry = async (entryId: string, assignment: AssignmentResult) => {
+  const updateEntry = async (entry: ExistingEntry, assignment: AssignmentResult) => {
     if (user) {
       const shouldResetBilling =
-        editingEntry?.client_id !== assignment.clientId ||
-        editingEntry?.project_id !== assignment.projectId ||
-        editingEntry?.task_id !== assignment.taskId ||
-        (editingEntry?.billable ?? true) !== assignment.billable ||
-        editingEntry?.rate_amount !== assignment.rateAmount ||
-        (editingEntry?.rate_currency ?? "EUR") !== assignment.rateCurrency ||
-        (editingEntry?.rate_unit ?? null) !== (assignment.rateAmount != null ? assignment.rateUnit : null);
+        entry.client_id !== assignment.clientId ||
+        entry.project_id !== assignment.projectId ||
+        entry.task_id !== assignment.taskId ||
+        (entry.billable ?? true) !== assignment.billable ||
+        entry.rate_amount !== assignment.rateAmount ||
+        (entry.rate_currency ?? "EUR") !== assignment.rateCurrency ||
+        (entry.rate_unit ?? null) !== (assignment.rateAmount != null ? assignment.rateUnit : null);
 
       const { error } = await supabase.from("time_entries").update({
         client_id: assignment.clientId,
@@ -554,10 +559,10 @@ const StartPage = () => {
         rate_unit: assignment.rateAmount != null ? assignment.rateUnit : null,
         billable_value: assignment.billableValue,
         ...(shouldResetBilling ? { billing_status: "unbilled", invoice_id: null } : {}),
-      }).eq("id", entryId);
+      }).eq("id", entry.id);
       if (error) throw error;
     } else {
-      const updated = updateAnonymousEntry(entryId, {
+      const updated = updateAnonymousEntry(entry.id, {
         client_id: assignment.clientId,
         project_id: assignment.projectId,
         task_id: assignment.taskId,
@@ -570,7 +575,7 @@ const StartPage = () => {
         billable_value: assignment.billableValue,
         billing_status: "unbilled",
         invoice_id: null,
-      }, (editingEntry as any)?.idempotency_key ?? null);
+      }, (entry as any)?.idempotency_key ?? null);
       if (!updated) throw new Error("Entry not found");
     }
   };

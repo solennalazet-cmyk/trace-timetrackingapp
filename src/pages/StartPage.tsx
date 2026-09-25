@@ -418,6 +418,8 @@ const StartPage = () => {
     entryType: string = "timer"
   ) => {
     console.log(`[StartPage] handleSessionEnd called, entryType=${entryType}, duration=${data.durationMinutes}min`);
+    // Warm a GPS fix now so the save later doesn't wait on one.
+    if (geoMode !== "off") primeLocation();
     if (data.durationMinutes <= 0) {
       data.durationMinutes = 1;
     }

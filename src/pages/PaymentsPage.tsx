@@ -17,6 +17,23 @@ import SubmittedReportSheet, { type SubmittedReport } from "@/components/Submitt
 import { toast } from "sonner";
 import { getClientColor } from "@/lib/utils";
 import Seo from "@/components/Seo";
+import {
+  TAX_COUNTRIES, getTaxCountry, setTaxCountry, taxNoticeSeen, markTaxNoticeSeen, taxYearRange, taxQuarters,
+} from "@/lib/tax-year";
+
+const fmtLong = (d: string) =>
+  new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
+/** Where a report stands, from the freelancer's point of view. */
+const reportStage = (status: string, hasEmployer: boolean, paid: number, total: number) => {
+  const isPaid = total > 0 && paid + 0.005 >= total;
+  if (status === "rejected") return { label: "Rejected", cls: "text-destructive" };
+  if (isPaid) return { label: "Paid", cls: "text-emerald-700 dark:text-emerald-400" };
+  if (paid > 0.005) return { label: "Part-paid", cls: "text-amber-700 dark:text-amber-400" };
+  if (status === "pending_connection" || (status === "approved" && !hasEmployer)) return { label: "Not shared", cls: "text-muted-foreground" };
+  if (status === "submitted") return { label: "Sent", cls: "text-foreground" };
+  return { label: "Approved", cls: "text-foreground" };
+};
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
@@ -119,7 +136,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
       .from("submitted_reports")
       .select("id, worker_user_id, employer_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, status, submitted_at, reviewed_at, shared_columns, entries_snapshot, rejection_reason, rejection_note")
       .eq(col, user.id)
-      .in("status", ["submitted", "approved"])
+      .in("status", ["submitted", "approved", "rejected", "pending_connection"])
       .order("period_end", { ascending: false });
 
     const freelancersQuery = isEmployer
@@ -238,49 +255,58 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
   }, [isEmployer, selectedWorker, groupNames, employerFreelancers]);
 
 
+  // A report counts as owed from the moment it is sent. Rejected reports are
+  // excluded (they need fixing and re-sending); payments reduce what is owed.
   const computeGroupTotals = (rows: ReportRow[]) => {
     let due = 0, paid = 0, overdue = 0;
     let currency = "EUR";
     const today = new Date(); today.setHours(0, 0, 0, 0);
     for (const r of rows) {
-      if (r.status !== "approved") continue;
-      currency = r.currency;
-      const total = Number(r.total_amount);
-      const p = paidByReport.get(r.id) ?? 0;
-      due += total;
-      paid += Math.min(total, p);
-      const remaining = Math.max(0, total - p);
-      if (remaining > 0) {
-        const ref = new Date((r.reviewed_at ?? r.submitted_at));
-        const dueDate = nextBillingCutoff(ref);
-        const today2 = new Date(); today2.setHours(0, 0, 0, 0);
-        if (dueDate < today2) overdue += remaining;
-      }
-    }
-    return { due, paid, outstanding: Math.max(0, due - paid), overdue, currency };
-  };
-
-  const overallTotals = useMemo(() => {
-    let due = 0, paid = 0, overdue = 0;
-    let currency = "EUR";
-    let since: string | null = null;
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    for (const r of visibleReports) {
-      if (r.status !== "approved") continue;
-      if (!since || r.period_start < since) since = r.period_start;
+      if (r.status === "rejected") continue;
       currency = r.currency;
       const total = Number(r.total_amount);
       const p = Math.min(total, paidByReport.get(r.id) ?? 0);
       due += total;
       paid += p;
       const remaining = Math.max(0, total - p);
-      if (remaining > 0) {
+      if (remaining > 0.005 && r.status === "approved" && r.employer_user_id) {
         const ref = new Date((r.reviewed_at ?? r.submitted_at));
         if (nextBillingCutoff(ref) < today) overdue += remaining;
       }
     }
-    return { due, paid, outstanding: Math.max(0, due - paid), overdue, currency, since };
-  }, [visibleReports, paidByReport]);
+    return { due, paid, outstanding: Math.max(0, due - paid), overdue, currency };
+  };
+
+  const overallTotals = useMemo(() => computeGroupTotals(visibleReports), [visibleReports, paidByReport]);
+  const rejectedCount = useMemo(() => visibleReports.filter((r) => r.status === "rejected").length, [visibleReports]);
+
+  // "Paid" total is scoped to a date range — the tax year by default.
+  const [taxInfo, setTaxInfo] = useState(() => getTaxCountry());
+  const [paidRange, setPaidRange] = useState<{ start: string; end: string; label: string }>(() => {
+    const r = taxYearRange(getTaxCountry().country);
+    return { ...r, label: "This tax year" };
+  });
+  const [rangeOpen, setRangeOpen] = useState(false);
+  const [showTaxNotice, setShowTaxNotice] = useState(() => getTaxCountry().assumed && !taxNoticeSeen());
+
+  const visibleReportIds = useMemo(() => new Set(visibleReports.map((r) => r.id)), [visibleReports]);
+  const paidBetween = useCallback((start: string, end: string) => {
+    let sum = 0;
+    for (const p of payments) {
+      if (!visibleReportIds.has(p.submitted_report_id)) continue;
+      if (p.paid_at >= start && p.paid_at <= end) sum += Number(p.amount);
+    }
+    return sum;
+  }, [payments, visibleReportIds]);
+  const paidInRange = paidBetween(paidRange.start, paidRange.end);
+
+  const changeTaxCountry = (code: string) => {
+    setTaxCountry(code);
+    const next = getTaxCountry();
+    setTaxInfo(next);
+    setShowTaxNotice(false);
+    setPaidRange({ ...taxYearRange(next.country), label: "This tax year" });
+  };
 
   // Collapse any open card when the worker filter changes so a hidden group doesn't stay open.
   useEffect(() => {

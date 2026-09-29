@@ -333,7 +333,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
     }
     // Apply payment FIFO across oldest unpaid reports in group
     const sorted = [...rows]
-      .filter((r) => r.status === "approved")
+      .filter((r) => r.status !== "rejected")
       .sort((a, b) => a.period_end.localeCompare(b.period_end));
     let remaining = amount;
     const inserts: any[] = [];
@@ -447,46 +447,119 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
         <div className="space-y-3">
           {(() => {
             const totalSym = CURRENCY_SYMBOLS[overallTotals.currency] ?? "€";
-            const pct = overallTotals.due > 0 ? Math.min(100, Math.round((overallTotals.paid / overallTotals.due) * 100)) : 0;
+            const allPaid = overallTotals.outstanding <= 0.005;
+            const quarters = taxQuarters(taxYearRange(taxInfo.country));
+            const lastYear = taxYearRange(taxInfo.country, -1);
+            const presets = [
+              { ...taxYearRange(taxInfo.country), label: "This tax year" },
+              { ...lastYear, label: "Last tax year" },
+              { start: "2000-01-01", end: "2999-12-31", label: "All time" },
+            ];
             return (
-              <Card className="p-4 rounded-2xl shadow-sm space-y-4">
+              <Card className="p-4 rounded-2xl shadow-sm space-y-3">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <Wallet className="w-4 h-4 text-muted-foreground shrink-0" />
-                      <span className="text-base font-bold tracking-tight">Total wages</span>
-                    </div>
-                    <p className="text-2xl font-mono font-bold text-foreground mt-1">{totalSym}{overallTotals.due.toFixed(2)}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      {overallTotals.since
-                        ? `Since ${new Date(overallTotals.since + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`
-                        : "No approved reports yet"}
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <Wallet className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Due today</span>
                   </div>
-                  <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground shrink-0">
+                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground shrink-0">
                     {selectedWorkerName}
                   </span>
                 </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <p className="text-sm font-mono font-semibold text-foreground">{totalSym}{overallTotals.due.toFixed(2)}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">Total wages due</p>
+                {allPaid ? (
+                  <div className="flex items-center gap-2">
+                    <Check className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
+                    <p className="text-3xl font-bold tracking-tight">All paid up</p>
                   </div>
+                ) : (
                   <div>
-                    <p className="text-sm font-mono font-semibold text-foreground">{totalSym}{overallTotals.paid.toFixed(2)}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">Paid</p>
-                  </div>
-                  <div>
-                    <p className={`text-sm font-mono font-semibold ${overallTotals.outstanding > 0.005 ? "text-orange-600 dark:text-orange-400" : "text-foreground"}`}>
-                      {totalSym}{overallTotals.outstanding.toFixed(2)}
+                    <p className="text-4xl font-mono font-bold text-foreground">{totalSym}{overallTotals.outstanding.toFixed(2)}</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Sent but not yet marked paid
+                      {overallTotals.overdue > 0.005 && (
+                        <span className="text-destructive font-medium"> · {totalSym}{overallTotals.overdue.toFixed(2)} overdue</span>
+                      )}
                     </p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">Remaining</p>
                   </div>
-                </div>
-                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                  <div className="h-full bg-emerald-500 transition-all" style={{ width: `${pct}%` }} />
-                </div>
+                )}
+                {rejectedCount > 0 && (
+                  <p className="text-sm text-destructive font-medium">
+                    {rejectedCount} rejected {rejectedCount === 1 ? "report needs" : "reports need"} fixing and re-sending
+                  </p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setRangeOpen((v) => !v)}
+                  aria-expanded={rangeOpen}
+                  className="w-full flex items-center justify-between gap-2 min-h-[44px] pt-3 border-t border-border text-left"
+                >
+                  <span className="text-sm text-muted-foreground">
+                    Paid <span className="font-mono font-semibold text-foreground">{totalSym}{paidInRange.toFixed(2)}</span>
+                    {paidRange.label === "All time" ? " · all time" : <> since <span className="underline underline-offset-2 text-foreground">{fmtLong(paidRange.start)}</span></>}
+                  </span>
+                  <CalendarIcon className="w-4 h-4 text-muted-foreground shrink-0" />
+                </button>
+
+                {showTaxNotice && (
+                  <div className="rounded-xl bg-muted p-3 text-sm space-y-2">
+                    <p>
+                      We assumed you pay tax in <strong>{taxInfo.country.name}</strong>, with the tax year starting{" "}
+                      {new Date(2000, taxInfo.country.month - 1, taxInfo.country.day).toLocaleDateString("en-GB", { day: "numeric", month: "long" })}.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" className="h-10" onClick={() => { setRangeOpen(true); markTaxNoticeSeen(); setShowTaxNotice(false); }}>Change</Button>
+                      <Button size="sm" className="h-10" onClick={() => { markTaxNoticeSeen(); setShowTaxNotice(false); }}>That's right</Button>
+                    </div>
+                  </div>
+                )}
+
+                {rangeOpen && (
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      {presets.map((p) => (
+                        <button
+                          key={p.label}
+                          type="button"
+                          onClick={() => setPaidRange(p)}
+                          className={`px-3 min-h-[40px] rounded-full text-sm font-medium border ${paidRange.label === p.label ? "bg-foreground text-background border-foreground" : "bg-background text-foreground border-border"}`}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {quarters.map((q) => {
+                        const active = paidRange.start === q.start && paidRange.end === q.end;
+                        return (
+                          <button
+                            key={q.label}
+                            type="button"
+                            onClick={() => setPaidRange({ ...q, label: q.label })}
+                            className={`rounded-xl border p-2 text-left ${active ? "border-foreground bg-muted" : "border-border"}`}
+                          >
+                            <p className="text-xs text-muted-foreground">{q.label} · {formatDate(q.start)}</p>
+                            <p className="text-sm font-mono font-semibold">{totalSym}{paidBetween(q.start, q.end).toFixed(0)}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input type="date" value={paidRange.start} onChange={(e) => e.target.value && setPaidRange((r) => ({ ...r, start: e.target.value, label: "Custom" }))} className="bg-background" aria-label="From" />
+                      <Input type="date" value={paidRange.end} onChange={(e) => e.target.value && setPaidRange((r) => ({ ...r, end: e.target.value, label: "Custom" }))} className="bg-background" aria-label="To" />
+                    </div>
+                    <label className="flex items-center justify-between gap-2 text-sm">
+                      <span className="text-muted-foreground">Tax country</span>
+                      <select
+                        value={taxInfo.country.code}
+                        onChange={(e) => changeTaxCountry(e.target.value)}
+                        className="h-10 rounded-lg border border-border bg-background px-2 text-sm"
+                      >
+                        {TAX_COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+                      </select>
+                    </label>
+                  </div>
+                )}
               </Card>
             );
           })()}
@@ -539,7 +612,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
             const overdue = t.overdue > 0.005;
 
             const status = noInvoices
-              ? { label: "No approved reports", cls: "bg-muted text-muted-foreground" }
+              ? { label: "No reports", cls: "bg-muted text-muted-foreground" }
               : fullyPaid
                 ? { label: "Paid", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" }
                 : overdue
@@ -591,7 +664,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
                   <div className="grid grid-cols-3 gap-2 mb-3">
                     <div>
                       <p className="text-base font-mono font-semibold text-foreground">{sym}{t.due.toFixed(2)}</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">Total wages due</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Billed</p>
                     </div>
                     <div>
                       <p className="text-base font-mono font-semibold text-foreground">{sym}{t.paid.toFixed(2)}</p>
@@ -607,7 +680,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
                       }`}>
                         {sym}{t.outstanding.toFixed(2)}
                       </p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">Remaining</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Due</p>
                     </div>
                   </div>
 
@@ -722,13 +795,10 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
                           const pending = r.status === "submitted";
                           const total = Number(r.total_amount);
                           const reportPaid = Math.min(total, paidByReport.get(r.id) ?? 0);
-                          const isPaid = reportPaid + 0.005 >= total && total > 0;
-                          const partiallyPaid = reportPaid > 0.005 && !isPaid;
-                          const payLabel = isPaid
-                            ? "Paid"
-                            : partiallyPaid
-                              ? `${s}${reportPaid.toFixed(2)} paid · ${s}${(total - reportPaid).toFixed(2)} due`
-                              : "Unpaid";
+                          const stage = reportStage(r.status, !!r.employer_user_id, reportPaid, total);
+                          const payLabel = stage.label === "Part-paid"
+                            ? `Part-paid · ${s}${(total - reportPaid).toFixed(2)} due`
+                            : stage.label;
                           const row = (
                             <button
                               type="button"
@@ -737,7 +807,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
                             >
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium truncate">{formatPeriod(r.period_start, r.period_end)}</p>
-                                <p className={`text-xs mt-0.5 font-medium ${isPaid ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"}`}>
+                                <p className={`text-xs mt-0.5 font-medium ${stage.cls}`}>
                                   {payLabel}
                                 </p>
                               </div>

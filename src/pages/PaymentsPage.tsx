@@ -545,8 +545,8 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
                       })}
                     </div>
                     <div className="flex gap-2">
-                      <Input type="date" value={paidRange.start} onChange={(e) => e.target.value && setPaidRange((r) => ({ ...r, start: e.target.value, label: "Custom" }))} className="bg-background" aria-label="From" />
-                      <Input type="date" value={paidRange.end} onChange={(e) => e.target.value && setPaidRange((r) => ({ ...r, end: e.target.value, label: "Custom" }))} className="bg-background" aria-label="To" />
+                      <Input type="date" value={paidRange.start} onChange={(e) => e.target.value && setPaidRange((r) => ({ ...r, start: e.target.value, label: "Custom" }))} className="bg-background min-w-0 flex-1" aria-label="From" />
+                      <Input type="date" value={paidRange.end} onChange={(e) => e.target.value && setPaidRange((r) => ({ ...r, end: e.target.value, label: "Custom" }))} className="bg-background min-w-0 flex-1" aria-label="To" />
                     </div>
                     <label className="flex items-center justify-between gap-2 text-sm">
                       <span className="text-muted-foreground">Tax country</span>

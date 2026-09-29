@@ -381,13 +381,18 @@ const StartPage = () => {
       const detail = (e as CustomEvent).detail as { mode: string; startedAt: string };
       if (!detail) return;
       if (geoMode === "off") return;
+      // useTimer reports its timer mode ("stopwatch" | "focus" | "shift"), but
+      // the save path reads the cache by entry type ("timer" | "shift").
+      // Normalize here so the start fix is found at clock-out — without this,
+      // stopwatch sessions cached under "stopwatch" were never matched.
+      const normalized = { mode: detail.mode === "shift" ? "shift" : "timer", startedAt: detail.startedAt };
       // First-time pre-prompt
       if (!geoPromptSeen) {
-        setPendingGeoStart(detail);
+        setPendingGeoStart(normalized);
         setGeoPrePromptOpen(true);
         return;
       }
-      captureStart(detail.mode, detail.startedAt);
+      captureStart(normalized.mode, normalized.startedAt);
     };
     window.addEventListener("trace-timer-started", handler as EventListener);
     return () => window.removeEventListener("trace-timer-started", handler as EventListener);

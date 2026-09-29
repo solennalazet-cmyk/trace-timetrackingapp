@@ -629,7 +629,7 @@ const PrepareBillingSheet = ({
       if (error) throw error;
       toast.success(
         isConnected
-          ? `Report submitted to ${clientName}.`
+          ? `Sent to ${clientName}.`
           : `Report queued — it will be delivered to ${clientName} once they accept your request.`,
       );
       setSubmitOpen(false);

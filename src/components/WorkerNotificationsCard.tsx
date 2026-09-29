@@ -90,6 +90,8 @@ const WorkerNotificationsCard = () => {
     for (const r of reportRows) {
       // Employers can reject quietly — those reviews raise no notification.
       if (r.notify_worker === false) continue;
+      // Approvals raise no card — the report's label on Payments shows it.
+      if (r.status === "approved") continue;
       evts.push({
         id: `r-${r.id}`,
         ts: r.reviewed_at,

@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/contexts/RoleContext";
 import SubmittedReportSheet, { type SubmittedReport } from "@/components/SubmittedReportSheet";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import { getClientColor } from "@/lib/utils";
 import Seo from "@/components/Seo";
 import {
@@ -93,6 +94,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
   const { user } = useAuth();
   const { activeRole } = useRole();
   const isEmployer = activeRole === "employer";
+  const navigate = useNavigate();
 
 
   const [reports, setReports] = useState<ReportRow[]>([]);
@@ -285,6 +287,10 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
   const [dismissedRejects, setDismissedRejects] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem(dismissKey) || "[]"); } catch { return []; }
   });
+  useEffect(() => {
+    if (!dismissKey) return;
+    try { setDismissedRejects(JSON.parse(localStorage.getItem(dismissKey) || "[]")); } catch {}
+  }, [dismissKey]);
   const rejectAlerts = useMemo(() => {
     if (isEmployer) return [];
     return visibleReports.filter((r: any) =>

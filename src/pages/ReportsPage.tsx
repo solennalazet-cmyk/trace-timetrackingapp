@@ -160,9 +160,22 @@ const ReportsPage = () => {
 
   useEffect(() => {
     if (datesInitialized || !settingsLoaded) return;
-    const { from, to } = getCurrentWeekRange(weekStartDay as 0 | 1 | 2 | 3 | 4 | 5 | 6);
-    setDateFrom(from);
-    setDateTo(to);
+    const params = new URLSearchParams(window.location.search);
+    const rf = params.get("resend_from"), rt = params.get("resend_to"), rc = params.get("resend_client");
+    if (rf && rt) {
+      // Coming from a rejected report on Payments: open export for that period/client.
+      const [fy, fm, fd] = rf.split("-").map(Number);
+      const [ty, tm, td] = rt.split("-").map(Number);
+      setDateFrom(new Date(fy, fm - 1, fd));
+      setDateTo(new Date(ty, tm - 1, td));
+      if (rc) setClientFilter(rc);
+      setExportOpen(true);
+      window.history.replaceState(null, "", window.location.pathname);
+    } else {
+      const { from, to } = getCurrentWeekRange(weekStartDay as 0 | 1 | 2 | 3 | 4 | 5 | 6);
+      setDateFrom(from);
+      setDateTo(to);
+    }
     setDatesInitialized(true);
   }, [weekStartDay, datesInitialized, settingsLoaded]);
 

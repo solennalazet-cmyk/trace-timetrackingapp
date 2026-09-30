@@ -272,14 +272,17 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
     if (entries.length <= 1) onOpenChange(false);
   };
 
-  const handleAssign = (entry: UnassignedEntry) => {
+  const handleAssign = (entry: UnassignedEntry, sheetHidden = false) => {
     setEntries((prev) => prev.filter((e) => e.id !== entry.id));
     onCountChange(Math.max(entries.length - 1, 0));
     onOpenChange(false);
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
-    window.setTimeout(() => onAssignEntry(entry), 240);
+    // Wait for the list sheet's 300ms close animation (and its focus/scroll
+    // lock release) to finish before the assignment box opens, so the two
+    // layers never fight over the keyboard.
+    window.setTimeout(() => onAssignEntry(entry), sheetHidden ? 0 : 340);
   };
 
   return (

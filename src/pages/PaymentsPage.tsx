@@ -134,7 +134,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
     // but only approved reports are counted as wages due below.
     const reportsQuery = supabase
       .from("submitted_reports")
-      .select("id, worker_user_id, employer_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, status, submitted_at, reviewed_at, shared_columns, entries_snapshot, rejection_reason, rejection_note")
+      .select("id, worker_user_id, employer_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, status, submitted_at, reviewed_at, shared_columns, entries_snapshot, rejection_reason, rejection_note, notify_worker")
       .eq(col, user.id)
       .in("status", ["submitted", "approved", "rejected", "pending_connection"])
       .order("period_end", { ascending: false });
@@ -278,7 +278,31 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
   };
 
   const overallTotals = useMemo(() => computeGroupTotals(visibleReports), [visibleReports, paidByReport]);
-  const rejectedCount = useMemo(() => visibleReports.filter((r) => r.status === "rejected").length, [visibleReports]);
+  // Actionable rejection alerts (freelancer only): only reviews after this
+  // feature shipped, only when the employer chose to notify, not dismissed.
+  const REJECT_ALERT_CUTOFF = Date.parse("2026-09-30T16:50:00Z");
+  const dismissKey = user ? `trace-reject-alerts-dismissed-${user.id}` : "";
+  const [dismissedRejects, setDismissedRejects] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(dismissKey) || "[]"); } catch { return []; }
+  });
+  const rejectAlerts = useMemo(() => {
+    if (isEmployer) return [];
+    return visibleReports.filter((r: any) =>
+      r.status === "rejected" &&
+      r.notify_worker !== false &&
+      r.reviewed_at && Date.parse(r.reviewed_at) >= REJECT_ALERT_CUTOFF &&
+      !dismissedRejects.includes(r.id),
+    );
+  }, [visibleReports, dismissedRejects, isEmployer]);
+  const dismissReject = (id: string) => {
+    const next = [...dismissedRejects, id];
+    setDismissedRejects(next);
+    try { localStorage.setItem(dismissKey, JSON.stringify(next)); } catch {}
+  };
+  const resendReport = (r: ReportRow) => {
+    const q = new URLSearchParams({ resend_from: r.period_start, resend_to: r.period_end, resend_client: r.client_id });
+    navigate(`/reports?${q.toString()}`);
+  };
 
   // "Paid" total is scoped to a date range — the tax year by default.
   const [taxInfo, setTaxInfo] = useState(() => getTaxCountry());
@@ -482,10 +506,29 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
                     </p>
                   </div>
                 )}
-                {rejectedCount > 0 && (
-                  <p className="text-sm text-destructive font-medium">
-                    {rejectedCount} rejected {rejectedCount === 1 ? "report needs" : "reports need"} fixing and re-sending
-                  </p>
+                {rejectAlerts.length > 0 && (
+                  <div className="space-y-2">
+                    {rejectAlerts.map((r) => (
+                      <div key={r.id} className="rounded-xl border border-destructive/40 p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm text-destructive font-medium">
+                            {groupNames.get(r.client_id) ?? "Client"} rejected your report ({r.period_start} → {r.period_end})
+                          </p>
+                          <button
+                            type="button"
+                            aria-label="Dismiss"
+                            className="text-muted-foreground hover:text-foreground -m-2 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                            onClick={() => dismissReject(r.id)}
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <Button size="sm" className="rounded-full h-8 px-4 mt-2" onClick={() => resendReport(r)}>
+                          Fix &amp; resend
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 )}
 
                 <button

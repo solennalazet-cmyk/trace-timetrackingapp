@@ -101,7 +101,19 @@ function startFix(): Promise<CapturedLocation | null> {
 /** Warm a location fix ahead of time (e.g. the instant the user taps stop). */
 export function primeLocation(): void {
   if (readFreshFix()) return;
-  void startFix();
+  // Only warm when permission is already granted. Triggering a permission
+  // prompt (or the OS "turn on location" sheet) while the assignment box is
+  // open steals focus from the page and resizes the viewport, which made the
+  // box bounce when the client field was tapped. The save still requests a
+  // fix later if needed, after the box is closed.
+  const perms = typeof navigator !== "undefined" ? (navigator as any).permissions : null;
+  if (!perms?.query) return;
+  perms
+    .query({ name: "geolocation" as PermissionName })
+    .then((status: PermissionStatus) => {
+      if (status.state === "granted") void startFix();
+    })
+    .catch(() => {});
 }
 
 /** A fix captured within the last minute, if any. */

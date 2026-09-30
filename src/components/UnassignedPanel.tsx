@@ -161,7 +161,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
   const [loading, setLoading] = useState(false);
   // While true the sheet stays hidden: we may be about to skip it entirely
   // because there is exactly one entry to assign.
-  const [resolving, setResolving] = useState(false);
+  const [resolving, setResolving] = useState(!!autoOpenSingle);
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [batchOpen, setBatchOpen] = useState(false);
   const [batchClientId, setBatchClientId] = useState<string>("");
@@ -199,11 +199,14 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
       setClients(getAnonymousClients().map((c: any) => ({ id: c.id, name: c.name })));
     }
     setLoading(false);
-    setResolving(false);
-    // Exactly one entry: there is nothing to choose from, so open it straight away.
+    // Exactly one entry: there is nothing to choose from, so open it straight
+    // away — the list sheet never appears, so no layer is left closing
+    // underneath the assignment box.
     if (autoOpenSingle && list.length === 1) {
-      handleAssign(list[0]);
+      handleAssign(list[0], true);
+      return;
     }
+    setResolving(false);
   };
 
   useEffect(() => {
@@ -211,7 +214,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
       setResolving(!!autoOpenSingle);
       loadEntries();
     } else {
-      setResolving(false);
+      setResolving(!!autoOpenSingle);
     }
   }, [open, user]);
 

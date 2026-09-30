@@ -161,7 +161,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
   const [loading, setLoading] = useState(false);
   // While true the sheet stays hidden: we may be about to skip it entirely
   // because there is exactly one entry to assign.
-  const [resolving, setResolving] = useState(false);
+  const [resolving, setResolving] = useState(!!autoOpenSingle);
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [batchOpen, setBatchOpen] = useState(false);
   const [batchClientId, setBatchClientId] = useState<string>("");
@@ -199,11 +199,14 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
       setClients(getAnonymousClients().map((c: any) => ({ id: c.id, name: c.name })));
     }
     setLoading(false);
-    setResolving(false);
-    // Exactly one entry: there is nothing to choose from, so open it straight away.
+    // Exactly one entry: there is nothing to choose from, so open it straight
+    // away — the list sheet never appears, so no layer is left closing
+    // underneath the assignment box.
     if (autoOpenSingle && list.length === 1) {
-      handleAssign(list[0]);
+      handleAssign(list[0], true);
+      return;
     }
+    setResolving(false);
   };
 
   useEffect(() => {
@@ -211,7 +214,7 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
       setResolving(!!autoOpenSingle);
       loadEntries();
     } else {
-      setResolving(false);
+      setResolving(!!autoOpenSingle);
     }
   }, [open, user]);
 
@@ -269,14 +272,17 @@ const UnassignedPanel = ({ open, onOpenChange, onAssignEntry, onCountChange, onB
     if (entries.length <= 1) onOpenChange(false);
   };
 
-  const handleAssign = (entry: UnassignedEntry) => {
+  const handleAssign = (entry: UnassignedEntry, sheetHidden = false) => {
     setEntries((prev) => prev.filter((e) => e.id !== entry.id));
     onCountChange(Math.max(entries.length - 1, 0));
     onOpenChange(false);
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
-    window.setTimeout(() => onAssignEntry(entry), 240);
+    // Wait for the list sheet's 300ms close animation (and its focus/scroll
+    // lock release) to finish before the assignment box opens, so the two
+    // layers never fight over the keyboard.
+    window.setTimeout(() => onAssignEntry(entry), sheetHidden ? 0 : 340);
   };
 
   return (

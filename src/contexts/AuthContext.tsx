@@ -48,9 +48,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const explicitSignOutRef = useRef(false);
   const refreshInFlightRef = useRef<Promise<void> | null>(null);
 
+  const [user, setUser] = useState<User | null>(null);
+
+  // Token refreshes hand us a brand-new session/user object every time. If we
+  // passed that straight through, every screen keyed on `user` would refetch
+  // and flash its loading state (the "screen goes blank and reloads" bug, which
+  // also unmounted open popovers like the date picker). Keep the user object
+  // identity stable while it's the same person.
   const applySession = (nextSession: Session | null) => {
     sessionRef.current = nextSession;
     setSession(nextSession);
+    setUser((current) => {
+      const next = nextSession?.user ?? null;
+      if (current && next && current.id === next.id) return current;
+      return next;
+    });
   };
 
   const hasLocalActiveTimer = () => {
@@ -164,6 +176,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // refreshSession() on resume avoids the "signed out on wake" bug.
     const onVisible = () => {
       if (document.visibilityState === "visible") {
+        // Only refresh when the token is actually close to expiring; refreshing
+        // on every focus caused needless re-renders across the app.
+        const exp = sessionRef.current?.expires_at;
+        if (exp && exp * 1000 - Date.now() > 5 * 60_000) return;
         if (!refreshInFlightRef.current) {
           refreshInFlightRef.current = supabase.auth.refreshSession()
             .then(({ data }) => {
@@ -201,7 +217,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider
       value={{
         session,
-        user: session?.user ?? null,
+        user,
         profile,
         loading,
         signOut,

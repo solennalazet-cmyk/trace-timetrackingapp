@@ -89,6 +89,7 @@ async def main():
                 await nn.first.click()
         await page.get_by_role("button", name="Stop").first.click()
 
+        await page.wait_for_timeout(1500); await page.screenshot(path=str(OUT / "0_after_stop.png"))
         box = "[data-assignment-box]"
         await page.wait_for_selector(box, timeout=10000)
         await page.wait_for_timeout(400)  # open animation

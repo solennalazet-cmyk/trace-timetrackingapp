@@ -192,6 +192,10 @@ const App = () => (
       <Toaster />
       <Sonner
         position="bottom-center"
+        // Keep toasts above the mobile bottom nav (64px + safe area) so they
+        // never cover navigation, whatever the device.
+        offset={{ bottom: "calc(80px + env(safe-area-inset-bottom))" }}
+        mobileOffset={{ bottom: "calc(80px + env(safe-area-inset-bottom))" }}
         toastOptions={{
           style: {
             background: "hsl(var(--card))",
@@ -203,7 +207,7 @@ const App = () => (
             fontSize: "14px",
             border: "1px solid hsl(var(--border))",
           },
-          duration: 3000,
+          duration: 2000,
         }}
       />
       <AuthProvider>

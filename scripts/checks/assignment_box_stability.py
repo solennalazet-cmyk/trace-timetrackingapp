@@ -55,7 +55,10 @@ async def rect(page, sel):
 
 
 async def main():
-    session = sign_in()
+    # Signed-out (local/anonymous) mode exercises the exact same box and
+    # picker without touching any real account. Set TRACE_CHECK_SIGNED_IN=1
+    # to run against the shared test account instead.
+    session = sign_in() if os.environ.get("TRACE_CHECK_SIGNED_IN") == "1" else None
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         ctx = await browser.new_context(
@@ -64,10 +67,11 @@ async def main():
         )
         page = await ctx.new_page()
         await page.goto(BASE)
-        await page.evaluate(
-            "([k, v]) => localStorage.setItem(k, v)",
-            [f"sb-{PROJECT_REF}-auth-token", json.dumps(session)],
-        )
+        if session:
+            await page.evaluate(
+                "([k, v]) => localStorage.setItem(k, v)",
+                [f"sb-{PROJECT_REF}-auth-token", json.dumps(session)],
+            )
         await page.goto(BASE + "/", wait_until="networkidle")
 
         # Dismiss first-run overlays if present.

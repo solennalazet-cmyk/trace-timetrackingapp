@@ -12,6 +12,14 @@ import AppErrorBoundary from "./components/AppErrorBoundary";
 import { lazy, Suspense, useEffect, useState, type ComponentType } from "react";
 import { applyColorTheme, getStoredColorTheme } from "./hooks/useColorTheme";
 import { clearChunkReloadMarker, recoverFromChunkLoadError } from "./lib/chunk-recovery";
+import { toast as sonnerToast } from "sonner";
+
+// Routine confirmations disappear after 2s; errors stay 5s so they're readable.
+{
+  const originalError = sonnerToast.error;
+  sonnerToast.error = ((message: Parameters<typeof originalError>[0], data?: Parameters<typeof originalError>[1]) =>
+    originalError(message, { duration: 5000, ...data })) as typeof originalError;
+}
 
 const lazyWithChunkRecovery = <T extends ComponentType<any>>(loader: () => Promise<{ default: T }>) =>
   lazy(() =>

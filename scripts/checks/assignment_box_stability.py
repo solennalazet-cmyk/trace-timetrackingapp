@@ -126,7 +126,10 @@ async def main():
         if await rows.count():
             await rows.first.tap()
         else:
-            await page.get_by_role("button", name="Close").first.tap()
+            # No saved clients (signed-out run): create one through the picker,
+            # which exercises the same select-and-close path.
+            await page.locator("[data-picker-panel] input").fill("Stability Check Co")
+            await page.locator("[data-picker-panel] button", has_text="Add").first.tap()
         await page.wait_for_timeout(500)
         same("box after selecting client", r0, await rect(page, box))
         await page.screenshot(path=str(OUT / "4_selected.png"))

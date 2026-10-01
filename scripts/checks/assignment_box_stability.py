@@ -80,15 +80,15 @@ async def main():
             if await btn.count() and await btn.first.is_visible():
                 await btn.first.click()
 
-        stop = page.get_by_role("button", name="Stop")
-        if not await stop.count():
-            await page.get_by_role("button", name="Start").first.click()
+        start = page.get_by_role("button", name="Start", exact=True)
+        if await start.count() and await start.first.is_visible():
+            await start.first.click()
             await page.wait_for_timeout(1500)
-            nn = page.get_by_role("button", name="Not now")
-            if await nn.count() and await nn.first.is_visible():
-                await nn.first.click()
-        await page.get_by_role("button", name="Stop").first.click()
-
+        nn = page.get_by_role("button", name="Not now")
+        if await nn.count() and await nn.first.is_visible():
+            await nn.first.click()
+            await page.wait_for_timeout(300)
+        await page.locator("button:visible", has_text="Stop").last.click()
         await page.wait_for_timeout(1500); await page.screenshot(path=str(OUT / "0_after_stop.png"))
         box = "[data-assignment-box]"
         await page.wait_for_selector(box, timeout=10000)

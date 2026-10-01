@@ -55,7 +55,10 @@ async def rect(page, sel):
 
 
 async def main():
-    session = sign_in()
+    # Signed-out (local/anonymous) mode exercises the exact same box and
+    # picker without touching any real account. Set TRACE_CHECK_SIGNED_IN=1
+    # to run against the shared test account instead.
+    session = sign_in() if os.environ.get("TRACE_CHECK_SIGNED_IN") == "1" else None
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         ctx = await browser.new_context(
@@ -64,10 +67,11 @@ async def main():
         )
         page = await ctx.new_page()
         await page.goto(BASE)
-        await page.evaluate(
-            "([k, v]) => localStorage.setItem(k, v)",
-            [f"sb-{PROJECT_REF}-auth-token", json.dumps(session)],
-        )
+        if session:
+            await page.evaluate(
+                "([k, v]) => localStorage.setItem(k, v)",
+                [f"sb-{PROJECT_REF}-auth-token", json.dumps(session)],
+            )
         await page.goto(BASE + "/", wait_until="networkidle")
 
         # Dismiss first-run overlays if present.
@@ -76,15 +80,16 @@ async def main():
             if await btn.count() and await btn.first.is_visible():
                 await btn.first.click()
 
-        stop = page.get_by_role("button", name="Stop")
-        if not await stop.count():
-            await page.get_by_role("button", name="Start").first.click()
+        start = page.get_by_role("button", name="Start", exact=True)
+        if await start.count() and await start.first.is_visible():
+            await start.first.click()
             await page.wait_for_timeout(1500)
-            nn = page.get_by_role("button", name="Not now")
-            if await nn.count() and await nn.first.is_visible():
-                await nn.first.click()
-        await page.get_by_role("button", name="Stop").first.click()
-
+        nn = page.get_by_role("button", name="Not now")
+        if await nn.count() and await nn.first.is_visible():
+            await nn.first.click()
+            await page.wait_for_timeout(300)
+        await page.locator("button:visible", has_text="Stop").last.click()
+        await page.wait_for_timeout(1500); await page.screenshot(path=str(OUT / "0_after_stop.png"))
         box = "[data-assignment-box]"
         await page.wait_for_selector(box, timeout=10000)
         await page.wait_for_timeout(400)  # open animation
@@ -121,7 +126,8 @@ async def main():
         if await rows.count():
             await rows.first.tap()
         else:
-            await page.get_by_role("button", name="Close").first.tap()
+            # No saved clients (signed-out run): close the picker instead.
+            await page.locator("[data-picker-panel] button[aria-label='Close']").tap()
         await page.wait_for_timeout(500)
         same("box after selecting client", r0, await rect(page, box))
         await page.screenshot(path=str(OUT / "4_selected.png"))

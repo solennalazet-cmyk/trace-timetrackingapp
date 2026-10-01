@@ -656,19 +656,8 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
             const isOpen = expandedKey === key;
             const fullyPaid = t.outstanding <= 0.005;
 
-            const partial = t.paid > 0.005 && t.outstanding > 0.005;
             const noInvoices = t.due <= 0.005;
             const overdue = t.overdue > 0.005;
-
-            const status = noInvoices
-              ? { label: "No reports", cls: "bg-muted text-muted-foreground" }
-              : fullyPaid
-                ? { label: "Paid", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" }
-                : overdue
-                  ? { label: "Overdue", cls: "bg-red-500/15 text-red-600 dark:text-red-400" }
-                  : partial
-                    ? { label: "Partial payments", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400" }
-                    : { label: "On track", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" };
 
             const pct = t.due > 0 ? Math.min(100, Math.round((t.paid / t.due) * 100)) : 0;
             const barCls = noInvoices
@@ -702,9 +691,6 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
                       {initials || "?"}
                     </div>
                     <h2 className="text-base font-semibold flex-1 truncate">{name}</h2>
-                    <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full ${status.cls}`}>
-                      {status.label}
-                    </span>
                     <ChevronRight
                       className={`w-4 h-4 text-muted-foreground transition-transform ${isOpen ? "rotate-90" : ""}`}
                     />

@@ -207,9 +207,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signOut = async () => {
     const flag = (window as any).__traceExplicitSignOut;
     if (flag) flag.current = true;
+    // Any work left in the on-device guest store while signed in belongs to
+    // this account: move it there first, then wipe the device copy so nothing
+    // from the signed-in session is shown after sign-out.
+    const uid = user?.id;
+    if (uid) {
+      try {
+        const { migrateAnonymousData } = await import("@/lib/migrate-anonymous");
+        await migrateAnonymousData(uid);
+      } catch (err) {
+        console.warn("[signOut] guest data migration failed", err);
+      }
+    }
+    [
+      "trace_anonymous_entries",
+      "trace_anonymous_clients",
+      "trace_anonymous_projects",
+      "trace_anonymous_tasks",
+      "trace_pending_assignment",
+    ].forEach((k) => { try { localStorage.removeItem(k); } catch { /* ignore */ } });
     await supabase.auth.signOut();
     applySession(null);
     setProfile(null);
+    window.dispatchEvent(new CustomEvent("trace-entries-changed"));
   };
 
 

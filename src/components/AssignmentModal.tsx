@@ -164,6 +164,23 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
   const [loadingData, setLoadingData] = useState(false);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // STABILITY CONTRACT (see AGENTS.md → "Assignment box must never move"):
+  // On phones the box is pinned to the top of the screen with a height measured
+  // ONCE when it opens. It must not be vertically centred and must not react to
+  // the keyboard, OS sheets or content changes — every one of those used to
+  // re-centre the box, which is the "bounce". Content scrolls inside instead.
+  const [phoneFrame, setPhoneFrame] = useState<number | null>(null);
+  useEffect(() => {
+    if (!open) {
+      setPhoneFrame(null);
+      return;
+    }
+    if (typeof window === "undefined" || window.innerWidth >= 768) return;
+    setPhoneFrame((prev) =>
+      prev ?? Math.round(Math.min(896, Math.max(420, window.innerHeight - 24)))
+    );
+  }, [open]);
   const dismissingRef = useRef(false);
 
   const clients: ComboboxItem[] = clientsFull.map((c) => ({ id: c.id, name: c.name }));
@@ -633,7 +650,9 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleSkipOrDismiss(); }}>
       <DialogContent
-        position="centered"
+        position={phoneFrame ? "pinned" : "centered"}
+        data-assignment-box=""
+        style={phoneFrame ? { height: phoneFrame, maxHeight: phoneFrame } : undefined}
         onOpenAutoFocus={(event) => event.preventDefault()}
         onInteractOutside={(event) => {
           // Nested portals (mobile combobox drawer, native select, popovers)

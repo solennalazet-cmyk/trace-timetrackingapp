@@ -99,6 +99,13 @@ export function freezeDialogViewport() {
   frozenCount += 1;
   return () => {
     frozenCount = Math.max(0, frozenCount - 1);
-    if (frozenCount === 0) schedule();
+    if (frozenCount !== 0) return;
+    // Frozen listeners skipped every update while the picker was open, and
+    // publish() exits early when the value is unchanged — so hand them the
+    // latest value directly instead of leaving them stuck on a stale offset.
+    current = compute();
+    for (const entry of entries) {
+      if (entry.respectFreeze) entry.fn(current);
+    }
   };
 }

@@ -49,6 +49,16 @@ const MobileSelectSheet = ({
   const [mounted, setMounted] = useState(open);
   const [visible, setVisible] = useState(false);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+  // Measured once per open, before the keyboard can change the viewport.
+  const [frameTop, setFrameTop] = useState(() =>
+    typeof window === "undefined" ? 96 : Math.round(window.innerHeight * 0.15)
+  );
+  useEffect(() => {
+    if (open && typeof window !== "undefined") {
+      setFrameTop(Math.round(window.innerHeight * 0.15));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
   const inputRef = useRef<HTMLInputElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const actionLockRef = useRef(false);
@@ -222,14 +232,16 @@ const MobileSelectSheet = ({
 
       <div
         className={cn(
-          "absolute inset-x-0 bottom-0 flex flex-col rounded-t-2xl border-t bg-background shadow-lg",
+          "absolute inset-x-0 flex flex-col rounded-t-2xl border-t bg-background shadow-lg",
           "transition-transform duration-200 ease-out will-change-transform",
           visible ? "translate-y-0" : "translate-y-full"
         )}
-        style={{
-          bottom: keyboardOffset,
-          maxHeight: `calc(85dvh - ${keyboardOffset}px)`,
-        }}
+        // STABILITY CONTRACT: the top edge (title + search field) is a fixed
+        // pixel position measured once on open. Only the bottom edge follows
+        // the keyboard, and filtering the list never resizes the panel — so
+        // nothing under the user's finger moves.
+        style={{ top: frameTop, bottom: keyboardOffset }}
+        data-picker-panel=""
       >
         <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-muted" />
 

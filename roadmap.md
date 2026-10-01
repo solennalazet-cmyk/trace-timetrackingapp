@@ -6,3 +6,4 @@
 - [x] Resolve missing billable rates from saved client/project rates or the latest matching billed session.
 - [x] Harden report approve/reject and payment recording against double taps and already-reviewed rows.
 - [x] Make the Freelancer Reports overview legible and consistent on mobile, with flat input metrics and prominent goals.
+- [x] Pin the clock-out assignment box and client picker so they never bounce, with a required automatic check.

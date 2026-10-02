@@ -230,7 +230,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       "trace_active_stopwatch",
       "trace_active_shift",
       "trace_active_focus",
-      "trace_recently_stopped",
     ].forEach((k) => { try { localStorage.removeItem(k); } catch { /* ignore */ } });
     // Remove any account-specific confirmation/error still floating over the
     // screen before changing to the signed-out state.

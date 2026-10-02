@@ -8,3 +8,4 @@
 
 ## Signed-out privacy
 - Never render session summaries, entry history, unassigned counts, or lingering account toasts when no user is authenticated; sign-out must clear their local UI state. Why: work-session information is private account data.
+- Preserve the non-display `trace_recently_stopped` marker across sign-out; it prevents a failed server cleanup from resurrecting an already clocked-out session. Why: privacy cleanup must not remove timer conflict protection.

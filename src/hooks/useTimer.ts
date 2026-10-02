@@ -35,7 +35,9 @@ const LS_KEYS: Record<string, string> = {
 };
 
 const RECENTLY_STOPPED_KEY = "trace_recently_stopped";
-const RECENTLY_STOPPED_TTL = 5 * 60_000; // 5 minutes — long enough for a slow delete + reload
+// Keep the stop proof long enough to survive signing out and returning later.
+// The marker includes startedAt, so it cannot suppress a genuinely new timer.
+const RECENTLY_STOPPED_TTL = 7 * 24 * 60 * 60_000;
 
 function readLS(key: string): TimerState | null {
   try {
@@ -274,6 +276,27 @@ export function useTimer(mode: TimerMode) {
           }
         }
         return;
+      }
+
+      // A completed entry with the same start time is definitive proof that
+      // this active row is stale. This also repairs older clock-outs whose
+      // local stop marker was removed before this safeguard existed.
+      if (data?.started_at && data.session_type === sessionType) {
+        const { data: completedEntries, error: completedError } = await supabase
+          .from("time_entries")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("start_time", data.started_at)
+          .is("deleted_at", null)
+          .limit(1);
+        if (!completedError && completedEntries && completedEntries.length > 0) {
+          console.warn(`[useTimer] completed entry found for active ${mode}; deleting stale active row`);
+          await supabase.from("active_sessions").delete().eq("user_id", user.id);
+          clearLS(lsKey);
+          setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
+          setElapsedMs(0);
+          return;
+        }
       }
 
       // Auto-clean stale sessions so a crashed/closed device doesn't leave a

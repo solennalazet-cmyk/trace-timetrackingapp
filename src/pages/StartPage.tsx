@@ -642,12 +642,21 @@ const StartPage = () => {
       return `${assignments.length} tasks saved.`;
     }
     if (user) {
-      // Best effort only — a failure here must never block the save.
+      // Re-check server cleanup when the recap is saved. A stale active row
+      // must not resurrect the timer on this or another device.
       try {
         const { data: staleSession } = await supabase
           .from("active_sessions").select("id").eq("user_id", user.id).maybeSingle();
-        if (staleSession) await supabase.from("active_sessions").delete().eq("user_id", user.id);
-      } catch { /* ignore */ }
+        if (staleSession) {
+          const { error: cleanupError } = await supabase
+            .from("active_sessions")
+            .delete()
+            .eq("user_id", user.id);
+          if (cleanupError) console.warn("[StartPage] stale active session cleanup failed", cleanupError);
+        }
+      } catch (cleanupError) {
+        console.warn("[StartPage] stale active session cleanup threw", cleanupError);
+      }
     }
     await saveEntry(session, assignment ?? null);
     return session.entryType === "shift" ? "Shift saved." : "Entry saved.";

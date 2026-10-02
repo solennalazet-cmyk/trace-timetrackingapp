@@ -19,6 +19,8 @@ interface AdaptiveComboboxProps {
   /** When true and the items list is empty, show the inline dots loader
    *  instead of the empty "Type to add new" / "No results" state. */
   loading?: boolean;
+  /** Mobile-only message shown when there are no items. */
+  emptyHint?: string;
 }
 
 const AdaptiveCombobox = ({
@@ -32,6 +34,7 @@ const AdaptiveCombobox = ({
   scrollContainerRef,
   allowCreate = true,
   loading = false,
+  emptyHint,
 }: AdaptiveComboboxProps) => {
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -94,6 +97,7 @@ const AdaptiveCombobox = ({
           placeholder={`Search ${label.toLowerCase()}…`}
           allowCreate={allowCreate}
           loading={loading}
+          emptyHint={emptyHint}
           onSelect={handleMobileSelect}
           onCreate={handleMobileCreate}
         />

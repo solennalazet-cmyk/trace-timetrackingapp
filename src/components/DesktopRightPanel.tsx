@@ -3,7 +3,6 @@ import { Timer, PenLine, Clock, Phone, CircleDot } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toLocalDateKey } from "@/lib/utils";
-import { getAnonymousClients, getAnonymousEntries, getAnonymousProjects } from "@/lib/anonymous-store";
 import { formatDuration } from "@/hooks/useTimer";
 
 interface TodayEntry {
@@ -54,8 +53,15 @@ const DesktopRightPanel = () => {
     const load = async () => {
       if (isFirst) setLoading(true);
       const today = toLocalDateKey(new Date());
-      if (user) {
-        const [{ data }, { data: clientRows }, { data: projectRows }] = await Promise.all([
+      if (!user) {
+        if (!cancelled) {
+          setEntries([]);
+          setUnassignedCount(0);
+          setLoading(false);
+        }
+        return;
+      }
+      const [{ data }, { data: clientRows }, { data: projectRows }] = await Promise.all([
           supabase
             .from("time_entries")
             .select("id, entry_type, duration_minutes, billable, rate_amount, rate_currency, rate_unit, start_time, end_time, client_id, project_id")
@@ -65,42 +71,26 @@ const DesktopRightPanel = () => {
             .order("created_at", { ascending: false }),
           supabase.from("clients").select("id, name").eq("user_id", user.id),
           supabase.from("projects").select("id, name").eq("user_id", user.id),
-        ]);
-        const clientMap: Record<string, string> = {};
-        clientRows?.forEach((c) => { clientMap[c.id] = c.name; });
-        const projectMap: Record<string, string> = {};
-        projectRows?.forEach((p) => { projectMap[p.id] = p.name; });
-        if (!cancelled) {
-          setEntries((data ?? []).map((e: any) => ({
-            ...e,
-            client_name: e.client_id ? clientMap[e.client_id] : undefined,
-            project_name: e.project_id ? projectMap[e.project_id] : undefined,
-          })));
-        }
-        const { count } = await supabase
-          .from("time_entries")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .is("client_id", null)
-          .is("project_id", null)
-          .is("deleted_at", null);
-        if (!cancelled) setUnassignedCount(count ?? 0);
-      } else {
-        const all = getAnonymousEntries();
-        const clientMap: Record<string, string> = {};
-        getAnonymousClients().forEach((c: any) => { clientMap[c.id] = c.name; });
-        const projectMap: Record<string, string> = {};
-        getAnonymousProjects().forEach((p: any) => { projectMap[p.id] = p.name; });
-        if (!cancelled) {
-          setEntries(all.filter((e: any) => e.entry_date === today).map((e: any, i: number) => ({
-            ...e,
-            id: e.id ?? `anon-${i}`,
-            client_name: e.client_id ? clientMap[e.client_id] : undefined,
-            project_name: e.project_id ? projectMap[e.project_id] : undefined,
-          })));
-          setUnassignedCount(all.filter((e: any) => !e.client_id && !e.project_id).length);
-        }
+      ]);
+      const clientMap: Record<string, string> = {};
+      clientRows?.forEach((c) => { clientMap[c.id] = c.name; });
+      const projectMap: Record<string, string> = {};
+      projectRows?.forEach((p) => { projectMap[p.id] = p.name; });
+      if (!cancelled) {
+        setEntries((data ?? []).map((e: any) => ({
+          ...e,
+          client_name: e.client_id ? clientMap[e.client_id] : undefined,
+          project_name: e.project_id ? projectMap[e.project_id] : undefined,
+        })));
       }
+      const { count } = await supabase
+        .from("time_entries")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .is("client_id", null)
+        .is("project_id", null)
+        .is("deleted_at", null);
+      if (!cancelled) setUnassignedCount(count ?? 0);
       if (!cancelled) { setLoading(false); isFirst = false; }
     };
     load();

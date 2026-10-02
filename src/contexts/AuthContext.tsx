@@ -238,6 +238,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
     applySession(null);
     setProfile(null);
+    window.dispatchEvent(new CustomEvent("trace-signed-out"));
     window.dispatchEvent(new CustomEvent("trace-entries-changed"));
   };
 

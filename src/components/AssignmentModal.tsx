@@ -209,48 +209,49 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
 
   const loadData = useCallback(async () => {
     if (userId) {
-      return runAssignmentRefresh(userId, async () => {
-       setLoadingData(true);
-       try {
-        const clientsRequest = supabase.from("clients").select("id, name, default_rate, currency").eq("user_id", userId);
-        const projectsRequest = supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", userId);
-        const tasksRequest = supabase.from("tasks").select("id, name, project_id, client_id").eq("user_id", userId);
-        const tagsRequest = supabase
-            .from("time_entries")
-            .select("tags")
-            .eq("user_id", userId)
-            .not("tags", "is", null)
-            .is("deleted_at", null);
-
-        // Clients are the first and most important assignment choice. Paint
-        // them as soon as their own request resolves; projects/tags can never
-        // hold this list hostage again.
-        const { data: clientRows, error: clientsError } = await clientsRequest;
-        if (clientsError) throw clientsError;
-        const nextClients = (clientRows ?? []) as ClientFull[];
-        setClientsFull(nextClients);
-
-        const [{ data: projectRows }, { data: taskRows }, { data: tagEntries }] = await Promise.all([
-          projectsRequest,
-          tasksRequest,
-          tagsRequest,
-        ]);
-        const nextProjects = (projectRows ?? []) as ProjectFull[];
-        const nextTasks = (taskRows ?? []).map((x: any) => ({ id: x.id, name: x.name, project_id: x.project_id ?? null, client_id: x.client_id ?? null }));
-        const tagSet = new Set<string>();
-        tagEntries?.forEach((entry: any) => entry.tags?.forEach((tag: string) => tagSet.add(tag)));
-        const nextTags = Array.from(tagSet).sort();
-        setAllProjectsFull(nextProjects);
-        setTasks(nextTasks);
-        setAllTags(nextTags);
-        writeAssignmentCache(userId, { clients: nextClients, projects: nextProjects, tasks: nextTasks, tags: nextTags });
+      // Fetch returns data instead of setting state, so EVERY open modal
+      // instance applies the result — even when it joined a refresh started
+      // by another (possibly unmounted) instance.
+      const apply = (d: { clients: ClientFull[]; projects: ProjectFull[]; tasks: any[]; tags: string[] }) => {
+        setClientsFull(d.clients);
+        setAllProjectsFull(d.projects);
+        setTasks(d.tasks);
+        setAllTags(d.tags);
+      };
+      const cachedNow = readAssignmentCache(userId);
+      const hasUsableCache = !!cachedNow && cachedNow.clients.length > 0;
+      if (cachedNow) apply(cachedNow as any);
+      if (!hasUsableCache) setLoadingData(true);
+      try {
+        const result = await runAssignmentRefresh(userId, async () => {
+          const [c, pr, t, tg] = await Promise.all([
+            supabase.from("clients").select("id, name, default_rate, currency").eq("user_id", userId),
+            supabase.from("projects").select("id, name, client_id, rate, currency").eq("user_id", userId),
+            supabase.from("tasks").select("id, name, project_id, client_id").eq("user_id", userId),
+            supabase.from("time_entries").select("tags").eq("user_id", userId).not("tags", "is", null).is("deleted_at", null),
+          ]);
+          if (c.error) throw c.error;
+          const tagSet = new Set<string>();
+          (tg.data ?? []).forEach((e: any) => e.tags?.forEach((x: string) => tagSet.add(x)));
+          const data = {
+            clients: (c.data ?? []) as ClientFull[],
+            projects: (pr.data ?? []) as ProjectFull[],
+            tasks: (t.data ?? []).map((x: any) => ({ id: x.id, name: x.name, project_id: x.project_id ?? null, client_id: x.client_id ?? null })),
+            tags: Array.from(tagSet).sort(),
+          };
+          writeAssignmentCache(userId, data);
+          return data;
+        }, { hasCache: hasUsableCache });
+        if (result) apply(result);
+        else {
+          const latest = readAssignmentCache(userId);
+          if (latest) apply(latest as any);
+        }
       } catch (error) {
         console.error("[AssignmentModal] assignment lists refresh failed", error);
-        throw error;
       } finally {
         setLoadingData(false);
       }
-      }, { hasCache: !!readAssignmentCache(userId) })?.catch(() => {});
     } else {
       setLoadingData(true);
       const ac = getAnonymousClients();

@@ -8,26 +8,26 @@
  */
 
 const lastRunAt = new Map<string, number>();
-const inFlight = new Map<string, Promise<void>>();
+const inFlight = new Map<string, Promise<any>>();
 
 export const ASSIGNMENT_REFRESH_INTERVAL_MS = 30_000;
 
-export function runAssignmentRefresh(
+export function runAssignmentRefresh<T = void>(
   userId: string,
-  task: () => Promise<void>,
+  task: () => Promise<T>,
   options: { hasCache: boolean; intervalMs?: number } = { hasCache: false }
-): Promise<void> | undefined {
+): Promise<T> | undefined {
   const interval = options.intervalMs ?? ASSIGNMENT_REFRESH_INTERVAL_MS;
   const last = lastRunAt.get(userId) ?? 0;
   if (Date.now() - last < interval && options.hasCache) return;
 
   const existing = inFlight.get(userId);
-  if (existing) return existing;
+  if (existing) return existing as Promise<T>;
 
   lastRunAt.set(userId, Date.now());
   const run = (async () => {
     try {
-      await task();
+      return await task();
     } catch (error) {
       // Allow an immediate retry after a failure.
       lastRunAt.delete(userId);

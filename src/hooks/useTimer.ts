@@ -35,7 +35,9 @@ const LS_KEYS: Record<string, string> = {
 };
 
 const RECENTLY_STOPPED_KEY = "trace_recently_stopped";
-const RECENTLY_STOPPED_TTL = 5 * 60_000; // 5 minutes — long enough for a slow delete + reload
+// Keep the stop proof long enough to survive signing out and returning later.
+// The marker includes startedAt, so it cannot suppress a genuinely new timer.
+const RECENTLY_STOPPED_TTL = 7 * 24 * 60 * 60_000;
 
 function readLS(key: string): TimerState | null {
   try {

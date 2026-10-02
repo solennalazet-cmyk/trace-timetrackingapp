@@ -18,6 +18,8 @@ interface MobileSelectSheetProps {
   /** When true and the items list is empty, show inline dots in the list and
    *  search bar instead of the empty state. */
   loading?: boolean;
+  /** Replaces the generic empty message when the list has no items. */
+  emptyHint?: string;
   onSelect: (id: string, name: string) => void;
   onCreate?: (name: string) => Promise<ComboboxItem | null>;
 }
@@ -41,6 +43,7 @@ const MobileSelectSheet = ({
   allowCreate = true,
   creating: externalCreating,
   loading = false,
+  emptyHint,
   onSelect,
   onCreate,
 }: MobileSelectSheetProps) => {
@@ -296,7 +299,7 @@ const MobileSelectSheet = ({
               </div>
             ) : (
               <div className="py-8 text-center text-sm text-muted-foreground">
-                {items.length === 0 ? "Type to add new" : "No results"}
+                {items.length === 0 ? (emptyHint ?? "Type to add new") : "No results"}
               </div>
             )
           )}

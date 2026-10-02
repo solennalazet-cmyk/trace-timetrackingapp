@@ -755,6 +755,7 @@ const AssignmentModal = ({ open, session, existingEntry, onSave, onSaveMulti, on
                 displayValue={clientName}
                 placeholder="Select client (optional)"
                 label="Client"
+                emptyHint={userId ? undefined : "You're not signed in — sign in to see your saved clients"}
                 loading={loadingData && clients.length === 0}
                 scrollContainerRef={scrollAreaRef}
                 onSelect={(id, name) => {

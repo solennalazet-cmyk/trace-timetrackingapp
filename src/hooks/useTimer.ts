@@ -130,6 +130,17 @@ export function useTimer(mode: TimerMode) {
     elapsedRef.current = elapsedMs;
   }, [elapsedMs]);
 
+  useEffect(() => {
+    const clearSignedOutTimer = () => {
+      const clearedState = { startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] };
+      timerStateRef.current = clearedState;
+      setTimerState(clearedState);
+      setElapsedMs(0);
+    };
+    window.addEventListener("trace-signed-out", clearSignedOutTimer);
+    return () => window.removeEventListener("trace-signed-out", clearSignedOutTimer);
+  }, []);
+
   const computeElapsed = useCallback(() => {
     if (!timerState.startedAt) return 0;
     if (timerState.pausedAt) {

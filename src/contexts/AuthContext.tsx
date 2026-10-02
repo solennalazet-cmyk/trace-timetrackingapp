@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Profile {
   id: string;
@@ -225,10 +226,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       "trace_anonymous_projects",
       "trace_anonymous_tasks",
       "trace_pending_assignment",
+      "trace_pending_session_v2",
+      "trace_active_stopwatch",
+      "trace_active_shift",
+      "trace_active_focus",
+      "trace_recently_stopped",
     ].forEach((k) => { try { localStorage.removeItem(k); } catch { /* ignore */ } });
+    // Remove any account-specific confirmation/error still floating over the
+    // screen before changing to the signed-out state.
+    toast.dismiss();
     await supabase.auth.signOut();
     applySession(null);
     setProfile(null);
+    window.dispatchEvent(new CustomEvent("trace-signed-out"));
     window.dispatchEvent(new CustomEvent("trace-entries-changed"));
   };
 

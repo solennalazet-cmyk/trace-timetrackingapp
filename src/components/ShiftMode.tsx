@@ -5,6 +5,7 @@ import { Pause, Play, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInHours } from "date-fns";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const BTN = "rounded-[28px] h-14 text-[16px] font-bold";
 
@@ -13,12 +14,13 @@ interface ShiftModeProps {
 }
 
 const ShiftMode = ({ onClockOut }: ShiftModeProps) => {
+  const { user } = useAuth();
   const { status, elapsedMs, startedAt, totalPausedMs, pausedAt, start, pause, resume, stop } = useTimer("shift");
   const [stopping, setStopping] = useState(false);
 
   const handleClockIn = () => {
     start();
-    toast.success("You're clocked in. Have a great work session!");
+    if (user) toast.success("You're clocked in. Have a great work session!");
   };
 
   const handleClockOut = async () => {

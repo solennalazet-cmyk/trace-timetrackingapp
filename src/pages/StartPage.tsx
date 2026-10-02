@@ -328,13 +328,12 @@ const StartPage = () => {
       setUnassignedCount(count ?? 0);
       setSingleUnassignedEntry(count === 1 && unassignedEntries?.[0] ? unassignedEntries[0] as ExistingEntry : null);
     } else {
-      const entries = getAnonymousEntries();
-      const todayEntries = entries.filter((e: any) => e.entry_date === today);
-      setTodayCount(todayEntries.length);
-      setTodayMinutes(todayEntries.reduce((sum: number, e: any) => sum + (e.duration_minutes || 0), 0));
-      const unassignedEntries = entries.filter((e: any) => !e.client_id && !e.project_id);
-      setUnassignedCount(unassignedEntries.length);
-      setSingleUnassignedEntry(unassignedEntries.length === 1 ? unassignedEntries[0] as ExistingEntry : null);
+      // A signed-out screen must never reveal work from a previous account
+      // (or any leftover guest-store rows) through its summary cards.
+      setTodayCount(0);
+      setTodayMinutes(0);
+      setUnassignedCount(0);
+      setSingleUnassignedEntry(null);
     }
   };
 
@@ -843,7 +842,7 @@ const StartPage = () => {
 
 
       {/* Summary cards */}
-      {showSummary && (
+      {user && showSummary && (
         <SummaryCards
           todayCount={todayCount}
           todayMinutes={todayMinutes}

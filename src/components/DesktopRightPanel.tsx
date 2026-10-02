@@ -128,6 +128,10 @@ const DesktopRightPanel = () => {
   const currency = entries.find((e) => e.rate_currency)?.rate_currency ?? "EUR";
   const sym = CURRENCY_SYMBOLS[currency] ?? "€";
 
+  // Session history belongs to an account and must never be visible on a
+  // signed-out screen, including data left in this browser's guest store.
+  if (!user) return null;
+
   return (
     <aside
       className="hidden lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen lg:py-6 lg:px-4 lg:border-l border-border/40 overflow-y-auto"

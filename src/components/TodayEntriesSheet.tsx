@@ -9,7 +9,6 @@ import { Timer, PenLine, Clock, Phone } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toLocalDateKey } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { getAnonymousClients, getAnonymousEntries, getAnonymousProjects } from "@/lib/anonymous-store";
 
 interface TodayEntry {
   id: string;
@@ -175,17 +174,7 @@ const TodayEntriesSheet = ({ open, onOpenChange, onEntryTap }: TodayEntriesSheet
           setEntries([]);
         }
       } else {
-        const all = getAnonymousEntries();
-        const clientMap: Record<string, string> = {};
-        getAnonymousClients().forEach((c: any) => { clientMap[c.id] = c.name; });
-        const projectMap: Record<string, string> = {};
-        getAnonymousProjects().forEach((p: any) => { projectMap[p.id] = p.name; });
-        setEntries(all.filter((e: any) => e.entry_date === today).map((e: any, i: number) => ({
-          ...e,
-          id: e.id ?? `anon-${i}`,
-          client_name: e.client_id ? clientMap[e.client_id] : undefined,
-          project_name: e.project_id ? projectMap[e.project_id] : undefined,
-        })));
+        setEntries([]);
       }
       setLoading(false);
     };
@@ -198,6 +187,8 @@ const TodayEntriesSheet = ({ open, onOpenChange, onEntryTap }: TodayEntriesSheet
   const hideEntry = (id: string) => {
     setHiddenIds((prev) => new Set(prev).add(id));
   };
+
+  if (!user) return null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

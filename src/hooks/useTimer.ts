@@ -278,6 +278,27 @@ export function useTimer(mode: TimerMode) {
         return;
       }
 
+      // A completed entry with the same start time is definitive proof that
+      // this active row is stale. This also repairs older clock-outs whose
+      // local stop marker was removed before this safeguard existed.
+      if (data?.started_at && data.session_type === sessionType) {
+        const { data: completedEntries, error: completedError } = await supabase
+          .from("time_entries")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("start_time", data.started_at)
+          .is("deleted_at", null)
+          .limit(1);
+        if (!completedError && completedEntries && completedEntries.length > 0) {
+          console.warn(`[useTimer] completed entry found for active ${mode}; deleting stale active row`);
+          await supabase.from("active_sessions").delete().eq("user_id", user.id);
+          clearLS(lsKey);
+          setTimerState({ startedAt: null, pausedAt: null, totalPausedMs: 0, pauseIntervals: [] });
+          setElapsedMs(0);
+          return;
+        }
+      }
+
       // Auto-clean stale sessions so a crashed/closed device doesn't leave a
       // phantom running timer that resurrects on the next login. Stopwatch
       // sessions older than 18h are cleared; shifts can legitimately run long

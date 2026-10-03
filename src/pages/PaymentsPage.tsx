@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/contexts/RoleContext";
 import SubmittedReportSheet, { type SubmittedReport } from "@/components/SubmittedReportSheet";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { getClientColor } from "@/lib/utils";
 import Seo from "@/components/Seo";
 import {
@@ -91,7 +91,9 @@ interface PaymentsPageProps {
   selectedWorker?: string | "all";
 }
 
-const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPageProps = {}) => {
+const PaymentsPage = ({ embedded = false, selectedWorker: selectedWorkerProp = "all" }: PaymentsPageProps = {}) => {
+  const [searchParams] = useSearchParams();
+  const selectedWorker = !embedded && searchParams.get("worker") ? searchParams.get("worker")! : selectedWorkerProp;
   const { user } = useAuth();
   const { activeRole } = useRole();
   const isEmployer = activeRole === "employer";

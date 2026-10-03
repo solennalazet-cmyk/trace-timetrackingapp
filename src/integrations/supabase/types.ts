@@ -678,6 +678,7 @@ export type Database = {
           daily_hour_target: number | null
           default_billable: boolean | null
           default_report_range: string | null
+          dismissed_notifications: string[]
           geolocation_mode: string | null
           geolocation_prompt_seen: boolean | null
           id: string
@@ -703,6 +704,7 @@ export type Database = {
           daily_hour_target?: number | null
           default_billable?: boolean | null
           default_report_range?: string | null
+          dismissed_notifications?: string[]
           geolocation_mode?: string | null
           geolocation_prompt_seen?: boolean | null
           id?: string
@@ -728,6 +730,7 @@ export type Database = {
           daily_hour_target?: number | null
           default_billable?: boolean | null
           default_report_range?: string | null
+          dismissed_notifications?: string[]
           geolocation_mode?: string | null
           geolocation_prompt_seen?: boolean | null
           id?: string

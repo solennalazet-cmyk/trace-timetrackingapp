@@ -282,29 +282,17 @@ const PaymentsPage = ({ embedded = false, selectedWorker = "all" }: PaymentsPage
   const overallTotals = useMemo(() => computeGroupTotals(visibleReports), [visibleReports, paidByReport]);
   // Actionable rejection alerts (freelancer only): only reviews after this
   // feature shipped, only when the employer chose to notify, not dismissed.
-  const REJECT_ALERT_CUTOFF = Date.parse("2026-09-30T16:50:00Z");
-  const dismissKey = user ? `trace-reject-alerts-dismissed-${user.id}` : "";
-  const [dismissedRejects, setDismissedRejects] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem(dismissKey) || "[]"); } catch { return []; }
-  });
-  useEffect(() => {
-    if (!dismissKey) return;
-    try { setDismissedRejects(JSON.parse(localStorage.getItem(dismissKey) || "[]")); } catch {}
-  }, [dismissKey]);
+  const { dismissed: dismissedRejects, loaded: dismissLoaded, dismiss } = useDismissedNotifications();
   const rejectAlerts = useMemo(() => {
-    if (isEmployer) return [];
+    if (isEmployer || !dismissLoaded) return [];
     return visibleReports.filter((r: any) =>
       r.status === "rejected" &&
       r.notify_worker !== false &&
       r.reviewed_at && Date.parse(r.reviewed_at) >= REJECT_ALERT_CUTOFF &&
       !dismissedRejects.includes(r.id),
     );
-  }, [visibleReports, dismissedRejects, isEmployer]);
-  const dismissReject = (id: string) => {
-    const next = [...dismissedRejects, id];
-    setDismissedRejects(next);
-    try { localStorage.setItem(dismissKey, JSON.stringify(next)); } catch {}
-  };
+  }, [visibleReports, dismissedRejects, isEmployer, dismissLoaded]);
+  const dismissReject = (id: string) => { void dismiss([id]); };
   const resendReport = (r: ReportRow) => {
     const q = new URLSearchParams({ resend_from: r.period_start, resend_to: r.period_end, resend_client: r.client_id });
     navigate(`/reports?${q.toString()}`);

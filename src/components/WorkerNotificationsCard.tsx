@@ -5,6 +5,7 @@ import { Check, X, Wallet, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useDismissedNotifications, REJECT_ALERT_CUTOFF } from "@/hooks/useDismissedNotifications";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
@@ -26,7 +27,6 @@ interface Event {
   note?: string | null;
 }
 
-const seenKey = (uid: string) => `trace-notifs-seen-${uid}`;
 
 /**
  * Worker-side notifications: surfaces approved/rejected reports and
@@ -36,11 +36,10 @@ const WorkerNotificationsCard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
-  const [seenAt, setSeenAt] = useState<number>(0);
+  const { dismissed, loaded, dismiss } = useDismissedNotifications();
 
   const load = useCallback(async () => {
     if (!user) return;
-    setSeenAt(Number(localStorage.getItem(seenKey(user.id)) ?? 0));
 
     const [{ data: rRows }, { data: pRows }] = await Promise.all([
       supabase
@@ -92,8 +91,10 @@ const WorkerNotificationsCard = () => {
       if (r.notify_worker === false) continue;
       // Approvals raise no card — the report's label on Payments shows it.
       if (r.status === "approved") continue;
+      // Same rule as Payments: no alerts for rejections before the feature launched.
+      if (!r.reviewed_at || Date.parse(r.reviewed_at) < REJECT_ALERT_CUTOFF) continue;
       evts.push({
-        id: `r-${r.id}`,
+        id: r.id,
         ts: r.reviewed_at,
         type: r.status === "approved" ? "approved" : "rejected",
         clientName: nameMap.get(r.client_id) ?? "Client",
@@ -104,6 +105,7 @@ const WorkerNotificationsCard = () => {
       });
     }
     for (const p of paymentRows) {
+      if (Date.parse(p.created_at) < REJECT_ALERT_CUTOFF) continue;
       const cid = paymentReportMap.get(p.submitted_report_id)?.client_id;
       evts.push({
         id: `p-${p.id}`,
@@ -126,17 +128,13 @@ const WorkerNotificationsCard = () => {
   }, [load]);
 
   const unread = useMemo(
-    () => events.filter((e) => new Date(e.ts).getTime() > seenAt).slice(0, 5),
-    [events, seenAt],
+    () => (loaded ? events.filter((e) => !dismissed.includes(e.id)).slice(0, 5) : []),
+    [events, dismissed, loaded],
   );
 
   if (!user || unread.length === 0) return null;
 
-  const dismissAll = () => {
-    const latest = new Date(unread[0].ts).getTime();
-    localStorage.setItem(seenKey(user.id), String(latest));
-    setSeenAt(latest);
-  };
+  const dismissAll = () => { void dismiss(unread.map((e) => e.id)); };
 
   return (
     <div className="space-y-2 mt-4">
@@ -185,13 +183,7 @@ const WorkerNotificationsCard = () => {
               <button
                 aria-label="Dismiss"
                 className="text-muted-foreground hover:text-foreground p-1 -mr-1"
-                onClick={() => {
-                  const t = new Date(e.ts).getTime();
-                  if (t > seenAt) {
-                    localStorage.setItem(seenKey(user.id), String(t));
-                    setSeenAt(t);
-                  }
-                }}
+                onClick={() => { void dismiss([e.id]); }}
               >
                 <X className="w-4 h-4" />
               </button>

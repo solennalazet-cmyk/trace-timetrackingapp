@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Inbox, Wallet, Activity, ChevronRight, Check, X, FileText, Loader2 } from "lucide-react";
@@ -110,6 +111,7 @@ const EmployerHomePage = () => {
   const [refreshing, setRefreshing] = useState(false);
   const touchStartY = useRef<number | null>(null);
 
+  const navigate = useNavigate();
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -126,7 +128,7 @@ const EmployerHomePage = () => {
         .eq("employer_user_id", user.id)
         .eq("status", "approved")
         .order("reviewed_at", { ascending: false })
-        .limit(20),
+        .limit(200),
       supabase
         .from("submitted_reports")
         .select("id, client_id, worker_user_id, status, reviewed_at, submitted_at, total_amount, currency")
@@ -160,7 +162,23 @@ const EmployerHomePage = () => {
       workerNameMap.get(r.worker_user_id) ?? "Freelancer";
     const mapRow = (r: any): SubmittedReport => ({ ...r, client_name: resolveName(r) });
     setPending(((pRes.data ?? []) as any[]).map(mapRow));
-    setApproved(((aRes.data ?? []) as any[]).map(mapRow));
+    // Payments due = approved reports minus what's already been recorded as paid.
+    const aRows = (aRes.data ?? []) as any[];
+    const paidMap = new Map<string, number>();
+    if (aRows.length > 0) {
+      const { data: payRows } = await supabase
+        .from("report_payments")
+        .select("submitted_report_id, amount")
+        .in("submitted_report_id", aRows.map((r) => r.id));
+      for (const p of (payRows ?? []) as any[]) {
+        paidMap.set(p.submitted_report_id, (paidMap.get(p.submitted_report_id) ?? 0) + Number(p.amount));
+      }
+    }
+    setApproved(
+      aRows
+        .map((r) => ({ ...mapRow(r), total_amount: Number(r.total_amount) - (paidMap.get(r.id) ?? 0) }))
+        .filter((r) => Number(r.total_amount) > 0.005),
+    );
 
     const items: ActivityItem[] = [];
     for (const r of reviewedRows) {
@@ -402,7 +420,7 @@ const EmployerHomePage = () => {
             {approved.map((r) => {
               const sym = CURRENCY_SYMBOLS[r.currency] ?? "€";
               return (
-                <button key={r.id} onClick={() => openReport(r)} className="w-full text-left">
+                <button key={r.id} onClick={() => navigate(`/payments?worker=${r.worker_user_id}`)} className="w-full text-left">
                   <Card className="p-4 hover:bg-muted/40 transition-colors">
                     <div className="flex items-center gap-3">
                       <div className="flex-1 min-w-0">

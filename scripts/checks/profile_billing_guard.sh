@@ -4,8 +4,9 @@
 set -u
 URL="https://qiwdhjgwakjzlwnabcmv.supabase.co"
 ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpd2Roamd3YWtqemx3bmFiY212Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1ODY0MTYsImV4cCI6MjA4OTE2MjQxNn0.uCJWUJnbpfukH5JwvqYA1v8X7P0RuBrdWCczjd97R68"
-TOKEN=$(curl -s "$URL/auth/v1/token?grant_type=password" -H "apikey: $ANON" -H "Content-Type: application/json" \
+[ -n "${TOKEN:-}" ] || TOKEN=$(curl -s "$URL/auth/v1/token?grant_type=password" -H "apikey: $ANON" -H "Content-Type: application/json" \
   -d "{\"email\":\"$TEST_EMAIL\",\"password\":\"$TEST_PASS\"}" | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
+[ -n "${TOKEN:-}" ] || { echo "FAIL could not sign in"; exit 1; }
 UID_=$(python3 -c "import base64,json,sys;p=sys.argv[1].split('.')[1];p+='='*(-len(p)%4);print(json.loads(base64.urlsafe_b64decode(p))['sub'])" "$TOKEN")
 fail=0
 patch() { curl -s -o /tmp/pbg.out -w "%{http_code}" -X PATCH "$URL/rest/v1/profiles?id=eq.$UID_" \

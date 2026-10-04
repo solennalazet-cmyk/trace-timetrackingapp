@@ -9,3 +9,6 @@
 ## Signed-out privacy
 - Never render session summaries, entry history, unassigned counts, or lingering account toasts when no user is authenticated; sign-out must clear their local UI state. Why: work-session information is private account data.
 - Preserve the non-display `trace_recently_stopped` marker across sign-out; it prevents a failed server cleanup from resurrecting an already clocked-out session. Why: privacy cleanup must not remove timer conflict protection.
+
+## Billing fields are server-only
+- `profiles` plan/subscription/trial/Stripe/period columns are blocked for signed-in users by the `guard_profile_billing_columns` trigger; write them only from edge functions with the service role. Why: users could otherwise grant themselves Pro. Check: `scripts/checks/profile_billing_guard.sh`.

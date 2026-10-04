@@ -62,7 +62,12 @@ Deno.serve(async (req) => {
         metadata: { supabase_user_id: user.id },
       });
       customerId = customer.id;
-      await supabase
+      // Billing columns are write-protected for signed-in users; use the service role.
+      const admin = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      await admin
         .from("profiles")
         .update({ stripe_customer_id: customerId })
         .eq("id", user.id);

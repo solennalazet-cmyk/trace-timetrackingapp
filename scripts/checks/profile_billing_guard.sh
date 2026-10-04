@@ -15,8 +15,8 @@ for body in '{"plan":"pro"}' '{"subscription_status":"active"}' '{"billing_inter
   '{"trial_started_at":"2030-01-01T00:00:00Z"}' '{"stripe_customer_id":"cus_x"}' '{"stripe_subscription_id":"sub_x"}'; do
   code=$(patch "$body"); if [ "$code" -ge 400 ]; then echo "PASS blocked $body ($code)"; else echo "FAIL allowed $body"; fail=1; fi
 done
-NAME=$(curl -s "$URL/rest/v1/profiles?id=eq.$UID_&select=full_name" -H "apikey: $ANON" -H "Authorization: Bearer $TOKEN" | python3 -c 'import sys,json;print(json.dumps(json.load(sys.stdin)[0]["full_name"]))')
-code=$(patch "{\"full_name\":$NAME,\"business_name\":null}")
+NAME=$(curl -s "$URL/rest/v1/profiles?id=eq.$UID_&select=full_name,business_name" -H "apikey: $ANON" -H "Authorization: Bearer $TOKEN" | python3 -c 'import sys,json;r=json.load(sys.stdin)[0];print(json.dumps(r["full_name"])+",\"business_name\":"+json.dumps(r["business_name"]))')
+code=$(patch "{\"full_name\":$NAME}")
 if [ "$code" -lt 300 ]; then echo "PASS name/business edit allowed"; else echo "FAIL name edit ($code)"; cat /tmp/pbg.out; fail=1; fi
 code=$(curl -s -o /tmp/pbg.out -w "%{http_code}" -X POST "$URL/rest/v1/profiles" -H "apikey: $ANON" -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" -d "{\"id\":\"$UID_\",\"plan\":\"pro\"}")

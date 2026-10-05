@@ -326,30 +326,39 @@ export type Database = {
           amount: number
           created_at: string
           currency: string
+          fully_settled: boolean
           id: string
+          legacy_shared: boolean
           note: string | null
           paid_at: string
           recorded_by_user_id: string
+          shortfall: number | null
           submitted_report_id: string
         }
         Insert: {
           amount: number
           created_at?: string
           currency?: string
+          fully_settled?: boolean
           id?: string
+          legacy_shared?: boolean
           note?: string | null
           paid_at?: string
           recorded_by_user_id: string
+          shortfall?: number | null
           submitted_report_id: string
         }
         Update: {
           amount?: number
           created_at?: string
           currency?: string
+          fully_settled?: boolean
           id?: string
+          legacy_shared?: boolean
           note?: string | null
           paid_at?: string
           recorded_by_user_id?: string
+          shortfall?: number | null
           submitted_report_id?: string
         }
         Relationships: [
@@ -367,6 +376,7 @@ export type Database = {
           client_id: string
           created_at: string
           currency: string
+          employer_hidden_at: string | null
           employer_user_id: string | null
           entries_snapshot: Json
           id: string
@@ -390,6 +400,7 @@ export type Database = {
           client_id: string
           created_at?: string
           currency?: string
+          employer_hidden_at?: string | null
           employer_user_id?: string | null
           entries_snapshot?: Json
           id?: string
@@ -413,6 +424,7 @@ export type Database = {
           client_id?: string
           created_at?: string
           currency?: string
+          employer_hidden_at?: string | null
           employer_user_id?: string | null
           entries_snapshot?: Json
           id?: string

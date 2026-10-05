@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, X, Wallet, AlertCircle } from "lucide-react";
+import { Check, X, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -19,7 +19,7 @@ const REJECT_LABELS: Record<string, string> = {
 interface Event {
   id: string;
   ts: string; // ISO
-  type: "approved" | "rejected" | "payment";
+  type: "approved" | "rejected";
   clientName: string;
   amount?: number;
   currency?: string;
@@ -29,8 +29,8 @@ interface Event {
 
 
 /**
- * Worker-side notifications: surfaces approved/rejected reports and
- * incoming payments since the user last dismissed.
+ * Worker-side notifications: surfaces approved/rejected reports since the user last
+ * dismissed. Payments from the other side are never notified.
  */
 const WorkerNotificationsCard = () => {
   const { user } = useAuth();
@@ -41,43 +41,20 @@ const WorkerNotificationsCard = () => {
   const load = useCallback(async () => {
     if (!user) return;
 
-    const [{ data: rRows }, { data: pRows }] = await Promise.all([
-      supabase
-        .from("submitted_reports")
-        .select("id, client_id, status, reviewed_at, rejection_reason, rejection_note, total_amount, currency, notify_worker")
-        .eq("worker_user_id", user.id)
-        .in("status", ["approved", "rejected"])
-        .not("reviewed_at", "is", null)
-        .not("employer_user_id", "is", null)
-        .neq("employer_user_id", user.id)
-        .order("reviewed_at", { ascending: false })
-        .limit(10),
-      supabase
-        .from("report_payments")
-        .select("id, submitted_report_id, amount, currency, created_at, recorded_by_user_id")
-        .neq("recorded_by_user_id", user.id) // payments WE recorded shouldn't notify us
-        .order("created_at", { ascending: false })
-        .limit(10),
-    ]);
+    // Payments recorded by the other side are private: no payment notices here.
+    const { data: rRows } = await supabase
+      .from("submitted_reports")
+      .select("id, client_id, status, reviewed_at, rejection_reason, rejection_note, total_amount, currency, notify_worker")
+      .eq("worker_user_id", user.id)
+      .in("status", ["approved", "rejected"])
+      .not("reviewed_at", "is", null)
+      .not("employer_user_id", "is", null)
+      .neq("employer_user_id", user.id)
+      .order("reviewed_at", { ascending: false })
+      .limit(10);
 
     const reportRows = (rRows ?? []) as any[];
-    const paymentRows = (pRows ?? []) as any[];
-
-    // Resolve client names — for payments we need to look up the report → client
-    const reportIdsFromPayments = Array.from(new Set(paymentRows.map((p) => p.submitted_report_id)));
-    let paymentReportMap = new Map<string, { client_id: string }>();
-    if (reportIdsFromPayments.length > 0) {
-      const { data: prRows } = await supabase
-        .from("submitted_reports")
-        .select("id, client_id")
-        .in("id", reportIdsFromPayments);
-      paymentReportMap = new Map(((prRows ?? []) as any[]).map((r) => [r.id, { client_id: r.client_id }]));
-    }
-
-    const clientIds = Array.from(new Set([
-      ...reportRows.map((r) => r.client_id),
-      ...Array.from(paymentReportMap.values()).map((v) => v.client_id),
-    ])).filter(Boolean);
+    const clientIds = Array.from(new Set(reportRows.map((r) => r.client_id))).filter(Boolean);
 
     let nameMap = new Map<string, string>();
     if (clientIds.length > 0) {
@@ -102,18 +79,6 @@ const WorkerNotificationsCard = () => {
         currency: r.currency,
         reason: r.rejection_reason,
         note: r.rejection_note,
-      });
-    }
-    for (const p of paymentRows) {
-      if (Date.parse(p.created_at) < REJECT_ALERT_CUTOFF) continue;
-      const cid = paymentReportMap.get(p.submitted_report_id)?.client_id;
-      evts.push({
-        id: `p-${p.id}`,
-        ts: p.created_at,
-        type: "payment",
-        clientName: (cid && nameMap.get(cid)) || "Client",
-        amount: Number(p.amount),
-        currency: p.currency,
       });
     }
     evts.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
@@ -153,10 +118,6 @@ const WorkerNotificationsCard = () => {
           title = `${e.clientName} rejected your report`;
           const reasonLabel = e.reason ? REJECT_LABELS[e.reason] ?? e.reason : "See details";
           body = e.note ? `${reasonLabel} — ${e.note}` : reasonLabel;
-        } else {
-          Icon = Wallet;
-          title = `Payment received from ${e.clientName}`;
-          body = `${sym}${(e.amount ?? 0).toFixed(2)}`;
         }
 
         return (

@@ -41,16 +41,18 @@ const EmployerRightPanel = () => {
         .from("submitted_reports")
         .select("id, total_amount, currency, status")
         .eq("employer_user_id", user.id)
-        .in("status", ["approved", "paid"]),
+        .is("employer_hidden_at", null),
+      // The database returns only payments this employer recorded plus legacy shared ones.
       supabase
         .from("report_payments")
-        .select("amount, currency, paid_at, created_at")
-        .eq("recorded_by_user_id", user.id)
+        .select("submitted_report_id, amount, currency, paid_at, created_at")
         .order("paid_at", { ascending: false }),
     ]);
 
-    const reports = (reportsRes.data ?? []) as any[];
-    const payments = (paymentsRes.data ?? []) as any[];
+    const allReports = (reportsRes.data ?? []) as any[];
+    const reportIds = new Set(allReports.map((r) => r.id));
+    const reports = allReports.filter((r) => r.status === "approved" || r.status === "paid");
+    const payments = ((paymentsRes.data ?? []) as any[]).filter((p) => reportIds.has(p.submitted_report_id));
     const currency = reports[0]?.currency ?? payments[0]?.currency ?? "EUR";
     const approvedTotal = reports.reduce((s, r) => s + Number(r.total_amount ?? 0), 0);
     const paidTotal = payments.reduce((s, p) => s + Number(p.amount ?? 0), 0);

@@ -62,6 +62,7 @@ const EmployerDashboardSection = ({ refreshKey, breaksDefaultOpen = false }: Pro
         .from("submitted_reports")
         .select("id, client_id, worker_user_id, period_start, period_end, total_amount, currency, status, submitted_at, reviewed_at, entries_snapshot")
         .eq("employer_user_id", user.id)
+        .is("employer_hidden_at", null)
         .gte("period_end", fromKey)
         .lte("period_start", toKey);
       if (cancelled) return;

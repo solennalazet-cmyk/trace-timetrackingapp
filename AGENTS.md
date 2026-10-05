@@ -26,3 +26,6 @@
 6. Reuse before adding: before writing a new query, rate calculation, role check or device-storage key, check whether one exists. Money maths lives in one place (src/lib), used by both sides.
 7. After every change run the build and existing tests, run scripts/checks/assignment_box_stability.py when dialogs, sheets, AssignmentModal, viewport or the timer stop flow were touched, and add a test for any bug fixed. Report what you ran and the results, and list every file changed.
 8. If something is unclear, a test fails or you are unsure, say so instead of guessing.
+
+## Payments are private per side
+- `report_payments` rows are visible only to their recorder, except rows tagged `legacy_shared` (pre-split data, readable by both parties); fully_settled/shortfall only on the freelancer's own new rows; `employer_hidden_at` only set by the employer on reviewed reports; approved employer reports can't be deleted and a delete can never cascade the other party's payments. All enforced by RLS and triggers. Why: each side's paid/due must reflect only their own records. Check: run `scripts/checks/payment_privacy_guard.sql` as a database admin (rolled back); every row must read PASS.

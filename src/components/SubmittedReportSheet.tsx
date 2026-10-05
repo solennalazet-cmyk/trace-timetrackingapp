@@ -1,19 +1,13 @@
 import { useMemo, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import {
-  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
-} from "@/components/ui/alert-dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Check, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { EXPORT_COLUMN_OPTIONS, type ExportColumnKey } from "@/lib/export-columns";
 import { interpretReviewResult, REVIEWABLE_STATUS } from "@/lib/review-guard";
 import { runExclusive } from "@/lib/action-lock";
+import RejectReportDialog from "@/components/RejectReportDialog";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
 
@@ -63,8 +57,6 @@ const formatDate = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("
 
 const SubmittedReportSheet = ({ open, onOpenChange, report, onReviewed, readOnly }: Props) => {
   const [rejectOpen, setRejectOpen] = useState(false);
-  const [reason, setReason] = useState<string>("missing_session");
-  const [note, setNote] = useState("");
   const [working, setWorking] = useState(false);
 
   const sym = report ? (CURRENCY_SYMBOLS[report.currency] ?? "€") : "€";
@@ -147,33 +139,6 @@ const SubmittedReportSheet = ({ open, onOpenChange, report, onReviewed, readOnly
     );
     if (!ok) return;
     toast.success("Report approved.");
-    onReviewed?.();
-    onOpenChange(false);
-  };
-
-  const handleReject = async () => {
-    if (!report || working) return;
-    if (reason === "other" && note.trim().length === 0) {
-      toast.error("Please add a note explaining the rejection.");
-      return;
-    }
-    const ok = await applyReview(async () =>
-      await supabase
-        .from("submitted_reports")
-        .update({
-          status: "rejected",
-          rejection_reason: reason,
-          rejection_note: note.trim() || null,
-        } as any)
-        .eq("id", report.id)
-        .eq("status", REVIEWABLE_STATUS)
-        .select("id"),
-    );
-    if (!ok) return;
-    toast.success("Report rejected. The freelancer has been notified.");
-    setRejectOpen(false);
-    setNote("");
-    setReason("missing_session");
     onReviewed?.();
     onOpenChange(false);
   };
@@ -291,42 +256,27 @@ const SubmittedReportSheet = ({ open, onOpenChange, report, onReviewed, readOnly
                 </Button>
               </div>
             )}
+            {!readOnly && report.status === "approved" && (
+              <Button
+                variant="outline"
+                className="w-full rounded-xl h-12 gap-2 justify-center font-medium"
+                onClick={() => setRejectOpen(true)}
+              >
+                <X className="w-4 h-4" /> Reject report
+              </Button>
+            )}
           </div>
         </SheetContent>
       </Sheet>
 
-      <AlertDialog open={rejectOpen} onOpenChange={setRejectOpen}>
-        <AlertDialogContent className="rounded-2xl w-[calc(100vw-2rem)] max-w-[400px]">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reject report</AlertDialogTitle>
-            <AlertDialogDescription>
-              The freelancer will be notified with your reason and can edit and resubmit.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-3">
-            <RadioGroup value={reason} onValueChange={setReason}>
-              {REJECT_REASONS.map((r) => (
-                <div key={r.value} className="flex items-center gap-2">
-                  <RadioGroupItem value={r.value} id={`reason-${r.value}`} />
-                  <Label htmlFor={`reason-${r.value}`} className="text-sm font-normal">{r.label}</Label>
-                </div>
-              ))}
-            </RadioGroup>
-            <Textarea
-              placeholder={reason === "other" ? "Required — describe the issue" : "Optional note for the freelancer"}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              rows={3}
-            />
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={working}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleReject} disabled={working}>
-              {working ? "Rejecting…" : "Reject report"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <RejectReportDialog
+        open={rejectOpen}
+        onOpenChange={setRejectOpen}
+        reportId={report.id}
+        fromStatus={report.status}
+        currency={report.currency}
+        onRejected={() => { onReviewed?.(); onOpenChange(false); }}
+      />
     </>
   );
 };

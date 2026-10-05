@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
@@ -9,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { interpretReviewResult, REVIEWABLE_STATUS } from "@/lib/review-guard";
+import { interpretReviewResult, REJECTABLE_STATUSES } from "@/lib/review-guard";
 import { runExclusive } from "@/lib/action-lock";
 
 export const REJECT_REASONS = [
@@ -24,9 +25,23 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   reportId: string | null;
   onRejected?: () => void;
+  /** Status the employer sees; "approved" means reversing an approval. */
+  fromStatus?: string;
+  currency?: string;
 }
 
-const RejectReportDialog = ({ open, onOpenChange, reportId, onRejected }: Props) => {
+const RejectReportDialog = ({ open, onOpenChange, reportId, onRejected, fromStatus, currency }: Props) => {
+  const { user } = useAuth();
+  const [myPaid, setMyPaid] = useState(0);
+  useEffect(() => {
+    setMyPaid(0);
+    if (!open || !reportId || !user || fromStatus !== "approved") return;
+    let cancelled = false;
+    supabase.from("report_payments").select("amount").eq("submitted_report_id", reportId).eq("recorded_by_user_id", user.id)
+      .then(({ data }) => { if (!cancelled) setMyPaid((data ?? []).reduce((s: number, p: any) => s + Number(p.amount), 0)); });
+    return () => { cancelled = true; };
+  }, [open, reportId, user, fromStatus]);
+  const sym = ({ EUR: "€", USD: "$", GBP: "£" } as Record<string, string>)[currency ?? "EUR"] ?? "€";
   const [reason, setReason] = useState<string>("missing_session");
   const [note, setNote] = useState("");
   const [notify, setNotify] = useState(true);
@@ -49,7 +64,7 @@ const RejectReportDialog = ({ open, onOpenChange, reportId, onRejected }: Props)
           notify_worker: notify,
         } as any)
         .eq("id", reportId)
-        .eq("status", REVIEWABLE_STATUS)
+        .in("status", [...REJECTABLE_STATUSES])
         .select("id"),
     );
     setWorking(false);
@@ -82,6 +97,11 @@ const RejectReportDialog = ({ open, onOpenChange, reportId, onRejected }: Props)
               ? "The freelancer will be notified with your reason and can edit and resubmit."
               : "The freelancer won't be notified. The report is marked rejected on your side only."}
           </AlertDialogDescription>
+          {myPaid > 0 && (
+            <p className="text-xs text-muted-foreground rounded-xl bg-muted/50 p-3 mt-2">
+              You recorded {sym}{myPaid.toFixed(2)} on this report. The payment stays on record but will not count while the report is rejected.
+            </p>
+          )}
         </AlertDialogHeader>
         <div className="space-y-3">
           <RadioGroup value={reason} onValueChange={setReason}>

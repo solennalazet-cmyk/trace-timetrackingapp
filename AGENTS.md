@@ -32,3 +32,7 @@
 
 ## Report review transitions
 - Employer may change status only submitted→approved/rejected or approved→rejected; nothing leaves rejected (resend = new report). Enforced by RLS + `guard_submitted_report_update`. Why: fix mistaken approvals without editing amounts. Check: payment_privacy_guard.sql.
+
+## Sent reports are locked for the freelancer
+- Once a report linked to an employer is sent (submitted, approved or rejected), the freelancer cannot change any field, including submitted_at and source; corrections mean delete (where allowed) and send a new report. pending_connection and solo reports stay editable, but only the automatic connection link may attach an employer or change their status. New pending_connection rows have no employer; new linked rows start as submitted and only to an accepted connection. Enforced by `guard_submitted_report_insert` / `guard_submitted_report_update` (the link sets a transaction-local `trace.system_link` flag). Why: the employer's review must not be bypassed. Check: payment_privacy_guard.sql.
+- Employer-only review data (e.g. session acknowledgements) lives in `report_acknowledgements`, never on `submitted_reports`, because the freelancer can read every column of their own report rows. Why: row-level rules cannot hide single columns.

@@ -99,7 +99,7 @@ const RejectReportDialog = ({ open, onOpenChange, reportId, onRejected, fromStat
           </AlertDialogDescription>
           {myPaid > 0 && (
             <p className="text-xs text-muted-foreground rounded-xl bg-muted/50 p-3 mt-2">
-              You recorded {sym}{myPaid.toFixed(2)} on this report. The payment stays on record but will not count while the report is rejected.
+              You recorded {sym}{myPaid.toFixed(2)} on this report. It stays on record and still counts as money paid. The report itself no longer counts as due while it is rejected.
             </p>
           )}
         </AlertDialogHeader>

@@ -149,8 +149,8 @@ SELECT pg_temp.blocked(format($q$INSERT INTO public.report_acknowledgements (sub
 SELECT pg_temp.blocked(format($q$UPDATE public.report_acknowledgements SET acknowledged_at = now() WHERE submitted_report_id = %L$q$, approved_rep), 'freelancer cannot change acknowledgements') FROM t_ids;
 -- Solo and pending_connection stay editable.
 INSERT INTO public.submitted_reports (id, worker_user_id, employer_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, shared_columns, entries_snapshot, status)
-SELECT solo, w, NULL, client, '2099-08-01', '2099-08-31', 1, 10, 'EUR', '{}', '[]', 'approved' FROM t_ids, t_lock
-UNION ALL SELECT pc, w, NULL, client, '2099-09-01', '2099-09-30', 1, 10, 'EUR', '{}', '[]', 'pending_connection' FROM t_ids, t_lock;
+SELECT solo, w, NULL::uuid, client, '2099-08-01'::date, '2099-08-31'::date, 1, 10, 'EUR', '{}'::text[], '[]'::jsonb, 'approved' FROM t_ids, t_lock
+UNION ALL SELECT pc, w, NULL::uuid, client, '2099-09-01'::date, '2099-09-30'::date, 1, 10, 'EUR', '{}'::text[], '[]'::jsonb, 'pending_connection' FROM t_ids, t_lock;
 UPDATE public.submitted_reports SET total_amount = 20 WHERE id = (SELECT solo FROM t_lock);
 SELECT pg_temp.ok((SELECT total_amount = 20 FROM public.submitted_reports, t_lock WHERE id = solo), 'solo report stays editable by its owner');
 UPDATE public.submitted_reports SET total_amount = 30 WHERE id = (SELECT pc FROM t_lock);
@@ -168,7 +168,7 @@ SELECT set_config('request.jwt.claims', '{}', true);
 ALTER TABLE public.clients DISABLE TRIGGER enforce_plan_limits_clients;
 INSERT INTO public.clients (id, user_id, name, connection_status) SELECT linkc, w, 'Link test', 'pending' FROM t_ids, t_lock;
 INSERT INTO public.submitted_reports (id, worker_user_id, employer_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, shared_columns, entries_snapshot, status)
-SELECT pc2, w, NULL, linkc, '2099-10-01', '2099-10-31', 1, 10, 'EUR', '{}', '[]', 'pending_connection' FROM t_ids, t_lock;
+SELECT pc2, w, NULL::uuid, linkc, '2099-10-01'::date, '2099-10-31'::date, 1, 10, 'EUR', '{}'::text[], '[]'::jsonb, 'pending_connection' FROM t_ids, t_lock;
 SELECT set_config('request.jwt.claims', json_build_object('sub', e, 'role', 'authenticated')::text, true) FROM t_ids;
 UPDATE public.clients SET connection_status = 'accepted', connected_user_id = (SELECT e FROM t_ids) WHERE id = (SELECT linkc FROM t_lock);
 SELECT set_config('request.jwt.claims', '{}', true);

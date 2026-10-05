@@ -15,11 +15,11 @@ GRANT SELECT ON t_ids TO authenticated;
 
 -- Fixture reports (as the system, then rolled back).
 INSERT INTO public.submitted_reports (id, worker_user_id, employer_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, shared_columns, entries_snapshot, status, submitted_at)
-SELECT approved_rep, w, e, client, '2099-01-01'::date, '2099-01-31'::date, 10, 300, 'EUR', '{}', '[]'::jsonb, 'approved', now() FROM t_ids
-UNION ALL SELECT r2, w, e, client, '2099-02-01'::date, '2099-02-28'::date, 10, 200, 'EUR', '{}', '[]'::jsonb, 'approved', now() FROM t_ids
-UNION ALL SELECT pending_rep, w, e, client, '2099-03-01'::date, '2099-03-31'::date, 1, 50, 'EUR', '{}', '[]'::jsonb, 'submitted', now() FROM t_ids
-UNION ALL SELECT rej_rep, w, e, client, '2099-04-01'::date, '2099-04-30'::date, 1, 50, 'EUR', '{}', '[]'::jsonb, 'rejected', now() FROM t_ids
-UNION ALL SELECT solo_rep, w, NULL, client, '2099-05-01'::date, '2099-05-31'::date, 1, 50, 'EUR', '{}', '[]'::jsonb, 'approved', now() FROM t_ids;
+SELECT approved_rep, w, e, client, '2099-01-01'::date, '2099-01-31'::date, 10, 300, 'EUR', '{}'::text[], '[]'::jsonb, 'approved', now() FROM t_ids
+UNION ALL SELECT r2, w, e, client, '2099-02-01'::date, '2099-02-28'::date, 10, 200, 'EUR', '{}'::text[], '[]'::jsonb, 'approved', now() FROM t_ids
+UNION ALL SELECT pending_rep, w, e, client, '2099-03-01'::date, '2099-03-31'::date, 1, 50, 'EUR', '{}'::text[], '[]'::jsonb, 'submitted', now() FROM t_ids
+UNION ALL SELECT rej_rep, w, e, client, '2099-04-01'::date, '2099-04-30'::date, 1, 50, 'EUR', '{}'::text[], '[]'::jsonb, 'rejected', now() FROM t_ids
+UNION ALL SELECT solo_rep, w, NULL, client, '2099-05-01'::date, '2099-05-31'::date, 1, 50, 'EUR', '{}'::text[], '[]'::jsonb, 'approved', now() FROM t_ids;
 -- One legacy row recorded by the employer.
 INSERT INTO public.report_payments (submitted_report_id, amount, currency, paid_at, recorded_by_user_id, legacy_shared)
 SELECT approved_rep, 100, 'EUR', '2099-02-01'::date, e, true FROM t_ids;
@@ -78,7 +78,7 @@ DELETE FROM public.submitted_reports WHERE id = (SELECT solo_rep FROM t_ids);
 SELECT pg_temp.ok((SELECT count(*) FROM public.submitted_reports, t_ids WHERE id = solo_rep) = 0, 'solo report can be deleted by its owner');
 DELETE FROM public.submitted_reports WHERE id = (SELECT rej_rep FROM t_ids);
 SELECT pg_temp.ok((SELECT count(*) FROM public.submitted_reports, t_ids WHERE id = rej_rep) = 0, 'rejected report can be deleted by the freelancer');
-SELECT pg_temp.blocked(format($q$INSERT INTO public.submitted_reports (worker_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, shared_columns, entries_snapshot, status, submitted_at, employer_hidden_at) VALUES (%L, %L, '2099-06-01'::date, '2099-06-30'::date, 1, 1, 'EUR', '{}', '[]'::jsonb, 'approved', now(), now())$q$, w, client), 'freelancer cannot insert with employer_hidden_at') FROM t_ids;
+SELECT pg_temp.blocked(format($q$INSERT INTO public.submitted_reports (worker_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, shared_columns, entries_snapshot, status, submitted_at, employer_hidden_at) VALUES (%L, %L, '2099-06-01'::date, '2099-06-30'::date, 1, 1, 'EUR', '{}'::text[], '[]'::jsonb, 'approved', now(), now())$q$, w, client), 'freelancer cannot insert with employer_hidden_at') FROM t_ids;
 RESET ROLE;
 
 SELECT pg_temp.act_as(gen_random_uuid());

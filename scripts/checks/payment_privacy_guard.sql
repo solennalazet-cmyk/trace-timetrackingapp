@@ -5,11 +5,12 @@ BEGIN;
 
 CREATE TEMP TABLE t_ids ON COMMIT DROP AS
 SELECT s.worker_user_id AS w, s.employer_user_id AS e,
-       (SELECT id FROM public.clients c WHERE c.user_id = s.worker_user_id LIMIT 1) AS client,
+       (SELECT id FROM public.clients c WHERE c.user_id = s.worker_user_id AND c.connected_user_id = s.employer_user_id AND c.connection_status = 'accepted' LIMIT 1) AS client,
        gen_random_uuid() AS approved_rep, gen_random_uuid() AS pending_rep, gen_random_uuid() AS solo_rep,
        gen_random_uuid() AS rej_rep, gen_random_uuid() AS r2
 FROM public.submitted_reports s
 WHERE s.employer_user_id IS NOT NULL AND s.employer_user_id <> s.worker_user_id
+  AND EXISTS (SELECT 1 FROM public.clients c WHERE c.user_id = s.worker_user_id AND c.connected_user_id = s.employer_user_id AND c.connection_status = 'accepted')
 LIMIT 1;
 GRANT SELECT ON t_ids TO authenticated;
 CREATE TEMP TABLE t_res (n serial, result text) ON COMMIT DROP;
@@ -34,7 +35,6 @@ BEGIN
   INSERT INTO t_res(result) VALUES (CASE WHEN n = 0 THEN 'PASS ' || label || ' (no rows affected)' ELSE 'FAIL ' || label || ' (allowed)' END);
 END $$;
 
-SELECT pg_temp.act_as(w) FROM t_ids;
 -- Fixture reports (as the system, then rolled back).
 INSERT INTO public.submitted_reports (id, worker_user_id, employer_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, shared_columns, entries_snapshot, status, submitted_at)
 SELECT approved_rep, w, e, client, '2099-01-01'::date, '2099-01-31'::date, 10, 300, 'EUR', '{}'::text[], '[]'::jsonb, 'approved', now() FROM t_ids
@@ -125,6 +125,55 @@ INSERT INTO public.submitted_reports (id, worker_user_id, employer_user_id, clie
 SELECT resend, w, e, client, '2099-03-01'::date, '2099-03-31'::date, 6, 240, 'EUR', '{}'::text[], '[]'::jsonb, 'submitted' FROM t_ids, t_rev;
 SELECT pg_temp.ok((SELECT status = 'submitted' FROM public.submitted_reports, t_rev WHERE id = resend), 'freelancer can resend after an approved report was rejected');
 RESET ROLE;
+
+-- ===== Freelancer lock on sent reports =====
+SELECT set_config('request.jwt.claims', '{}', true);
+CREATE TEMP TABLE t_lock ON COMMIT DROP AS SELECT gen_random_uuid() AS solo, gen_random_uuid() AS pc, gen_random_uuid() AS pc2, gen_random_uuid() AS linkc;
+GRANT SELECT ON t_lock TO authenticated;
+INSERT INTO public.report_acknowledgements (submitted_report_id, employer_user_id, session_id, acknowledged_by_user_id)
+SELECT approved_rep, e, 's1', e FROM t_ids;
+
+SELECT pg_temp.act_as(w) FROM t_ids;
+SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET status = 'approved' WHERE id = %L$q$, pending_rep), 'freelancer cannot approve their own sent report') FROM t_ids;
+SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET total_amount = 9999 WHERE id = %L$q$, approved_rep), 'freelancer cannot change the amount of an approved report') FROM t_ids;
+SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET entries_snapshot = '[]'::jsonb, total_hours = 99 WHERE id = %L$q$, r2), 'freelancer cannot change the sessions of an approved report') FROM t_ids;
+SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET total_amount = 1 WHERE id = %L$q$, pending_rep), 'freelancer cannot edit a report awaiting review') FROM t_ids;
+SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET submitted_at = now() - interval '90 days' WHERE id = %L$q$, pending_rep), 'freelancer cannot change submitted_at of a sent report') FROM t_ids;
+SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET source = 'imported' WHERE id = %L$q$, pending_rep), 'freelancer cannot change source of a sent report') FROM t_ids;
+SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET rejection_note = NULL, total_amount = 1 WHERE id = %L$q$, x), 'freelancer cannot edit a rejected report') FROM t_rev;
+SELECT pg_temp.blocked(format($q$INSERT INTO public.submitted_reports (worker_user_id, employer_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, shared_columns, entries_snapshot, status) VALUES (%L, %L, %L, '2099-07-01', '2099-07-31', 1, 1, 'EUR', '{}', '[]', 'pending_connection')$q$, w, e, client), 'pending_connection insert cannot name an employer') FROM t_ids;
+SELECT pg_temp.blocked(format($q$INSERT INTO public.submitted_reports (worker_user_id, employer_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, shared_columns, entries_snapshot, status) VALUES (%L, %L, %L, '2099-07-01', '2099-07-31', 1, 1, 'EUR', '{}', '[]', 'approved')$q$, w, e, client), 'freelancer cannot insert a linked report as approved') FROM t_ids;
+SELECT pg_temp.blocked(format($q$INSERT INTO public.submitted_reports (worker_user_id, employer_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, shared_columns, entries_snapshot, status) VALUES (%L, %L, %L, '2099-07-01', '2099-07-31', 1, 1, 'EUR', '{}', '[]', 'submitted')$q$, w, gen_random_uuid(), client), 'freelancer cannot send to an employer they are not connected to') FROM t_ids;
+SELECT pg_temp.ok((SELECT count(*) = 0 FROM public.report_acknowledgements a, t_ids WHERE a.submitted_report_id = approved_rep), 'freelancer cannot read acknowledgements');
+SELECT pg_temp.blocked(format($q$INSERT INTO public.report_acknowledgements (submitted_report_id, employer_user_id, acknowledged_by_user_id) VALUES (%L, %L, %L)$q$, approved_rep, e, w), 'freelancer cannot write acknowledgements') FROM t_ids;
+SELECT pg_temp.blocked(format($q$UPDATE public.report_acknowledgements SET acknowledged_at = now() WHERE submitted_report_id = %L$q$, approved_rep), 'freelancer cannot change acknowledgements') FROM t_ids;
+-- Solo and pending_connection stay editable.
+INSERT INTO public.submitted_reports (id, worker_user_id, employer_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, shared_columns, entries_snapshot, status)
+SELECT solo, w, NULL::uuid, client, '2099-08-01'::date, '2099-08-31'::date, 1, 10, 'EUR', '{}'::text[], '[]'::jsonb, 'approved' FROM t_ids, t_lock
+UNION ALL SELECT pc, w, NULL::uuid, client, '2099-09-01'::date, '2099-09-30'::date, 1, 10, 'EUR', '{}'::text[], '[]'::jsonb, 'pending_connection' FROM t_ids, t_lock;
+UPDATE public.submitted_reports SET total_amount = 20 WHERE id = (SELECT solo FROM t_lock);
+SELECT pg_temp.ok((SELECT total_amount = 20 FROM public.submitted_reports, t_lock WHERE id = solo), 'solo report stays editable by its owner');
+UPDATE public.submitted_reports SET total_amount = 30 WHERE id = (SELECT pc FROM t_lock);
+SELECT pg_temp.ok((SELECT total_amount = 30 FROM public.submitted_reports, t_lock WHERE id = pc), 'pending_connection report stays editable');
+SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET employer_user_id = %L, status = 'submitted' WHERE id = %L$q$, e, solo), 'freelancer cannot attach an employer to a solo report') FROM t_ids, t_lock;
+SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET status = 'submitted' WHERE id = %L$q$, pc), 'freelancer cannot move pending_connection to submitted by hand') FROM t_lock;
+RESET ROLE;
+
+SELECT pg_temp.act_as(e) FROM t_ids;
+SELECT pg_temp.ok((SELECT count(*) = 1 FROM public.report_acknowledgements a, t_ids WHERE a.submitted_report_id = approved_rep), 'employer can read their acknowledgements');
+RESET ROLE;
+
+-- Automatic connection link still moves pending_connection to submitted (accepted by the employer).
+SELECT set_config('request.jwt.claims', '{}', true);
+ALTER TABLE public.clients DISABLE TRIGGER enforce_plan_limits_clients;
+INSERT INTO public.clients (id, user_id, name, connection_status) SELECT linkc, w, 'Link test', 'pending' FROM t_ids, t_lock;
+INSERT INTO public.submitted_reports (id, worker_user_id, employer_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, shared_columns, entries_snapshot, status)
+SELECT pc2, w, NULL::uuid, linkc, '2099-10-01'::date, '2099-10-31'::date, 1, 10, 'EUR', '{}'::text[], '[]'::jsonb, 'pending_connection' FROM t_ids, t_lock;
+SELECT set_config('request.jwt.claims', json_build_object('sub', e, 'role', 'authenticated')::text, true) FROM t_ids;
+UPDATE public.clients SET connection_status = 'accepted', connected_user_id = (SELECT e FROM t_ids) WHERE id = (SELECT linkc FROM t_lock);
+SELECT set_config('request.jwt.claims', '{}', true);
+SELECT pg_temp.ok((SELECT status = 'submitted' AND employer_user_id = e FROM public.submitted_reports, t_ids, t_lock WHERE id = pc2), 'automatic connection link still delivers a pending report');
+SELECT pg_temp.ok(current_setting('trace.system_link', true) IS DISTINCT FROM 'on', 'connection link flag is switched off afterwards');
 
 SELECT result FROM t_res ORDER BY n;
 ROLLBACK;

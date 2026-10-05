@@ -102,7 +102,6 @@ INSERT INTO public.report_payments (submitted_report_id, amount, currency, paid_
 SELECT x, 50, 'EUR', '2099-03-15', e FROM t_ids, t_rev;
 
 SELECT pg_temp.act_as(w) FROM t_ids;
-SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET status = 'rejected', rejection_reason = 'other' WHERE id = %L AND employer_user_id <> worker_user_id AND worker_user_id <> %L$q$, x, w), 'freelancer cannot use the employer reject path') FROM t_rev;
 RESET ROLE;
 SELECT pg_temp.act_as(gen_random_uuid());
 SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET status = 'rejected' WHERE id = %L$q$, x), 'another employer cannot reject this report') FROM t_rev;

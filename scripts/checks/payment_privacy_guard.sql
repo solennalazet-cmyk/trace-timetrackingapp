@@ -13,17 +13,6 @@ WHERE s.employer_user_id IS NOT NULL AND s.employer_user_id <> s.worker_user_id
 LIMIT 1;
 GRANT SELECT ON t_ids TO authenticated;
 
--- Fixture reports (as the system, then rolled back).
-INSERT INTO public.submitted_reports (id, worker_user_id, employer_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, shared_columns, entries_snapshot, status, submitted_at)
-SELECT approved_rep, w, e, client, '2099-01-01'::date, '2099-01-31'::date, 10, 300, 'EUR', '{}'::text[], '[]'::jsonb, 'approved', now() FROM t_ids
-UNION ALL SELECT r2, w, e, client, '2099-02-01'::date, '2099-02-28'::date, 10, 200, 'EUR', '{}'::text[], '[]'::jsonb, 'approved', now() FROM t_ids
-UNION ALL SELECT pending_rep, w, e, client, '2099-03-01'::date, '2099-03-31'::date, 1, 50, 'EUR', '{}'::text[], '[]'::jsonb, 'submitted', now() FROM t_ids
-UNION ALL SELECT rej_rep, w, e, client, '2099-04-01'::date, '2099-04-30'::date, 1, 50, 'EUR', '{}'::text[], '[]'::jsonb, 'rejected', now() FROM t_ids
-UNION ALL SELECT solo_rep, w, NULL, client, '2099-05-01'::date, '2099-05-31'::date, 1, 50, 'EUR', '{}'::text[], '[]'::jsonb, 'approved', now() FROM t_ids;
--- One legacy row recorded by the employer.
-INSERT INTO public.report_payments (submitted_report_id, amount, currency, paid_at, recorded_by_user_id, legacy_shared)
-SELECT approved_rep, 100, 'EUR', '2099-02-01'::date, e, true FROM t_ids;
-
 CREATE OR REPLACE FUNCTION pg_temp.act_as(u uuid) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
   PERFORM set_config('request.jwt.claims', json_build_object('sub', u, 'role', 'authenticated')::text, true);
@@ -41,6 +30,19 @@ BEGIN
   EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'PASS % (blocked: %)', label, SQLERRM; RETURN; END;
   IF n = 0 THEN RAISE NOTICE 'PASS % (no rows affected)', label; ELSE RAISE EXCEPTION 'FAIL % (allowed)', label; END IF;
 END $$;
+
+SELECT pg_temp.act_as(w) FROM t_ids;
+-- Fixture reports (as the system, then rolled back).
+INSERT INTO public.submitted_reports (id, worker_user_id, employer_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, shared_columns, entries_snapshot, status, submitted_at)
+SELECT approved_rep, w, e, client, '2099-01-01'::date, '2099-01-31'::date, 10, 300, 'EUR', '{}'::text[], '[]'::jsonb, 'approved', now() FROM t_ids
+UNION ALL SELECT r2, w, e, client, '2099-02-01'::date, '2099-02-28'::date, 10, 200, 'EUR', '{}'::text[], '[]'::jsonb, 'approved', now() FROM t_ids
+UNION ALL SELECT pending_rep, w, e, client, '2099-03-01'::date, '2099-03-31'::date, 1, 50, 'EUR', '{}'::text[], '[]'::jsonb, 'submitted', now() FROM t_ids
+UNION ALL SELECT rej_rep, w, e, client, '2099-04-01'::date, '2099-04-30'::date, 1, 50, 'EUR', '{}'::text[], '[]'::jsonb, 'rejected', now() FROM t_ids
+UNION ALL SELECT solo_rep, w, NULL, client, '2099-05-01'::date, '2099-05-31'::date, 1, 50, 'EUR', '{}'::text[], '[]'::jsonb, 'approved', now() FROM t_ids;
+RESET ROLE;
+-- One legacy row recorded by the employer.
+INSERT INTO public.report_payments (submitted_report_id, amount, currency, paid_at, recorded_by_user_id, legacy_shared)
+SELECT approved_rep, 100, 'EUR', '2099-02-01'::date, e, true FROM t_ids;
 
 -- Freelancer records a new settled receipt across two reports, plus a new employer payment.
 SELECT pg_temp.act_as(w) FROM t_ids;

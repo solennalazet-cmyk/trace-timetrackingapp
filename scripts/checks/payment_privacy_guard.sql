@@ -43,6 +43,7 @@ UNION ALL SELECT pending_rep, w, e, client, '2099-03-01'::date, '2099-03-31'::da
 UNION ALL SELECT rej_rep, w, e, client, '2099-04-01'::date, '2099-04-30'::date, 1, 50, 'EUR', '{}'::text[], '[]'::jsonb, 'rejected', now() FROM t_ids
 UNION ALL SELECT solo_rep, w, NULL, client, '2099-05-01'::date, '2099-05-31'::date, 1, 50, 'EUR', '{}'::text[], '[]'::jsonb, 'approved', now() FROM t_ids;
 RESET ROLE;
+SELECT set_config('request.jwt.claims', '{}', true);
 -- One legacy row recorded by the employer.
 INSERT INTO public.report_payments (submitted_report_id, amount, currency, paid_at, recorded_by_user_id, legacy_shared)
 SELECT approved_rep, 100, 'EUR', '2099-02-01'::date, e, true FROM t_ids;
@@ -61,7 +62,8 @@ RESET ROLE;
 
 SELECT pg_temp.act_as(e) FROM t_ids;
 INSERT INTO public.report_payments (submitted_report_id, amount, currency, paid_at, recorded_by_user_id)
-SELECT r2, 50, 'EUR', '2099-03-01'::date, e FROM t_ids;
+SELECT r2, 50, 'EUR', '2099-03-01'::date, e FROM t_ids
+UNION ALL SELECT pending_rep, 10, 'EUR', '2099-03-01'::date, e FROM t_ids;
 SELECT pg_temp.ok((SELECT count(*) FROM public.report_payments p, t_ids WHERE p.recorded_by_user_id = w AND p.submitted_report_id IN (approved_rep, r2)) = 0, 'employer cannot read the freelancer''s new receipts (settled/shortfall)');
 SELECT pg_temp.ok((SELECT count(*) FROM public.report_payments p, t_ids WHERE p.fully_settled OR p.shortfall IS NOT NULL) = 0, 'employer sees no settled or shortfall values at all');
 SELECT pg_temp.ok((SELECT count(*) FROM public.report_payments p, t_ids WHERE p.submitted_report_id = approved_rep AND p.legacy_shared) = 1, 'employer still sees the legacy row');
@@ -78,7 +80,7 @@ SELECT pg_temp.act_as(w) FROM t_ids;
 SELECT pg_temp.ok((SELECT count(*) FROM public.report_payments p, t_ids WHERE p.recorded_by_user_id = e AND p.submitted_report_id = r2) = 0, 'freelancer cannot read the employer''s new payment');
 SELECT pg_temp.ok((SELECT count(*) FROM public.report_payments p, t_ids WHERE p.submitted_report_id = approved_rep AND p.legacy_shared) = 1, 'freelancer still sees the legacy row');
 SELECT pg_temp.ok((SELECT status = 'approved' AND total_amount = 300 FROM public.submitted_reports, t_ids WHERE id = approved_rep), 'hiding changed nothing the freelancer sees');
-SELECT pg_temp.blocked(format($q$DELETE FROM public.submitted_reports WHERE id = %L$q$, r2), 'freelancer delete cannot take the employer''s payments') FROM t_ids;
+SELECT pg_temp.blocked(format($q$DELETE FROM public.submitted_reports WHERE id = %L$q$, pending_rep), 'freelancer delete of a pending report cannot take the employer''s payments') FROM t_ids;
 DELETE FROM public.submitted_reports WHERE id = (SELECT solo_rep FROM t_ids);
 SELECT pg_temp.ok((SELECT count(*) FROM public.submitted_reports, t_ids WHERE id = solo_rep) = 0, 'solo report can be deleted by its owner');
 DELETE FROM public.submitted_reports WHERE id = (SELECT rej_rep FROM t_ids);

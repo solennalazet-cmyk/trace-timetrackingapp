@@ -321,6 +321,44 @@ export type Database = {
           },
         ]
       }
+      report_acknowledgements: {
+        Row: {
+          acknowledged_at: string
+          acknowledged_by_user_id: string
+          created_at: string
+          employer_user_id: string
+          id: string
+          session_id: string | null
+          submitted_report_id: string
+        }
+        Insert: {
+          acknowledged_at?: string
+          acknowledged_by_user_id: string
+          created_at?: string
+          employer_user_id: string
+          id?: string
+          session_id?: string | null
+          submitted_report_id: string
+        }
+        Update: {
+          acknowledged_at?: string
+          acknowledged_by_user_id?: string
+          created_at?: string
+          employer_user_id?: string
+          id?: string
+          session_id?: string | null
+          submitted_report_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_acknowledgements_submitted_report_id_fkey"
+            columns: ["submitted_report_id"]
+            isOneToOne: false
+            referencedRelation: "submitted_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_payments: {
         Row: {
           amount: number

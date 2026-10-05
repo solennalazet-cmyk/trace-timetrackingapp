@@ -94,6 +94,7 @@ SELECT pg_temp.blocked(format($q$INSERT INTO public.report_payments (submitted_r
 RESET ROLE;
 
 -- ===== Employer may reject an already-approved report =====
+SELECT set_config('request.jwt.claims', '{}', true);
 CREATE TEMP TABLE t_rev ON COMMIT DROP AS SELECT gen_random_uuid() AS x, gen_random_uuid() AS resend;
 GRANT SELECT ON t_rev TO authenticated;
 INSERT INTO public.submitted_reports (id, worker_user_id, employer_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, shared_columns, entries_snapshot, status, submitted_at, reviewed_at)

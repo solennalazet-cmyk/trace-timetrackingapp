@@ -164,6 +164,39 @@ export type Database = {
         }
         Relationships: []
       }
+      employer_closed_days: {
+        Row: {
+          created_at: string
+          employer_user_id: string
+          end_date: string
+          id: string
+          label: string
+          repeat_yearly: boolean
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employer_user_id: string
+          end_date: string
+          id?: string
+          label?: string
+          repeat_yearly?: boolean
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employer_user_id?: string
+          end_date?: string
+          id?: string
+          label?: string
+          repeat_yearly?: boolean
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           client_id: string | null
@@ -408,6 +441,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      staff_time_off: {
+        Row: {
+          created_at: string
+          employer_user_id: string
+          end_date: string
+          id: string
+          note: string | null
+          staff_client_id: string
+          start_date: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employer_user_id: string
+          end_date: string
+          id?: string
+          note?: string | null
+          staff_client_id: string
+          start_date: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employer_user_id?: string
+          end_date?: string
+          id?: string
+          note?: string | null
+          staff_client_id?: string
+          start_date?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       submitted_reports: {
         Row: {
@@ -918,6 +987,38 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _report_flags_internal: {
+        Args: { _report_id: string }
+        Returns: {
+          amount: number
+          duration_minutes: number
+          entry_date: string
+          flag_key: string
+          reason_kind: string
+          reason_label: string
+          session_key: string
+        }[]
+      }
+      _report_staff_ids: {
+        Args: { _client: string; _employer: string; _worker: string }
+        Returns: string[]
+      }
+      _snapshot_flags: {
+        Args: { _employer: string; _entries: Json; _staff: string[] }
+        Returns: {
+          amount: number
+          duration_minutes: number
+          entry_date: string
+          flag_key: string
+          reason_kind: string
+          reason_label: string
+          session_key: string
+        }[]
+      }
+      approve_report: {
+        Args: { _acknowledge?: boolean; _report_id: string }
+        Returns: Json
+      }
       can_access_submission: { Args: { _sub_id: string }; Returns: boolean }
       email_matches_auth_user: { Args: { _email: string }; Returns: boolean }
       has_role: {
@@ -926,6 +1027,53 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      import_flags: {
+        Args: { _client_id: string; _entries: Json }
+        Returns: {
+          amount: number
+          duration_minutes: number
+          entry_date: string
+          flag_key: string
+          reason_kind: string
+          reason_label: string
+          session_key: string
+        }[]
+      }
+      import_report: {
+        Args: {
+          _acknowledge?: boolean
+          _client_id: string
+          _currency: string
+          _entries: Json
+          _period_end: string
+          _period_start: string
+          _shared_columns: string[]
+          _total_amount: number
+          _total_hours: number
+        }
+        Returns: Json
+      }
+      report_flags: {
+        Args: { _report_id: string }
+        Returns: {
+          acknowledged: boolean
+          amount: number
+          duration_minutes: number
+          entry_date: string
+          flag_key: string
+          reason_kind: string
+          reason_label: string
+          report_id: string
+          session_key: string
+        }[]
+      }
+      report_flags_batch: {
+        Args: { _report_ids: string[] }
+        Returns: {
+          flag_count: number
+          report_id: string
+        }[]
       }
     }
     Enums: {

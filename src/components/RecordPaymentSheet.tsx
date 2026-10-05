@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { validatePaymentAmount, paymentLockKey } from "@/lib/payment-amount";
+import { paymentLockKey } from "@/lib/payment-amount";
+import { splitPayment } from "@/lib/payment-split";
 import { runExclusive } from "@/lib/action-lock";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", CAD: "C$", AUD: "A$", CHF: "CHF" };
@@ -47,12 +48,17 @@ const RecordPaymentSheet = ({ open, onOpenChange, reportId, currency, totalAmoun
 
   const handleSave = async () => {
     if (!reportId || saving) return;
-    const check = validatePaymentAmount(amount, outstanding);
+    // Employer rule (shared with the Payments page): no paying more than is owed.
+    const check = splitPayment(
+      amount,
+      [{ id: reportId, status: "approved", total_amount: totalAmount, currency, period_end: "" }],
+      new Map([[reportId, Number(alreadyPaid) || 0]]),
+    );
     if (!check.ok) {
-      toast.error(check.message);
+      toast.error((check as { message: string }).message);
       return;
     }
-    const amountToSave = check.amount ?? 0;
+    const amountToSave = check.amount;
     setSaving(true);
     const { error } = await runExclusive(
       paymentLockKey(reportId, amountToSave, date),
@@ -89,10 +95,8 @@ const RecordPaymentSheet = ({ open, onOpenChange, reportId, currency, totalAmoun
             <Label htmlFor="pay-amount">Amount ({sym})</Label>
             <Input
               id="pay-amount"
-              type="number"
+              type="text"
               inputMode="decimal"
-              step="0.01"
-              min="0"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
             />

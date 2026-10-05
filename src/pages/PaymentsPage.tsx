@@ -22,13 +22,15 @@ import Seo from "@/components/Seo";
 import {
   TAX_COUNTRIES, getTaxCountry, setTaxCountry, taxNoticeSeen, markTaxNoticeSeen, taxYearRange, taxQuarters,
 } from "@/lib/tax-year";
+import { splitPayment, countedPayments, paidMap, settledSet, owedOn, isLargeShortfall, parseAmount, type PaymentPart } from "@/lib/payment-split";
+import { runExclusive } from "@/lib/action-lock";
 
 const fmtLong = (d: string) =>
   new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 /** Where a report stands, from the freelancer's point of view. */
-const reportStage = (status: string, hasEmployer: boolean, paid: number, total: number) => {
-  const isPaid = total > 0 && paid + 0.005 >= total;
+const reportStage = (status: string, hasEmployer: boolean, paid: number, total: number, settled = false) => {
+  const isPaid = settled || (total > 0 && paid + 0.005 >= total);
   if (status === "rejected") return { label: "Rejected", cls: "text-destructive" };
   if (isPaid) return { label: "Paid", cls: "text-emerald-700 dark:text-emerald-400" };
   if (paid > 0.005) return { label: "Part-paid", cls: "text-amber-700 dark:text-amber-400" };
@@ -79,6 +81,9 @@ interface PaymentRow {
   note: string | null;
   recorded_by_user_id: string;
   created_at?: string;
+  legacy_shared?: boolean;
+  fully_settled?: boolean;
+  shortfall?: number | null;
 }
 
 interface FreelancerPaymentGroup {
@@ -143,6 +148,8 @@ const PaymentsPage = ({ embedded = false, selectedWorker: selectedWorkerProp = "
       .eq(col, user.id)
       .in("status", ["submitted", "approved", "rejected", "pending_connection"])
       .order("period_end", { ascending: false });
+    // Reports the employer removed stay in the database but leave the employer's lists.
+    const scopedReportsQuery = isEmployer ? reportsQuery.is("employer_hidden_at", null) : reportsQuery;
 
     const freelancersQuery = isEmployer
       ? supabase
@@ -154,7 +161,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker: selectedWorkerProp = "
       : null;
 
     const [reportsRes, freelancersRes] = await Promise.all([
-      reportsQuery,
+      scopedReportsQuery,
       freelancersQuery ?? Promise.resolve({ data: null }),
     ]);
 
@@ -217,11 +224,11 @@ const PaymentsPage = ({ embedded = false, selectedWorker: selectedWorkerProp = "
     };
   }, []);
 
-  const paidByReport = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const p of payments) m.set(p.submitted_report_id, (m.get(p.submitted_report_id) ?? 0) + Number(p.amount));
-    return m;
-  }, [payments]);
+  // The database returns only this person's own payments plus legacy shared
+  // ones. A freelancer's own new receipt replaces a legacy row on the same report.
+  const counted = useMemo(() => countedPayments(payments, reports), [payments, reports]);
+  const paidByReport = useMemo(() => paidMap(counted), [counted]);
+  const settled = useMemo(() => settledSet(counted), [counted]);
 
   const visibleReports = useMemo(() => {
     if (!isEmployer || selectedWorker === "all") return reports;
@@ -263,7 +270,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker: selectedWorkerProp = "
   // A report counts as owed from the moment it is sent. Rejected reports are
   // excluded (they need fixing and re-sending); payments reduce what is owed.
   const computeGroupTotals = (rows: ReportRow[]) => {
-    let due = 0, paid = 0, overdue = 0;
+    let due = 0, paid = 0, overdue = 0, outstanding = 0;
     let currency = "EUR";
     const today = new Date(); today.setHours(0, 0, 0, 0);
     for (const r of rows) {
@@ -271,15 +278,16 @@ const PaymentsPage = ({ embedded = false, selectedWorker: selectedWorkerProp = "
       currency = r.currency;
       const total = Number(r.total_amount);
       const p = Math.min(total, paidByReport.get(r.id) ?? 0);
+      const remaining = owedOn(r, paidByReport, settled);
       due += total;
       paid += p;
-      const remaining = Math.max(0, total - p);
+      outstanding += remaining; // settled reports owe nothing more
       if (remaining > 0.005 && r.status === "approved" && r.employer_user_id) {
         const ref = new Date((r.reviewed_at ?? r.submitted_at));
         if (nextBillingCutoff(ref) < today) overdue += remaining;
       }
     }
-    return { due, paid, outstanding: Math.max(0, due - paid), overdue, currency };
+    return { due, paid, outstanding: Math.max(0, outstanding), overdue, currency };
   };
 
   const overallTotals = useMemo(() => computeGroupTotals(visibleReports), [visibleReports, paidByReport]);
@@ -313,12 +321,12 @@ const PaymentsPage = ({ embedded = false, selectedWorker: selectedWorkerProp = "
   const visibleReportIds = useMemo(() => new Set(visibleReports.map((r) => r.id)), [visibleReports]);
   const paidBetween = useCallback((start: string, end: string) => {
     let sum = 0;
-    for (const p of payments) {
+    for (const p of counted) {
       if (!visibleReportIds.has(p.submitted_report_id)) continue;
       if (p.paid_at >= start && p.paid_at <= end) sum += Number(p.amount);
     }
     return sum;
-  }, [payments, visibleReportIds]);
+  }, [counted, visibleReportIds]);
   const paidInRange = paidBetween(paidRange.start, paidRange.end);
 
   const changeTaxCountry = (code: string) => {
@@ -345,45 +353,47 @@ const PaymentsPage = ({ embedded = false, selectedWorker: selectedWorkerProp = "
     }
   };
 
-  const handleSavePayment = async (rows: ReportRow[]) => {
-    if (!user) return;
-    const amount = Number(draftAmount);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      toast.error("Enter a valid amount.");
-      return;
-    }
-    // Apply payment FIFO across oldest unpaid reports in group
-    const sorted = [...rows]
-      .filter((r) => r.status !== "rejected")
-      .sort((a, b) => a.period_end.localeCompare(b.period_end));
-    let remaining = amount;
-    const inserts: any[] = [];
-    for (const r of sorted) {
-      if (remaining <= 0.005) break;
-      const total = Number(r.total_amount);
-      const paid = paidByReport.get(r.id) ?? 0;
-      const owed = Math.max(0, total - paid);
-      if (owed <= 0.005) continue;
-      const apply = Math.min(owed, remaining);
-      inserts.push({
-        submitted_report_id: r.id,
-        amount: apply,
-        currency: r.currency,
-        paid_at: draftDate,
-        recorded_by_user_id: user.id,
-      });
-      remaining -= apply;
-    }
-    if (inserts.length === 0) {
-      toast.info("Nothing outstanding to pay.");
-      return;
-    }
+  // Who is recording: the report's freelancer records what arrived (may differ
+  // from the invoice); the employer may not pay more than is owed.
+  const [draftSettled, setDraftSettled] = useState(false);
+  const [settleConfirm, setSettleConfirm] = useState<{ rows: ReportRow[]; parts: PaymentPart[]; shortfall: number; owedReached: number; currency: string } | null>(null);
+
+  const insertParts = async (rows: ReportRow[], parts: PaymentPart[], settledTick: boolean, shortfall: number) => {
+    if (!user || saving) return;
+    const inserts = parts.map((p, i) => ({
+      submitted_report_id: p.reportId,
+      amount: p.amount,
+      currency: p.currency,
+      paid_at: draftDate,
+      recorded_by_user_id: user.id,
+      ...(settledTick ? { fully_settled: true, shortfall: i === parts.length - 1 && shortfall > 0 ? shortfall : null } : {}),
+    }));
     setSaving(true);
-    const { error } = await supabase.from("report_payments").insert(inserts);
+    const total = parts.reduce((s, p) => s + p.amount, 0);
+    const { error } = await runExclusive(
+      `payment:${rows.map((r) => r.id).sort().join(",")}:${total.toFixed(2)}:${draftDate}`,
+      async () => await supabase.from("report_payments").insert(inserts as any),
+    );
     setSaving(false);
     if (error) { toast.error(error.message); return; }
-    toast.success("Payment recorded.");
+    toast.success(settledTick ? "Receipt recorded and marked settled." : "Payment recorded.");
+    setDraftSettled(false);
     load();
+  };
+
+  const handleSavePayment = async (rows: ReportRow[]) => {
+    if (!user || saving) return;
+    const isReceipt = rows.length > 0 && rows[0].worker_user_id === user.id;
+    const result = splitPayment(draftAmount, rows, paidByReport, { allowOver: isReceipt, settled });
+    if (!result.ok) { toast.error((result as { message: string }).message); return; }
+    if (isReceipt && result.over > 0.005) {
+      toast.info(`That's ${result.over.toFixed(2)} more than invoiced. It's been added to the latest report.`);
+    }
+    if (isReceipt && draftSettled) {
+      setSettleConfirm({ rows, parts: result.parts, shortfall: result.shortfall, owedReached: result.owedReached, currency: rows[0].currency });
+      return;
+    }
+    await insertParts(rows, result.parts, false, 0);
   };
 
   const handleDeletePayment = async (ids: string | string[]) => {
@@ -394,18 +404,39 @@ const PaymentsPage = ({ embedded = false, selectedWorker: selectedWorkerProp = "
     load();
   };
 
+  /** Reports the current person may remove from this group. */
+  const removableRows = (rows: ReportRow[]) => {
+    if (!user) return [];
+    return rows.filter((r) =>
+      r.worker_user_id === user.id
+        // Freelancer: approved reports sent to an employer are locked.
+        ? !(r.employer_user_id && r.status === "approved")
+        // Employer: only reviewed reports; pending ones are rejected instead.
+        : r.status === "approved" || r.status === "rejected",
+    );
+  };
+
   const handleDeleteGroup = async () => {
-    if (!deleteTarget || !user) return;
+    if (!deleteTarget || !user || deleting) return;
     const groupRows = reports.filter((r) => (isEmployer ? r.worker_user_id : r.client_id) === deleteTarget.key);
-    if (groupRows.length === 0) { setDeleteTarget(null); return; }
+    const targets = removableRows(groupRows);
+    if (targets.length === 0) { setDeleteTarget(null); return; }
     setDeleting(true);
-    const ids = groupRows.map((r) => r.id);
-    const { error: payErr } = await supabase.from("report_payments").delete().in("submitted_report_id", ids);
-    if (payErr) { setDeleting(false); toast.error(payErr.message); return; }
-    const { error: repErr } = await supabase.from("submitted_reports").delete().in("id", ids);
+    let removed = 0;
+    let firstError: string | null = null;
+    for (const r of targets) {
+      // Employer "Remove" only hides the report from their own lists; it never
+      // deletes reports or payments. Freelancer delete removes their own report
+      // (and their own payments with it); the database refuses anything else.
+      const { error } = r.worker_user_id === user.id
+        ? await supabase.from("submitted_reports").delete().eq("id", r.id)
+        : await supabase.from("submitted_reports").update({ employer_hidden_at: new Date().toISOString() } as any).eq("id", r.id);
+      if (error) firstError = firstError ?? error.message; else removed++;
+    }
     setDeleting(false);
-    if (repErr) { toast.error(repErr.message); return; }
-    toast.success("Removed.");
+    const kept = groupRows.length - removed;
+    if (removed === 0) toast.error(firstError ?? "Nothing could be removed.");
+    else toast.success(kept > 0 ? `Removed ${removed}. ${kept} kept (locked or awaiting review).` : "Removed.");
     if (expandedKey === deleteTarget.key) setExpandedKey(null);
     setDeleteTarget(null);
     load();
@@ -730,10 +761,8 @@ const PaymentsPage = ({ embedded = false, selectedWorker: selectedWorkerProp = "
                         <div className="flex gap-2">
                           <div className="flex-1 relative">
                             <Input
-                              type="number"
+                              type="text"
                               inputMode="decimal"
-                              step="0.01"
-                              min="0"
                               value={draftAmount}
                               onFocus={() => setEditingAmount(true)}
                               onChange={(e) => setDraftAmount(e.target.value)}
@@ -752,6 +781,26 @@ const PaymentsPage = ({ embedded = false, selectedWorker: selectedWorkerProp = "
                             />
                           </div>
                         </div>
+                        {rows[0]?.worker_user_id === user?.id && (
+                          <label className="flex items-start gap-2 text-sm min-h-[44px] cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="mt-1 h-4 w-4"
+                              checked={draftSettled}
+                              onChange={(e) => setDraftSettled(e.target.checked)}
+                            />
+                            <span>
+                              Fully settled
+                              <span className="block text-xs text-muted-foreground">Tick if this is all you'll receive (e.g. bank fees were taken). Only you see this.</span>
+                            </span>
+                          </label>
+                        )}
+                        {rows[0]?.worker_user_id === user?.id && (() => {
+                          const typed = parseAmount(draftAmount);
+                          return Number.isFinite(typed) && typed > t.outstanding + 0.01 ? (
+                            <p className="text-xs text-muted-foreground">That's more than the {sym}{t.outstanding.toFixed(2)} invoiced. That's fine if it's what arrived.</p>
+                          ) : null;
+                        })()}
                         <Button
                           className="w-full rounded-lg h-12 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold text-sm shadow-sm"
                           disabled={saving}
@@ -821,7 +870,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker: selectedWorkerProp = "
                           const pending = r.status === "submitted";
                           const total = Number(r.total_amount);
                           const reportPaid = Math.min(total, paidByReport.get(r.id) ?? 0);
-                          const stage = reportStage(r.status, !!r.employer_user_id, reportPaid, total);
+                          const stage = reportStage(r.status, !!r.employer_user_id, reportPaid, total, settled.has(r.id));
                           const payLabel = stage.label === "Part-paid"
                             ? `Part-paid · ${s}${(total - reportPaid).toFixed(2)} due`
                             : stage.label;
@@ -857,7 +906,7 @@ const PaymentsPage = ({ embedded = false, selectedWorker: selectedWorkerProp = "
                       </div>
                     </div>
 
-                    {!embedded && (
+                    {!embedded && removableRows(rows).length > 0 && (
                       <Button
                         variant="outline"
                         className="w-full rounded-lg h-10 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
@@ -908,7 +957,9 @@ const PaymentsPage = ({ embedded = false, selectedWorker: selectedWorkerProp = "
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {deleteTarget?.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              All submitted reports and recorded payments for this {isEmployer ? "freelancer" : "client"} will be permanently removed. This cannot be undone.
+              {isEmployer
+                ? "Approved and rejected reports from this freelancer will be removed from your lists. Nothing is deleted, and the freelancer's records don't change. Reports still awaiting review stay: reject them instead."
+                : "Your reports for this client will be permanently deleted, with the payments you recorded on them. Approved reports sent to a client are locked and will be kept. This cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -918,11 +969,48 @@ const PaymentsPage = ({ embedded = false, selectedWorker: selectedWorkerProp = "
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleting ? "Deleting…" : "Delete permanently"}
+              {deleting ? "Removing…" : isEmployer ? "Remove" : "Delete permanently"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>}
+
+      <AlertDialog open={!!settleConfirm} onOpenChange={(o) => !o && setSettleConfirm(null)}>
+        <AlertDialogContent className="max-w-[380px] w-[calc(100vw-2rem)] rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark as settled?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {settleConfirm && (() => {
+                const s = CURRENCY_SYMBOLS[settleConfirm.currency] ?? "€";
+                const n = settleConfirm.parts.length;
+                return (
+                  <>
+                    This will mark {n} report{n === 1 ? "" : "s"} as settled, with a shortfall of {s}{settleConfirm.shortfall.toFixed(2)}.
+                    {isLargeShortfall(settleConfirm.shortfall, settleConfirm.owedReached) && (
+                      <span className="block mt-2 font-semibold text-destructive">
+                        That's more than 10% of the {s}{settleConfirm.owedReached.toFixed(2)} invoiced. Check the amount before you confirm.
+                      </span>
+                    )}
+                  </>
+                );
+              })()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={saving}
+              onClick={() => {
+                const c = settleConfirm;
+                setSettleConfirm(null);
+                if (c) void insertParts(c.rows, c.parts, true, c.shortfall);
+              }}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

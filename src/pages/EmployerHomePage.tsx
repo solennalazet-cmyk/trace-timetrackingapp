@@ -120,12 +120,14 @@ const EmployerHomePage = () => {
         .from("submitted_reports")
         .select("*")
         .eq("employer_user_id", user.id)
+        .is("employer_hidden_at", null)
         .eq("status", "submitted")
         .order("submitted_at", { ascending: false }),
       supabase
         .from("submitted_reports")
         .select("*")
         .eq("employer_user_id", user.id)
+        .is("employer_hidden_at", null)
         .eq("status", "approved")
         .order("reviewed_at", { ascending: false })
         .limit(200),
@@ -133,6 +135,7 @@ const EmployerHomePage = () => {
         .from("submitted_reports")
         .select("id, client_id, worker_user_id, status, reviewed_at, submitted_at, total_amount, currency")
         .eq("employer_user_id", user.id)
+        .is("employer_hidden_at", null)
         .order("submitted_at", { ascending: false })
         .limit(20),
     ]);

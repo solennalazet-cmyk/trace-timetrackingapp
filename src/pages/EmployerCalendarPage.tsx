@@ -104,6 +104,7 @@ const EmployerCalendarPage = () => {
         .from("submitted_reports")
         .select("id, client_id, period_start, period_end, entries_snapshot")
         .eq("employer_user_id", user.id)
+        .is("employer_hidden_at", null)
         .gte("period_end", toLocalDateKey(gridStart))
         .lte("period_start", toLocalDateKey(gridEnd)),
       supabase

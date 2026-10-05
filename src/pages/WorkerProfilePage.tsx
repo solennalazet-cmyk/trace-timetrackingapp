@@ -94,6 +94,7 @@ const WorkerProfilePage = () => {
         .from("submitted_reports")
         .select("currency, total_hours, total_amount, entries_snapshot")
         .eq("employer_user_id", user.id)
+        .is("employer_hidden_at", null)
         .eq("worker_user_id", data.connected_user_id)
         .order("period_end", { ascending: false })
         .limit(1)

@@ -12,7 +12,16 @@
  * "someone got there first" instead of as success.
  */
 
+/** Approve is only possible from this status. */
 export const REVIEWABLE_STATUS = "submitted";
+
+/** Reject may start from a pending report or reverse an earlier approval. */
+export const REJECTABLE_STATUSES = ["submitted", "approved"] as const;
+
+/** True when a report can still be rejected (pending, or approved by mistake). */
+export function canReject(status: string | null | undefined): boolean {
+  return (REJECTABLE_STATUSES as readonly string[]).includes(status ?? "");
+}
 
 export interface ReviewOutcome {
   ok: boolean;

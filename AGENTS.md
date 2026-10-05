@@ -12,3 +12,17 @@
 
 ## Billing fields are server-only
 - `profiles` plan/subscription/trial/Stripe/period columns are blocked for signed-in users by the `guard_profile_billing_columns` trigger; write them only from edge functions with the service role. Why: users could otherwise grant themselves Pro. Check: `scripts/checks/profile_billing_guard.sh`.
+
+## Two sides, kept separate
+
+1. Trace has a freelancer side and an employer side. They have different navigation, home screens, data and jobs. Treat them as separate products that share only a visual style and the connection between users.
+   - Freelancer-only code is never imported by employer code, and the reverse.
+   - Both sides may import shared code, and shared code contains no role checks (no isEmployer / activeRole / kind branching inside shared UI or utilities).
+   - New code goes in the correct side's folder. If the side is unclear, ask me.
+2. Every request names which side it is for. Only change that side. If a change would touch a file used by both sides, STOP and tell me first: name the file, who uses it and what could change for the other side. Never fix something by adding an isEmployer branch inside a shared page; propose a split instead.
+3. A feature built for one side (for example the tax country and tax-year selector, which is freelancer-only) must not appear on the other side. When adding a feature, state which side gets it.
+4. Anything that must always be true (a report's status order, payment limits, privacy between the two sides, billing and plan columns writable only by the Stripe webhook, one running timer per user) is enforced in the DATABASE (constraint, trigger or RLS), with the UI only as a friendly layer. Tell me which mechanism you chose. Any new billing or entitlement column must be added to the profiles protection trigger.
+5. Never change, backfill or delete existing user data (reports, payments, sessions) unless I explicitly ask. New rules apply from now on.
+6. Reuse before adding: before writing a new query, rate calculation, role check or device-storage key, check whether one exists. Money maths lives in one place (src/lib), used by both sides.
+7. After every change run the build and existing tests, run scripts/checks/assignment_box_stability.py when dialogs, sheets, AssignmentModal, viewport or the timer stop flow were touched, and add a test for any bug fixed. Report what you ran and the results, and list every file changed.
+8. If something is unclear, a test fails or you are unsure, say so instead of guessing.

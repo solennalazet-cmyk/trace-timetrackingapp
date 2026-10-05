@@ -29,3 +29,6 @@
 
 ## Payments are private per side
 - `report_payments` rows are visible only to their recorder, except rows tagged `legacy_shared` (pre-split data, readable by both parties); fully_settled/shortfall only on the freelancer's own new rows; `employer_hidden_at` only set by the employer on reviewed reports; approved employer reports can't be deleted and a delete can never cascade the other party's payments. All enforced by RLS and triggers. Why: each side's paid/due must reflect only their own records. Check: run `scripts/checks/payment_privacy_guard.sql` as a database admin (rolled back); every row must read PASS.
+
+## Report review transitions
+- Employer status changes allowed by the database: submitted → approved, submitted → rejected, approved → rejected. Nothing leaves rejected (the freelancer resends as a new report). Enforced by the employer update policy and `guard_submitted_report_update`. Why: employers must be able to correct a mistaken approval without ever editing amounts or sessions. Check: `scripts/checks/payment_privacy_guard.sql`.

@@ -102,8 +102,6 @@ SELECT x, w, e, client, '2099-03-01'::date, '2099-03-31'::date, 5, 200, 'EUR', '
 INSERT INTO public.report_payments (submitted_report_id, amount, currency, paid_at, recorded_by_user_id)
 SELECT x, 50, 'EUR', '2099-03-15', e FROM t_ids, t_rev;
 
-SELECT pg_temp.act_as(w) FROM t_ids;
-RESET ROLE;
 SELECT pg_temp.act_as(gen_random_uuid());
 SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET status = 'rejected' WHERE id = %L$q$, x), 'another employer cannot reject this report') FROM t_rev;
 RESET ROLE;

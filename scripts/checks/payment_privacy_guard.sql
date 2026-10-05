@@ -1,6 +1,6 @@
 -- Proves the private payment model and report guards in the live database.
 -- Runs entirely inside one transaction that is ROLLED BACK: nothing persists.
--- Usage: bash scripts/checks/payment_privacy_guard.sh
+-- Run as a database admin (needs SET ROLE authenticated); every row must read PASS.
 BEGIN;
 
 CREATE TEMP TABLE t_ids ON COMMIT DROP AS
@@ -12,6 +12,9 @@ FROM public.submitted_reports s
 WHERE s.employer_user_id IS NOT NULL AND s.employer_user_id <> s.worker_user_id
 LIMIT 1;
 GRANT SELECT ON t_ids TO authenticated;
+CREATE TEMP TABLE t_res (n serial, result text) ON COMMIT DROP;
+GRANT ALL ON t_res TO authenticated;
+GRANT USAGE ON SEQUENCE t_res_n_seq TO authenticated;
 
 CREATE OR REPLACE FUNCTION pg_temp.act_as(u uuid) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
@@ -20,15 +23,15 @@ BEGIN
 END $$;
 CREATE OR REPLACE FUNCTION pg_temp.ok(cond boolean, label text) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
-  IF cond THEN RAISE NOTICE 'PASS %', label; ELSE RAISE EXCEPTION 'FAIL %', label; END IF;
+  INSERT INTO t_res(result) VALUES (CASE WHEN cond THEN 'PASS ' ELSE 'FAIL ' END || label);
 END $$;
 CREATE OR REPLACE FUNCTION pg_temp.blocked(sql text, label text) RETURNS void LANGUAGE plpgsql AS $$
 DECLARE n int;
 BEGIN
   BEGIN
     EXECUTE sql; GET DIAGNOSTICS n = ROW_COUNT;
-  EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'PASS % (blocked: %)', label, SQLERRM; RETURN; END;
-  IF n = 0 THEN RAISE NOTICE 'PASS % (no rows affected)', label; ELSE RAISE EXCEPTION 'FAIL % (allowed)', label; END IF;
+  EXCEPTION WHEN OTHERS THEN INSERT INTO t_res(result) VALUES ('PASS ' || label || ' (blocked: ' || SQLERRM || ')'); RETURN; END;
+  INSERT INTO t_res(result) VALUES (CASE WHEN n = 0 THEN 'PASS ' || label || ' (no rows affected)' ELSE 'FAIL ' || label || ' (allowed)' END);
 END $$;
 
 SELECT pg_temp.act_as(w) FROM t_ids;
@@ -88,4 +91,5 @@ SELECT pg_temp.ok((SELECT count(*) FROM public.report_payments p, t_ids WHERE p.
 SELECT pg_temp.blocked(format($q$INSERT INTO public.report_payments (submitted_report_id, amount, currency, paid_at, recorded_by_user_id) VALUES (%L, 1, 'EUR', '2099-01-01', %L)$q$, r2, current_setting('request.jwt.claims')::json->>'sub'), 'outsider cannot insert payments') FROM t_ids;
 RESET ROLE;
 
+SELECT result FROM t_res ORDER BY n;
 ROLLBACK;

@@ -70,7 +70,7 @@ SELECT pg_temp.ok((SELECT count(*) FROM public.report_payments p, t_ids WHERE p.
 SELECT pg_temp.blocked(format($q$UPDATE public.report_payments SET fully_settled = true WHERE recorded_by_user_id = %L AND submitted_report_id = %L$q$, e, r2), 'employer cannot mark a payment settled') FROM t_ids;
 SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET employer_hidden_at = now() WHERE id = %L$q$, pending_rep), 'employer cannot hide a report still awaiting review') FROM t_ids;
 SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET total_amount = 1, employer_hidden_at = now() WHERE id = %L$q$, rej_rep), 'employer cannot change anything else while hiding') FROM t_ids;
-SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET status = 'rejected' WHERE id = %L$q$, approved_rep), 'employer cannot re-review an approved report') FROM t_ids;
+SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET status = 'approved' WHERE id = %L$q$, rej_rep), 'employer cannot approve a rejected report') FROM t_ids;
 UPDATE public.submitted_reports SET employer_hidden_at = now() WHERE id = (SELECT approved_rep FROM t_ids);
 SELECT pg_temp.ok((SELECT employer_hidden_at IS NOT NULL FROM public.submitted_reports, t_ids WHERE id = approved_rep), 'employer can hide an approved report');
 SELECT pg_temp.blocked(format($q$DELETE FROM public.submitted_reports WHERE id = %L$q$, rej_rep), 'employer cannot delete reports') FROM t_ids;
@@ -91,6 +91,41 @@ RESET ROLE;
 SELECT pg_temp.act_as(gen_random_uuid());
 SELECT pg_temp.ok((SELECT count(*) FROM public.report_payments p, t_ids WHERE p.submitted_report_id IN (approved_rep, r2)) = 0, 'outsider cannot read payments');
 SELECT pg_temp.blocked(format($q$INSERT INTO public.report_payments (submitted_report_id, amount, currency, paid_at, recorded_by_user_id) VALUES (%L, 1, 'EUR', '2099-01-01', %L)$q$, r2, current_setting('request.jwt.claims')::json->>'sub'), 'outsider cannot insert payments') FROM t_ids;
+RESET ROLE;
+
+-- ===== Employer may reject an already-approved report =====
+CREATE TEMP TABLE t_rev ON COMMIT DROP AS SELECT gen_random_uuid() AS x, gen_random_uuid() AS resend;
+GRANT SELECT ON t_rev TO authenticated;
+INSERT INTO public.submitted_reports (id, worker_user_id, employer_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, shared_columns, entries_snapshot, status, submitted_at, reviewed_at)
+SELECT x, w, e, client, '2099-03-01'::date, '2099-03-31'::date, 5, 200, 'EUR', '{}'::text[], '[{"id":"s1"}]'::jsonb, 'approved', now(), now() - interval '1 day' FROM t_ids, t_rev;
+INSERT INTO public.report_payments (submitted_report_id, amount, currency, paid_at, recorded_by_user_id)
+SELECT x, 50, 'EUR', '2099-03-15', e FROM t_ids, t_rev;
+
+SELECT pg_temp.act_as(w) FROM t_ids;
+SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET status = 'rejected', rejection_reason = 'other' WHERE id = %L AND employer_user_id <> worker_user_id AND worker_user_id <> %L$q$, x, w), 'freelancer cannot use the employer reject path') FROM t_rev;
+RESET ROLE;
+SELECT pg_temp.act_as(gen_random_uuid());
+SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET status = 'rejected' WHERE id = %L$q$, x), 'another employer cannot reject this report') FROM t_rev;
+RESET ROLE;
+
+SELECT pg_temp.act_as(e) FROM t_ids;
+SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET status = 'rejected', total_amount = 1 WHERE id = %L$q$, x), 'employer cannot change the amount while rejecting') FROM t_rev;
+SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET status = 'rejected', entries_snapshot = '[]'::jsonb WHERE id = %L$q$, x), 'employer cannot change sessions while rejecting') FROM t_rev;
+SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET rejection_note = 'x' WHERE id = %L$q$, x), 'employer cannot edit review notes on an approved report without rejecting') FROM t_rev;
+UPDATE public.submitted_reports SET status = 'rejected', rejection_reason = 'incorrect_hours', rejection_note = 'oops', notify_worker = true
+ WHERE id = (SELECT x FROM t_rev) AND status IN ('submitted','approved');
+SELECT pg_temp.ok((SELECT status = 'rejected' AND rejection_reason = 'incorrect_hours' AND rejection_note = 'oops' AND notify_worker AND reviewed_at > now() - interval '1 minute' AND total_amount = 200 FROM public.submitted_reports, t_rev WHERE id = x), 'employer rejects an approved report: status, reason, note, notify stored, fresh review time, amount unchanged');
+-- Double tap: same conditional write again changes zero rows.
+SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET status = 'rejected' WHERE id = %L AND status IN ('submitted','approved')$q$, x), 'second reject tap changes nothing') FROM t_rev;
+SELECT pg_temp.blocked(format($q$UPDATE public.submitted_reports SET status = 'approved' WHERE id = %L$q$, x), 'approve from rejected is refused') FROM t_rev;
+SELECT pg_temp.ok((SELECT count(*) = 1 AND sum(amount) = 50 FROM public.report_payments p, t_rev WHERE p.submitted_report_id = x), 'employer payment is kept after rejection');
+RESET ROLE;
+
+SELECT pg_temp.act_as(w) FROM t_ids;
+SELECT pg_temp.ok((SELECT status = 'rejected' AND notify_worker AND rejection_reason = 'incorrect_hours' FROM public.submitted_reports, t_rev WHERE id = x), 'freelancer sees the rejection with its reason');
+INSERT INTO public.submitted_reports (id, worker_user_id, employer_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, shared_columns, entries_snapshot, status)
+SELECT resend, w, e, client, '2099-03-01'::date, '2099-03-31'::date, 6, 240, 'EUR', '{}'::text[], '[]'::jsonb, 'submitted' FROM t_ids, t_rev;
+SELECT pg_temp.ok((SELECT status = 'submitted' FROM public.submitted_reports, t_rev WHERE id = resend), 'freelancer can resend after an approved report was rejected');
 RESET ROLE;
 
 SELECT result FROM t_res ORDER BY n;

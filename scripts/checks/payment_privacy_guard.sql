@@ -15,14 +15,14 @@ GRANT SELECT ON t_ids TO authenticated;
 
 -- Fixture reports (as the system, then rolled back).
 INSERT INTO public.submitted_reports (id, worker_user_id, employer_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, shared_columns, entries_snapshot, status, submitted_at)
-SELECT approved_rep, w, e, client, '2099-01-01', '2099-01-31', 10, 300, 'EUR', '{}', '[]', 'approved', now() FROM t_ids
-UNION ALL SELECT r2, w, e, client, '2099-02-01', '2099-02-28', 10, 200, 'EUR', '{}', '[]', 'approved', now() FROM t_ids
-UNION ALL SELECT pending_rep, w, e, client, '2099-03-01', '2099-03-31', 1, 50, 'EUR', '{}', '[]', 'submitted', now() FROM t_ids
-UNION ALL SELECT rej_rep, w, e, client, '2099-04-01', '2099-04-30', 1, 50, 'EUR', '{}', '[]', 'rejected', now() FROM t_ids
-UNION ALL SELECT solo_rep, w, NULL, client, '2099-05-01', '2099-05-31', 1, 50, 'EUR', '{}', '[]', 'approved', now() FROM t_ids;
+SELECT approved_rep, w, e, client, '2099-01-01'::date, '2099-01-31'::date, 10, 300, 'EUR', '{}', '[]'::jsonb, 'approved', now() FROM t_ids
+UNION ALL SELECT r2, w, e, client, '2099-02-01'::date, '2099-02-28'::date, 10, 200, 'EUR', '{}', '[]'::jsonb, 'approved', now() FROM t_ids
+UNION ALL SELECT pending_rep, w, e, client, '2099-03-01'::date, '2099-03-31'::date, 1, 50, 'EUR', '{}', '[]'::jsonb, 'submitted', now() FROM t_ids
+UNION ALL SELECT rej_rep, w, e, client, '2099-04-01'::date, '2099-04-30'::date, 1, 50, 'EUR', '{}', '[]'::jsonb, 'rejected', now() FROM t_ids
+UNION ALL SELECT solo_rep, w, NULL, client, '2099-05-01'::date, '2099-05-31'::date, 1, 50, 'EUR', '{}', '[]'::jsonb, 'approved', now() FROM t_ids;
 -- One legacy row recorded by the employer.
 INSERT INTO public.report_payments (submitted_report_id, amount, currency, paid_at, recorded_by_user_id, legacy_shared)
-SELECT approved_rep, 100, 'EUR', '2099-02-01', e, true FROM t_ids;
+SELECT approved_rep, 100, 'EUR', '2099-02-01'::date, e, true FROM t_ids;
 
 CREATE OR REPLACE FUNCTION pg_temp.act_as(u uuid) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
@@ -45,8 +45,8 @@ END $$;
 -- Freelancer records a new settled receipt across two reports, plus a new employer payment.
 SELECT pg_temp.act_as(w) FROM t_ids;
 INSERT INTO public.report_payments (submitted_report_id, amount, currency, paid_at, recorded_by_user_id, fully_settled, shortfall)
-SELECT approved_rep, 200, 'EUR', '2099-02-02', w, true, NULL FROM t_ids
-UNION ALL SELECT r2, 180, 'EUR', '2099-02-02', w, true, 20 FROM t_ids;
+SELECT approved_rep, 200, 'EUR', '2099-02-02'::date, w, true, NULL FROM t_ids
+UNION ALL SELECT r2, 180, 'EUR', '2099-02-02'::date, w, true, 20 FROM t_ids;
 SELECT pg_temp.ok((SELECT count(*) FROM public.report_payments p, t_ids WHERE p.recorded_by_user_id = w AND p.fully_settled AND p.submitted_report_id IN (approved_rep, r2)) = 2, 'settled tick saved on both reports reached');
 SELECT pg_temp.blocked(format($q$UPDATE public.report_payments SET legacy_shared = true WHERE recorded_by_user_id = %L AND submitted_report_id = %L$q$, w, r2), 'legacy tag cannot be changed') FROM t_ids;
 SELECT pg_temp.blocked(format($q$INSERT INTO public.report_payments (submitted_report_id, amount, currency, paid_at, recorded_by_user_id, legacy_shared) VALUES (%L, 1, 'EUR', '2099-01-01', %L, true)$q$, r2, w), 'new rows cannot be tagged legacy') FROM t_ids;
@@ -56,7 +56,7 @@ RESET ROLE;
 
 SELECT pg_temp.act_as(e) FROM t_ids;
 INSERT INTO public.report_payments (submitted_report_id, amount, currency, paid_at, recorded_by_user_id)
-SELECT r2, 50, 'EUR', '2099-03-01', e FROM t_ids;
+SELECT r2, 50, 'EUR', '2099-03-01'::date, e FROM t_ids;
 SELECT pg_temp.ok((SELECT count(*) FROM public.report_payments p, t_ids WHERE p.recorded_by_user_id = w AND p.submitted_report_id IN (approved_rep, r2)) = 0, 'employer cannot read the freelancer''s new receipts (settled/shortfall)');
 SELECT pg_temp.ok((SELECT count(*) FROM public.report_payments p, t_ids WHERE p.fully_settled OR p.shortfall IS NOT NULL) = 0, 'employer sees no settled or shortfall values at all');
 SELECT pg_temp.ok((SELECT count(*) FROM public.report_payments p, t_ids WHERE p.submitted_report_id = approved_rep AND p.legacy_shared) = 1, 'employer still sees the legacy row');
@@ -78,7 +78,7 @@ DELETE FROM public.submitted_reports WHERE id = (SELECT solo_rep FROM t_ids);
 SELECT pg_temp.ok((SELECT count(*) FROM public.submitted_reports, t_ids WHERE id = solo_rep) = 0, 'solo report can be deleted by its owner');
 DELETE FROM public.submitted_reports WHERE id = (SELECT rej_rep FROM t_ids);
 SELECT pg_temp.ok((SELECT count(*) FROM public.submitted_reports, t_ids WHERE id = rej_rep) = 0, 'rejected report can be deleted by the freelancer');
-SELECT pg_temp.blocked(format($q$INSERT INTO public.submitted_reports (worker_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, shared_columns, entries_snapshot, status, submitted_at, employer_hidden_at) VALUES (%L, %L, '2099-06-01', '2099-06-30', 1, 1, 'EUR', '{}', '[]', 'approved', now(), now())$q$, w, client), 'freelancer cannot insert with employer_hidden_at') FROM t_ids;
+SELECT pg_temp.blocked(format($q$INSERT INTO public.submitted_reports (worker_user_id, client_id, period_start, period_end, total_hours, total_amount, currency, shared_columns, entries_snapshot, status, submitted_at, employer_hidden_at) VALUES (%L, %L, '2099-06-01'::date, '2099-06-30'::date, 1, 1, 'EUR', '{}', '[]'::jsonb, 'approved', now(), now())$q$, w, client), 'freelancer cannot insert with employer_hidden_at') FROM t_ids;
 RESET ROLE;
 
 SELECT pg_temp.act_as(gen_random_uuid());
